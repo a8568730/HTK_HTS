@@ -32,8 +32,8 @@
 /*      File: HSigP.c:   Signal Processing Routines            */
 /* ----------------------------------------------------------- */
 
-char *hsigp_version = "!HVER!HSigP:   3.2.1 [CUED 15/10/03]";
-char *hsigp_vc_id = "$Id: HSigP.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
+char *hsigp_version = "!HVER!HSigP:   3.3 [CUED 28/04/05]";
+char *hsigp_vc_id = "$Id: HSigP.c,v 1.1.1.1 2005/05/12 10:52:51 jal58 Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"
@@ -150,6 +150,7 @@ static float AutoCorrelate(Vector s, Vector r, int p, int frameSize)
    float sum,energy;
    int   i,j;
 
+   energy = 0.0;
    for (i=0;i<=p;i++) {
       sum = 0.0;
       for (j=1;j<=frameSize-i;j++)
@@ -715,7 +716,7 @@ float MatrixIDFT(Vector as, Vector ac, DMatrix cm)
 
    nFreq = VectorSize(as);
    nAuto = VectorSize(ac);
-
+   E=0.0;
    for (i=0; i<nAuto; i++) {
       acc = cm[i+1][1] * (double)as[1];
       for (j=1; j<nFreq; j++)

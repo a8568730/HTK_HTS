@@ -19,8 +19,8 @@
 /*    File: HSGen: Generate Sentences from a Lattice           */
 /* ----------------------------------------------------------- */
 
-char *hsgen_version = "!HVER!HSGen:   3.2.1 [CUED 15/10/03]";
-char *hsgen_vc_id = "$Id: HSGen.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hsgen_version = "!HVER!HSGen:   3.3 [CUED 28/04/05]";
+char *hsgen_vc_id = "$Id: HSGen.c,v 1.1.1.1 2005/05/12 10:52:54 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

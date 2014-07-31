@@ -32,8 +32,8 @@
 /*         File: HModel.c  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
-char *hmodel_version = "!HVER!HModel:   3.2.1 [CUED 15/10/03]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.13 2003/10/15 08:10:12 ge204 Exp $";
+char *hmodel_version = "!HVER!HModel:   3.3 [CUED 28/04/05]";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.4 2005/07/22 10:17:01 mjfg Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -71,8 +71,8 @@ static int trace = 0;
 typedef struct _XFDirInfo *XFDirLink;
 
 typedef struct _XFDirInfo {
-   char *dirName;           /* input XForm directory name */
-   XFDirLink next;          /* next directory name in list */
+  char *dirName;           /* input XForm directory name */
+  XFDirLink next;          /* next directory name in list */
 } XFDirInfo;
 
 /* --------------------------- Initialisation ---------------------- */
@@ -82,18 +82,33 @@ static int nParm = 0;
 static Boolean checking   = TRUE;       /* check HMM defs */
 static Boolean saveBinary = FALSE;      /* save HMM defs in binary */
 static Boolean saveGlobOpts = TRUE;     /* save ~o with HMM defs */
-static Boolean saveRegClass = TRUE;     /* save regression classes and tree */ 
+static Boolean saveRegTree = FALSE;    /* save regression classes and tree */ 
+static Boolean saveBaseClass = FALSE;   /* save base classes */ 
+static Boolean saveInputXForm = FALSE;  /* save input xforms with models set */
 static Boolean forceHSKind= FALSE;      /* force HMM Set Kind */
 static Boolean keepDistinct=FALSE;      /* keep orphan HMMs distinct */
 static Boolean discreteLZero=FALSE;     /* map DLOGZERO to LZERO */
+static Boolean reorderComps=FALSE;      /* re-order mixture components (PDE) */
 
 static Boolean allowOthers=TRUE;        /* allow unseen models in files */
 static HSetKind cfHSKind;
-static char orphanMacFile[100]; /* last resort file for new macros */
+static char orphanMacFile[100];         /* last resort file for new macros */
 
 static XFDirLink xformDirNames = NULL;  /* linked list of input transform directories */
-static Boolean saveInputXForm = TRUE;   /* save input xforms with models set */
+static Boolean indexSet = FALSE;        /* have the indexes been set for the model set */
+
 static MemHeap xformStack;              /* For Storage of xforms with no model sets ... */
+
+static int pde1BlockEnd = 13;          /* size of PDE blocks */
+static int pde2BlockEnd = 26;          /* size of PDE blocks */
+static LogFloat pdeTh1 = -5.0;         /* threshold for 1/3 PDE */
+static LogFloat pdeTh2 = 0.0;          /* threshold for 2/3 PDE */
+
+#ifdef PDE_STATS
+static int nGaussTot = 0;
+static int nGaussPDE1 = 0;
+static int nGaussPDE2 = 0;
+#endif
 
 void InitSymNames(void);
 
@@ -101,6 +116,7 @@ void InitSymNames(void);
 void InitModel(void)
 {
    int i;
+   double d;
    Boolean b;
    char buf[MAXSTRLEN];
    
@@ -115,7 +131,8 @@ void InitModel(void)
       if (GetConfBool(cParm,nParm,"SAVEBINARY",&b)) saveBinary = b;
       if (GetConfBool(cParm,nParm,"KEEPDISTINCT",&b)) keepDistinct = b;
       if (GetConfBool(cParm,nParm,"SAVEGLOBOPTS",&b)) saveGlobOpts = b;
-      if (GetConfBool(cParm,nParm,"SAVEREGCLASS",&b)) saveRegClass = b;
+      if (GetConfBool(cParm,nParm,"SAVEREGTREE",&b)) saveRegTree = b;
+      if (GetConfBool(cParm,nParm,"SAVEBASECLASS",&b)) saveBaseClass = b;
       if (GetConfBool(cParm,nParm,"SAVEINPUTXFORM",&b)) saveInputXForm = b;
       if (GetConfBool(cParm,nParm,"ALLOWOTHERHMMS",&b)) allowOthers = b;
       if (GetConfBool(cParm,nParm,"DISCRETELZERO",&b)) discreteLZero = b;
@@ -130,6 +147,11 @@ void InitModel(void)
             HError(7070,"InitModel: Unknown HMM kind %s",buf);
          forceHSKind = TRUE;
       }
+      if (GetConfBool(cParm,nParm,"REORDERCOMPS",&b)) reorderComps = b;
+      if (GetConfInt(cParm,nParm,"PDE1BLOCKEND",&i)) pde1BlockEnd = i;
+      if (GetConfInt(cParm,nParm,"PDE2BLOCKEND",&i)) pde2BlockEnd = i;
+      if (GetConfFlt(cParm,nParm,"PDETHRESHOLD1",&d)) pdeTh1 = d;
+      if (GetConfFlt(cParm,nParm,"PDETHRESHOLD2",&d)) pdeTh2 = d;
    }
 }
 
@@ -335,7 +357,7 @@ static ReturnStatus CheckDiscrete(HMMSet *hset)
    int s;
 
    for (s=1;s<=hset->swidth[0]; s++){
-      if (hset->swidth[s] != 1) {
+      if ((hset->swidth[s] != 1) && (!(HasVQ(hset->pkind)))) {
          HRError(7030,"CheckDiscrete: stream width not equal to 1 in discrete stream %d ",s);
          return(FAIL);
       }
@@ -378,7 +400,7 @@ typedef enum {   /* Only a character big !! */
    MEAN, VARIANCE, INVCOVAR, XFORM, GCONST,
    DURATION, INVDIAGCOV, TRANSP, DPROB, LLTCOV, LLTCOVAR,
    XFORMKIND=90, PARENTXFORM, NUMXFORMS, XFORMSET,
-   LINXFORM, OFFSET, BIAS, BLOCKINFO, BLOCK, BASECLASS, 
+   LINXFORM, OFFSET, BIAS, LOGDET, BLOCKINFO, BLOCK, BASECLASS, 
    CLASS, XFORMWGTSET, CLASSXFORM, MMFIDMASK, PARAMETERS,
    NUMCLASSES, ADAPTKIND, PREQUAL, INPUTXFORM,
    RCLASS=110, REGTREE, NODE, TNODE,
@@ -417,13 +439,14 @@ static struct {
      {"XFORMKIND", XFORMKIND } , {"PARENTXFORM", PARENTXFORM },
      {"NUMXFORMS", NUMXFORMS }, {"XFORMSET", XFORMSET },
      {"LINXFORM", LINXFORM }, {"OFFSET", OFFSET }, 
-     {"BIAS", BIAS }, {"BLOCKINFO", BLOCKINFO }, {"BLOCK", BLOCK }, 
+     {"BIAS", BIAS }, {"LOGDET", LOGDET},{"BLOCKINFO", BLOCKINFO }, {"BLOCK", BLOCK }, 
      {"BASECLASS", BASECLASS }, {"CLASS", CLASS }, 
      {"XFORMWGTSET", XFORMWGTSET }, {"CLASSXFORM", CLASSXFORM }, 
      {"MMFIDMASK", MMFIDMASK }, {"PARAMETERS", PARAMETERS },
      {"NUMCLASSES", NUMCLASSES }, {"ADAPTKIND", ADAPTKIND },
      {"PREQUAL", PREQUAL }, {"INPUTXFORM", INPUTXFORM },
-     { "", NULLSYM } };
+     { "", NULLSYM }
+};
 
 /* Reverse lookup table for above */
 static char *symNames[NULLSYM+1];
@@ -448,7 +471,7 @@ void InitSymNames(void)
 ReturnStatus InitScanner(char *fname, Source *src, Token *tok, HMMSet *hset)
 {
    if(InitSource(fname, src, HMMDefFilter)<SUCCESS){
-      return(FAIL);
+     return(FAIL);
    }
    tok->sym = NULLSYM; tok->macroType = ' '; 
    tok->binForm = FALSE;
@@ -534,6 +557,7 @@ static ReturnStatus GetToken(Source *src, Token *tok)
          HMError(src,"GetToken: > missing in symbol");
          return(FAIL);
       }
+      /* This is tacky and has to be fixed*/
       for (sym=0; sym<NUMSYM; sym++) /* Look symbol up in symMap */
          if (strcmp(symMap[sym].name,buf) == 0) {
             tok->sym = symMap[sym].sym;
@@ -562,46 +586,6 @@ static ReturnStatus GetToken(Source *src, Token *tok)
    return(FAIL);
 }
 
-/*
-  Looks for the macroname in the current directory. If it is 
-  notfound search through the input transform directories
-  in order. FOpen is used to allow optional generation of
-  Error messages using T_XFD
-*/
-static char *InitXFormScanner(HMMSet *hset, char *macroname, char *fname,
-			      Source *src, Token *tok)
-{
-   static char buf[MAXSTRLEN];
-   XFDirLink p;
-   Boolean isPipe;
-   FILE *f;
-
-   if ((fname==NULL) || ((f=FOpen(fname,NoFilter,&isPipe)) == NULL)) {
-      if ((trace&T_XFD) && (fname!=NULL))
-         HRError(7010,"InitXFormScanner: Cannot open source file %s",fname);
-      p = xformDirNames;
-      while ((p!=NULL) && 
-             ((f=FOpen(MakeFN(macroname,p->dirName,NULL,buf),NoFilter,&isPipe)) == NULL)) {
-         if (trace&T_XFD) 
-            HRError(7010,"InitXFormScanner: Cannot open source file %s",buf);
-         p = p->next;
-      }
-      if (p==NULL) { /* Failed to find macroname */
-         HError(7035,"Failed to find macroname %s",macroname);
-      } else { /* Close file and initialise scanner */
-         FClose(f,isPipe);
-         InitScanner(buf,src,tok,hset);
-      }
-      if (trace&T_TOP) printf("Loading macro file %s\n",buf);
-      return buf;
-   } else {
-      FClose(f,isPipe);
-      if (trace&T_TOP) printf("Loading macro file %s\n",fname);
-      InitScanner(fname,src,tok,hset);
-      return fname;
-   }
-}
-
 /* ------------------- HMM 'option' handling ----------------------- */
 
 
@@ -621,7 +605,7 @@ static ReturnStatus GetOption(HMMSet *hset, Source *src, Token *tok, int *nState
    Boolean ntok=TRUE;
 
    static InputXForm* GetInputXForm(HMMSet *hset, Source *src, Token *tok);
-
+   
    switch (tok->sym) {
    case NUMSTATES:
       if (!ReadShort(src,&nSt,1,tok->binForm)){
@@ -757,6 +741,41 @@ static ReturnStatus CheckOptions(HMMSet *hset)
       return(FAIL);
    }
    return(SUCCESS);
+}
+
+/* Str2BaseClassKind: parse the string into the correct baseclass */
+BaseClassKind Str2BaseClassKind(char *str)
+{
+  BaseClassKind bkind = MIXBASE;
+  if (!(strcmp(str,"MIXBASE"))) bkind = MIXBASE;
+  else if (!(strcmp(str,"MEANBASE"))) bkind =  MEANBASE;
+  else if (!(strcmp(str,"COVBASE"))) bkind =  COVBASE;
+  else HError(999,"Unknown BaseClass kind");
+  return bkind;
+}
+
+/* Str2XFormKind: parse the string into the correct xform kind */
+XFormKind Str2XFormKind(char *str)
+{
+  XFormKind xkind = MLLRMEAN;
+
+  if (!(strcmp(str,"MLLRMEAN"))) xkind = MLLRMEAN;
+  else if (!(strcmp(str,"MLLRCOV"))) xkind = MLLRCOV;
+  else if (!(strcmp(str,"MLLRVAR"))) xkind = MLLRVAR;   
+  else if (!(strcmp(str,"CMLLR"))) xkind = CMLLR;
+  else HError(999,"Unknown XForm Class kind");
+  return xkind;
+}
+
+/* Str2XFormKind: parse the string into the correct xform kind */
+AdaptKind Str2AdaptKind(char *str)
+{
+  AdaptKind akind = TREE;
+
+  if (!(strcmp(str,"TREE"))) akind = TREE;
+  else if (!(strcmp(str,"BASE"))) akind = BASE;
+  else HError(999,"Unknown Adapt kind");
+  return akind;
 }
 
 /* ---------------------- Input XForm Directory Handling ---------------------- */
@@ -1044,115 +1063,337 @@ static Ptr GetStructure(HMMSet *hset, Source *src, char type)
    return m->structure;
 }
 
-
-/* Find a node in the regression tree given the index and return the node */
-static RegTree *FindNode(RegTree *t, RegTree *r, int i)
+static ReturnStatus CheckBaseClass(HMMSet *hset, BaseClass *bclass)
 {
-   if (t != NULL) {
-      r = FindNode(t->left, r, i);
-      if (t->nodeInfo->nodeIndex == i)
-         return t;
-      r = FindNode(t->right, r, i);
-   }
-
-   return r;
-
+  int b,ncomp=0;
+  ILink i;
+  MixPDF *mp;
+  
+  /* ensure that each component is assigned to a base class */
+  for (b=1;b<=bclass->numClasses;b++) {
+    for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
+      mp = ((MixtureElem *)i->item)->mpdf;
+      if (mp->mIdx>0) {      
+	mp->mIdx = -mp->mIdx;
+	ncomp++;
+      } else { /* item appears in list multiple times */
+	HRError(999,"Component specified multiple times");  
+	return(FAIL);
+      }
+    }
+  }
+  /* have all the components been seen? */
+  if (ncomp != hset->numMix) {
+    HRError(999,"Components missing from Base Class list (%d %d)",ncomp,hset->numMix);
+    return(FAIL);
+  }
+  /* mIdx is used in HRec, so reset */
+  for (b=1;b<=bclass->numClasses;b++) {
+    for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
+      mp = ((MixtureElem *)i->item)->mpdf;
+      if (mp->mIdx<0) mp->mIdx = -mp->mIdx;
+      else 
+	HError(999,"CompressItemList: corrupted item list");
+    }
+  }
+  return(SUCCESS);
 }
 
-static RegNode *CreateNodeInfo(MemHeap *m, short nodeId)
+/* 
+   AddXFormItem: create an ItemRec holding x and prepend it to list 
+   Owner is not used in these lists.
+*/
+static void AddXFormItem(MemHeap *x, Ptr item, Ptr owner, ILink *list)
+{
+   ILink p;
+   
+   p=(ILink) New(x,sizeof(ItemRec));
+   p->item=item; p->owner=owner; p->next=*list;
+   *list=p;
+}
+
+
+static void CompressItemList(MemHeap *x, ILink ilist, ILink *bilist)
+{
+  ILink i,p;
+  MixPDF *mp;
+  MixtureElem *me;
+  int ncomp=0,ndel=0;
+
+  p = NULL; /* the first component can't have already been seen! */
+  for (i=ilist; i!=NULL; i=i->next) {
+    me = (MixtureElem *)i->item;
+    mp = me->mpdf;
+    if (mp->mIdx>0) {      
+      mp->mIdx = -mp->mIdx;
+      AddXFormItem(x,me,i->owner,bilist);
+      ncomp++;
+    } else { /* delete item from list */
+      ndel++;
+    }
+  }
+  /* mIdx is used in HRec, so reset */
+  for (i=*bilist; i!=NULL; i=i->next) {
+    mp = ((MixtureElem *)i->item)->mpdf;
+    if (mp->mIdx<0) mp->mIdx = -mp->mIdx;
+    else 
+      HError(999,"CompressItemList: corrupted item list");
+  }
+  if ((ndel>0) && (trace&T_XFD))
+    printf(" CompressItemList: kept %d components, deleted %d components\n",ncomp,ndel);
+}
+
+static BaseClass* GetBaseClass(HMMSet *hset,Source *src, Token *tok)
+{
+  BaseClass *bclass;
+  char buf[MAXSTRLEN];
+  char type = 'm';             /* type of items to tie */
+  int nbases, i, b;
+  ILink ilist;
+
+  void SetIndexes(HMMSet *hset);
+
+  if (trace&T_PAR) printf("HModel: GetBaseClass\n");
+  if (tok->sym == MMFIDMASK) { 
+    bclass = (BaseClass *)New(hset->hmem,sizeof(BaseClass));
+    bclass->fname = CopyString(hset->hmem,src->name);
+    if (!ReadString(src,buf)){
+      HRError(7013,"GetBaseClass: cannot read MMFIDMASK");
+      return(NULL);
+    }
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    bclass->mmfIdMask = CopyString(hset->hmem,buf);
+    if (tok->sym == PARAMETERS) {
+      if (!ReadString(src,buf)){
+	HMError(src,"<PARAMETERS> symbol expected in GetBaseClass");
+	return(NULL);
+      }
+    } 
+    bclass->bkind = Str2BaseClassKind(buf);
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    if (tok->sym == STREAMINFO) {
+      bclass->swidth = CreateIntVec(hset->hmem,SMAX);
+      if (!ReadInt(src,bclass->swidth,1,tok->binForm)){
+	HMError(src,"Num Streams Expected");
+	return(NULL);
+      }
+      if (bclass->swidth[0] >= SMAX){
+	HMError(src,"Stream limit exceeded");
+	return(NULL);
+      }
+      if (!ReadInt(src,bclass->swidth+1,bclass->swidth[0],tok->binForm)){
+         HMError(src,"Stream Widths Expected");
+         return(NULL);
+      }
+      /* Now check that things match the HMMSet */
+      for (i=1;i<=bclass->swidth[0];i++)
+	if (bclass->swidth[i] != hset->swidth[i]) {
+	  HError(999,"Stream width %d [%d] does not match model set [%d]",i,bclass->swidth[i],hset->swidth[i]);
+	  return(NULL);
+	}
+      if(GetToken(src,tok)<SUCCESS){
+	HMError(src,"GetToken failed");
+	return(NULL);
+      }
+    } else {
+      if (hset->swidth[0] != 1)
+	HError(999,"<STREAMINFO> must be specified in multiple stream base classes");
+      bclass->swidth = NULL; /* indicates a single stream - don't care */
+    }
+    if (tok->sym == NUMCLASSES) {
+      if (!ReadInt(src,&nbases,1,tok->binForm)){
+	HMError(src,"Number of baseclasses for regression base class expected");
+	return(NULL);
+      }
+    } else {
+      HMError(src,"<NUMCLASSES> symbol expected in GetBaseClass");
+      return(NULL);
+    }
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    bclass->numClasses = nbases;
+    bclass->ilist = (ILink *)New(hset->hmem,sizeof(ILink)*(nbases+1));
+    /* Set the indexes for the models - just in case being loaded from 
+       a macro */
+    if (!indexSet) SetIndexes(hset);
+    /* BaseClasses Can only refer to physical HMMs for wild cards */
+    SetParsePhysicalHMM(TRUE);
+    for (i=1;i<=nbases;i++) {
+      if (tok->sym != CLASS) {
+	HMError(src,"<CLASS> symbol expected in GetBaseClass");
+	return(NULL);
+      }
+      if (!ReadInt(src,&b,1,tok->binForm)){
+	HMError(src,"Number of class expected");
+	return(NULL);
+      }
+      if (b!=i)
+	HError(999,"Error reading classes in BaseClass");
+      ilist= NULL; bclass->ilist[i] = NULL;
+      PItemList(&ilist,&type,hset,src,(trace&T_PAR));
+      CompressItemList(hset->hmem,ilist,bclass->ilist+i);
+      ResetUtilItemList();
+      /* multiple examples of the same component may be specified */
+      if(GetToken(src,tok)<SUCCESS){
+	HMError(src,"GetToken failed");
+	return(NULL);
+      }
+    }
+    SetParsePhysicalHMM(FALSE);
+    if (CheckBaseClass(hset,bclass)<SUCCESS)
+      HError(999,"BaseClass check failed");
+    bclass->nUse = 0;
+  } else if (tok->sym==MACRO && tok->macroType=='b'){
+    if((bclass=(BaseClass *)GetStructure(hset,src,'b'))==NULL){
+      HMError(src,"GetStructure Failed");
+      return(NULL);
+    }
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+  } else {
+    HMError(src,"<MMFIDMASK> symbol expected in GetBaseClass");
+    return(NULL);
+  }
+  bclass->nUse++;
+  return bclass;
+}
+
+
+/* Find a node in the regression tree given the index and return the node */
+static RegNode *FindNode(RegNode *n, RegNode *r, int id)
+{
+  int i;
+
+  if (n != NULL) {
+    if (n->nodeIndex == id)
+      return n;
+    for (i=1;i<=n->numChild;i++) 
+      r = FindNode(n->child[i], r, id);
+  }
+  return r;
+}
+
+static RegNode *CreateRegNode(MemHeap *m, int nodeId)
 {
    RegNode *n;
   
    n  = (RegNode *) New(m, sizeof(RegNode));
    n->nodeIndex = nodeId;
-   n->nodeComps = 0;
    n->nodeOcc = 0.0;
-   n->nBases = 0;
-   n->WTrans = NULL;
-   n->HTrans = NULL;
-   n->bases  = NULL;
-   n->backTrans = NULL;
-
+   n->numChild = 0;
+   n->child = NULL;
+   n->baseClasses = NULL;
+   n->info = NULL;
+   n->vsize = 0;
    return n;
 }
 
 /* GetRegTree: parse src and return the regression tree structure */
 static RegTree *GetRegTree(HMMSet *hset, Source *src, Token *tok)
 {
-   RegTree *rtree = NULL, *t;
-   short size, i;
-   int comps;
-   short index;
+   RegTree *rtree = NULL;
+   RegNode *rnode, *root;
+   int index,nbases,base,nchild,i,sw;
+   char buf[MAXSTRLEN];
 
    /* allocate space for the regression tree root node */
-   rtree = (RegTree *) New(hset->hmem, sizeof(RegTree));
-   rtree->left = rtree->right = NULL;
-   rtree->nodeInfo = CreateNodeInfo(hset->hmem, 1);
 
    if (trace&T_PAR) printf("HModel: GetRegTree\n");
-   if (tok->sym==REGTREE) {      
-      if (!ReadShort(src,&size,1,tok->binForm)){
-         HMError(src,"Size of the regression tree is expected");
-         return(NULL);
+   if (tok->sym == BASECLASS){
+     rtree = (RegTree *) New(hset->hmem, sizeof(RegTree));
+     rtree->fname = CopyString(hset->hmem,src->name);
+     if(GetToken(src,tok)<SUCCESS){
+       HMError(src,"GetToken failed");
+       return(NULL);
+     }
+     if (tok->sym==MACRO && tok->macroType=='b') {
+       if (!ReadString(src,buf))
+	 HError(7013,"GetRegTree: cannot read base class macro name");
+      rtree->bclass = LoadBaseClass(hset,buf,NULL);	
+      if(GetToken(src,tok)<SUCCESS){
+	HMError(src,"GetToken failed");
+	return(NULL);
       }
-      size *= 2; size -= 1;
-      for (i = 1; i <= size; i++) {
-      
-         if(GetToken(src,tok)<SUCCESS){
-            HMError(src,"GetToken failed");
-            return(NULL);
-         }
-         if (!ReadShort(src,&index,1,tok->binForm)){
-            HMError(src,"Parent node index for regression tree expected");
-            return(NULL);
-         }
-         t = FindNode(rtree, NULL, index);
-         if (t == NULL){
-            HRError(7085, "GetRegTree: Can't find node %d in tree", index);
-            return(NULL);
-         }
-         switch(tok->sym) {
-         case NODE:
-            /* create children */
-            t->left  = (RegTree *) New(hset->hmem, sizeof(RegTree));
-            t->right = (RegTree *) New(hset->hmem, sizeof(RegTree));
-            t->left->left = t->left->right = NULL;
-            t->right->left = t->right->right = NULL;
-            if (!ReadShort(src,&index,1,tok->binForm)){
-               HMError(src,"Left node index for regression tree expected");
-               return(NULL);
-            }
-            t->left->nodeInfo  = CreateNodeInfo(hset->hmem, index);
-            if (!ReadShort(src,&index,1,tok->binForm)){
-               HMError(src,"Right node index for regression tree expected");
-               return(NULL);
-            }
-            t->right->nodeInfo = CreateNodeInfo(hset->hmem, index);
-            break;
-         case TNODE:
-            /* load the number of components */
-            if (!ReadInt(src,&comps,1,tok->binForm)){
-               HMError(src,"Number of components for regression base class expected");
-               return(NULL);
-            }
-            t->nodeInfo->nodeComps = comps;
-            /* if (!ReadFloat(src,&tmp,1,tok->binForm))
-               HMError(src,"Occ count (training) for regression base class expected");
-               if (!ReadFloat(src,&tmp,1,tok->binForm))
-               HMError(src,"Node score for regression base class expected"); */
-            break;
-         default:
-            HRError(7085,"GetRegTree:Unexpected token symbol");
-            return(NULL);
-         }
-      }
-   }
-
-   if(GetToken(src,tok)<SUCCESS){
-      HMError(src,"GetToken failed");
-      return(NULL);
-   }
-  
+     } else /* or just load the macro explicitly */
+       rtree->bclass = GetBaseClass(hset,src,tok);
+     /* Check the BaseClass stream info to see if root can be adapted */
+     if (rtree->bclass->swidth == NULL)
+       rtree->valid = TRUE;
+     else {
+       rtree->valid = TRUE;
+       sw = rtree->bclass->swidth[1];
+       for (i=2;i<=rtree->bclass->swidth[0];i++)
+	 if (rtree->bclass->swidth[i] != sw)
+	   rtree->valid = FALSE;
+     }
+     rtree->root = root = CreateRegNode(hset->hmem,1);
+     while ((tok->sym != EOFSYM) && 
+	    ((tok->sym==NODE) || (tok->sym==TNODE))) {
+       switch(tok->sym) {
+       case NODE:
+	 if (!ReadInt(src,&index,1,tok->binForm)){
+	   HMError(src,"Node index for regression tree expected");
+	   return(NULL);
+	 }
+	 if ((rnode = FindNode(root, NULL, index)) == NULL)
+	   HError(999,"Nodes are expected in numerical order");
+	 rtree->numNodes ++;
+	 if (!ReadInt(src,&nchild,1,tok->binForm)){
+	   HMError(src,"Number of children for regression tree expected");
+	   return(NULL);
+	 }
+	 rnode->numChild = nchild;
+	 rnode->child = (RegNode **)New(hset->hmem,(nchild+1)*sizeof(RegNode));
+	 for (i=1;i<=nchild;i++) {
+	   if (!ReadInt(src,&index,1,tok->binForm)){
+	     HMError(src,"Node index of child in regression tree expected");
+	     return(NULL);
+	   }
+	   rnode->child[i] = CreateRegNode(hset->hmem,index);
+	 }
+	 break;
+       case TNODE:
+	 if (!ReadInt(src,&index,1,tok->binForm)){
+	   HMError(src,"Node index for regression tree expected");
+	   return(NULL);
+	 }
+	 if ((rnode = FindNode(root, NULL, index)) == NULL)
+	   HError(999,"Nodes are expected in numerical order");
+	 rtree->numTNodes ++;
+	 if (!ReadInt(src,&nbases,1,tok->binForm)){
+	   HMError(src,"Number of baseclasses for regression base class expected");
+	   return(NULL);
+	 }
+	 rnode->baseClasses = CreateIntVec(hset->hmem,nbases);
+	 for (i=1;i<=nbases;i++) {
+	   if (!ReadInt(src,&base,1,tok->binForm)){
+	     HMError(src,"Baseclasse number for regression base class expected");
+	     return(NULL);
+	   }
+	   rnode->baseClasses[i] = base;
+	 }
+	 break;
+       default:
+	 HRError(7085,"GetRegTree:Unexpected token symbol");
+	 return(NULL);
+       }
+       if(GetToken(src,tok)<SUCCESS){
+	 HMError(src,"GetToken failed");
+	 return(NULL);
+       }
+     }
+   } else 
+     HMError(src,"Regression Tree definition expected");     
    return rtree; 
 }
 
@@ -1392,19 +1633,7 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
    } else {
       mp = (MixPDF *)New(hset->hmem,sizeof(MixPDF));
       mp->nUse = 0; mp->hook = NULL; mp->gConst = LZERO;
-      mp->rClass = 0;
-      if (tok->sym == RCLASS) {
-         short r;
-         if (!ReadShort(src,&r,1,tok->binForm)){
-            HMError(src,"Regression Class Number expected");
-            return(NULL);
-         }
-         mp->rClass = r;
-         if(GetToken(src,tok)<SUCCESS){
-            HMError(src,"GetToken failed");
-            return(NULL);
-         }
-      }
+      mp->mIdx = 0;
       if((mp->mean = GetMean(hset,src,tok))==NULL){      
          HMError(src,"GetMean Failed");
          return(NULL);
@@ -1578,6 +1807,7 @@ static MixPDF *EmptyMixPDF(HMMSet *hset, int vSize, int s)
    t[s] = (MixPDF *)New(hset->hmem,sizeof(MixPDF));
    t[s]->ckind = DIAGC;
    t[s]->nUse = 0; t[s]->hook = NULL; t[s]->gConst = LZERO;
+   t[s]->mIdx = 0;
    t[s]->mean = CreateSVector(hset->hmem,vSize);
    ZeroVector(t[s]->mean);
    t[s]->cov.var = CreateSVector(hset->hmem,vSize);
@@ -1933,155 +2163,377 @@ static SVector GetBias(HMMSet *hset, Source *src, Token *tok)
 /* GetLinXForm: get a linear transformations */
 static LinXForm* GetLinXForm(HMMSet *hset, Source *src, Token *tok)
 {
-   LinXForm *xf;
-   MemHeap *hmem;
-   int i,b;
-   int numBlocks;
+  LinXForm *xf;
+  MemHeap *hmem;
+  int i,b;
+  int numBlocks;
 
-   if (trace&T_PAR) printf("HModel: GetLinXForm\n");
-   if (tok->sym == VECSIZE) {
-      if (hset==NULL) hmem = &xformStack;
-      else hmem = hset->hmem;
-      xf = (LinXForm *)New(hmem,sizeof(LinXForm));
-      if (!ReadInt(src,&(xf->vecSize),1,tok->binForm)){
-         HRError(7013,"GetLinXForm: cannot read vector size");
-         return(NULL);
-      }
-      if(GetToken(src,tok)<SUCCESS){
-         HMError(src,"GetToken failed");
-         return(NULL);
-      }
-      if (tok->sym == OFFSET){
-         if(GetToken(src,tok)<SUCCESS){
-            HMError(src,"GetToken failed");
-            return(NULL);
-         }
-         xf->bias = GetBias(hset,src,tok);
-      } else {
-         xf->bias = NULL;
-      }
-      if (tok->sym!=BLOCKINFO){
-         HMError(src,"<BLOCKINFO> symbol expected");
-         return(NULL);
-      }
-      if (!ReadInt(src,&numBlocks,1,tok->binForm)){
-         HMError(src,"Number of transform blocks expected");
-         return(NULL);
-      }
-      xf->blockSize = CreateIntVec(hmem,numBlocks);
-      if (!ReadInt(src,xf->blockSize+1,numBlocks,tok->binForm)){
-         HMError(src,"Size of blocks expected");
-         return(NULL);
-      }    
-      xf->xform = (Matrix *)New(hmem,(numBlocks+1)*sizeof(Matrix));
-      if(GetToken(src,tok)<SUCCESS){
-         HMError(src,"GetToken failed");
-         return(NULL);
-      }
-      for (i=1;i<=numBlocks;i++) {
-         if (tok->sym != BLOCK){
-            HMError(src,"<NUMXFORMS> symbol expected");
-            return(NULL);
-         }
-         if (!ReadInt(src,&b,1,tok->binForm)){
-            HMError(src,"Weight class expected");
-            return(NULL);
-         }      
-         if (b != i) {
-            HMError(src,"Inconsistency in transform definition");
-            return(NULL);
-         }
-         if(GetToken(src,tok)<SUCCESS){
-            HMError(src,"GetToken failed");
-            return(NULL);
-         }
-         xf->xform[i] = GetTransform(hset,src,tok);
-      }
-      xf->nUse = 0;
-   }
-   else if ((tok->sym==MACRO && tok->macroType=='f') && (hset != NULL)){
-      if((xf=(LinXForm *)GetStructure(hset,src,'f'))==NULL){
-         HMError(src,"GetStructure Failed");
-         return(NULL);
-      }
-      xf->nUse++;
-      if(GetToken(src,tok)<SUCCESS){
-         HMError(src,"GetToken failed");
-         return(NULL);
-      }
-   } else{
-      HMError(src,"<VECSIZE> symbol expected in GetXFormSet");
+  if (trace&T_PAR) printf("HModel: GetLinXForm\n");
+  if (tok->sym == VECSIZE) {
+    if (hset==NULL) hmem = &xformStack;
+    else hmem = hset->hmem;
+    xf = (LinXForm *)New(hmem,sizeof(LinXForm));
+    if (!ReadInt(src,&(xf->vecSize),1,tok->binForm)){
+      HRError(7013,"GetLinXForm: cannot read vector size");
       return(NULL);
-   }
-   return xf;
+    }
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    if (tok->sym == OFFSET){
+      if(GetToken(src,tok)<SUCCESS){
+	HMError(src,"GetToken failed");
+	return(NULL);
+      }
+      xf->bias = GetBias(hset,src,tok);
+    } else {
+      xf->bias = NULL;
+    }
+    if (tok->sym == LOGDET){
+       if (!ReadFloat(src,&xf->det,1,tok->binForm)){
+          HMError(src,"Determinant of transform expected");
+          return(NULL);
+       }
+       
+       if(GetToken(src,tok)<SUCCESS){
+          HMError(src,"GetToken failed");
+          return(NULL);
+       }
+    } else {
+        xf->det = 0;
+    } 
+    if (tok->sym!=BLOCKINFO){
+      HMError(src,"<BLOCKINFO> symbol expected");
+      return(NULL);
+    }
+    if (!ReadInt(src,&numBlocks,1,tok->binForm)){
+      HMError(src,"Number of transform blocks expected");
+      return(NULL);
+    }
+    xf->blockSize = CreateIntVec(hmem,numBlocks);
+    if (!ReadInt(src,xf->blockSize+1,numBlocks,tok->binForm)){
+      HMError(src,"Size of blocks expected");
+      return(NULL);
+    }    
+    xf->xform = (Matrix *)New(hmem,(numBlocks+1)*sizeof(Matrix));
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    for (i=1;i<=numBlocks;i++) {
+      if (tok->sym != BLOCK){
+	HMError(src,"<NUMXFORMS> symbol expected");
+	return(NULL);
+      }
+      if (!ReadInt(src,&b,1,tok->binForm)){
+	HMError(src,"Weight class expected");
+	return(NULL);
+      }      
+      if (b != i) {
+	HMError(src,"Inconsistency in transform definition");
+	return(NULL);
+      }
+      if(GetToken(src,tok)<SUCCESS){
+	HMError(src,"GetToken failed");
+	return(NULL);
+      }
+      xf->xform[i] = GetTransform(hset,src,tok);
+    }
+    xf->nUse = 0;
+  }
+  else if ((tok->sym==MACRO && tok->macroType=='f') && (hset != NULL)){
+    if((xf=(LinXForm *)GetStructure(hset,src,'f'))==NULL){
+      HMError(src,"GetStructure Failed");
+      return(NULL);
+    }
+    xf->nUse++;
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+  } else{
+    HMError(src,"<VECSIZE> symbol expected in GetXFormSet");
+    return(NULL);
+  }
+  return xf;
 }
 
-/* GetInputXForm: get the input linear transformations */
+/* GetXFormSet: get the set of linear transformations */
+static XFormSet* GetXFormSet(HMMSet *hset, Source *src, Token *tok)
+{
+  char buf[MAXSTRLEN];
+  int i,b;
+  XFormSet *xformSet;
+
+  if (trace&T_PAR) printf("HModel: GetXFormSet\n");
+  if (tok->sym == XFORMKIND) {
+    xformSet = (XFormSet *)New(hset->hmem,sizeof(XFormSet));
+    if (!ReadString(src,buf)){
+      HRError(7013,"GetXFormSet: cannot read Transform Kind");
+      return(NULL);
+    }
+    xformSet->xkind = Str2XFormKind(buf);
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    if (tok->sym != NUMXFORMS){
+      HMError(src,"<NUMXFORMS> symbol expected");
+      return(NULL);
+    }
+    if (!ReadInt(src,&(xformSet->numXForms),1,tok->binForm)){
+      HMError(src,"Baseclasse number for regression base class expected");
+      return(NULL);
+    }
+    xformSet->xforms = 
+      (LinXForm **)New(hset->hmem,(xformSet->numXForms+1)*sizeof(LinXForm *));
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    for (i=1;i<=xformSet->numXForms;i++) {
+      if (tok->sym != LINXFORM){
+	HMError(src,"<LINXFORM> symbol expected");
+	return(NULL);
+      }
+      if (!ReadInt(src,&b,1,tok->binForm)){
+	HMError(src,"Transform number expected");
+	return(NULL);
+      }      
+      if (b != i) {
+	HMError(src,"Inconsistency in transform definition");
+	return(NULL);
+      }
+      if(GetToken(src,tok)<SUCCESS){
+	HMError(src,"GetToken failed");
+	return(NULL);
+      }
+      xformSet->xforms[i] = GetLinXForm(hset,src,tok);
+    }
+    xformSet->nUse=0;
+  }
+  else if (tok->sym==MACRO && tok->macroType=='g'){
+    if((xformSet=(XFormSet *)GetStructure(hset,src,'g'))==NULL){
+      HMError(src,"GetStructure Failed");
+      return(NULL);
+    }
+    xformSet->nUse++;
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+  } else{
+    HMError(src,"<XFORMKIND> symbol expected in GetXFormSet");
+    return(NULL);
+  }
+  return xformSet;
+}
+
+/* GetXFormSet: get the set of linear transformations */
 static InputXForm* GetInputXForm(HMMSet *hset, Source *src, Token *tok)
 {
-   char buf[MAXSTRLEN];
-   MemHeap *hmem;
-   InputXForm *xf;
+  char buf[MAXSTRLEN];
+  MemHeap *hmem;
+  InputXForm *xf;
 
-   if (trace&T_PAR) printf("HModel: GetXForm\n");
-   if (tok->sym == MMFIDMASK) { 
-      if (hset==NULL) hmem = &xformStack;
-      else hmem = hset->hmem;
-      xf = (InputXForm *)New(hmem,sizeof(InputXForm));
-      xf->fname = CopyString(hmem,src->name);
-      xf->xformName = NULL;
-      if (!ReadString(src,buf)){
-         HRError(7013,"GetInputXForm: cannot read MMFIDMASK");
-         return(NULL);
-      }
-      xf->mmfIdMask = CopyString(hmem,buf);
-      if(GetToken(src,tok)<SUCCESS){
-         HMError(src,"GetToken failed");
-         return(NULL);
-      }
-      if (tok->sym != PARMKIND) {
-         HMError(src,"parameter kind symbol expected");
-         return(NULL);
-      }
-      xf->pkind = tok->pkind;
-      if(GetToken(src,tok)<SUCCESS){
-         HMError(src,"GetToken failed");
-         return(NULL);
-      }
-      if (tok->sym == PREQUAL) {
-         xf->preQual = TRUE;
-         if(GetToken(src,tok)<SUCCESS){
-            HMError(src,"GetToken failed");
-            return(NULL);
-         }
-      } else 
-         xf->preQual = FALSE;
-      if (tok->sym != LINXFORM){
-         HMError(src,"<LINXFORM> symbol expected");
-         return(NULL);
-      }
-      if(GetToken(src,tok)<SUCCESS){
-         HMError(src,"GetToken failed");
-         return(NULL);
-      }
-      xf->xform = GetLinXForm(hset,src,tok);
-      xf->nUse=0;
-   }
-   else if ((tok->sym==MACRO && tok->macroType=='j') && (hset != NULL)){
-      if((xf=(InputXForm *)GetStructure(hset,src,'j'))==NULL){
-         HMError(src,"GetStructure Failed");
-         return(NULL);
-      }
-      xf->nUse++;
-      if(GetToken(src,tok)<SUCCESS){
-         HMError(src,"GetToken failed");
-         return(NULL);
-      }
-   } else{
-      HMError(src,"<MMFIDMASK> symbol expected in GetInputXForm");
+  if (trace&T_PAR) printf("HModel: GetXForm\n");
+  if (tok->sym == MMFIDMASK) { 
+    if (hset==NULL) hmem = &xformStack;
+    else hmem = hset->hmem;
+    xf = (InputXForm *)New(hmem,sizeof(InputXForm));
+    xf->fname = CopyString(hmem,src->name);
+    xf->xformName = NULL;
+    if (!ReadString(src,buf)){
+      HRError(7013,"GetInputXForm: cannot read MMFIDMASK");
       return(NULL);
-   }
-   return xf;
+    }
+    xf->mmfIdMask = CopyString(hmem,buf);
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    if (tok->sym != PARMKIND) {
+      HMError(src,"parameter kind symbol expected");
+      return(NULL);
+    }
+    xf->pkind = tok->pkind;
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    if (tok->sym == PREQUAL) {
+      xf->preQual = TRUE;
+      if(GetToken(src,tok)<SUCCESS){
+	HMError(src,"GetToken failed");
+	return(NULL);
+      }
+    } else 
+      xf->preQual = FALSE;
+    if (tok->sym != LINXFORM){
+      HMError(src,"<LINXFORM> symbol expected");
+      return(NULL);
+    }
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    xf->xform = GetLinXForm(hset,src,tok);
+    xf->nUse=0;
+  }
+  else if ((tok->sym==MACRO && tok->macroType=='j') && (hset != NULL)){
+    if((xf=(InputXForm *)GetStructure(hset,src,'j'))==NULL){
+      HMError(src,"GetStructure Failed");
+      return(NULL);
+    }
+    xf->nUse++;
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+  } else{
+    HMError(src,"<MMFIDMASK> symbol expected in GetInputXForm");
+    return(NULL);
+  }
+  return xf;
+}
+
+/* GetAdaptXFormDef: get a adaptation transform def from given source */
+static AdaptXForm* GetAdaptXForm(HMMSet *hset, Source *src, Token *tok)
+{
+  char buf[MAXSTRLEN];
+  AdaptXForm *xform;
+  LabId id;
+  MLink m;
+  int i,b;
+
+  if (trace&T_PAR) printf("HModel: GetAdaptXForm\n");
+  if ((hset->hsKind != PLAINHS) && (hset->hsKind != SHAREDHS))
+     HError(999,"Can only estimated transforms with PLAINHS and SHAREDHS!");
+  if (tok->sym == ADAPTKIND) {
+    xform = (AdaptXForm *)New(hset->hmem,sizeof(AdaptXForm));
+    xform->fname = CopyString(hset->hmem,src->name);
+    xform->mem = hset->hmem;
+    xform->hset = hset;
+    /* regression tree only meaningful when generating xform */
+    xform->rtree = NULL;
+    xform->nUse = 0;
+    xform->xformName = NULL;
+    if (!ReadString(src,buf)){
+      HRError(7013,"GetAdaptXForm: cannot read Transform Kind");
+      return(NULL);
+    }
+    xform->akind = Str2AdaptKind(buf);
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    if (tok->sym != BASECLASS){
+      HMError(src,"<BASECLASS> symbol expected");
+      return(NULL);
+    }
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    if (tok->sym==MACRO && tok->macroType=='b') {
+      if (!ReadString(src,buf))
+	HError(7013,"GetAdaptXForm: cannot read base class macro name");
+      xform->bclass = LoadBaseClass(hset,buf,NULL);	
+      if(GetToken(src,tok)<SUCCESS){
+	HMError(src,"GetToken failed");
+	return(NULL);
+      }
+    } else /* or just load the macro explicitly */
+      xform->bclass = GetBaseClass(hset,src,tok);
+    if (tok->sym == PARENTXFORM) { /* Is there a parent transform */
+      if(GetToken(src,tok)<SUCCESS){
+	HMError(src,"GetToken failed");
+	return(NULL);
+      }
+      /* is it stored as a macro - need to go and find it */
+      if (tok->sym==MACRO && tok->macroType=='a') {
+	if (!ReadString(src,buf))
+	  HError(7013,"GetAdaptXForm: cannot read parent macro name");
+	xform->parentXForm = LoadOneXForm(hset,buf,NULL);	
+	if(GetToken(src,tok)<SUCCESS){
+	  HMError(src,"GetToken failed");
+	  return(NULL);
+	}
+      } else /* or just load the macro explicitly */
+	xform->parentXForm = GetAdaptXForm(hset, src, tok);
+    } else {
+      xform->parentXForm = NULL;
+    }
+    if (tok->sym != XFORMSET){
+      HMError(src,"<XFORMSET> symbol expected");
+      return(NULL);
+    }
+    if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+    }
+    xform->xformSet = GetXFormSet(hset,src,tok);
+    if (tok->sym != XFORMWGTSET){
+      HMError(src,"<XFORMWGTSET> symbol expected");
+      return(NULL);
+    }
+    if (HardAssign(xform)) {
+      xform->xformWgts.assign = CreateIntVec(hset->hmem,xform->bclass->numClasses);
+    } else 
+      HError(999,"Currently not supported");
+    for (i=1;i<=xform->bclass->numClasses;i++) {
+      if(GetToken(src,tok)<SUCCESS){
+	HMError(src,"GetToken failed");
+	return(NULL);
+      }
+      if (tok->sym != CLASSXFORM){
+	HMError(src,"<CLASSXFORM> symbol expected");
+	return(NULL);
+      }
+      if (!ReadInt(src,&b,1,tok->binForm)){
+	HMError(src,"Weight class expected");
+	return(NULL);
+      }      
+      if (b != i) {
+	HMError(src,"Inconsistency in transform weight definition");
+	return(NULL);
+      }
+      if (HardAssign(xform)) {
+	if (!ReadInt(src,&(xform->xformWgts.assign[i]),1,tok->binForm)){
+	  HMError(src,"XForm class expected");
+	  return(NULL);
+	}      
+      } else 
+	HError(999,"Currently not supported");
+    }
+  }
+  else if (tok->sym==MACRO && tok->macroType=='a'){ 
+    /* xforms should always be stored with macro headers */
+    if (!ReadString(src,buf))
+      HError(7013,"GetAdaptXForm: cannot read macro name");
+    id = GetLabId(buf,FALSE);
+    if ((id==NULL) || ((m = FindMacroName(hset,'a',id)) == NULL)) { /* macro may be defined elsewhere */
+      xform = LoadOneXForm(hset, buf, NULL);
+      xform->xformName = CopyString(hset->hmem,buf);
+    } else {
+      m = FindMacroName(hset,'a',id);
+      if (m==NULL) 
+	HError(7035,"GetAdaptXForm: no macro %s, type a exists",buf);  
+      xform = (AdaptXForm *)(m->structure);
+      if (xform->hset != hset)
+	HError(7035,"GetAdaptXForm: inconsistency in HMMSet");           
+    }
+    xform->nUse++;
+  } else{
+    HMError(src,"<ADAPTKIND> symbol expected in GetXFormSet");
+    return(NULL);
+  }
+  if(GetToken(src,tok)<SUCCESS){
+    HMError(src,"GetToken failed");
+    return(NULL);
+  }
+  return xform;
 }
 
 /* ---------------------- Symbol Output Routine ------------------------ */
@@ -2325,6 +2777,25 @@ static void PutTransform(HMMSet *hset, FILE *f, MLink q, SMatrix m,
    }
 }
 
+/* PutBias: output bias vector to stream f */
+static void PutBias(HMMSet *hset, FILE *f, MLink q, SVector m, 
+                    Boolean inMacro, Boolean binary)
+{
+   int nUse;
+   short size;
+   
+   nUse = GetUse(m);
+   if (nUse > 0 || inMacro) 
+      PutMacroHdr(hset,f,q,'y',m,binary);
+   if (nUse == 0 || inMacro) {
+      PutSymbol(f,BIAS,binary);
+      size = VectorSize(m);
+      WriteShort(f,&size,1,binary);
+      if (!binary) fprintf(f,"\n");
+      WriteVector(f,m,binary);
+   }
+}
+
 /* PutDuration: output duration vector to stream f */
 static void PutDuration(HMMSet *hset, FILE *f, MLink q, SVector v,
                         Boolean inMacro, Boolean binary)
@@ -2404,133 +2875,116 @@ static void PutTransMat(HMMSet *hset, FILE *f, MLink q, SMatrix m,
 }
 
 /* ----------------- Regression Tree Output Functions -------------------- */
-/* linked list of components that are grouped into a cluster */
-typedef struct _CoList {
-  
-   struct _CoList *next;     /* next component in the linked list */
-   char   *hmmName;          /* Physical hmm name for this component */
-   int    state;             /* state containing this component */
-   int    stream;            /* stream for this component */
-   int    mix;               /* mixture for this component */
-   MixPDF *mp;               /* actual component */
-  
-} CoList;
 
-/* node information in the regression class tree */
-typedef struct {
-  
-   Vector aveMean;           /* node cluster mean */
-   Vector aveCovar;          /* node cluster variance */
-   float  clusterScore;      /* node cluster score */
-   float  clustAcc;          /* accumulates in this cluster */
-   int    nComponents;       /* number of components in this cluster */
-   short  nodeIndex;         /* node index number */
-   CoList *list;             /* linked list of the mixture components */
-  
-} RNode;
-
-/* return the node of a tree */
-static RNode *GetRNode(RegTree *t) {
-
-   return ((RNode *) t->node);
-
-}
-
-static void GetTreeVector(RegTree **tVec, RegTree *t) {
-  
-   RNode *n;
-   short index;
-
-   if (t != NULL) {
-      GetTreeVector(tVec, t->left);
-      if (t->nodeInfo == NULL) {
-         n = GetRNode(t);
-         index = n->nodeIndex;
-      }
-      else
-         index = t->nodeInfo->nodeIndex;
-      tVec[index] = t;
-      GetTreeVector(tVec, t->right);
-   } 
-  
-}
-
-/* find the number of terminals in the tree (returned in nTerms) */
-static void FindNumTerminals(RegTree *t, short *nTerms) 
+/* GetMixPDFInfo: get state, stream and number of specified mpdf */
+static void GetMixPDFInfo(HMMSet *hset, HMMDef *hmm, MixtureElem *tme, int *state, int *stream, int *comp)
 {
-   if (t != NULL) {
-      FindNumTerminals(t->left, nTerms);
-      if (t->left == NULL)
-         *nTerms += 1;
-      FindNumTerminals(t->right, nTerms);
+   int M,N,S,i,m,s;
+   Boolean found;
+   StateElem *se;
+   StreamElem *ste;
+   MixtureElem *me;
+
+   found = FALSE;
+   N = hmm->numStates;
+   se = hmm->svec+2;
+   S = hset->swidth[0];
+   *state=0;
+   for (i=2; i<N; i++,se++){
+      ste = se->info->pdf+1;
+      for (s=1;s<=S;s++,ste++){
+         me = ste->spdf.cpdf + 1; M = ste->nMix;
+         for (m=1;m<=M;m++,me++) {
+            if (me == tme) {
+               *state = i; *stream = s;
+               *comp = m; found = TRUE;
+               break;
+            }
+         }
+         if (found) break;
+      }
+      if (found) break;
+   }
+   if (*state==0) HError(999,"GetMixPDFInfo: component not found");
+}
+
+
+/* PutBaseClass: output the regression class tree */
+static void PutBaseClass(HMMSet *hset, FILE *f, MLink q, BaseClass *bclass, 
+			 Boolean inMacro, Boolean binary) 
+{
+  char buf[MAXSTRLEN];
+  int numClass, c;
+  ILink i;
+  int stream, state, comp;
+  HMMDef *hmm;
+  
+  if (bclass->fname == NULL)
+     HError(999,"Can only PutBaseClass with baseclasses that have been read");
+  if (bclass->nUse >0 || inMacro)  
+    PutMacroHdr(hset,f,q,'b',bclass,binary);
+  if (bclass->nUse == 0 || inMacro) {
+    PutSymbol(f,MMFIDMASK,binary);
+    fprintf(f," %s ",bclass->mmfIdMask);
+    if (!binary) fprintf(f,"\n");
+    PutSymbol(f,PARAMETERS,binary);
+    WriteString(f,BaseClassKind2Str(bclass->bkind,buf),DBL_QUOTE);
+    if (!binary) fprintf(f,"\n");
+    PutSymbol(f,NUMCLASSES,binary);
+    numClass = bclass->numClasses;
+    WriteInt(f,&(numClass),1,binary);
+    if (!binary) fprintf(f,"\n");
+    for (c=1;c<=numClass;c++) {
+       PutSymbol(f,CLASS,binary);
+       WriteInt(f,&(c),1,binary);
+       fprintf(f," {");       
+       for (i=bclass->ilist[c]; i!=NULL; i=i->next) {
+          hmm = i->owner;
+          GetMixPDFInfo(hset,hmm,(MixtureElem *)i->item,&state,&stream,&comp);
+          if (i!=bclass->ilist[c]) fprintf(f,",");
+          if (hset->swidth[0] == 1) /* single stream case */
+             fprintf(f,"%s.state[%d].mix[%d]",HMMPhysName(hset,hmm),state,comp);
+          else 
+             fprintf(f,"%s.state[%d].stream[%d].mix[%d]",HMMPhysName(hset,hmm),state,stream,comp);
+       }
+       fprintf(f,"}\n");       
+    }
+  }    
+}
+
+/* PutRegTreeNode: outpur a node a regression tree 
+   this should only be printed explicitly (not in the form of a macro */
+static void PutRegNode(HMMSet *hset, FILE *f, RegNode *rnode, Boolean binary) 
+{
+   int size,c;
+
+   if (rnode->numChild == 0) { /* terminal node */
+      PutSymbol(f,TNODE,binary);
+      WriteInt(f,&(rnode->nodeIndex),1,binary);      
+      size = IntVecSize(rnode->baseClasses);
+      WriteInt(f,&size,1,binary);
+      WriteIntVec(f,rnode->baseClasses, binary);
+   } else {
+      PutSymbol(f,NODE,binary);
+      WriteInt(f,&(rnode->nodeIndex),1,binary);      
+      WriteInt(f,&(rnode->numChild),1,binary);
+      for (c=1;c<=rnode->numChild;c++)
+         WriteInt(f,&(rnode->child[c]->nodeIndex),1,binary);      
+      if (!binary) fprintf(f,"\n");
+      for (c=1;c<=rnode->numChild;c++)
+         PutRegNode(hset,f,rnode->child[c],binary);
    }
 }
-
 
 /* PutRegTree: output the regression class tree */
 static void PutRegTree(HMMSet *hset, FILE *f, MLink q, RegTree *t, 
-                       Boolean inMacro, Boolean binary) {
-  
-
-   RegTree **tVec=NULL;
-   RNode *n=NULL;
-   int i, nNodes=0;
-   short nTerms=0;
-   short index;
-   int nComps;
-
+                       Boolean inMacro, Boolean binary) 
+{
    PutMacroHdr(hset,f,q,'r',t,binary);
-   FindNumTerminals(t, &nTerms);
-   nNodes = nTerms*2 - 1;
-   tVec = (RegTree **) New(&gstack, nNodes*sizeof(RegTree *));
-   --tVec;
-   GetTreeVector(tVec, t);
-   /* Write the regression tree header */
-   PutSymbol(f, REGTREE, binary);
-   WriteShort(f,&nTerms,1,binary);
-   if (!binary) fprintf(f,"\n");
-   /* Write the rest of the tree */
-   for (i = 1; i <= nNodes; i++) {
-      if (tVec[i]->nodeInfo == NULL) {
-         n = GetRNode(tVec[i]);
-         index = n->nodeIndex;
-         nComps = n->nComponents;
-      }
-      else {
-         index = tVec[i]->nodeInfo->nodeIndex;
-         nComps = tVec[i]->nodeInfo->nodeComps;
-      }
-      if (tVec[i]->left == NULL) {
-         PutSymbol(f, TNODE, binary);
-         WriteShort(f,&index,1,binary);
-         WriteInt(f,&nComps,1,binary);
-         /* WriteFloat(f,&(n->clustAcc),1,binary);
-            WriteFloat(f,&(n->clusterScore),1,binary); */
-         if (!binary) fprintf(f,"\n");
-      }
-      else {
-         PutSymbol(f, NODE, binary);
-         WriteShort(f,&index,1,binary);
-         if (tVec[i]->left->nodeInfo == NULL) {
-            n = GetRNode(tVec[i]->left);
-            index = n->nodeIndex;
-         }
-         else
-            index = tVec[i]->left->nodeInfo->nodeIndex;
-         WriteShort(f,&index,1,binary);      
-         if (tVec[i]->right->nodeInfo == NULL) {
-            n = GetRNode(tVec[i]->right);
-            index = n->nodeIndex;
-         }
-         else
-            index = tVec[i]->right->nodeInfo->nodeIndex;
-         WriteShort(f,&index,1,binary);
-         if (!binary) fprintf(f,"\n");
-      } 
-   }
-   /* Dispose(&gstack, tVec); */
+   PutSymbol(f,BASECLASS,binary);
+   PutBaseClass(hset,f,NULL,t->bclass,FALSE,binary);
+   PutRegNode(hset,f,t->root,binary);
 }
-
 
 /* PutMixPDF: output mixture pdf to stream f */
 static void PutMixPDF(HMMSet *hset, FILE *f, MLink q, MixPDF *mp, 
@@ -2539,11 +2993,6 @@ static void PutMixPDF(HMMSet *hset, FILE *f, MLink q, MixPDF *mp,
    if (mp->nUse >0 || inMacro)  
       PutMacroHdr(hset,f,q,'m',mp,binary);
    if (mp->nUse == 0 || inMacro){
-      if (saveRegClass && mp->rClass!=0) {
-         PutSymbol(f,RCLASS,binary);
-         WriteShort(f,&mp->rClass,1,binary);
-         if (!binary) fprintf(f,"\n");
-      }
       PutMean(hset,f,NULL,mp->mean,FALSE,binary);
       switch(mp->ckind){
       case DIAGC:  PutVariance(hset,f,NULL,mp->cov.var,FALSE,binary); break;
@@ -2625,73 +3074,116 @@ static void PutStateInfo(HMMSet *hset, FILE *f, MLink q, StateInfo *si,
    }
 }
 
-/* PutBias: output bias vector to stream f */
-static void PutBias(HMMSet *hset, FILE *f, MLink q, SVector m, 
-                    Boolean inMacro, Boolean binary)
+static void PutLinXForm(HMMSet *hset, FILE *f, MLink q, LinXForm *xf, 
+			  Boolean inMacro, Boolean binary)
 {
-   int nUse;
-   short size;
-   
-   nUse = GetUse(m);
-   if (nUse > 0 || inMacro) 
-      PutMacroHdr(hset,f,q,'y',m,binary);
-   if (nUse == 0 || inMacro) {
-      PutSymbol(f,BIAS,binary);
-      size = VectorSize(m);
-      WriteShort(f,&size,1,binary);
+  int i;
+
+  if (xf->nUse > 0 || inMacro) 
+    PutMacroHdr(hset,f,q,'f',xf,binary);
+  if (xf->nUse == 0 || inMacro){
+    PutSymbol(f,VECSIZE,binary);
+    WriteInt(f,&(xf->vecSize),1,binary);
+    if (!binary) fprintf(f,"\n");
+    if (xf->bias != NULL) {
+      PutSymbol(f,OFFSET,binary);
       if (!binary) fprintf(f,"\n");
-      WriteVector(f,m,binary);
-   }
+      PutBias(hset,f,NULL,xf->bias,FALSE,binary);      
+    }
+    if ( xf->det != 0) {
+      PutSymbol(f,LOGDET,binary);
+      WriteFloat(f, &(xf->det), 1, binary);
+      if (!binary) fprintf(f,"\n");
+    }
+    PutSymbol(f,BLOCKINFO,binary);
+    WriteInt(f,xf->blockSize,1,binary);
+    for (i=1;i<=IntVecSize(xf->blockSize);i++) {
+      WriteInt(f,xf->blockSize+i,1,binary);
+    }
+    if (!binary) fprintf(f,"\n");
+    for (i=1;i<=IntVecSize(xf->blockSize);i++) {
+      PutSymbol(f,BLOCK,binary);
+      WriteInt(f,&i,1,binary);
+      if (!binary) fprintf(f,"\n");
+      PutTransform(hset,f,NULL,xf->xform[i],FALSE,binary);
+    }
+  }
 }
 
-static void PutLinXForm(HMMSet *hset, FILE *f, MLink q, LinXForm *xf, 
-                        Boolean inMacro, Boolean binary)
+static void PutXFormSet(HMMSet *hset, FILE *f, MLink q, XFormSet *xformSet, 
+			  Boolean inMacro, Boolean binary)
 {
-   int i;
+  int i;
+  char buf[MAXSTRLEN];
 
-   if (xf->nUse > 0 || inMacro) 
-      PutMacroHdr(hset,f,q,'f',xf,binary);
-   if (xf->nUse == 0 || inMacro){
-      PutSymbol(f,VECSIZE,binary);
-      WriteInt(f,&(xf->vecSize),1,binary);
+  if (xformSet->nUse > 0 || inMacro) 
+    PutMacroHdr(hset,f,q,'g',xformSet,binary);
+  if (xformSet->nUse == 0 || inMacro){
+    PutSymbol(f,XFORMKIND,binary);
+    fprintf(f,"%s\n",XFormKind2Str(xformSet->xkind,buf));
+    PutSymbol(f,NUMXFORMS,binary);
+    WriteInt(f,&(xformSet->numXForms),1,binary);
+    if (!binary) fprintf(f,"\n");
+    for (i=1;i<=xformSet->numXForms;i++) {
+      PutSymbol(f,LINXFORM,binary);
+      WriteInt(f,&i,1,binary);
       if (!binary) fprintf(f,"\n");
-      if (xf->bias != NULL) {
-         PutSymbol(f,OFFSET,binary);
-         if (!binary) fprintf(f,"\n");
-         PutBias(hset,f,NULL,xf->bias,inMacro,binary);      
-      }
-      PutSymbol(f,BLOCKINFO,binary);
-      WriteInt(f,xf->blockSize,1,binary);
-      for (i=1;i<=IntVecSize(xf->blockSize);i++) {
-         WriteInt(f,xf->blockSize+i,1,binary);
-      }
-      if (!binary) fprintf(f,"\n");
-      for (i=1;i<=IntVecSize(xf->blockSize);i++) {
-         PutSymbol(f,BLOCK,binary);
-         WriteInt(f,&i,1,binary);
-         if (!binary) fprintf(f,"\n");
-         PutTransform(hset,f,NULL,xf->xform[i],inMacro,binary);
-      }
-   }
+      PutLinXForm(hset,f,NULL,xformSet->xforms[i],FALSE,binary);
+    }
+  }
 }
 
 static void PutInputXForm(HMMSet *hset, FILE *f, MLink q, InputXForm *xf, 
 			  Boolean inMacro, Boolean binary)
 {
-   char buf[MAXSTRLEN];
+  char buf[MAXSTRLEN];
   
-   if (xf->nUse > 0 || inMacro) 
-      PutMacroHdr(hset,f,q,'j',xf,binary);
-   if (xf->nUse == 0 || inMacro){
-      PutSymbol(f,MMFIDMASK,binary);
-      fprintf(f," %s ",xf->mmfIdMask);
-      fprintf(f,"<%s>", ParmKind2Str(xf->pkind,buf));
-      if (xf->preQual)
-         PutSymbol(f,PREQUAL,binary);
-      if (!binary) fprintf(f,"\n");
-      PutSymbol(f,LINXFORM,binary);
-      PutLinXForm(hset,f,NULL,xf->xform,FALSE,binary);
-   }
+  if (xf->nUse > 0 || inMacro) 
+    PutMacroHdr(hset,f,q,'j',xf,binary);
+  if (xf->nUse == 0 || inMacro){
+    PutSymbol(f,MMFIDMASK,binary);
+    fprintf(f," %s ",xf->mmfIdMask);
+    fprintf(f,"<%s>", ParmKind2Str(xf->pkind,buf));
+    if (xf->preQual)
+      PutSymbol(f,PREQUAL,binary);
+    if (!binary) fprintf(f,"\n");
+    PutSymbol(f,LINXFORM,binary);
+    PutLinXForm(hset,f,NULL,xf->xform,FALSE,binary);
+  }
+}
+
+static void PutAdaptXForm(HMMSet *hset, FILE *f, MLink q, AdaptXForm *xform, 
+			  Boolean inMacro, Boolean binary)
+{
+  int i;
+  char buf[MAXSTRLEN];
+
+  if (xform->nUse > 0 || inMacro) 
+    PutMacroHdr(hset,f,q,'a',xform,binary);
+  if (xform->nUse == 0 || inMacro){
+    PutSymbol(f,ADAPTKIND,binary);
+    fprintf(f,"%s\n",AdaptKind2Str(xform->akind,buf));
+    PutSymbol(f,BASECLASS,binary);
+    PutBaseClass(hset,f,NULL,xform->bclass,FALSE,binary);
+    if (xform->parentXForm != NULL) {
+      PutSymbol(f,PARENTXFORM,binary);
+      PutAdaptXForm(hset,f,NULL,xform->parentXForm,FALSE,binary);
+    }
+    PutSymbol(f,XFORMSET,binary);
+    if (!binary) fprintf(f,"\n");
+    PutXFormSet(hset,f,NULL,xform->xformSet,FALSE,binary);
+    PutSymbol(f,XFORMWGTSET,binary);
+    if (!binary) fprintf(f,"\n");
+    for (i=1;i<=xform->bclass->numClasses;i++) {
+      PutSymbol(f,CLASSXFORM,binary);
+      WriteInt(f,&i,1,binary);	
+      if (HardAssign(xform)) {
+	WriteInt(f,&(xform->xformWgts.assign[i]),1,binary);	
+      } else 
+	HError(999,"Not currently supported");
+      fprintf(f,"\n");
+    }
+  }
 }
 
 /* PutOptions: write the current global options to f */
@@ -2718,8 +3210,8 @@ static void PutOptions(HMMSet *hset, FILE *f, Boolean binary)
       fprintf(f,"<%s>", CovKind2Str(hset->ckind,buf));
    if (!binary) fprintf(f,"\n");
    if ((saveInputXForm) && (hset->xf != NULL)) {
-      PutSymbol(f,INPUTXFORM, binary);
-      PutInputXForm(hset,f,NULL,hset->xf,FALSE,binary);          
+     PutSymbol(f,INPUTXFORM, binary);
+     PutInputXForm(hset,f,NULL,hset->xf,FALSE,binary);          
    }
 }
 
@@ -2784,8 +3276,46 @@ MLink NewMacro(HMMSet *hset, short fidx, char type, LabId id, Ptr structure)
    MLink m;
    PtrMap *p;
 
-   if (FindMacroName(hset,type,id) != NULL){
-      HError(7036,"NewMacro: macro or model name %s already exists",id->name);
+   m = FindMacroName(hset,type,id);
+   if (m != NULL){
+     /* 
+	Create special exception for allowing multiple definitions of
+	the same macro. These are due to flexibility in xform code.
+	Exceptional macros are:
+	'a' adaptation transform definition
+	'b' baseclass definition
+	'r' regression class tree definition
+	All these macros have an associated fname field that states
+	the filename that they were loaded from. Note that the memory
+	from the structure is not freed.
+     */
+     switch (type) { 
+     case 'a':
+       if (!(strcmp(((AdaptXForm *)m->structure)->fname,((AdaptXForm *)structure)->fname))) {
+	 HRError(7036,"Duplicate copy of ~a macro %s loaded from %s",id->name,((AdaptXForm *)m->structure)->fname);
+	 return m;
+       }
+       break;
+     case 'b':
+       if (!(strcmp(((BaseClass *)m->structure)->fname,((BaseClass *)structure)->fname))) {
+	 HRError(7036,"Duplicate copy of ~b macro %s loaded from %s",id->name,((BaseClass *)m->structure)->fname);
+	 return m;
+       } else {
+	 HRError(7036,"WARNING: Duplicate copies of ~b macro %s loaded from %s and %s",
+                 id->name,((BaseClass *)m->structure)->fname,((BaseClass *)m->structure)->fname);
+	 return m;
+       }
+       break;
+     case 'r':
+       if (!(strcmp(((RegTree *)m->structure)->fname,((RegTree *)structure)->fname))) {
+	 HRError(7036,"Duplicate copy of ~r macro %s loaded from %s",id->name,((RegTree *)m->structure)->fname);
+	 return m;
+       }
+       break;
+     default:
+       break;
+     }
+     HError(7036,"NewMacro: macro or model name %s already exists",id->name);
    }
 
    m = (MLink)New(hset->hmem,sizeof(MacroDef));
@@ -2908,7 +3438,7 @@ Boolean HasMacros(HMMSet *hset, char * types)
 void SetVFloor(HMMSet *hset, Vector *vFloor, float minVar)
 {
    int j,s,S,size;
-   char mac[MAXSTRLEN], num[10];
+   char mac[256], num[10];
    LabId id;
    MLink m;
    SVector v;
@@ -2949,7 +3479,7 @@ void ApplyVFloor(HMMSet *hset)
    LabId id;
    char mac[32];
    HMMScanState hss;
-   LogFloat ldet;
+   /* LogFloat ldet; */
 
    /* get varFloor vectors */
    S=hset->swidth[0];
@@ -3026,7 +3556,6 @@ void ApplyVFloor(HMMSet *hset)
       fflush(stdout);
    }
 }
-
 
 /* ---------------------- Print Profile Routines ---------------------- */
 
@@ -3214,8 +3743,8 @@ static ReturnStatus LoadAllMacros(HMMSet *hset, char *fname, short fidx)
             else {
                if (trace&T_MAC)
                   printf("HModel: getting HMM Def from macro %s\n",m->id->name);
-               if(GetToken(&src,&tok)<SUCCESS){
-                  TermScanner(&src);
+	       if (GetToken(&src,&tok)<SUCCESS) {
+		  TermScanner(&src);
                   HMError(&src,"LoadAllMacros: GetToken failed");
                   return(FAIL);
                }
@@ -3226,9 +3755,9 @@ static ReturnStatus LoadAllMacros(HMMSet *hset, char *fname, short fidx)
                }               
                m->fidx = fidx;
             }
-         } else {             /* load a shared structure */
-            /* input transforms are store prior to the options !! */
-            if ((type != 'j') && (CheckOptions(hset)<SUCCESS)) {
+	 } else {             /* load a shared structure */
+	   /* input transforms are store prior to the options !! */
+	   if ((type != 'j') && (CheckOptions(hset)<SUCCESS)) {
                TermScanner(&src);
                HMError(&src,"LoadAllMacros: CheckOptions failed");
                return(FAIL);
@@ -3245,18 +3774,27 @@ static ReturnStatus LoadAllMacros(HMMSet *hset, char *fname, short fidx)
             case 'v': structure = GetVariance(hset,&src,&tok);  break;
             case 'i': structure = GetCovar(hset,&src,&tok);     break;
             case 'c': structure = GetCovar(hset,&src,&tok);     break;
-            case 'x': structure = GetTransform(hset,&src,&tok); break;
             case 'w': structure = GetSWeights(hset,&src,&tok);  break;
             case 't': structure = GetTransMat(hset,&src,&tok);  break;
             case 'd': structure = GetDuration(hset,&src,&tok);  break;
-            case 'r': structure = GetRegTree(hset,&src,&tok);   break;
-               /* code for input transform support */
+	      /* code for transform support */
+            case 'a': 
+	      structure = GetAdaptXForm(hset,&src,&tok);
+	      ((AdaptXForm *)structure)->xformName = CopyString(hset->hmem,id->name);
+	      break;
+            case 'r': 
+	      structure = GetRegTree(hset,&src,&tok);break;
+	    case 'b': 
+	      structure = GetBaseClass(hset,&src,&tok); break;
             case 'f': structure = GetLinXForm(hset,&src,&tok);  break;
+            case 'g': structure = GetXFormSet(hset,&src,&tok);  break;
+            case 'x': structure = GetTransform(hset,&src,&tok); break;
             case 'y': structure = GetBias(hset,&src,&tok);   break;
+	      /* code for input transform support */
             case 'j': 
-               structure = GetInputXForm(hset,&src,&tok);   
-               ((InputXForm *)structure)->xformName = CopyString(hset->hmem,id->name);
-               break;
+	      structure = GetInputXForm(hset,&src,&tok);   
+	      ((InputXForm *)structure)->xformName = CopyString(hset->hmem,id->name);
+	      break;
             default :
                TermScanner(&src);
                HRError(7037,"LoadAllMacros: bad macro type in MMF %s",fname);
@@ -3336,6 +3874,7 @@ void SetIndexes(HMMSet *hset)
    int h,nm,nsm,ns,nss,nt;
    
    /* Reset indexes */
+   indexSet = TRUE;
    nt=0;
    NewHMMScan(hset,&hss);
    while(GoNextState(&hss,FALSE))
@@ -3394,7 +3933,6 @@ void SetIndexes(HMMSet *hset)
    hset->numTransP=nt;
 }
 
-
 /* SetCovKindUsage
 
      Count number of mixtures for using each covKind.
@@ -3409,25 +3947,25 @@ void SetCovKindUsage (HMMSet *hset)
    for (ck = 0; ck < NUMCKIND; ck++)
       hset->ckUsage[ck] =0;
 
-   if (hset->hsKind == PLAINHS || hset->hsKind == SHAREDHS) {
-      NewHMMScan(hset,&hss);
-      while(GoNextMix(&hss,FALSE))
-         ++hset->ckUsage[hss.mp->ckind];
-      EndHMMScan(&hss);
+   if (hset->hsKind == DISCRETEHS) return;
 
-      /* set global covKind if currently unset (i.e. NULLC) */
-      if (hset->ckind == NULLC) {
-         CovKind lastSeenCK;
-         int nCK = 0;
+   NewHMMScan(hset,&hss);
+   while(GoNextMix(&hss,FALSE))
+      ++hset->ckUsage[hss.mp->ckind];
+   EndHMMScan(&hss);
 
-         for (ck = 0; ck < NUMCKIND; ck++)
-            if (hset->ckUsage[ck] > 0) {
-               ++nCK;
-               lastSeenCK = ck;
-            }
-         if (nCK == 1)
-            hset->ckind = lastSeenCK;
-      }
+   /* set global covKind if currently unset (i.e. NULLC) */
+   if (hset->ckind == NULLC) {
+      CovKind lastSeenCK = NULLC;
+      int nCK = 0;
+
+      for (ck = 0; ck < NUMCKIND; ck++)
+         if (hset->ckUsage[ck] > 0) {
+            ++nCK;
+            lastSeenCK = ck;
+         }
+      if (nCK == 1)
+         hset->ckind = lastSeenCK;
    }
 }
 
@@ -3485,7 +4023,7 @@ ReturnStatus LoadHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt)
                   HMError(&src,"LoadHMMSet: GetToken failed");
                   return(FAIL);
                }
-               while (tok.sym == MACRO)
+	       while (tok.sym == MACRO)
                   switch (tok.macroType){
                   case 'o':
                      if(GetOptions(hset,&src,&tok, &nState)==FAIL){
@@ -3555,6 +4093,7 @@ ReturnStatus LoadHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt)
       }
    SetIndexes(hset);
    SetCovKindUsage(hset);
+   SetParmHMMSet(hset);
    return(SUCCESS);
 }
 
@@ -3573,7 +4112,7 @@ void CreateHMMSet(HMMSet *hset, MemHeap *heap, Boolean allowTMods)
    hset->vecSize = 0; hset->swidth[0] = 0;
    hset->dkind = NULLD; hset->ckind = NULLC; hset->pkind = 0;
    hset->numPhyHMM = hset->numLogHMM = hset->numMacros = 0;
-   hset->xf = NULL;
+   hset->xf = NULL; hset->logWt = FALSE;
    for (s=1; s<SMAX; s++) {
       hset->tmRecs[s].nMix = 0; hset->tmRecs[s].mixId = NULL;
       hset->tmRecs[s].probs = NULL; hset->tmRecs[s].mixes = NULL;
@@ -3581,6 +4120,12 @@ void CreateHMMSet(HMMSet *hset, MemHeap *heap, Boolean allowTMods)
    /* initialise the hash tables */
    hset->mtab = (MLink *)MakeHashTab(hset,MACHASHSIZE);
    hset->pmap = NULL;
+   /* initialise adaptation information */
+   hset->attRegAccs = FALSE;
+   hset->attXFormInfo = FALSE;
+   hset->attMInfo = FALSE;
+   hset->curXForm = NULL;
+   hset->parentXForm = NULL;
 }
 
 /* CreateHMM: create logical macro. If pId is unknown, create macro for
@@ -3710,12 +4255,7 @@ static void SaveMacros(FILE *f, HMMSet *hset, short fidx, Boolean binary)
 {
    MLink m;
    int h;
-      
-   /* 
-      First thing is to store the InputXForm if necessary. Rules are:
-      1) If read from Macro file store using related file
-      2) If Loaded using a config variable/Created  store in the first macrofile
-   */
+   
    if (saveInputXForm) { 
       for (h=0; h<MACHASHSIZE; h++)
          for (m=hset->mtab[h]; m!=NULL; m=m->next)
@@ -3742,9 +4282,11 @@ static void SaveMacros(FILE *f, HMMSet *hset, short fidx, Boolean binary)
             case 'c':
                PutCovar(hset,f,m,(SMatrix)m->structure,LLTCOVAR,TRUE,binary); 
                break;
-            case 'x':
-               PutTransform(hset,f,m,(SMatrix)m->structure,TRUE,binary);
-               break;
+	       /* is this going to be an issue ????
+		 case 'x':
+		 PutTransform(hset,f,m,(SMatrix)m->structure,TRUE,binary);
+		 break;
+	       */
             case 'w':
                PutSWeights(hset,f,m,(SVector)m->structure,TRUE,binary); 
                break;
@@ -3754,10 +4296,7 @@ static void SaveMacros(FILE *f, HMMSet *hset, short fidx, Boolean binary)
             case 't':
                PutTransMat(hset,f,m,(SMatrix)m->structure,TRUE,binary);
                break;
-            case 'r':
-               if (saveRegClass)
-                  PutRegTree(hset,f,m,(RegTree *)m->structure,TRUE,binary);
-               break;
+	       /* should these be associated with the models or not ??? */
             default: break;
             }
    for (h=0; h<MACHASHSIZE; h++)    /* then higher levels */
@@ -3768,54 +4307,464 @@ static void SaveMacros(FILE *f, HMMSet *hset, short fidx, Boolean binary)
       for (m=hset->mtab[h]; m!=NULL; m=m->next)
          if (m->fidx == fidx && m->type == 's')
             PutStateInfo(hset,f,m,(StateInfo *)m->structure,TRUE,binary);
-   for (h=0; h<MACHASHSIZE; h++)    /* then top level */
+   for (h=0; h<MACHASHSIZE; h++)    /* then top model level */
       for (m=hset->mtab[h]; m!=NULL; m=m->next)
          if (m->fidx == fidx && m->type == 'h')
             PutHMMDef(hset,f,m,TRUE,binary); 
+   if (saveBaseClass) {   /* then store base classes */
+     /*
+       BaseClasses are stored last as on reading they 
+       construct the itemlist. If someone decides to
+       use multiple MMFs or mixture of looking in the 
+       directory this may cause the macros not to be 
+       found
+     */
+     for (h=0; h<MACHASHSIZE; h++)  
+       for (m=hset->mtab[h]; m!=NULL; m=m->next)
+         if (m->fidx == fidx && m->type == 'b')
+	   PutBaseClass(hset,f,m,(BaseClass *)m->structure,TRUE,binary);
+   }
+   if (saveRegTree) { /* then the regression classes */
+     for (h=0; h<MACHASHSIZE; h++)  
+       for (m=hset->mtab[h]; m!=NULL; m=m->next)
+         if (m->fidx == fidx && m->type == 'r')
+	   PutRegTree(hset,f,m,(RegTree *)m->structure,TRUE,binary);
+   }
 }
 
 static ReturnStatus GetXFormMacros(HMMSet *hset, Source *src, Token *tok, int fidx)
 {
-   char type, buf[MAXSTRLEN];
-   LabId id;
-   Ptr structure;
+  char type, buf[MAXSTRLEN];
+  LabId id;
+  Ptr structure;
 
-   while (tok->sym == MACRO){
-      type = tok->macroType;
-      if (!ReadString(src,buf)){
-         TermScanner(src);
-         HRError(999,"GetXFormMacros: Macro name expected in macro file %s",src->name);
-         return(FAIL);
+  while (tok->sym == MACRO){
+    type = tok->macroType;
+    if (!ReadString(src,buf)){
+      TermScanner(src);
+      HRError(999,"GetXFormMacros: Macro name expected in macro file %s",src->name);
+      return(FAIL);
+    }
+    id = GetLabId(buf,TRUE);
+    if(GetToken(src,tok)<SUCCESS){
+      TermScanner(src);
+      HRError(999,"GetXFormMacros: Macro name expected in macro file %s",src->name);
+      return(FAIL);
+    }
+    switch(type){
+    case 'a': 
+      structure = GetAdaptXForm(hset,src,tok);
+      ((AdaptXForm *)structure)->xformName = CopyString(hset->hmem,id->name);
+      break;
+    case 'b': 
+      structure = GetBaseClass(hset,src,tok); break;
+    case 'r': 
+      structure = GetRegTree(hset,src,tok); break;
+    case 'f': structure = GetLinXForm(hset,src,tok);  break;
+    case 'g': structure = GetXFormSet(hset,src,tok);  break;
+    case 'x': structure = GetTransform(hset,src,tok); break;
+    case 'y': structure = GetBias(hset,src,tok);   break;
+      /* code for input transform support */
+    case 'j': 
+      structure = GetInputXForm(hset,src,tok);
+      ((InputXForm *)structure)->xformName = CopyString(hset->hmem,id->name);
+      break;
+    default :
+      TermScanner(src);
+      HRError(7037,"GetXFormMacros: bad macro type in xform file %s",src->name);
+      return(FAIL);
+    }
+    if(structure==NULL){
+      TermScanner(src);
+      HRError(7035,"GetXFormMacros: Get macro data failed in %s",src->name);
+      return(FAIL);
+    }
+    NewMacro(hset,fidx,type,id,structure);
+    if (trace&T_MAC)
+      printf("HModel: storing macro ~%c %s -> %p\n",type,id->name,structure);
+  }
+  return(SUCCESS);
+}
+
+/*
+  Looks for the macroname in the current directory. If it is 
+  notfound search through the input transform directories
+  in order. FOpen is used to allow optional generation of
+  Error messages using T_XFD
+*/
+static char *InitXFormScanner(HMMSet *hset, char *macroname, char *fname,
+			      Source *src, Token *tok)
+{
+  static char buf[MAXSTRLEN];
+  XFDirLink p;
+  Boolean isPipe;
+  FILE *f=NULL;
+
+  if ((fname==NULL) || ((f=FOpen(fname,NoFilter,&isPipe)) == NULL)) {
+    if ((trace&T_XFD) && (fname!=NULL))
+      HRError(7010,"InitXFormScanner: Cannot open source file %s",fname);
+    p = xformDirNames;
+    while ((p!=NULL) && 
+	   ((f=FOpen(MakeFN(macroname,p->dirName,NULL,buf),NoFilter,&isPipe)) == NULL)) {
+      if (trace&T_XFD) 
+	HRError(7010,"InitXFormScanner: Cannot open source file %s",buf);
+      p = p->next;
+    }
+    if (p==NULL) { /* Failed to find macroname */
+      HError(7035,"Failed to find macroname %s",macroname);
+    } else { /* Close file and initialise scanner */
+      FClose(f,isPipe);
+      InitScanner(buf,src,tok,hset);
+    }
+    if (trace&T_TOP) printf("Loading macro file %s\n",buf);
+    return buf;
+  } else {
+    FClose(f,isPipe);
+    if (trace&T_TOP) printf("Loading macro file %s\n",fname);
+    InitScanner(fname,src,tok,hset);
+    return fname;
+  }
+}
+
+/* EXPORT->LoadBaseClass: loads, and returns, the specified baseclass */
+BaseClass *LoadBaseClass(HMMSet *hset, char* macroname, char *fname)
+{
+  Source src;
+  char *fn;
+  LabId id;
+  Token tok;
+  BaseClass *bclass;
+  Ptr structure;
+  MLink m;
+  int fidx = LOADFIDX; /* indicates that these are loaded xform macros */
+
+  /* First see whether the macro exists */
+  id = GetLabId(macroname,FALSE);
+  if ((id == NULL) || ((m = FindMacroName(hset,'b',id))==NULL))  { 
+    fn = InitXFormScanner(hset, macroname, fname, &src, &tok);
+    SkipWhiteSpace(&src);
+    if(GetToken(&src,&tok)<SUCCESS){
+      TermScanner(&src);
+    }
+    if (GetXFormMacros(hset,&src,&tok,fidx)<SUCCESS)
+      HError(999,"Error in XForm macro file %s",fn);
+    /* All macros have been read. The baseclass macro may be one of them */
+    id = GetLabId(macroname,FALSE);
+    if ((id==NULL)||((m = FindMacroName(hset,'b',id))==NULL)) { /* not stored in macro format */
+      id = GetLabId(macroname,TRUE);
+      structure = bclass = GetBaseClass(hset,&src,&tok);
+      NewMacro(hset,fidx,'b',id,structure);
+    } else {
+      bclass = (BaseClass *)m->structure;
+    }
+    TermScanner(&src);
+  } else { /* macro already exists so just return it */
+    bclass = (BaseClass *)m->structure;
+  }
+  if (trace&T_XFM)
+    printf("  Using baseclass macro \"%s\" from file %s\n",macroname,bclass->fname);
+  return bclass;
+}
+
+/* EXPORT->LoadRegTree: loads, or returns, the specified regression tree */
+RegTree *LoadRegTree(HMMSet *hset, char* macroname, char *fname)
+{
+  Source src;
+  char *fn;
+  LabId id;
+  Token tok;
+  RegTree *regTree;
+  Ptr structure;
+  MLink m;
+  int fidx = LOADFIDX; /* indicates that these are loaded xform macros */
+
+  /* First see whether the macro exists */
+  id = GetLabId(macroname,FALSE);
+  if ((id == NULL) || ((m = FindMacroName(hset,'r',id))==NULL)) { 
+    fn = InitXFormScanner(hset, macroname, fname, &src, &tok);
+    SkipWhiteSpace(&src);
+    if(GetToken(&src,&tok)<SUCCESS){
+      TermScanner(&src);
+    }
+    if (GetXFormMacros(hset,&src,&tok,fidx)<SUCCESS)
+      HError(999,"Error in XForm macro file %s",fn);
+    /* All macros have been read. The baseclass macro may be one of them */
+    id = GetLabId(macroname,FALSE);
+    if ((id==NULL) || ((m = FindMacroName(hset,'r',id))==NULL)) { /* not stored in macro format */
+      id = GetLabId(macroname,TRUE);
+      structure = regTree = GetRegTree(hset,&src,&tok);
+      NewMacro(hset,fidx,'r',id,structure);
+    } else {
+      regTree = (RegTree *)m->structure;
+    }
+    TermScanner(&src);
+  } else { /* macro already exists so just return it */
+    regTree = (RegTree *)m->structure;
+  }
+  if (trace&T_XFM)
+    printf("  Using regtree macro \"%s\" from file %s\n",macroname,regTree->fname);
+  return regTree;
+}
+
+/* EXPORT->LoadOneXForm: loads, or returns, the specified transform */
+AdaptXForm *LoadOneXForm(HMMSet *hset, char* macroname, char *fname)
+{
+  Source src;
+  char *fn;
+  LabId id;
+  Token tok;
+  AdaptXForm *xform;
+  Ptr structure;
+  MLink m;
+  int fidx = LOADFIDX; /* indicates that these are loaded xform macros */
+
+  /* First see whether the macro exists */
+  id = GetLabId(macroname,FALSE);
+  if ((id == NULL) || ((m = FindMacroName(hset,'a',id))==NULL)) { 
+    fn = InitXFormScanner(hset, macroname, fname, &src, &tok);
+    SkipWhiteSpace(&src);
+    if(GetToken(&src,&tok)<SUCCESS){
+      TermScanner(&src);
+    }
+    if (GetXFormMacros(hset,&src,&tok,fidx)<SUCCESS)
+      HError(999,"Error in XForm macro file %s",fn);
+    /* All xform macros have been read. The speaker macro may be one of them */
+    id = GetLabId(macroname,FALSE);
+    if ((id==NULL) || ((m = FindMacroName(hset,'a',id))==NULL)) { /* not stored in macro format */
+      id = GetLabId(macroname,TRUE);
+      structure = xform = GetAdaptXForm(hset,&src,&tok);
+      if (xform->xformName == NULL) /* may have been stored without the macro header */
+	xform->xformName = CopyString(hset->hmem,macroname);
+      NewMacro(hset,fidx,'a',id,structure);
+    } else {
+      xform = (AdaptXForm *)m->structure;
+    }
+    TermScanner(&src);
+  } else { /* macro already exists so just return it */
+    xform = (AdaptXForm *)m->structure;
+  }
+  if (trace&T_XFM)
+    printf("  Using xform macro \"%s\" from file %s\n",macroname,xform->fname);
+  return xform;
+}
+
+/* EXPORT->LoadInputXForm: loads, or returns, the specified transform */
+InputXForm *LoadInputXForm(HMMSet *hset, char* macroname, char *fname)
+{
+  Source src;
+  char *fn;
+  LabId id;
+  Token tok;
+  InputXForm *xf;
+  Ptr structure;
+  MLink m;
+  char buf[MAXSTRLEN], type;
+  int fidx = LOADFIDX; /* indicates that these are loaded xform macros */
+
+  if (hset == NULL) { /* read a transform with no model set */
+    fn = InitXFormScanner(hset, macroname, fname, &src, &tok);
+    SkipWhiteSpace(&src);
+    if(GetToken(&src,&tok)<SUCCESS){
+      TermScanner(&src);
+      return(NULL);
+    }
+    /* handle the case where the macro header is included */
+    if (tok.sym == MACRO) {
+      type = tok.macroType;
+      if (type != 'j') {
+	HRError(999,"LoadInputXForm: Only Input Transform can be specified with no model set %s",src.name);
+	return(NULL);
       }
-      id = GetLabId(buf,TRUE);
-      if(GetToken(src,tok)<SUCCESS){
-         TermScanner(src);
-         HRError(999,"GetXFormMacros: Macro name expected in macro file %s",src->name);
-         return(FAIL);
+      if (!ReadString(&src,buf)){
+	TermScanner(&src);
+	HRError(999,"LoadInputXForm: Input XForm macro name expected in macro file %s",src.name);
+	return(NULL);
       }
-      switch(type){
-      case 'f': structure = GetLinXForm(hset,src,tok);  break;
-      case 'x': structure = GetTransform(hset,src,tok); break;
-      case 'y': structure = GetBias(hset,src,tok);   break;
-      case 'j': 
-         structure = GetInputXForm(hset,src,tok);
-         ((InputXForm *)structure)->xformName = CopyString(hset->hmem,id->name);
-         break;
-      default :
-         TermScanner(src);
-         HRError(7037,"GetXFormMacros: bad macro type in xform file %s",src->name);
-         return(FAIL);
+      if (strcmp(buf,macroname)) {
+	HRError(999,"LoadInputXForm: Inconsistent macro names  %s and %s in file %s",macroname,buf,src.name);
+	return(NULL);
       }
-      if(structure==NULL){
-         TermScanner(src);
-         HRError(7035,"GetXFormMacros: Get macro data failed in %s",src->name);
-         return(FAIL);
+      if(GetToken(&src,&tok)<SUCCESS){
+	TermScanner(&src);
+	return(NULL);
       }
-      NewMacro(hset,fidx,type,id,structure);
-      if (trace&T_MAC)
-         printf("HModel: storing macro ~%c %s -> %p\n",type,id->name,structure);
+    }
+    xf = GetInputXForm(hset,&src,&tok);
+    xf->xformName = CopyString(&xformStack,macroname);
+    TermScanner(&src);
+  } else { /* First see whether the macro exists */
+    id = GetLabId(macroname,FALSE);
+    if ((id == NULL) || ((m = FindMacroName(hset,'j',id))== NULL)) { /* macro doesn't exist go find it */
+      fn = InitXFormScanner(hset, macroname, fname, &src, &tok);
+      SkipWhiteSpace(&src);
+      if(GetToken(&src,&tok)<SUCCESS){
+	TermScanner(&src);
+	return(NULL);
+      }
+      if (GetXFormMacros(hset,&src,&tok,fidx)<SUCCESS)
+	HError(999,"Error in XForm macro file %s",fn);
+      /* All xform macros have been read. The speaker macro may be one of them */
+      id = GetLabId(macroname,FALSE);
+      if ((id==NULL) || ((m = FindMacroName(hset,'j',id))==NULL)) { /* not stored in macro format */
+	id = GetLabId(macroname,TRUE);
+	structure = xf = GetInputXForm(hset,&src,&tok);
+	if (xf->xformName == NULL) /* may have been stored without the macro header */
+	  xf->xformName = CopyString(hset->hmem,macroname);
+	NewMacro(hset,fidx,'j',id,structure);
+      } else {
+	xf = (InputXForm *)m->structure;
+      }
+      TermScanner(&src);
+    } else { /* macro already exists so just return it */
+      xf = (InputXForm *)m->structure;
+    }
+  }
+  if (trace&T_XFM)
+    printf("  Using input xform macro \"%s\" from file %s\n",macroname,xf->fname);
+  return xf;
+}
+
+/* 
+   EXPORT-> CreateXFormMacro: creates a macro for the 
+   new transform. Assigns fidx=-1 to indicate that this
+   is a created xform rather than an input xform
+*/
+void CreateXFormMacro(HMMSet *hset,AdaptXForm *xform, char* macroname)
+{
+  LabId id;
+  MLink m;
+  int fidx = CREATEFIDX;
+
+  if (((id = GetLabId(macroname,FALSE)) != NULL) && 
+      ((m = FindMacroName(hset,'a', id)) != NULL)) { /* Need a new one */
+    HRError(999,"CreateXFormMacro: macroname %s previously loaded from %s",macroname,
+	    ((AdaptXForm *)m->structure)->fname);
+    DeleteMacro(hset,m);
+  }
+  id = GetLabId(macroname,TRUE);
+  NewMacro(hset,fidx,'a',id,xform);
+}
+
+/* 
+   EXPORT->SaveAllXForms: outputs all generated transforms 
+   - these are indicated by having fidx=-1
+*/
+void SaveAllXForms(HMMSet *hset, char *fname, Boolean binary)
+{
+  MLink m;
+  int h;
+  FILE *f;
+  Boolean isPipe;
+  int fidx=CREATEFIDX;
+      
+  binary = binary||saveBinary;
+  if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
+    HError(7011,"SaveAllXForm: Cannot create output file %s",fname);
+  }
+  if (trace&T_MAC)
+    printf("HModel: saving all XForms to %s\n",fname);
+  for (h=0; h<MACHASHSIZE; h++)
+    for (m=hset->mtab[h]; m!=NULL; m=m->next)
+      if (m->fidx == fidx)
+	switch(m->type){            /* atomic macros first */
+	case 'y':
+	  PutBias(hset,f,m,(SVector)m->structure,TRUE,binary);     
+	  break;
+	case 'x':
+	  PutTransform(hset,f,m,(SMatrix)m->structure,TRUE,binary);
+	  break;
+	case 'b':
+	  if (saveBaseClass)
+	    PutBaseClass(hset,f,m,(BaseClass *)m->structure,TRUE,binary);
+	  break;
+	default: 
+	  break;
+	}
+  if (saveBaseClass) {   /* then store base classes */
+     for (h=0; h<MACHASHSIZE; h++)  
+        for (m=hset->mtab[h]; m!=NULL; m=m->next)
+         if (m->type == 'b')
+	   PutBaseClass(hset,f,m,(BaseClass *)m->structure,TRUE,binary);
+  }
+  if (saveRegTree) { /* then the regression classes */
+     for (h=0; h<MACHASHSIZE; h++)  
+        for (m=hset->mtab[h]; m!=NULL; m=m->next)
+           if (m->type == 'r')
+              PutRegTree(hset,f,m,(RegTree *)m->structure,TRUE,binary);
    }
-   return(SUCCESS);
+  /* Now do the higher levels for the transforms */
+  for (h=0; h<MACHASHSIZE; h++)    /* then higher levels */
+    for (m=hset->mtab[h]; m!=NULL; m=m->next)
+      if (m->fidx == fidx && m->type == 'f')
+	PutLinXForm(hset,f,m,(LinXForm *)m->structure,TRUE,binary);
+  for (h=0; h<MACHASHSIZE; h++)    /* then higher levels */
+    for (m=hset->mtab[h]; m!=NULL; m=m->next)
+      if (m->fidx == fidx && m->type == 'g')
+	PutXFormSet(hset,f,m,(XFormSet *)m->structure,TRUE,binary);
+  for (h=0; h<MACHASHSIZE; h++)    /* then higher levels */
+    for (m=hset->mtab[h]; m!=NULL; m=m->next)
+      if (m->fidx == fidx && m->type == 'j')
+	PutInputXForm(hset,f,m,(InputXForm *)m->structure,TRUE,binary);
+  for (h=0; h<MACHASHSIZE; h++)    /* then top level */
+    for (m=hset->mtab[h]; m!=NULL; m=m->next)
+      if (m->fidx == fidx && m->type == 'a')
+	PutAdaptXForm(hset,f,m,(AdaptXForm *)m->structure,TRUE,binary);
+  FClose(f,isPipe);  
+}
+
+/* EXPORT->SaveOneXForm: outputs an individual transform */
+void SaveOneXForm(HMMSet *hset, AdaptXForm *xform, char *fname, Boolean binary)
+{
+  FILE *f;
+  AdaptXForm *swapxform;
+  Boolean isPipe;
+  char buf1[MAXSTRLEN], buf2[MAXSTRLEN];
+
+  if (xform->nUse>0) 
+    HError(999,"Shared AdaptXForm cannot store to a single file");
+  binary = binary||saveBinary;
+  if (xform->swapXForm != NULL) { /* need to save the parent xform */
+     swapxform = xform->swapXForm;
+     xform->swapXForm = NULL;
+     MakeFN(xform->xformName,PathOf(fname,buf1),NULL,buf2);
+     SaveOneXForm(hset,xform,buf2,binary);
+     /* having saved it sorted out the usage and create the macro */
+     CreateXFormMacro(hset,xform,xform->xformName);
+     xform->nUse = 1;
+     xform = swapxform;
+     fname = MakeFN(xform->xformName,buf1,NULL,buf2);
+  }
+  if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
+    HError(7011,"SaveOneXForm: Cannot create output file %s",fname);
+  }
+  if (trace&T_MAC)
+    printf("HModel: saving XForm to %s\n",fname);
+  /* store the macro header information without explicitly generating
+     the macro */
+  fprintf(f,"~a %s",ReWriteString(xform->xformName,NULL,DBL_QUOTE));
+  if (!binary) fprintf(f,"\n");
+  PutAdaptXForm(hset,f,NULL,xform,FALSE,binary);
+  FClose(f,isPipe);  
+}
+
+/* EXPORT->SaveInputXForm: outputs an individual transform */
+void SaveInputXForm(HMMSet *hset, InputXForm *xf, char *fname, Boolean binary)
+{
+  FILE *f;
+  Boolean isPipe;
+
+  binary = binary||saveBinary;
+  if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
+    HError(7011,"SaveInputXForm: Cannot create output file %s",fname);
+  }
+  if (trace&T_MAC)
+    printf("HModel: saving XForm to %s\n",fname);
+  /* store the macro header information without explicitly generating
+     the macro */
+  fprintf(f,"~a %s",ReWriteString(xf->xformName,NULL,DBL_QUOTE));
+  if (!binary) fprintf(f,"\n");
+  PutInputXForm(hset,f,NULL,xf,FALSE,binary);
+  FClose(f,isPipe);  
 }
 
 /* EXPORT->SaveInOneFile: ignore source files and store in fname */
@@ -3916,8 +4865,31 @@ void FixOrphanMacros(HMMSet *hset)
    }
 }
 
+/* gconst_cmp: positive if the second gConst larger than the first, negative
+               if the first gConst larger and 0 if equal */
+static int gconst_cmp(const void *v1,const void *v2)
+{
+   MixtureElem *me1, *me2;
+
+   me1 = (MixtureElem *)v1; me2 = (MixtureElem *)v2;
+   if (me1->mpdf->gConst < me2->mpdf->gConst) return 1;
+   if (me1->mpdf->gConst > me2->mpdf->gConst) return -1;
+   return 0;
+}
+
+/* ReOrderComponents: Sort Gaussians into descending order of gConsts */
+static void ReOrderComponents(HMMSet *hset)
+{
+   HMMScanState hss;
+
+   NewHMMScan(hset,&hss);
+   while(GoNextStream(&hss,FALSE))
+      qsort(hss.ste->spdf.cpdf+1,hss.M,sizeof(MixtureElem),gconst_cmp);
+   EndHMMScan(&hss);
+}
+
 /* EXPORT->SaveHMMSet: save the given HMM set */
-ReturnStatus SaveHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt, Boolean binary)
+ReturnStatus SaveHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt, char *macroExt, Boolean binary)
 {
    FILE *f;
    MILink p;
@@ -3927,11 +4899,14 @@ ReturnStatus SaveHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt, Boolean binary
    Boolean isPipe;
    
    FixOrphanMacros(hset);
+   /* Sort mixture components according to the gConst values */
+   if ((hset->hsKind == PLAINHS || hset->hsKind == SHAREDHS) && reorderComps)
+      ReOrderComponents(hset);
    binary = binary || saveBinary;
    /* First output to all named MMF files */
    for (p=hset->mmfNames,i=1; p!=NULL; p=p->next,i++) 
       if (p->isLoaded) {
-         MakeFN(p->fName,hmmDir,NULL,fname);
+         MakeFN(p->fName,hmmDir,macroExt,fname);
          if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
             HRError(7011,"SaveHMMSet: Cannot create MMF file %s",fname);
             return(FAIL);
@@ -4048,6 +5023,7 @@ void ClearSeenFlags(HMMSet *hset, ClearDepth depth)
    StateElem *se;
    StreamElem *ste;
    StateInfo *si;
+   MixPDF *mp;
    
    S = hset->swidth[0];
    for (h=0; h<MACHASHSIZE; h++)
@@ -4067,6 +5043,15 @@ void ClearSeenFlags(HMMSet *hset, ClearDepth depth)
                         ClearStreams(hset,ste,depth);
                }
          }
+   if ((hset->hsKind == TIEDHS) && (depth==CLR_ALL)) {
+      for (s=1;s<=S;s++)
+         for (i=1;i<=hset->tmRecs[s].nMix;i++) {
+            mp = hset->tmRecs[s].mixes[i];
+            Untouch(&mp->nUse);
+            UntouchV(mp->mean);
+            UntouchV(mp->cov.var);  
+         }
+   }
 }
 
 /* ----------------- General HMM Operations --------------------- */
@@ -4202,112 +5187,25 @@ int MaxStatesInSet(HMMSet *hset)
    return max;
 }
 
-/* -------------------- Input Transform Operations ---------------- */
-
-/* EXPORT->LoadInputXForm: loads, or returns, the specified transform */
-InputXForm *LoadInputXForm(HMMSet *hset, char* macroname, char *fname)
-{
-   Source src;
-   char *fn;
-   LabId id;
-   Token tok;
-   InputXForm *xf;
-   Ptr structure;
-   MLink m;
-   char buf[MAXSTRLEN], type;
-   int fidx = LOADFIDX; /* indicates that these are loaded xform macros */
-
-   if (hset == NULL) { /* read a transform with no model set */
-      fn = InitXFormScanner(hset, macroname, fname, &src, &tok);
-      SkipWhiteSpace(&src);
-      if(GetToken(&src,&tok)<SUCCESS){
-         TermScanner(&src);
-         return(NULL);
-      }
-      /* handle the case where the macro header is included */
-      if (tok.sym == MACRO) {
-         type = tok.macroType;
-         if (type != 'j') {
-            HRError(999,"LoadInputXForm: Only Input Transform can be specified with no model set %s",src.name);
-            return(NULL);
-         }
-         if (!ReadString(&src,buf)){
-            TermScanner(&src);
-            HRError(999,"LoadInputXForm: Input XForm macro name expected in macro file %s",src.name);
-            return(NULL);
-         }
-         if (strcmp(buf,macroname)) {
-            HRError(999,"LoadInputXForm: Inconsistent macro names  %s and %s in file %s",macroname,buf,src.name);
-            return(NULL);
-         }
-         if(GetToken(&src,&tok)<SUCCESS){
-            TermScanner(&src);
-            return(NULL);
-         }
-      }
-      xf = GetInputXForm(hset,&src,&tok);
-      xf->xformName = CopyString(&xformStack,macroname);
-      TermScanner(&src);
-   } else { /* First see whether the macro exists */
-      id = GetLabId(macroname,FALSE);
-      if (id == NULL) { /* macro doesn't exist go find it */
-         fn = InitXFormScanner(hset, macroname, fname, &src, &tok);
-         SkipWhiteSpace(&src);
-         if(GetToken(&src,&tok)<SUCCESS){
-            TermScanner(&src);
-            return(NULL);
-         }
-         if (GetXFormMacros(hset,&src,&tok,fidx)<SUCCESS)
-            HError(999,"Error in XForm macro file %s",fn);
-         /* All xform macros have been read. The speaker macro may be one of them */
-         id = GetLabId(macroname,FALSE);
-         if (id==NULL) { /* not stored in macro format */
-            id = GetLabId(macroname,TRUE);
-            structure = xf = GetInputXForm(hset,&src,&tok);
-            if (xf->xformName == NULL) /* may have been stored without the macro header */
-               xf->xformName = CopyString(hset->hmem,macroname);
-            NewMacro(hset,fidx,'j',id,structure);
-         } else {
-            m = FindMacroName(hset,'j',id);
-            xf = (InputXForm *)m->structure;
-         }
-         TermScanner(&src);
-      } else { /* macro already exists so just return it */
-         m = FindMacroName(hset,'j',id);
-         xf = (InputXForm *)m->structure;
-         xf->nUse++;
-      }
-   }
-   if (trace&T_XFM)
-      printf("  Using input xform macro \"%s\" from file %s\n",macroname,xf->fname);
-   return xf;
-}
-
-/* EXPORT->SaveInputXForm: outputs an individual transform */
-void SaveInputXForm(HMMSet *hset, InputXForm *xf, char *fname, Boolean binary)
-{
-   FILE *f;
-   Boolean isPipe;
-
-   binary = binary||saveBinary;
-   if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
-      HError(7011,"SaveInputXForm: Cannot create output file %s",fname);
-   }
-   if (trace&T_MAC)
-      printf("HModel: saving XForm to %s\n",fname);
-   /* 
-      store the macro header information without explicitly generating
-      the macro 
-   */
-   fprintf(f,"~a %s",ReWriteString(xf->xformName,NULL,DBL_QUOTE));
-   if (!binary) fprintf(f,"\n");
-   PutInputXForm(hset,f,NULL,xf,FALSE,binary);
-   FClose(f,isPipe);  
-}
-
-
 /* ----------------- Output Probability Calculations ---------------------- */
 
+float MixWeight(HMMSet *hset, float weight)
+{
+   if (hset->logWt) {
+      if (weight<LMINMIX) return 0;
+      else return exp(weight);
+   } else 
+      return weight;
+}
+
+LogFloat MixLogWeight(HMMSet *hset, float weight)
+{
+   if (hset->logWt) return weight;
+   else {
+      if (weight<MINMIX) return LZERO;
+      else return log(weight);
+   }
+}
 
 /* CmpTM: return sign(t2->prob - t1->prob) */
 static int CmpTM(const void *t1, const void *t2)
@@ -4431,8 +5329,8 @@ static LogFloat XOutP(Vector x, int vecSize, MixPDF *mp)
    return -0.5*sum;
 }
 
-/* IDOutP: Log prob of x in given mixture - Inverse Diagonal Case */
-static LogFloat IDOutP(Vector x, int vecSize, MixPDF *mp)
+/* EXPORT-> IDOutP: Log prob of x in given mixture - Inverse Diagonal Case */
+LogFloat IDOutP(Vector x, int vecSize, MixPDF *mp)
 {
    int i;
    float sum,xmm;
@@ -4445,8 +5343,55 @@ static LogFloat IDOutP(Vector x, int vecSize, MixPDF *mp)
    return -0.5*sum;
 }
 
+/* EXPORT-> PDEMOutP: Mixture Outp calculation exploiting sharing and PDE 
 
+   xwtdet must be x-wt-det where x is the current total score, wt is a
+   log mixture weight and det is a log determinant of an xform
 
+   BTW, works only with INVDIAGC */
+Boolean PDEMOutP(Vector otvs, MixPDF *mp, LogFloat *mixp, LogFloat xwtdet)
+{
+   int i,vs;
+   LogFloat xmm;
+   
+   *mixp = mp->gConst;
+#ifdef PDE_STATS
+   nGaussTot++;
+#endif
+   for (i=1; i<=pde1BlockEnd; i++) { /* first block */
+      xmm = otvs[i] - mp->mean[i];
+      *mixp += xmm*xmm*mp->cov.var[i];
+   }
+   /* test the first threshold */
+   if (xwtdet+0.5*(*mixp) < pdeTh1) {
+#ifdef PDE_STATS
+      nGaussPDE1++;
+#endif
+      for (; i<=pde2BlockEnd; i++) { /* second block */
+	 xmm = otvs[i] - mp->mean[i];
+	 *mixp += xmm*xmm*mp->cov.var[i];
+      }
+      /* test the second threshold */
+      if (xwtdet+0.5*(*mixp) < pdeTh2) {
+#ifdef PDE_STATS
+	 nGaussPDE2++;
+#endif
+	 vs = VectorSize(otvs);
+	 for (; i<=vs; i++) { /* third block */
+	    xmm = otvs[i] - mp->mean[i];
+	    *mixp += xmm*xmm*mp->cov.var[i];
+	 }
+      } else {
+	 *mixp = LZERO;
+	 return FALSE;
+      }
+   } else {
+      *mixp = LZERO;
+      return FALSE;
+   }
+   *mixp *= -0.5;
+   return TRUE;
+}
 
 /* EXPORT-> MOutP: returns log prob of vector x for given mixture */
 LogFloat MOutP(Vector x, MixPDF *mp)
@@ -4505,7 +5450,7 @@ LogFloat SOutP(HMMSet *hset, int s, Observation *x, StreamElem *se)
       } else {
          bx = LZERO;                   /* Multi Mixture Case */
          for (m=1; m<=se->nMix; m++,me++) {
-            wt=me->weight; wt=MixLogWeight(hset,wt);
+            wt=MixLogWeight(hset,me->weight);
             if (wt>LMINMIX) {  
                mp = me->mpdf; 
                switch (mp->ckind) {
@@ -4593,6 +5538,15 @@ LogFloat Short2DProb(short s)
    if (s==32767) return(LZERO);
    else return(exp(((float)s)/DLOGSCALE));
 }
+
+#ifdef PDE_STATS
+/* EXPORT->PrintPDEstats: print PDE stats */
+void PrintPDEstats()
+{
+   printf("PDE Gaussians: total %d, eliminated at th1 %d, at th2 %d\n",nGaussTot,nGaussTot-nGaussPDE1,nGaussPDE1-nGaussPDE2);
+   nGaussTot = nGaussPDE1 = nGaussPDE2 = 0;
+}
+#endif
 
 /* ----------------------- Fix GConsts ----------------------------- */
 
@@ -4722,12 +5676,32 @@ char *DurKind2Str(DurKind dkind, char *buf)
    return strcpy(buf,durmap[dkind]);
 }
 
-
 /* EXPORT-> CovKind2Str: Return string representation of enum CovKind */
 char *CovKind2Str(CovKind ckind, char *buf)
 {
    static char *covmap[] = {"DIAGC","INVDIAGC","FULLC","XFORMC"};
    return strcpy(buf,covmap[ckind]);
+}
+
+/* EXPORT-> XFormKind2Str: Return string representation of enum XFormKind */
+char *XFormKind2Str(XFormKind xkind, char *buf)
+{
+   static char *xformmap[] = {"MLLRMEAN","MLLRCOV", "MLLRVAR", "CMLLR"};
+   return strcpy(buf,xformmap[xkind]);
+}
+
+/* EXPORT-> AdaptKind2Str: Return string representation of enum AdaptKind */
+char *AdaptKind2Str(AdaptKind akind, char *buf)
+{
+   static char *adaptmap[] = {"TREE","BASE","INTERPOLATE","SELECT","TRANCAT","LIKECAT"};
+   return strcpy(buf,adaptmap[akind]);
+}
+
+/* EXPORT-> BaseClassKind2Str: Return string representation of enum BaseClassKind */
+char *BaseClassKind2Str(BaseClassKind bkind, char *buf)
+{
+   static char *basemap[] = {"MIXBASE","MEANBASE","COVBASE"};
+   return strcpy(buf,basemap[bkind]);
 }
 
 /* ------------------------- End of HModel.c --------------------------- */

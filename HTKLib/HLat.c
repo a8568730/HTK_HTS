@@ -16,7 +16,7 @@
 /* author: Gunnar Evermann <ge204@eng.cam.ac.uk>               */
 /* ----------------------------------------------------------- */
 /*         Copyright:                                          */
-/*         2001-2002  Cambridge University                     */
+/*         2001-2004  Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -34,8 +34,8 @@
 */
 
 
-char *hlat_version = "!HVER!HLat:   3.2.1 [CUED 15/10/03]";
-char *hlat_vc_id = "$Id: HLat.c,v 1.4 2003/10/15 08:10:12 ge204 Exp $";
+char *hlat_version = "!HVER!HLat:   3.3 [CUED 28/04/05]";
+char *hlat_vc_id = "$Id: HLat.c,v 1.1.1.1 2005/05/12 10:52:50 jal58 Exp $";
 
 
 #include "HShell.h"
@@ -60,6 +60,7 @@ char *hlat_vc_id = "$Id: HLat.c,v 1.4 2003/10/15 08:10:12 ge204 Exp $";
 #define T_EXP  00010
 #define T_MEM  00020
 #define T_TRAN 00040
+#define T_LLF  00100
 
 static int trace=0;
 static ConfParam *cParm[MAXGLOBS];      /* config parameters */
@@ -72,6 +73,9 @@ static LabId endWord;           /* word at end of Lattice (!SENT_END) */
 static LabId startLMWord;       /* word at start in LM (<s>) */
 static LabId endLMWord;         /* word at end in LM (</s>) */
 static LabId nullWord;          /* null word in Lattices (!NULL) */
+static Boolean beamPruneArcs = TRUE; /* apply beam pruning to arcs (rather than just nodes) */
+
+static char *llfExt = "LLF";    /* extension for LLF lattice files */
 
 static MemHeap slaHeap, slnHeap;/* MHEAPs for use in LatExpand() */
 
@@ -99,19 +103,164 @@ struct _SubLArc {
 };
 #endif
 
+/* --------------------------- LLF processing ---------------------- */
+
+typedef struct _LLFInfo LLFInfo;
+struct _LLFInfo {
+   LLFInfo *next;
+   char name[MAXFNAMELEN];
+   Source source;
+   int lastAccess;
+};
+
+
+static int numLLFs = 0; 
+static int maxLLFs = 5; 
+static int numLatsLoaded = 0;
+static LLFInfo *llfInfo = NULL;
+
+static MemHeap llfHeap;
+
+
+void CloseLLF (LLFInfo *llf)
+{
+   if (trace&T_LLF)
+      printf ("Closing LLF %s\n", llf->name);
+   CloseSource (&llf->source);
+   llf->name[0] = '\0';
+   llf->lastAccess = 0;
+}
+
+
+LLFInfo *OpenLLF (char *fn)
+{
+   LLFInfo *llf;
+   Source s;
+   char buf[MAXFNAMELEN];
+
+   if (trace&T_LLF)
+      printf ("Opening LLF %s\n", fn);
+
+   if (InitSource (fn, &s, NetFilter) < SUCCESS) {
+      HError(-8630,"OpenLLF: Cannot open LLF %s", fn);
+      return NULL;
+   }
+   if (!ReadStringWithLen (&s, buf, MAXFNAMELEN) ||
+       strcmp (buf, "#!LLF!#")) {   /* no LLF header or read from pipe failed */
+      HError(-8630,"OpenLLF: Cannot read from LLF %s", fn);
+      return NULL;
+   }
+
+   if (numLLFs < maxLLFs) {
+      ++numLLFs;
+      llf = New (&llfHeap, sizeof (LLFInfo));
+      llf->next = llfInfo;
+      llfInfo = llf;
+   }
+   else {
+      LLFInfo *l;
+
+      /* find oldest (least recently accessed) LLF */
+      llf = llfInfo;
+      for (l = llfInfo->next; l; l = l->next)
+         if (l->lastAccess < llf->lastAccess)
+            llf = l;
+
+      CloseLLF (llf);
+   }
+
+   strcpy (llf->name, fn);
+   llf->source = s;
+
+   return llf;
+}
+
+void ScanLLF (LLFInfo *llf, char *fn, char *ext)
+{
+   char buf[MAXFNAMELEN];
+   char latfn[MAXFNAMELEN];
+
+   llf->lastAccess = numLatsLoaded;
+   MakeFN (fn, NULL, ext, latfn);
+
+   while (ReadStringWithLen (&llf->source, buf, MAXFNAMELEN)) {
+      if (!strcmp(buf, latfn)) {   /* found name */
+         return;
+      }
+      if (trace&T_LLF)
+         printf ("ScanLLF: skipping '%s'\n", buf);
+      ReadUntilLine (&llf->source, ".");   /* skip this lattice */
+   }
+   HError (8631, "ScanLLF: lattice '%s' not found in LLF '%s'\n", latfn, llf->name);
+}
+
+
+Lattice *GetLattice (char *fn, char *path, char *ext,
+                     /* arguments of ReadLattice() below */
+                     MemHeap *heap, Vocab *voc, 
+                     Boolean shortArc, Boolean add2Dict)
+{
+   Lattice *lat;
+   LLFInfo *llf;
+   char llfName[MAXFNAMELEN];
+
+   MakeFN (path, NULL, llfExt, llfName);
+
+   /* check whether LLF is open already */
+   for (llf = llfInfo; llf; llf = llf->next) {
+      if (!strcmp (llfName, llf->name))
+         break;
+   }
+
+   if (!llf) {   /* not found -> try to open LLF */
+      llf = OpenLLF (llfName);
+
+      if (!llf) {       /* can't find LLF -> fall back to single file lattices */
+         char latfn[MAXFNAMELEN];
+         FILE *f;
+         Boolean isPipe;
+
+         MakeFN (fn, path, ext, latfn);
+         if ((f = FOpen(latfn, NetFilter, &isPipe)) == NULL)
+            HError(8632,"GetLattice: Cannot open Lattice file %s", latfn);
+         lat = ReadLattice (f, heap, voc, shortArc, add2Dict);
+         FClose(f, isPipe);
+         return lat;
+      }
+   }
+
+   /* scan for lattice with requested name in LLF */
+   ++numLatsLoaded;
+   ScanLLF (llf, fn, ext);
+
+   /* note we do not support sub lattices here, thus call ReadOneLattice()  directly */
+   lat = ReadOneLattice (&llf->source, heap, voc, shortArc, add2Dict);
+
+   return lat;
+}
+
+
 /* --------------------------- Initialisation ---------------------- */
 
 /* EXPORT->InitLat: register module & set configuration parameters */
 void InitLat(void)
 {
    int i;
+   Boolean b;
+   char buf[MAXSTRLEN];
 
    Register(hlat_version,hlat_vc_id);
    nParm = GetConfig("HLAT", TRUE, cParm, MAXGLOBS);
    if (nParm>0){
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
+      if (GetConfBool(cParm,nParm,"BEAMPRUNEARCS",&b)) 
+         beamPruneArcs = b;
+      if (GetConfStr(cParm,nParm,"LLFEXT",buf))
+         llfExt = CopyString(&gstack,buf);
+      if (GetConfInt(cParm,nParm,"MAXLLFS",&i)) maxLLFs = i;
    }
 
+   CreateHeap (&llfHeap, "LLF stack", MSTAK, 1, 1.0, 1000, 10000);
 #ifndef NO_LAT_LM
    CreateHeap (&slaHeap, "LatExpand arc heap", MHEAP, sizeof (SubLArc), 1.0, 1000, 128000);
    CreateHeap (&slnHeap, "LatExpand node heap", MHEAP,sizeof (SubLNode), 1.0, 1000, 32000);
@@ -510,6 +659,27 @@ Transcription *LatFindBest (MemHeap *heap, Lattice *lat, int N)
    return trans;
 }
 
+/* EXPORT->LatSetScores
+
+     set ln->score values to node posterior to make WriteLattice() deterministic
+*/
+void LatSetScores (Lattice *lat)
+{
+   LogDouble best;
+   LNode *ln;
+   int i;
+
+   LatAttachInfo (&gcheap, sizeof (FBinfo), lat);
+
+   best = LatForwBackw (lat, LATFB_MAX);
+
+   for (i = 0, ln = lat->lnodes; i < lat->nn; ++i, ++ln) {
+      ln->score = LNodeFw (ln) + LNodeBw (ln);
+   }
+
+   LatDetachInfo (&gcheap, lat);
+}
+
 
 /* EXPORT->LatPrune
 
@@ -571,16 +741,6 @@ Lattice *LatPrune (MemHeap *heap, Lattice *lat, LogDouble thresh, float arcsPerS
    }
 
    nn = na = 0;
-   /* scan arcs and count survivors */
-   for (i = 0, la = lat->larcs; i < lat->na; ++i, ++la) {
-      score = LNodeFw (la->start) + LArcTotLike (lat, la) + LNodeBw (la->end);
-      if (score >= limit) {     /* keep */
-         la->score = (float) na;
-         ++na;
-      }
-      else                   /* remove */
-         la->score = -1.0;
-   }
 
    /* scan nodes, count survivors and verify consistency */
    for (i = 0, ln = lat->lnodes; i < lat->nn; ++i, ++ln) {
@@ -591,7 +751,35 @@ Lattice *LatPrune (MemHeap *heap, Lattice *lat, LogDouble thresh, float arcsPerS
       }
       else {                    
          ln->n = -1;
-         /* check that there are no arcs to keep attached to ln */
+      }
+   }
+
+   /* scan arcs and count survivors */
+   for (i = 0, la = lat->larcs; i < lat->na; ++i, ++la) {
+      if (beamPruneArcs) {
+         score = LNodeFw (la->start) + LArcTotLike (lat, la) + LNodeBw (la->end);
+         if (score >= limit) {     /* keep */
+            la->score = (float) na;
+            ++na;
+         }
+         else                   /* remove */
+            la->score = -1.0;
+      }
+      else {                    /* only prune arc if either node is dead */
+         if (la->start->n != -1 && la->end->n != -1) {  /* both nodes are alive => keep arc */
+            la->score = (float) na;
+            ++na;
+         }
+         else                   /* remove */
+            la->score = -1.0;
+      }
+   }
+
+#if 0
+   /*   SANITY check */
+   for (i = 0, ln = lat->lnodes; i < lat->nn; ++i, ++ln) {
+      if (ln->n == -1) {
+         /* check that there are no live arcs attached to dead nodes */
          for (la = ln->foll; la; la = la->farc) {
             if (la->score >= 0.0)
                HError (8691, "LatPrune: arc score (%f) better than node score (%f)\n", 
@@ -600,6 +788,7 @@ Lattice *LatPrune (MemHeap *heap, Lattice *lat, LogDouble thresh, float arcsPerS
          }
       }
    }
+#endif 
    
    if (trace & T_PRUN)
       printf ("lattice pruned from %d/%d to %d/%d\n", lat->nn, lat->na, nn, na);

@@ -32,8 +32,8 @@
 /*         File: HTrain.c   HMM Training Support Routines      */
 /* ----------------------------------------------------------- */
 
-char *htrain_version = "!HVER!HTrain:   3.2.1 [CUED 15/10/03]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+char *htrain_version = "!HVER!HTrain:   3.3 [CUED 28/04/05]";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.1.1.1 2005/05/12 10:52:51 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -206,8 +206,8 @@ SegStore CreateSegStore(MemHeap *x, Observation obs, int segLen)
 /* EXPORT->LoadSegment: of obs in pbuf from start to end */
 void LoadSegment(SegStore ss, HTime start, HTime end, ParmBuf pbuf)
 {
-   Sequence vq;
-   Sequence fv;
+   Sequence vq = NULL;
+   Sequence fv = NULL;
    BufferInfo info;
    long i,st,en,len;
    int s,S = ss->o.swidth[0];
@@ -251,7 +251,7 @@ void LoadSegment(SegStore ss, HTime start, HTime end, ParmBuf pbuf)
 /* EXPORT->SegLength: Return num obs in i'th segment */
 int SegLength(SegStore ss, int i)
 {
-   Sequence s;
+   Sequence s = NULL;
    
    if (ss->hasfv) 
       s = (Sequence) GetItem(ss->fvSegs,i);
@@ -422,7 +422,7 @@ static float Distance(Vector v1, Vector v2)
 {
    Vector iv,crow;
    TriMat ic;
-   double sum,x;
+   double sum=0.0,x;
    int i,j;
 
    switch(dck){
@@ -932,7 +932,7 @@ static WtAcc *CreateWtAcc(MemHeap *x, int nMix, int nPara)
      wa[count].c = CreateVector(x,nMix);
      ZeroVector(wa[count].c);
      wa[count].occ = 0.0;
-     wa[count].time = -1; wa[count].prob = LZERO;
+     wa[count].time = -1; wa[count].prob = NULL;
      ++wtC;
    }
    return wa;
@@ -971,8 +971,8 @@ void TMAttachAccs(HMMSet *hset, MemHeap *x, int nPara)
 
 
 /* EXPORT->AttachAccs: attach accumulators to hset */
-void AttachAccs(HMMSet *hset, MemHeap *x){ AttachAccsParallel(hset,x,1); }
-void AttachAccsParallel(HMMSet *hset, MemHeap *x, int nPara)
+void AttachAccs(HMMSet *hset, MemHeap *x, UPDSet uFlags){ AttachAccsParallel(hset,x,uFlags,1); }
+void AttachAccsParallel(HMMSet *hset, MemHeap *x, UPDSet uFlags, int nPara)
 {
    HMMScanState hss;
    StreamElem *ste;
@@ -993,13 +993,19 @@ void AttachAccsParallel(HMMSet *hset, MemHeap *x, int nPara)
                while (GoNextMix(&hss,TRUE)) {
                   if (DoPreComps(hset->hsKind))
                      hss.mp->hook = CreatePreComp(x);
-                  if (!IsSeenV(hss.mp->mean)) {
-                     SetHook(hss.mp->mean,CreateMuAcc(x,size,nPara));
+		  if (!IsSeenV(hss.mp->mean)) {
+                     if (uFlags&UPMEANS) 
+                        SetHook(hss.mp->mean,CreateMuAcc(x,size,nPara));
+                     else 
+                        SetHook(hss.mp->mean,NULL);
                      TouchV(hss.mp->mean);
                   }
-                  if (!IsSeenV(hss.mp->cov.var)) {
-                     SetHook(hss.mp->cov.var,
-                             CreateVaAcc(x,size,hss.mp->ckind,nPara));
+		  if (!IsSeenV(hss.mp->cov.var)) {
+                     if (uFlags&UPVARS) 
+                        SetHook(hss.mp->cov.var,
+                                CreateVaAcc(x,size,hss.mp->ckind,nPara));
+                     else 
+                        SetHook(hss.mp->cov.var,NULL);
                      TouchV(hss.mp->cov.var);
                   }
                }
@@ -1056,9 +1062,8 @@ void TMZeroAccs(HMMSet *hset, int start, int end)
 }
 
 /*  EXPORT->ZeroAccs: zero all accumulators in given HMM set */
-void ZeroAccs(HMMSet *hset){ ZeroAccsParallel(hset,1); }
-
-void ZeroAccsParallel(HMMSet *hset, int nPara)
+void ZeroAccs(HMMSet *hset, UPDSet uFlags){ ZeroAccsParallel(hset,uFlags,1); }
+void ZeroAccsParallel(HMMSet *hset, UPDSet uFlags, int nPara)
 {
    HMMScanState hss;
    StreamElem *ste;
@@ -1080,7 +1085,7 @@ void ZeroAccsParallel(HMMSet *hset, int nPara)
             wa = (WtAcc *)ste->hook;
             for(i=start;i<=end;i++){
 	      ZeroVector(wa[i].c); wa[i].occ = 0.0;
-	      wa[i].time = -1; wa[i].prob = LZERO;
+	      wa[i].time = -1; wa[i].prob = NULL;
 	    }
             if (hss.isCont)
                while (GoNextMix(&hss,TRUE)) {
@@ -1088,34 +1093,33 @@ void ZeroAccsParallel(HMMSet *hset, int nPara)
 		     p = (PreComp *)hss.mp->hook;  
 		     p->time = -1; p->prob = LZERO;
                   }
-                  if (!IsSeenV(hss.mp->mean)) {
+                  if ((uFlags&UPMEANS) && (!IsSeenV(hss.mp->mean))) {
                      ma = (MuAcc *)GetHook(hss.mp->mean);
 		     for(i=start;i<=end;i++){
-		       ZeroVector(ma[i].mu); ma[i].occ = 0.0;
-		     }
-		     TouchV(hss.mp->mean);
+                        ZeroVector(ma[i].mu); ma[i].occ = 0.0;
+                     }
+                     TouchV(hss.mp->mean);
                   }
-                  if (!IsSeenV(hss.mp->cov.var)) {
+                  if ((uFlags&UPVARS) && (!IsSeenV(hss.mp->cov.var))) {
 		     va = (VaAcc *)GetHook(hss.mp->cov.var);
 		     for(i=start;i<=end;i++){
-		       switch(hss.mp->ckind){
-		       case DIAGC:
-		       case INVDIAGC:
-			 ZeroVector(va[i].cov.var);
-			 break;
-		       case FULLC:
-			 ZeroTriMat(va[i].cov.inv);
-			 break;
-		       default:
-			 HError(7170,"ShowAccs: bad cov kind %d",
-				hss.mp->ckind);
-		       }
-		       va[i].occ = 0.0;
+                        switch(hss.mp->ckind){
+                        case DIAGC:
+                        case INVDIAGC:
+                           ZeroVector(va[i].cov.var);
+                           break;
+                        case FULLC:
+                           ZeroTriMat(va[i].cov.inv);
+                           break;
+                        default:
+                           HError(7170,"ShowAccs: bad cov kind %d",
+                                  hss.mp->ckind);
+                        }
+                        va[i].occ = 0.0;
 		     }
                      TouchV(hss.mp->cov.var);
                   }
                }
-          
          }
       }
       if (!IsSeenV(hmm->transP)) {
@@ -1172,9 +1176,9 @@ void TMShowAccs(HMMSet *hset, int index)
 }
 
 /* EXPORT->ShowAccs: show accs attached to hset */
-void ShowAccs(HMMSet *hset){ ShowAccsParallel(hset, 0); }
+void ShowAccs(HMMSet *hset, UPDSet uFlags){ ShowAccsParallel(hset, uFlags, 0); }
 
-void ShowAccsParallel(HMMSet *hset, int index)
+void ShowAccsParallel(HMMSet *hset, UPDSet uFlags, int index)
 {
    const int mw=12;
    HMMScanState hss;
@@ -1202,13 +1206,13 @@ void ShowAccsParallel(HMMSet *hset, int index)
             if (hss.isCont)
                while (GoNextMix(&hss,TRUE)) {
                   printf("   mix %d\n",hss.m);
-                  if (!IsSeenV(hss.mp->mean)) {
+                  if ((uFlags&UPMEANS) && (!IsSeenV(hss.mp->mean))) {
                      ma = (MuAcc *)GetHook(hss.mp->mean);
                      printf("    mean occ=%f\n",ma[index].occ);
                      ShowVector("    means=",ma[index].mu,mw);
                      TouchV(hss.mp->mean);
                   }
-                  if (!IsSeenV(hss.mp->cov.var)) {
+                  if ((uFlags&UPVARS) && (!IsSeenV(hss.mp->cov.var))) {
                      va = (VaAcc *)GetHook(hss.mp->cov.var);
                      printf("    var occ=%f\n",va[index].occ);
                      switch(hss.mp->ckind){
@@ -1284,7 +1288,7 @@ void ResetPreComps(HMMSet *hset)
          while (GoNextStream(&hss,TRUE)) {
             ste = hss.ste;
             wa = (WtAcc *)ste->hook;
-            wa->time = -1; wa->prob = LZERO;
+            wa->time = -1; wa->prob = NULL;
             if (hss.isCont)
                while (GoNextMix(&hss,TRUE)) {
                   p = (PreComp *)hss.mp->hook;
@@ -1313,7 +1317,7 @@ void ResetHMMPreComps(HLink hmm, int nStreams)
       for (s=1;s<=nStreams; s++,ste++){
          wa = (WtAcc *)ste->hook; nMixes = ste->nMix;
          if (wa != NULL) {
-            wa->time = -1; wa->prob = LZERO;
+            wa->time = -1; wa->prob = NULL;
             me = ste->spdf.cpdf+1;
             for (m=1; m<=nMixes; m++,me++){
                p = (PreComp *)me->mpdf->hook;
@@ -1411,8 +1415,8 @@ static FILE * GetDumpFile(char *name, int n)
 /* EXPORT->DumpAccs: Dump a copy of the accs in hset to fname.
        Any occurrence of the $ symbol in fname is replaced by n.
        The file is left open and returned */
-FILE * DumpAccs(HMMSet *hset, char *fname, int n){ return DumpAccsParallel(hset,fname,n,0); }
-FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, int index)
+FILE * DumpAccs(HMMSet *hset, char *fname, UPDSet uFlags, int n){ return DumpAccsParallel(hset,fname,n,uFlags,0); }
+FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, UPDSet uFlags, int index)
 {
    FILE *f;
    HLink hmm;
@@ -1431,11 +1435,11 @@ FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, int index)
             DumpWtAcc(f,((WtAcc *)hss.ste->hook)+index);
             if (hss.isCont){
                while (GoNextMix(&hss,TRUE)) {
-                  if (!IsSeenV(hss.mp->mean)) {
+                  if ((uFlags&UPMEANS) && (!IsSeenV(hss.mp->mean))) {
                      DumpMuAcc(f,((MuAcc *)GetHook(hss.mp->mean))+index);
                      TouchV(hss.mp->mean);
                   }
-                  if (!IsSeenV(hss.mp->cov.var)) {
+                  if ((uFlags&UPVARS) && (!IsSeenV(hss.mp->cov.var))) {
                      DumpVaAcc(f,((VaAcc *)GetHook(hss.mp->cov.var))+index,hss.mp->ckind);
                      TouchV(hss.mp->cov.var);
                   }
@@ -1580,8 +1584,8 @@ static void CheckMarker(Source *src)
 
 /* EXPORT->LoadAccs: inc accumulators in hset by vals in fname */
 
-Source LoadAccs(HMMSet *hset, char *fname){ return LoadAccsParallel(hset,fname,0); }
-Source LoadAccsParallel(HMMSet *hset, char *fname, int index)
+Source LoadAccs(HMMSet *hset, char *fname, UPDSet uFlags){ return LoadAccsParallel(hset,fname,uFlags,0); }
+Source LoadAccsParallel(HMMSet *hset, char *fname, UPDSet uFlags, int index)
 {
    Source src;
    HLink hmm;
@@ -1606,11 +1610,11 @@ Source LoadAccsParallel(HMMSet *hset, char *fname, int index)
             LoadWtAcc(&src,((WtAcc *)hss.ste->hook)+index,hss.M);
             if (hss.isCont){
                while (GoNextMix(&hss,TRUE)) {
-                  if (!IsSeenV(hss.mp->mean)) {
+                  if ((uFlags&UPMEANS) && (!IsSeenV(hss.mp->mean))) {
 		     LoadMuAcc(&src,((MuAcc *)GetHook(hss.mp->mean))+index,size);
                      TouchV(hss.mp->mean);
                   }
-                  if (!IsSeenV(hss.mp->cov.var)) {
+                  if ((uFlags&UPVARS) && (!IsSeenV(hss.mp->cov.var))) {
                      LoadVaAcc(&src,((VaAcc *)GetHook(hss.mp->cov.var))+index,
                                size,hss.mp->ckind);
                      TouchV(hss.mp->cov.var);

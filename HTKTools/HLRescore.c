@@ -33,8 +33,8 @@
      - allow batch processing?
 */
 
-char *hlrescore_version = "!HVER!HLRescore:   3.2.1 [CUED 15/10/03]";
-char *hlrescore_vc_id = "$Id: HLRescore.c,v 1.4 2003/10/15 08:10:13 ge204 Exp $";
+char *hlrescore_version = "!HVER!HLRescore:   3.3 [CUED 28/04/05]";
+char *hlrescore_vc_id = "$Id: HLRescore.c,v 1.1.1.1 2005/05/12 10:52:54 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -94,6 +94,7 @@ static char *startLMWord;       /* word at start in LM (<s>) */
 static char *endLMWord;         /* word at end in LM (</s>) */
 
 static Boolean fixBadLats = FALSE;         /* fix final word in lattices */
+static Boolean sortLattice = TRUE;         /* sort lattice nodes by time & posterior */
 
 static LogDouble pruneInThresh = - LZERO;  /* beam for pruning (-t) */
 static LogDouble pruneOutThresh = - LZERO; /* beam for pruning (-u) */
@@ -143,6 +144,7 @@ void SetConfParms(void)
       if (GetConfStr (cParm, nParm, "ENDLMWORD", buf))
          endLMWord = CopyString (&gstack, buf);
       if (GetConfBool (cParm, nParm, "FIXBADLATS", &b)) fixBadLats = b;
+      if (GetConfBool (cParm, nParm, "SORTLATTICE", &b)) sortLattice = b;
    }
 }
 
@@ -459,7 +461,15 @@ void ProcessLattice (char *latfn)
    /* write lattice */
    if (writeLat) {
       LatFormat form;
-      
+      int i;
+      LNode *ln;
+
+      if (sortLattice)
+         LatSetScores (lat);
+      else
+         for(i=0, ln=lat->lnodes; i<lat->nn; i++, ln++)
+            ln->score=0.0;
+
       MakeFN (latfn, labOutDir, latInExt, lfn);
       lf = FOpen (lfn, NetOFilter, &isPipe);
       if (!lf)

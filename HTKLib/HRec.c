@@ -19,8 +19,8 @@
 /*         File: HRec.c  Viterbi Recognition Engine Library    */
 /* ----------------------------------------------------------- */
 
-char *hrec_version = "!HVER!HRec:   3.2.1 [CUED 15/10/03]";
-char *hrec_vc_id = "$Id: HRec.c,v 1.11 2003/10/15 08:10:13 ge204 Exp $";
+char *hrec_version = "!HVER!HRec:   3.3 [CUED 28/04/05]";
+char *hrec_vc_id = "$Id: HRec.c,v 1.1.1.1 2005/05/12 10:52:51 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -34,6 +34,7 @@ char *hrec_vc_id = "$Id: HRec.c,v 1.11 2003/10/15 08:10:13 ge204 Exp $";
 #include "HNet.h"
 #include "HRec.h"
 #include "HUtil.h"
+#include "HAdapt.h"
 
 /* Trace levels */
 
@@ -235,6 +236,7 @@ struct precinfo {
 
 /* Global variable (so we want to get rid of them) */
 static PRecInfo *pri;
+static AdaptXForm *inXForm;
 
 /* Module Initialisation */
 static ConfParam *cParm[MAXGLOBS];      /* config parameters */
@@ -409,49 +411,72 @@ static LogFloat cSOutP(HMMSet *hset, int s, Observation *x, StreamElem *se,
                        int id)
 {
    PreComp *pre;
-   int m;
-   LogFloat bx,px,wt;
+   LogFloat bx,px,wt,det;
+   int m,vSize;
+   double sum;
    MixtureElem *me;
-   Vector v;
+   TMixRec *tr;
+   TMProb *tm;
+   Vector v,tv;
    
-   /* Note hset->kind == SHAREDHS */
-   v=x->fv[s];
-   me=se->spdf.cpdf+1;
-   if (se->nMix==1){     /* Single Mixture Case */
-      if (me->mpdf->mIdx>0 && me->mpdf->mIdx<=pri->psi->nmp)
-         pre=pri->psi->mPre+me->mpdf->mIdx;
-      else pre=NULL;
-      if (pre==NULL)
-         bx=MOutP(v, me->mpdf);
-      else if (pre->id!=id) {
-         bx=MOutP(v, me->mpdf);
-         pre->id=id;
-         pre->outp=bx;
-      }
-      else
-         bx=pre->outp;
-   } else {
-      bx=LZERO;                   /* Multi Mixture Case */
-      for (m=1; m<=se->nMix; m++,me++) {
-         wt = MixLogWeight(hset, me->weight);
-         if (wt>LMINMIX) {   
-            if (me->mpdf->mIdx>0 && me->mpdf->mIdx<=pri->psi->nmp)
-               pre=pri->psi->mPre+me->mpdf->mIdx;
-            else pre=NULL;
-            if (pre==NULL)
-               px=MOutP(v, me->mpdf);
-            else if (pre->id!=id) {
-               px=MOutP(v, me->mpdf);
-               pre->id=id;
-               pre->outp=px;
+   switch (hset->hsKind){
+   case PLAINHS:
+   case SHAREDHS:
+      v=x->fv[s];
+      me=se->spdf.cpdf+1;
+      if (se->nMix==1){     /* Single Mixture Case */
+         if (me->mpdf->mIdx>0 && me->mpdf->mIdx<=pri->psi->nmp)
+            pre=pri->psi->mPre+me->mpdf->mIdx;
+         else pre=NULL;
+         if (pre==NULL) {
+            bx= MOutP(ApplyCompFXForm(me->mpdf,v,inXForm,&det,id),me->mpdf);
+            bx += det;
+         } else if (pre->id!=id) {
+            bx= MOutP(ApplyCompFXForm(me->mpdf,v,inXForm,&det,id),me->mpdf);
+            bx += det;
+            pre->id=id;
+            pre->outp=bx;
+         }
+         else
+            bx=pre->outp;
+      } else {
+         bx=LZERO;                   /* Multi Mixture Case */
+         for (m=1; m<=se->nMix; m++,me++) {
+            wt = MixLogWeight(hset, me->weight);
+            if (wt>LMINMIX) {   
+               if (me->mpdf->mIdx>0 && me->mpdf->mIdx<=pri->psi->nmp)
+                  pre=pri->psi->mPre+me->mpdf->mIdx;
+               else pre=NULL;
+               if (pre==NULL) {
+                  px= MOutP(ApplyCompFXForm(me->mpdf,v,inXForm,&det,id),me->mpdf);
+                  px += det;
+               } else if (pre->id!=id) {
+                  px= MOutP(ApplyCompFXForm(me->mpdf,v,inXForm,&det,id),me->mpdf);
+                  px += det;
+                  pre->id=id;
+                  pre->outp=px;
+               }
+               else
+                  px=pre->outp;
+               bx=LAdd(bx,wt+px);
             }
-            else
-               px=pre->outp;
-            bx=LAdd(bx,wt+px);
          }
       }
+      return bx;
+   case TIEDHS:
+      v = x->fv[s];
+      vSize = VectorSize(v);
+      if (vSize != hset->swidth[s])
+         HError(7071,"SOutP: incompatible stream widths %d vs %d",
+                vSize,hset->swidth[s]);
+      sum = 0.0; tr = hset->tmRecs+s;
+      tm = tr->probs+1; tv = se->spdf.tpdf;
+      for (m=1; m<=tr->topM; m++,tm++)
+         sum += tm->prob * tv[tm->index];
+      return (sum>=MINLARG)?log(sum)+tr->maxP:LZERO;
+   default: HError(7071,"SOutP: bad hsKind %d\n",hset->hsKind);
    }
-   return bx;
+   return LZERO; /* to keep compiler happy */   
 }
 
 
@@ -473,8 +498,8 @@ static LogFloat cPOutP(PSetInfo *psi,Observation *obs,StateInfo *si,int id)
       HError(8520,"cPOutP: State has no PreComp attached");
 #endif
    
-   if (pre->id!=id) {
-      if (psi->mixShared==FALSE){
+   if (pre->id!=id) { /* bodged at the moment - fix !! */
+      if ((FALSE && psi->mixShared==FALSE) || (psi->hset->hsKind == DISCRETEHS)) {
          outp=POutP(psi->hset,obs,si);
       }
       else {
@@ -1386,7 +1411,7 @@ static void LatFromPaths(Path *path,int *ln,Lattice *lat)
    NxtPath tmp,*pth;
    Align *align,*al,*pr;
    MLink ml;
-   LabId labid,labpr;
+   LabId labid,labpr = NULL;
    char buf[80];
    int i,frame;
    double prlk,dur,like,wp;
@@ -1771,13 +1796,14 @@ void StartRecognition(VRecInfo *vri,Network *net,
       }
 }
 
-void ProcessObservation(VRecInfo *vri,Observation *obs,int id)
+void ProcessObservation(VRecInfo *vri,Observation *obs,int id, AdaptXForm *xform)
 {
    NetInst *inst,*next;
    int j;
    float thresh;
 
    pri=vri->pri;
+   inXForm = xform; /* sepcifies the transform to use for this observation */
    if (pri==NULL)
       HError(8570,"ProcessObservation: Visible recognition info not initialised");
    if (pri->net==NULL)
@@ -1891,7 +1917,7 @@ void TracePath(FILE *file,Path *path)
 /* EXPORT->CompleteRecognition: Free unused data and return traceback */
 Lattice *CompleteRecognition(VRecInfo *vri,HTime frameDur,MemHeap *heap)
 {
-   Lattice *lat;
+   Lattice *lat = NULL;
    NetInst *inst;
    TokenSet dummy;
    RelToken rtok[1];

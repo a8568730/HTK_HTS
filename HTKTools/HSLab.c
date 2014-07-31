@@ -32,8 +32,8 @@
 /*         File: HSLab.c:   The Speech Label Editor            */
 /* ----------------------------------------------------------- */
 
-char *hslab_version = "!HVER!HSLab:   3.2.1 [CUED 15/10/03]";
-char *hslab_vc_id = "$Id: HSLab.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hslab_version = "!HVER!HSLab:   3.3 [CUED 28/04/05]";
+char *hslab_vc_id = "$Id: HSLab.c,v 1.2 2005/05/12 15:51:29 jal58 Exp $";
 
 /* 
    --------------------------------------------------------------
@@ -1678,12 +1678,12 @@ void IncLabStr(void)
 
    strcpy(sbuf,labstr);
    for (p=sbuf; *p != '\0'; p++)
-      if (isdigit(*p)){
+      if (isdigit((int) *p)){
          isNum = TRUE; break;
       }
    if (isNum){    
       for (q=p+1; *q != '\0'; q++)
-         if (!isdigit(*q)) break;
+         if (!isdigit((int) *q)) break;
       num = atoi(p) +1; sprintf(nbuf,"%d",num);
       *p = '\0'; 
       strcpy(labstr,sbuf); strcat(labstr,nbuf); strcat(labstr,q);

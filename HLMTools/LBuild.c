@@ -29,8 +29,8 @@
 /*         File: LBuild.c - generate LM                         */
 /* ----------------------------------------------------------- */
 
-char *lbuild_version = "!HVER!LBuild:   3.2.1 [CUED 15/10/03]";
-char *lbuild_vc_id = "$Id: LBuild.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
+char *lbuild_version = "!HVER!LBuild:   3.3 [CUED 28/04/05]";
+char *lbuild_vc_id = "$Id: LBuild.c,v 1.1.1.1 2005/05/12 10:52:19 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

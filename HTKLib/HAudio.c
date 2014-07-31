@@ -19,8 +19,8 @@
 /*      File: HAudio.c: Audio Input/Output Interface           */
 /* ----------------------------------------------------------- */
 
-char *haudio_version = "!HVER!HAudio:   3.2.1 [CUED 15/10/03]";
-char *haudio_vc_id = "$Id: HAudio.c,v 1.9 2003/10/15 08:10:12 ge204 Exp $";
+char *haudio_version = "!HVER!HAudio:   3.3 [CUED 28/04/05]";
+char *haudio_vc_id = "$Id: HAudio.c,v 1.2 2005/05/12 15:51:23 jal58 Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"
@@ -1391,7 +1391,7 @@ static void InitAudo(AudioOut a, HTime *sampPeriod)
 #endif
 #ifdef SUN16_AUDIO
    {
-      int f,g,i;
+      int f,g;
       
       AUDIO_INITINFO(&a->audio_info);
       if ((a->audio_ctld = open(AUDIO_IO, O_WRONLY + O_NDELAY)) < 0) 

@@ -19,7 +19,7 @@
 /*         File: HFB.h: Forward Backward routines module       */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HFB:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HFB:   3.3 [CUED 28/04/05] */
 
 #ifndef _HFB_H_
 #define _HFB_H_
@@ -29,9 +29,6 @@ extern "C" {
 #endif
 
 #define NOPRUNE 1.0E20
-
-enum _UPDSet{UPMEANS=1,UPVARS=2,UPTRANS=4,UPMIXES=8,UPADAPT=16};
-typedef enum _UPDSet UPDSet;
 
 /* structure for the utterance information */
 typedef struct {
@@ -82,7 +79,7 @@ typedef struct {
   DVector *alphat;    /* array[1..Q][1..Nq] of prob */
   DVector *alphat1;   /* alpha[t-1] */
   DVector **beta;     /* array[1..T][1..Q][1..Nq] of prob */
-  float ****otprob;   /* array[1..T][1..Q][2..Nq-1][0..S] of prob */
+  float *****otprob;  /* array[1..T][1..Q][2..Nq-1][0..S][0..M] of prob */
   LogDouble pr;       /* log prob of current utterance */
   Vector occt;        /* occ probs for current time t */
   Vector *occa;       /* array[1..Q][1..Nq] of occ probs (trace only) */
@@ -102,8 +99,9 @@ typedef struct {
   int maxM;           /* maximum number of mixtures in hmmset */
   int maxMixInS[SMAX];/* array[1..swidth[0]] of max mixes */
   AlphaBeta *ab;      /* Alpha-beta structure for this model */
-  RegTransInfo *rt;   /* Adaptation regression transform info 
-			 only used if adaptation is being performed */
+  AdaptXForm *inXForm;/* current input transform (if any) */
+  AdaptXForm *al_inXForm;/* current input transform for al_hset (if any) */
+  AdaptXForm *paXForm;/* current parent transform (if any) */
 } FBInfo;
 
 
@@ -112,9 +110,11 @@ typedef struct {
 /* Initialise HFB module */
 void InitFB(void) ;
 
+/* Allow tools to enable top-level tracing in HFB. Only here for historical reasons */
+void SetTraceFB(void);
+
 /* Initialise the forward backward memory stacks etc */
-void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *set, 
-                       RegTransInfo *rt, UPDSet uset, 
+void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *set, UPDSet uset, 
                        LogDouble pruneInit, LogDouble pruneInc, 
                        LogDouble pruneLim, float minFrwdP);
 

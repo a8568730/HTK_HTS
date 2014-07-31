@@ -21,7 +21,7 @@
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
 /*                                                             */
-/*              2002  Cambridge University                     */
+/*          2002-2004 Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -32,8 +32,8 @@
 /*         File: HERest.c: Embedded B-W ReEstimation           */
 /* ----------------------------------------------------------- */
 
-char *herest_version = "!HVER!HERest:   3.2.1 [CUED 15/10/03]";
-char *herest_vc_id = "$Id: HERest.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
+char *herest_version = "!HVER!HERest:   3.3 [CUED 28/04/05]";
+char *herest_vc_id = "$Id: HERest.c,v 1.3 2005/07/22 10:17:13 mjfg Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -68,13 +68,19 @@ char *herest_vc_id = "$Id: HERest.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
 #include "HTrain.h"
 #include "HUtil.h"
 #include "HAdapt.h"
+#include "HMap.h"
 #include "HFB.h"
 
 /* Trace Flags */
 #define T_TOP   0001    /* Top level tracing */
 #define T_MAP   0002    /* logical/physical hmm map */
-#define T_MIX   0004    /* Mixture Weights */
-#define T_UPD   0010    /* Model updates */
+#define T_UPD   0004    /* Model updates */
+
+
+/* possible values of updateMode */
+#define UPMODE_DUMP 1
+#define UPMODE_UPDATE 2
+#define UPMODE_BOTH 3
 
 /* Global Settings */
 
@@ -97,16 +103,18 @@ static Boolean saveBinary = FALSE;  /* save output in binary  */
 static Boolean ldBinary = TRUE;        /* load/dump in binary */
 static FileFormat dff=UNDEFF;       /* data file format */
 static FileFormat lff=UNDEFF;       /* label file format */
+static int updateMode = UPMODE_UPDATE; /* dump summed accs, update models or do both? */
+
 
 static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
 static int nParm = 0;               /* total num params */
-Boolean traceHFB = FALSE;        /* pass to HFB to retain top-level tracing */
 
 static Boolean al_hmmUsed = FALSE;   /* Set for 2-model ReEstimation */
 static char al_hmmDir[MAXFNAMELEN];  /* dir to look for alignment hmm defs */
 static char al_hmmExt[MAXSTRLEN];  	 /* alignment hmm def file extension */
 static char al_hmmMMF[MAXFNAMELEN];  /* alignment hmm MMF */
 static char al_hmmLst[MAXFNAMELEN];  /* alignment hmm list */
+static char up_hmmMMF[MAXFNAMELEN];  /* alignment hmm list */
 static HMMSet al_hset ;      	 /* Option 2nd set of models for alignment */
 
 /* Global Data Structures - valid for all training utterances */
@@ -120,12 +128,18 @@ static Boolean firstTime = TRUE;    /* Flag used to enable creation of ot */
 static Boolean twoDataFiles = FALSE; /* Enables creation of ot2 for FB
                                         training using two data files */
 static int totalT=0;       /* total number of frames in training data */
-static LogDouble totalPr;   /* total log prob upto current utterance */
+static LogDouble totalPr=0;   /* total log prob upto current utterance */
 static Vector vFloor[SMAX]; /* variance floor - default is all zero */
 
 static MemHeap hmmStack;   /*For Storage of all dynamic structures created...*/
 static MemHeap uttStack;
 static MemHeap fbInfoStack;
+static MemHeap accStack;
+
+/* information about transforms */
+static XFInfo xfInfo;
+static int maxSpUtt = 0;
+static float varFloorPercent = 0;
 
 /* ------------------ Process Command Line -------------------------- */
    
@@ -134,11 +148,13 @@ void SetConfParms(void)
 {
    int i;
    Boolean b;
+   double f;
    char buf[MAXSTRLEN];
    
    nParm = GetConfig("HEREST", TRUE, cParm, MAXGLOBS);
    if (nParm>0) {
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
+      if (GetConfFlt(cParm,nParm,"VARFLOORPERCENTILE",&f)) varFloorPercent = f;
       if (GetConfBool(cParm,nParm,"SAVEBINARY",&b)) saveBinary = b;
       if (GetConfBool(cParm,nParm,"BINARYACCFORMAT",&b)) ldBinary = b;
       /* 2-model reestimation alignment model set */
@@ -155,6 +171,24 @@ void SetConfParms(void)
       if (GetConfStr(cParm,nParm,"ALIGNMODELEXT",buf)) {
           strcpy(al_hmmExt,buf); al_hmmUsed = TRUE;
       }
+      if (GetConfStr(cParm,nParm,"ALIGNXFORMEXT",buf)) {
+         xfInfo.alXFormExt = CopyString(&hmmStack,buf);
+      }
+      if (GetConfStr(cParm,nParm,"ALIGNXFORMDIR",buf)) {
+         xfInfo.alXFormDir = CopyString(&hmmStack,buf);
+      }
+      if (GetConfStr(cParm,nParm,"INXFORMMASK",buf)) {
+         xfInfo.inSpkrPat = CopyString(&hmmStack,buf);
+      }
+      if (GetConfStr(cParm,nParm,"PAXFORMMASK",buf)) {
+         xfInfo.paSpkrPat = CopyString(&hmmStack,buf);
+      }
+      if (GetConfStr(cParm,nParm,"UPDATEMODE",buf)) {
+         if (!strcmp (buf, "DUMP")) updateMode = UPMODE_DUMP;
+         else if (!strcmp (buf, "UPDATE")) updateMode = UPMODE_UPDATE;
+         else if (!strcmp (buf, "BOTH")) updateMode = UPMODE_BOTH;
+         else HError(2319, "Unknown UPDATEMODE specified (must be DUMP, UPDATE or BOTH)");
+      }
    }
 }
 
@@ -162,8 +196,12 @@ void ReportUsage(void)
 {
    printf("\nUSAGE: HERest [options] hmmList dataFiles...\n\n");
    printf(" Option                                       Default\n\n");
+   printf(" -a      Use an input linear transform        off\n");
    printf(" -c f    Mixture pruning threshold            10.0\n");
    printf(" -d s    dir to find hmm definitions          current\n");
+   printf(" -h s    set output speaker name pattern   *.%%%%%%\n");
+   printf("         to s, optionally set input and parent patterns\n");
+   printf(" -l N    set max files per speaker            off\n");
    printf(" -m N    set min examples needed per model    3\n");
    printf(" -o s    extension for new hmm files          as src\n");
    printf(" -p N    set parallel mode to N               off\n");
@@ -171,11 +209,13 @@ void ReportUsage(void)
    printf("         ...using two parameterisations       off\n");
    printf(" -s s    print statistics to file s           off\n");
    printf(" -t f [i l] set pruning to f [inc limit]      inf\n");
-   printf(" -u tmvw update t)rans m)eans v)ars w)ghts    tmvw\n");
+   printf(" -u tmvwap  update t)rans m)eans v)ars w)ghts tmvw\n");
+   printf("                a)daptation xform p)rior used     \n");
    printf(" -v f    set minimum variance to f            0.0\n");
    printf(" -w f    set mix weight floor to f*MINMIX     0.0\n");
    printf(" -x s    extension for hmm files              none\n");
-   PrintStdOpts("BFGHILMSTX");
+   printf(" -z s    Save all xforms to TMF file s        TMF\n");
+   PrintStdOpts("BEFGHIJKLMSTX");
    printf("\n\n");
 }
 
@@ -191,6 +231,8 @@ void SetuFlags(void)
       case 'm': uFlags = (UPDSet) (uFlags+UPMEANS); break;
       case 'v': uFlags = (UPDSet) (uFlags+UPVARS); break;
       case 'w': uFlags = (UPDSet) (uFlags+UPMIXES); break;
+      case 'a': uFlags = (UPDSet) (uFlags+UPXFORM); break;
+      case 'p': uFlags = (UPDSet) (uFlags+UPMAP); break;
       default: HError(2320,"SetuFlags: Unknown update flag %c",*s);
          break;
       }
@@ -227,6 +269,20 @@ char *ScriptWord(FILE *script, char *scriptBuf)
    return scriptBuf;
 }
 
+void CheckUpdateSetUp()
+{
+  AdaptXForm *xf;
+
+  xf = xfInfo.paXForm;
+  if ((xfInfo.paXForm != NULL) && !(uFlags&UPXFORM)) {
+    while (xf != NULL) {
+      if (xf->xformSet->xkind != CMLLR)\
+	HError(999,"SAT only supported with CMLLR transforms");
+      xf = xf->parentXForm;
+    }
+  }
+}
+
 int main(int argc, char *argv[])
 {
    char *datafn=NULL;
@@ -242,7 +298,7 @@ int main(int argc, char *argv[])
    Source src;
    float tmpFlt;
    int tmpInt;
-   int numUtt;
+   int numUtt,spUtt=0;
 
    void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn);
    void DoForwardBackward(FBInfo *fbInfo, UttInfo *utt, char *datafn, char *datafn2);
@@ -259,19 +315,22 @@ int main(int argc, char *argv[])
       HError(2300,"HERest: InitParm failed");
    InitTrain();
    InitUtil();   InitFB();
+   InitAdapt(&xfInfo); InitMap();
 
    if (!InfoPrinted() && NumArgs() == 0)
       ReportUsage();
    if (NumArgs() == 0) Exit(0);
    al_hmmDir[0] = '\0'; al_hmmExt[0] = '\0'; 
    al_hmmMMF[0] = '\0'; al_hmmLst[0] = '\0'; 
-   SetConfParms();
+   up_hmmMMF[0] = '\0';
    CreateHeap(&hmmStack,"HmmStore", MSTAK, 1, 1.0, 50000, 500000);
+   SetConfParms();
    CreateHMMSet(&hset,&hmmStack,TRUE);
    CreateHeap(&uttStack,   "uttStore",    MSTAK, 1, 0.5, 100,   1000);
    utt = (UttInfo *) New(&uttStack, sizeof(UttInfo));
    CreateHeap(&fbInfoStack,   "FBInfoStore",  MSTAK, 1, 0.5, 100 ,  1000 );
    fbInfo = (FBInfo *) New(&fbInfoStack, sizeof(FBInfo));
+   CreateHeap(&accStack,   "accStore",    MSTAK, 1, 1.0, 50000,   500000);
 
    while (NextArg() == SWITCHARG) {
       s = GetSwtArg();
@@ -346,7 +405,8 @@ int main(int argc, char *argv[])
       case 'H':
          if (NextArg() != STRINGARG)
             HError(2319,"HERest: HMM macro file name expected");
-         AddMMF(&hset,GetStrArg());
+         strcpy(up_hmmMMF,GetStrArg());
+         AddMMF(&hset,up_hmmMMF);
          break;     
       case 'I':
          if (NextArg() != STRINGARG)
@@ -369,6 +429,53 @@ int main(int argc, char *argv[])
          if (NextArg()!=STRINGARG)
             HError(2319,"HERest: Label file extension expected");
          labExt = GetStrArg(); break;
+	 /* additional options for transform support */
+      case 'a':
+ 	xfInfo.useInXForm = TRUE; break;
+      case 'h':
+	if (NextArg()!=STRINGARG)
+	  HError(1,"Speaker name pattern expected");
+	xfInfo.outSpkrPat = GetStrArg();
+	break;
+      case 'l':
+         maxSpUtt = GetChkedInt(0,0100000,s);
+         break;
+      case 'E':
+         if (NextArg()!=STRINGARG)
+            HError(2319,"HERest: parent transform directory expected");
+	 xfInfo.usePaXForm = TRUE;
+         xfInfo.paXFormDir = GetStrArg(); 
+         if (NextArg()==STRINGARG)
+	   xfInfo.paXFormExt = GetStrArg(); 
+	 if (NextArg() != SWITCHARG)
+	   HError(2319,"HERest: cannot have -E as the last option");	  
+         break;              
+      case 'J':
+         if (NextArg()!=STRINGARG)
+            HError(2319,"HERest: input transform directory expected");
+         AddInXFormDir(&hset,GetStrArg());
+         if (NextArg()==STRINGARG) {
+            if (xfInfo.inXFormExt == NULL)
+               xfInfo.inXFormExt = GetStrArg(); 
+            else
+               HError(2319,"HERest: only one input transform extension may be specified");
+         }
+	 if (NextArg() != SWITCHARG)
+	   HError(2319,"HERest: cannot have -J as the last option");	  
+         break;              
+      case 'K':
+         if (NextArg()!=STRINGARG)
+            HError(2319,"HERest: output transform directory expected");
+         xfInfo.outXFormDir = GetStrArg(); 
+         if (NextArg()==STRINGARG)
+	   xfInfo.outXFormExt = GetStrArg(); 
+	 if (NextArg() != SWITCHARG)
+	   HError(2319,"HERest: cannot have -K as the last option");	  
+         break;              
+      case 'z':
+         if (NextArg() != STRINGARG)
+            HError(2319,"HERest: output TMF file expected");
+         xfInfo.xformTMF = GetStrArg(); break;
       default:
          HError(2319,"HERest: Unknown switch %s",s);
       }
@@ -380,7 +487,8 @@ int main(int argc, char *argv[])
    InitUttInfo(utt, twoDataFiles);
    numUtt = 1;
 
-   if (trace&T_TOP) traceHFB=TRUE; /* allows HFB to do top-level tracing */
+   if (trace&T_TOP) 
+      SetTraceFB(); /* allows HFB to do top-level tracing */
 
    do {
       if (NextArg()!=STRINGARG)
@@ -395,7 +503,7 @@ int main(int argc, char *argv[])
       }else
          datafn = GetStrArg();
       if (parMode==0){
-         src=LoadAccs(&hset, datafn);
+         src=LoadAccs(&hset, datafn,uFlags);
          ReadFloat(&src,&tmpFlt,1,ldBinary);
          totalPr += (LogDouble)tmpFlt;
          ReadInt(&src,&tmpInt,1,ldBinary);
@@ -403,22 +511,41 @@ int main(int argc, char *argv[])
          CloseSource( &src );
       }
       else {
-         DoForwardBackward(fbInfo, utt, datafn, datafn2) ;
-         numUtt += 1;
+         /* track speakers */	 
+         if (UpdateSpkrStats(&hset,&xfInfo, datafn)) spUtt=0;
+	 /* Check to see whether set-up is valid */
+	 CheckUpdateSetUp();
+         fbInfo->inXForm = xfInfo.inXForm;
+         fbInfo->al_inXForm = xfInfo.al_inXForm;
+         fbInfo->paXForm = xfInfo.paXForm;
+         if ((maxSpUtt==0) || (spUtt<maxSpUtt))
+            DoForwardBackward(fbInfo, utt, datafn, datafn2) ;
+         numUtt += 1; spUtt++;
       }
    } while (NumArgs()>0);
-   if (parMode>0){
-      MakeFN("HER$.acc",newDir,NULL,newFn);
-      f=DumpAccs(&hset,newFn,parMode);
-      tmpFlt = (float)totalPr;
-      WriteFloat(f,&tmpFlt,1,ldBinary);
-      WriteInt(f,(int*)&totalT,1,ldBinary);
-      fclose( f );
-   }else {
-      if (stats) {
-         StatReport(&hset);
+
+   if (uFlags&UPXFORM) {/* ensure final speaker correctly handled */ 
+      UpdateSpkrStats(&hset,&xfInfo, NULL); 
+      if (trace&T_TOP) {
+         printf("Reestimation complete - average log prob per frame = %e (%d frames)\n",
+                totalPr/totalT, totalT);
       }
-      UpdateModels(&hset,utt->pbuf2);
+   } else {
+      if (parMode>0  || (parMode==0 && (updateMode&UPMODE_DUMP))){
+         MakeFN("HER$.acc",newDir,NULL,newFn);
+         f=DumpAccs(&hset,newFn,uFlags,parMode);
+         tmpFlt = (float)totalPr;
+         WriteFloat(f,&tmpFlt,1,ldBinary);
+         WriteInt(f,(int*)&totalT,1,ldBinary);
+         fclose( f );
+      }
+      if (parMode <= 0) {
+         if (stats) {
+            StatReport(&hset);
+         }
+         if (updateMode&UPMODE_UPDATE)
+            UpdateModels(&hset,utt->pbuf2);
+      }
    }
    ResetHeap(&uttStack);
    ResetHeap(&fbInfoStack);
@@ -439,9 +566,8 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
       HError(2321,"Initialise: MakeHMMSet failed");
    if(LoadHMMSet( hset,hmmDir,hmmExt)<SUCCESS)
       HError(2321,"Initialise: LoadHMMSet failed");
-   SetParmHMMSet(hset);
-   AttachAccs(hset, &gstack);
-   ZeroAccs(hset);
+   AttachAccs(hset, &accStack, uFlags);
+   ZeroAccs(hset, uFlags);
    P = hset->numPhyHMM;
    L = hset->numLogHMM;
    vSize = hset->vecSize;
@@ -450,17 +576,21 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
 
    hsKind = hset->hsKind;
    if (hsKind==DISCRETEHS)
-     uFlags = (UPDSet) (uFlags & (~(UPMEANS|UPVARS)));
+     uFlags = (UPDSet) (uFlags & (~(UPMEANS|UPVARS|UPXFORM)));
 
-   ConvDiagC(hset,TRUE);
+   if (parMode != 0) {
+      ConvDiagC(hset,TRUE);
+   }
    if (trace&T_TOP) {
-      printf("HERest  Updating: ");
+      if (uFlags&UPMAP)  printf("HERest  MAP Updating: ");
+      else printf("HERest  ML Updating: ");
       if (uFlags&UPTRANS) printf("Transitions "); 
       if (uFlags&UPMEANS) printf("Means "); 
       if (uFlags&UPVARS)  printf("Variances "); 
+      if (uFlags&UPXFORM)  printf("XForms "); 
       if (uFlags&UPMIXES && maxM>1)  printf("MixWeights "); 
       printf("\n\n ");
-  
+    
       if (parMode>=0) printf("Parallel-Mode[%d] ",parMode);
 
       printf("System is ");
@@ -481,16 +611,34 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
    SetVFloor( hset, vFloor, minVar);
    totalPr = 0.0;
 
+   if (xfInfo.inSpkrPat == NULL) xfInfo.inSpkrPat = xfInfo.outSpkrPat; 
+   if (xfInfo.paSpkrPat == NULL) xfInfo.paSpkrPat = xfInfo.outSpkrPat; 
+   if (uFlags&UPXFORM) {
+      if ((hsKind != PLAINHS) && (hsKind != SHAREDHS))
+         HError(999,"Can only estimated transforms with PLAINHS and SHAREDHS!");
+      if (uFlags != UPXFORM)
+         HError(999,"Can only update linear transforms OR model parameters!");
+      xfInfo.useOutXForm = TRUE;
+      /* This initialises things - temporary hack - THINK!! */
+      CreateAdaptXForm(hset, "tmp");
+   } 
+
+   
    /* initialise and  pass information to the forward backward library */
-   InitialiseForBack(fbInfo, x, hset, NULL, uFlags, pruneInit, pruneInc,
+   InitialiseForBack(fbInfo, x, hset, uFlags, pruneInit, pruneInc,
                      pruneLim, minFrwdP);
 
+   if (parMode != 0) {
+      ConvLogWt(hset);
+   }
    /* 2-model reestimation */
    if (al_hmmUsed){
        if (trace&T_TOP)
            printf("2-model re-estimation enabled\n");
        /* load alignment HMM set */
        CreateHMMSet(&al_hset,&hmmStack,TRUE);
+       xfInfo.al_hset = &al_hset;
+       if (xfInfo.alXFormExt == NULL) xfInfo.alXFormExt = xfInfo.inXFormExt;
        /* load multiple MMFs */
        if (strlen(al_hmmMMF) > 0 ) {
            char *p,*q;
@@ -498,7 +646,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
            p=q=al_hmmMMF;
            for(;;) {
                eos = (*p=='\0');
-               if ( ( isspace(*p) || *p == '\0' ) && (q!=p) ) {
+               if ( ( isspace((int) *p) || *p == '\0' ) && (q!=p) ) {
                    *p='\0';
                    if (trace&T_TOP) { 
                        printf("Loading alignment HMM set %s\n",q);
@@ -522,6 +670,10 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
 
        /* switch model set */
        UseAlignHMMSet(fbInfo,x,&al_hset);
+       if (parMode != 0) {
+	  ConvDiagC(&al_hset,TRUE);
+	  ConvLogWt(&al_hset);
+       }
 
        /* and echo status */
        if (trace&T_TOP) { 
@@ -639,15 +791,16 @@ void UpdateTrans(HMMSet *hset, int px, HLink hmm)
 }
 
 /* FloorMixes: apply floor to given mix set */
-void FloorMixes(MixtureElem *mixes, int M, float floor)
+void FloorMixes(HMMSet *hset, MixtureElem *mixes, int M, float floor)
 {
    float sum,fsum,scale;
    MixtureElem *me;
    int m;
    
+   if (hset->logWt == TRUE) HError(999,"FloorMixes requires linear weights");
    sum = fsum = 0.0;
    for (m=1,me=mixes; m<=M; m++,me++) {
-      if (me->weight>floor)
+      if (MixWeight(hset,me->weight)>floor)
          sum += me->weight;
       else {
          fsum += floor; me->weight = floor;
@@ -718,7 +871,7 @@ void FloorDProbs(ShortVec mixes, int M, float floor)
 /* UpdateWeights: use acc values to calc new estimate of mix weights */
 void UpdateWeights(HMMSet *hset, int px, HLink hmm)
 {
-   int i,s,m,M,N,S;
+   int i,s,m,M=0,N,S;
    float x,occi;
    WtAcc *wa;
    StateElem *se;
@@ -779,7 +932,7 @@ void UpdateWeights(HMMSet *hset, int px, HLink hmm)
                      break;
                   case PLAINHS:
                   case SHAREDHS:
-                     FloorMixes(ste->spdf.cpdf+1,M,mixWeightFloor);
+                     FloorMixes(hset,ste->spdf.cpdf+1,M,mixWeightFloor);
                      break;
                   }
                }
@@ -818,11 +971,13 @@ void UpdateMeans(HMMSet *hset, int px, HLink hmm)
                if (ma != NULL){
                   occim = ma->occ;
                   if (occim > 0.0)
-                     for (k=1; k<=vSize; k++)
-                        mean[k] += ma->mu[k]/occim;
-                  else
+                     for (k=1; k<=vSize; k++) 
+                       mean[k] += ma->mu[k]/occim;
+                  else{
+                     M = ste->nMix;
                      HError(-2330,"UpdateMeans: Model %d[%s]: no use of mean %d.%d.%d",
                             px,HMMPhysName(hset,hmm),i,s,m);
+                  }
                   SetHook(mean,NULL);
                }
             }
@@ -924,9 +1079,12 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
                         CovInvert(cov.inv,cov.inv);
                      }
                   }
-                  else
-                     HError(-2330,"UpdateVars: Model %d[%s]: no use of variance %d.%d.%d",
-                            px,HMMPhysName(hset,hmm),i,s,m);
+                  else{
+                    MixtureElem *me2;
+                    me2 = ste->spdf.cpdf + 1; M = ste->nMix;
+                    HError(-2330,"UpdateVars: Model %d[%s]: no use of variance %d.%d.%d",
+                           px,HMMPhysName(hset,hmm),i,s,m);
+                  }
                   if (mixFloored == TRUE) nFloorVarMix++;
                   SetHook(cov.var,NULL);
                }
@@ -1002,22 +1160,80 @@ void UpdateTMVars(HMMSet *hset)
    }
 }
 
+static  int fltcompare(const void *_i, const void *_j)
+{
+  const float *i = (const float*)_i;
+  const float *j = (const float*)_j;
+  if (*i > *j)
+    return (1);
+  if (*i < *j)
+    return (-1);
+  return (0);
+}
 
-/* UpdateModels: update all models and save them in newDir if set,
-   new files have newExt if set */
-void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
+
+void FloorVars(HMMSet *hset1, int s){
+  HMMScanState hss1;
+  int vsize;
+  int i;
+  if(!(hset1->hsKind==PLAINHS || hset1->hsKind==SHAREDHS)){
+     HError(1, "Percentile var flooring not supported for this kind of hmm set. (e.g. tied.) should be easy.");
+  } else { 
+     float **varray;
+     int M=0,m=0,floored=0;
+     vsize = hset1->swidth[s];
+     
+     NewHMMScan(hset1,&hss1); 
+     while(GoNextMix(&hss1,FALSE)){
+       M++;
+     }
+     EndHMMScan(&hss1); 
+
+     varray = New(&gstack, sizeof(float*) * (vsize+1));
+     for(i=1;i<=vsize;i++) varray[i] = New(&gstack, sizeof(float) * M);
+
+     NewHMMScan(hset1,&hss1); 
+     while(GoNextMix(&hss1,FALSE)){
+       int k;
+       if(hss1.mp->ckind != DIAGC ) HError(1, "FloorVars expects DIAGC covariances. ");
+       
+       for(k=1;k<=vsize;k++){
+          varray[k][m] = hss1.mp->cov.var[k];
+       }
+       m++;
+     }
+     EndHMMScan(&hss1); 
+     
+     for(i=1;i<=vsize;i++){
+        qsort((char *) varray[i], M, sizeof(float), fltcompare);
+     }
+
+     if(varFloorPercent <=0 || varFloorPercent >= 100) HError(1, "varFloorPercent should be <100 and >0..");
+     
+
+     NewHMMScan(hset1,&hss1); 
+     while(GoNextMix(&hss1,FALSE)){
+        int k, Pos = (int)(varFloorPercent*0.01*M);
+        for(k=1;k<=vsize;k++){
+           if(hss1.mp->cov.var[k] < varray[k][Pos]){
+              hss1.mp->cov.var[k] =  varray[k][Pos];
+              floored++;
+           }
+        }
+     }
+     EndHMMScan(&hss1); 
+     printf("Floored %d (expected to floor %d)\n", floored, (int)( varFloorPercent * 0.01 * M * vsize));
+  }
+  FixAllGConsts(hset1);
+}
+
+void MLUpdateModels(HMMSet *hset, UPDSet uFlags)
 {
    HSetKind hsKind;
    HMMScanState hss;
    HLink hmm;
    int px,n,maxM;
-   static char str[100];
-   BufferInfo info2;
 
-   if (trace&T_UPD){
-      printf("Starting Model Update\n"); fflush(stdout);
-   }
-   ConvDiagC(hset,TRUE); /* invert the variances again */
    hsKind = hset->hsKind;
    maxM = MaxMixInSet(hset);
 
@@ -1057,7 +1273,7 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
                UpdateVars(hset,px,hmm);
             if (uFlags & UPMEANS)
                UpdateMeans(hset,px,hmm);
-            if (uFlags & (UPMEANS|UPVARS))
+            if (uFlags & (UPMEANS|UPVARS)) 
                FixGConsts(hmm);
          }  
       }
@@ -1070,9 +1286,42 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
                 nFloorVar,nFloorVarMix);
       fflush(stdout);
    }
+}
+
+
+/* UpdateModels: update all models and save them in newDir if set,
+   new files have newExt if set */
+void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
+{
+   int maxM;
+   static char str[100];
+   BufferInfo info2;
+
+   if (trace&T_UPD){
+      printf("Starting Model Update\n"); fflush(stdout);
+   }
+   if (parMode == -1) {
+      ForceDiagC(hset); /* invert the variances again */
+      ConvExpWt(hset);
+   }
+   maxM = MaxMixInSet(hset);
+
+   if (uFlags & UPMAP)
+     MAPUpdateModels(hset, uFlags);
+   else {
+     MLUpdateModels(hset, uFlags);     
+   }
+   
+   if(varFloorPercent){
+      int s;
+      printf("Flooring all vars to the %f'th percentile of distribution... ", varFloorPercent);
+      for(s=1;s<=hset->swidth[0];s++)
+         FloorVars(hset,s);
+   }
+
    if (trace&T_TOP){
       if (mmfFn == NULL)
-         printf("Saving hmm's to dir %s\n",(newDir==NULL)?"Current":newDir);
+         printf("Saving hmm's to dir %s\n",(newDir==NULL)?"Current":newDir); 
       else
          printf("Saving hmm's to MMF %s\n",mmfFn);
       fflush(stdout);
@@ -1089,7 +1338,7 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
          hset->pkind = info2.tgtPK;
       }
    }
-   SaveHMMSet(hset,newDir,newExt,saveBinary);
+   SaveHMMSet(hset,newDir,newExt,NULL,saveBinary);
    if (trace&T_TOP) {
       printf("Reestimation complete - average log prob per frame = %e\n",
              totalPr/totalT);

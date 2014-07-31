@@ -32,8 +32,8 @@
 /*       File: HParm.c:  Speech Parameter File Input/Output    */
 /* ----------------------------------------------------------- */
 
-char *hparm_version = "!HVER!HParm:   3.2.1 [CUED 15/10/03]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.15 2003/10/15 08:10:13 ge204 Exp $";
+char *hparm_version = "!HVER!HParm:   3.3 [CUED 28/04/05]";
+char *hparm_vc_id = "$Id: HParm.c,v 1.2 2005/07/22 10:17:02 mjfg Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -75,7 +75,7 @@ static int varScaleDim=0;
 static char varScaleFN[MAXFNAMELEN] = "\0";
 
 static Boolean highDiff = FALSE;   /* compute higher oder differentials, only up to fourth */
-static Boolean UseOldXFormCVN = FALSE;  /* this allows us to go back to the old version with broken CVN */
+static Boolean UseOldXFormCVN = TRUE;  /* this allows us to go back to the old version with broken CVN */
 static ParmKind ForcePKind = ANON; /* force to output a customized parm kind to make older versions
                                     happy for all the parm kind types supported here */
 
@@ -162,8 +162,12 @@ typedef struct {
    char *varScaleFN;          /* var scale file name */          
    char* cMeanDN;             /* dir to find cepstral mean files */
    char* cMeanMask;           /* cepstral mean selection mask */
+   char* cMeanPathMask;       /* cepstral mean path selection mask */
    char* varScaleDN ;         /* dir to find variance estimate files */
    char* varScaleMask;        /* variance estimate file selection mask */
+   char* varScalePathMask;    /* variance estimate file path selection mask */
+   char* sideXFormMask;       /* side XForm mask */
+   char* sideXFormExt;       /* side XForm mask */
 
    VQTable vqTab;             /* VQ table */
    Matrix MatTran;            /* Stores transformation matrix */ 
@@ -216,6 +220,7 @@ typedef struct {
    int postFrames;
    Boolean preQual;
    InputXForm *xform;
+   AdaptXForm *sideXForm;
 }IOConfigRec;
 
 typedef IOConfigRec *IOConfig;
@@ -287,8 +292,12 @@ typedef enum {
    /* cepstral mean subtraction */
    CMEANDIR,     /* dir to find the means */
    CMEANMASK,    /* label mask to idenitfy mean file */
+   CMEANPATHMASK,/* label mask to idenitfy the path of mean file */
    VARSCALEDIR,  /* dir to find the variance estimate files */
    VARSCALEMASK, /* label mask to idenitfy the variance estimate files */
+   VARSCALEPATHMASK, /* label mask to idenitfy the path of the variance estimate files */
+   SIDEXFORMMASK,/* mask for use with side-based xforms */
+   SIDEXFORMEXT, /* extension for use with side-based xforms */
 
    /* MatTran file */
    MATTRANFN,     /* File name for MatTran file */
@@ -318,8 +327,8 @@ static char * ioConfName[CFGSIZE] = {
    ,"ADDDITHER",
    "DOUBLEFFT",
    "VARSCALEFN", 
-   "CMEANDIR" , "CMEANMASK",
-   "VARSCALEDIR", "VARSCALEMASK" ,
+   "CMEANDIR" , "CMEANMASK", "CMEANPATHMASK",
+   "VARSCALEDIR", "VARSCALEMASK" , "VARSCALEPATHMASK" , "SIDEXFORMMASK", "SIDEXFORMEXT",
    "MATTRANFN", "MATTRAN", "THIRDWINDOW", "FOURTHWINDOW"
 };
 
@@ -348,8 +357,10 @@ static const IOConfigRec defConf = {
    FALSE,                 /* DOUBLEFFT */
    /* side based normalisation */
    NULL,                  /* VARSCALEFN */
-   NULL,NULL,             /* CMEANDIR CMEANMASK */
-   NULL,NULL,             /* VARSCALEDIR VARSCALEMASK */
+   NULL,NULL,NULL,        /* CMEANDIR CMEANMASK CMEANPATHMASK */
+   NULL,NULL,NULL,        /* VARSCALEDIR VARSCALEMASK VARSCALEPATHMASK */
+
+   NULL,NULL,             /* SIDEXFORMMASK SIDEXFORMEXT*/
 
    NULL,                  /* vqTab */
    NULL, NULL, 2, 2      /* MATTRANFN, MATTRAN THIRDWIN FOURTHWIN */
@@ -570,7 +581,7 @@ static void LoadVarScale (MemHeap *x, IOConfig cf)
       CloseSource (&varsrc);
       
       /* Apply a linear transform to the global variance */
-      if ((cf->MatTran != NULL) && (UseOldXFormCVN)) {
+      if ((cf->MatTran != NULL) &&  (UseOldXFormCVN)) {
 
          FDim = NumCols(cf->MatTran);
          NewFDim = NumRows(cf->MatTran);
@@ -666,7 +677,7 @@ void SetParmHMMSet(Ptr aset)
               into a macro.
             */
             id = GetLabId(cfg_xf->xformName,TRUE);
-            NewMacro(hset,-1,'j',id,(Ptr)cfg_xf);
+            NewMacro(hset,-2,'j',id,(Ptr)cfg_xf);
             cfg_xf->nUse++;
             hset->xf = cfg_xf;
          }
@@ -715,12 +726,72 @@ static void LoadMat (MemHeap *x, IOConfig cf)  /*static??*/
    }
 }
 
+static AdaptXForm *LoadSideXForm(IOConfig cf, char *fname) 
+{
+   AdaptXForm *xf;
+   char macroname[MAXSTRLEN];
+   char side[MAXSTRLEN];
+   Boolean maskMatch;
+
+   maskMatch = MaskMatch(cf->sideXFormMask,side, fname);
+   if ((!maskMatch) && (fname != NULL))
+      HError(999,"Side xform mask %s does not match filename %s",cf->sideXFormMask,fname);
+   MakeFN(side,NULL,cf->sideXFormExt,macroname);
+   xf = LoadOneXForm(hset,macroname,NULL);
+   if (xf == NULL)
+      HError(999,"Cannot correctly load side transform %s",macroname);
+
+   /* Check that this is a valid side XForm */
+   if (xf->bclass->numClasses != 1) HError(999,"Can only use global bseclasses for sideXforms");
+   if (xf->parentXForm != NULL) HError(999,"Cannot have parent xfprms with sideXforms");
+   if (xf->xformSet->xkind != CMLLR) HError(999,"Can only use CMLLR as sideXforms");
+
+   return xf;
+}
+
+static void ApplyXForm2Vector(LinXForm *linXForm, Vector mean)
+{  
+   Vector vec, bias;
+   int size,b,bsize;
+   Matrix A;
+   float tmp;
+   int i,j;
+   int cnt,cnti,cntj;
+
+   /* Check dimensions */
+   size = linXForm->vecSize;
+   if (size != VectorSize(mean))
+      HError(999,"Transform dimension (%d) does not match mean dimension (%d)",
+             size,VectorSize(mean));
+   vec = CreateVector(&gstack,size);
+   CopyVector(mean,vec); ZeroVector(mean);
+   /* Transform mean */
+   for (b=1,cnti=1,cnt=1;b<=IntVecSize(linXForm->blockSize);b++) {
+      bsize = linXForm->blockSize[b];
+      A = linXForm->xform[b];
+      for (i=1;i<=bsize;i++,cnti++) {
+         tmp = 0;
+         for (j=1,cntj=cnt;j<=bsize;j++,cntj++)
+            tmp += A[i][j] * vec[cntj];
+         mean[cnti] = tmp;
+      }
+      cnt += bsize;
+   }
+   /* Apply bias if required */
+   bias = linXForm->bias;
+   if (bias != NULL) {
+      for (i=1;i<=size;i++)
+         mean[i] += bias[i];
+   }
+   FreeVector(&gstack,vec);
+}
+
 /* 
    Rather than put this all in InitParm and in InitChannel
    we abstract it into a separate function.
 */
 
-char *GS(char *s){static char b[100]; GetConfStr(cParm,nParm,s,b); return b;}
+char *GS(char *s){static char b[MAXFNAMELEN]; GetConfStr(cParm,nParm,s,b); return b;}
 int     GI(char *s){int i;     GetConfInt(cParm,nParm,s,&i); return i;}
 double  GF(char *s){double d;  GetConfFlt(cParm,nParm,s,&d); return d;}
 Boolean GB(char *s){Boolean b; GetConfBool(cParm,nParm,s,&b); return b;}
@@ -789,8 +860,12 @@ static IOConfig ReadIOConfig(IOConfig p)
                               break;
          case VARSCALEDIR:    p->varScaleDN = CopyString(&gcheap,GS(s)); break;
          case VARSCALEMASK:   p->varScaleMask = CopyString(&gcheap,GS(s)); break;
+         case VARSCALEPATHMASK:   p->varScalePathMask = CopyString(&gcheap,GS(s)); break;
          case CMEANDIR:       p->cMeanDN = CopyString(&gcheap,GS(s)); break;
          case CMEANMASK:      p->cMeanMask = CopyString(&gcheap,GS(s)); break;
+         case CMEANPATHMASK:  p->cMeanPathMask = CopyString(&gcheap,GS(s)); break;
+         case SIDEXFORMMASK:  p->sideXFormMask = CopyString(&gcheap,GS(s)); break;
+         case SIDEXFORMEXT:   p->sideXFormExt = CopyString(&gcheap,GS(s)); break;
          case MATTRANFN:      p->MatTranFN= CopyString(&gcheap, GS(s)); break;
 
          case THIRDWINDOW:    p->thirdWin = GI(s); break;
@@ -1231,7 +1306,7 @@ static void SetCodeStyle(IOConfig cf)
 /* ValidCodeParms: check to ensure reasonable wave->parm code params */
 static void ValidCodeParms(IOConfig cf)
 {
-   int order;
+   int order=0;
    ParmKind btgt = cf->tgtPK&BASEMASK;
    
    if (cf->srcSampRate<=0.0 || cf->srcSampRate>10000000.0)
@@ -1534,10 +1609,12 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
                           int hdValid, int tlValid)
 {
    char buf[100],buff1[256],buff2[256];
-   int si,ti,d,ds,de, i, j, step, size;
+   int si,ti,d=0,ds,de, i, j, step, size;
    short span[12];
    float *fp, mean, scale;
    ParmKind tgtBase;
+   Vector tmp;
+   LinXForm *xf;
 
    if (highDiff && ((cf->curPK&HASDELTA) || (cf->curPK&HASACCS) || (cf->curPK&HASTHIRD)))
        HError (6371, "AddQualifiers: HIGHDIFF=T not supported with source features that contain derivatives already");
@@ -1565,10 +1642,10 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
    }
    if ((cf->MatTranFN != NULL) && (!cf->preQual)) { 
       tgtBase = cf->tgtPK&BASEMASK;
-      if ((cf->curPK&BASEMASK)!=tgtBase && (tgtBase==LPCEPSTRA || tgtBase==MFCC))
+      if ((cf->curPK&BASEMASK)!=tgtBase && (tgtBase==LPCEPSTRA || tgtBase==MFCC || tgtBase==PLP))
          size = TotalComps(cf->numCepCoef,cf->tgtPK);
       else 
-         size = TotalComps(NumStatic(cf->srcUsed,cf->srcPK),cf->tgtPK);
+	size = TotalComps(NumStatic(cf->srcUsed,cf->srcPK),cf->tgtPK);
       FindSpans(span,cf->tgtPK,size);    
    } else 
       FindSpans(span,cf->tgtPK,cf->tgtUsed);    
@@ -1591,8 +1668,13 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
       if (trace&T_QUA)
          printf("\nHParm:  adding %d accs to %d rows",d,nRows);
       /* Treatment of deltas ensures that whole margin is valid */
-      AddDiffs(data,nRows,cf->nCols,si,ti,d,cf->accWin,
-               hdValid,tlValid,cf->v1Compat,cf->simpleDiffs);
+      /* the Accs now have to precede the thirds, as you need delts  */
+      /* to calc the thirds */
+      if (hdValid>0) ds=pbuf->qwin-cf->delWin-cf->accWin; else ds=0;
+      if (tlValid>0) de=nRows+pbuf->qwin-cf->delWin-cf->accWin-1; else de=nRows-1;
+      
+      AddDiffs(data+cf->nCols*ds,de-ds+1,cf->nCols,si,ti,d,cf->delWin,
+	       hdValid+ds,tlValid-ds,cf->v1Compat,cf->simpleDiffs);
       cf->curPK |= HASACCS;  cf->nUsed += d;
       if ((cf->tgtPK&HASTHIRD) && !(cf->curPK&HASTHIRD)) {
          d = span[9]-span[8]+1; si = span[6]; ti = span[8];
@@ -1719,6 +1801,25 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
             }
          }
       }
+
+      /* Now apply any side specific xforms */
+      if (cf->sideXForm != NULL) {
+         xf = cf->sideXForm->xformSet->xforms[1];
+         if (cf->varScaleFN) {
+            if (xf->vecSize != d)
+               HError(999,"Incompatible sizes %d and %d",xf->vecSize,d);
+         }
+         d = xf->vecSize;
+         tmp = CreateVector(&gstack,d);
+         step = cf->nCols; fp = data;
+         for (j=0;j<nRows;j++) {
+            for (i=0;i<d;i++) tmp[i+1]=*(fp+i);
+            ApplyXForm2Vector(xf,tmp);
+            for (i=0;i<d;i++) *(fp+i)=tmp[i+1];
+            fp += step;
+         }
+         FreeVector(&gstack,tmp);
+      }
       
       if ((cf->MatTranFN != NULL) && (!cf->preQual)) {      
          if (cf->matPK != cf->curPK) {
@@ -1731,7 +1832,7 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
          cf->nSamples = pbuf->main.nRows;
       }      
    }
-   
+
    if (trace&T_QUA)
       printf("\nHParm:  quals added to give %s\n",
              ParmKind2Str (cf->curPK, buf));
@@ -2034,7 +2135,7 @@ static void SetUpForCoding(MemHeap *x, IOConfig cf, int frSize)
 {
    char buf[50];
    ParmKind btgt;
-
+  
    cf->s = CreateVector(x,frSize);
    cf->r = CreateShortVec(x,frSize);
    cf->curPK = btgt = cf->tgtPK&BASEMASK;
@@ -2089,11 +2190,12 @@ static void SetUpForCoding(MemHeap *x, IOConfig cf, int frSize)
       cf->tgtUsed = TotalComps(NumStatic(cf->nUsed,cf->curPK),cf->tgtPK);
    else {
       if (cf->preQual)
-         cf->tgtUsed = NumRows(cf->MatTran)*(1+HasDelta(cf->tgtPK)+HasAccs(cf->tgtPK));
-      else 
-         cf->tgtUsed = NumRows(cf->MatTran);
+         cf->tgtUsed = NumRows(cf->MatTran)*(1+HasDelta(cf->tgtPK)+HasAccs(cf->tgtPK)+HasThird(cf->tgtPK));
+      else  
+	cf->tgtUsed = NumRows(cf->MatTran);
    }
-   cf->nCols = (cf->nUsed>cf->tgtUsed)?cf->nUsed:cf->tgtUsed;
+   cf->nCols=TotalComps(NumStatic(cf->nUsed,cf->curPK),cf->tgtPK);
+   cf->nCols = (cf->nCols>cf->tgtUsed)?cf->nCols:cf->tgtUsed;
    cf->nCvrt = cf->nUsed;
 }
 
@@ -2102,9 +2204,9 @@ static void SetUpForCoding(MemHeap *x, IOConfig cf, int frSize)
 static int ConvertFrame(IOConfig cf, float *pbuf)
 {
    ParmKind btgt = cf->tgtPK&BASEMASK;
-   float re,rawte,te,*p, cepScale = 1.0;
-   int i,bsize;
-   Vector v;
+   float re,rawte=0.0,te,*p, cepScale = 1.0;
+   int i,bsize=0;
+   Vector v=NULL;
    char buf[50];
    Boolean rawE;
    
@@ -2181,11 +2283,13 @@ static int ConvertFrame(IOConfig cf, float *pbuf)
          ++p;
       }
       else      /* For PLP include gain as C0 */
-         *p++ = v[bsize+1] * cepScale;
+         *p++ = v[bsize+1] * cepScale;   
+      cf->curPK|=HASZEROC ;
    }
    if (cf->tgtPK&HASENERGY) {
       if (rawE) te = rawte;
-      *p++ = (te<MINLARG) ? LZERO : log(te);
+      *p++ = (te<MINLARG) ? LZERO : log(te);  
+      cf->curPK|=HASENERGY;
    }
    return p - pbuf;
 }
@@ -2728,7 +2832,7 @@ Boolean ReadESIGPHeader(FILE *f, long *nSamp, long *sampP, short *sampS,
    observation, splitting into streams as necessary */
 static void ExtractObservation(float *fp, Observation *o)
 {
-   int i,j,k,n,w1,w2,w,nStatic;
+   int i,j,k,n,w1,w2,w,nStatic = 0;
    int numS = o->swidth[0];
    Vector v,ev;
    Boolean wantE,skipE;
@@ -3061,7 +3165,9 @@ static void LoadCMeanVector( MemHeap* x , IOConfig cf , char* fname )
    static Vector meanVector = NULL;
 
    char mfname[MAXFNAMELEN]; /* actual mean filename */
+   char pname[MAXFNAMELEN];  /* actual path name */
    char buf[MAXSTRLEN];    /* temporary working buffer */
+   char buf2[MAXSTRLEN];   /* temporary working buffer */
    Source src;
    ParmKind pk,tgtMask;
    int dim;
@@ -3072,7 +3178,14 @@ static void LoadCMeanVector( MemHeap* x , IOConfig cf , char* fname )
    if (!MaskMatch (cf->cMeanMask, mfname, fname))
       HError (6376, "LoadCMeanVector: non-matching mask %s", cf->cMeanMask);
 
-   MakeFN(mfname, cf->cMeanDN, 0, buf);
+   if ( cf->cMeanPathMask != 0 ){
+      if (!MaskMatch (cf->cMeanPathMask, pname, fname))
+         HError (6376, "LoadCMeanVector: non-matching path mask %s", cf->cMeanPathMask);
+      MakeFN (pname, cf->cMeanDN, 0, buf2);
+      MakeFN (mfname, buf2, 0, buf);
+   }
+   else
+      MakeFN(mfname, cf->cMeanDN, 0, buf);
    
    /* caching of vector */
    if (strcmp(buf, mfname_prev) == 0){ /* names match , old vector must be the same */
@@ -3095,7 +3208,7 @@ static void LoadCMeanVector( MemHeap* x , IOConfig cf , char* fname )
    pk = Str2ParmKind (buf+1);
 
    /* check if ParmKind matches with target ParmKind */
-   tgtMask = ~( cf->tgtPK & ( HASDELTA | HASACCS | HASTHIRD | HASZEROM ) ); /* mask irrelevant target flags */
+   tgtMask = ~( cf->tgtPK & ( HASDELTA | HASACCS | HASTHIRD | HASZEROM | HASVQ ) ); /* mask irrelevant target flags */
    if ((pk & tgtMask) != (cf->tgtPK & tgtMask))
       HError(6376, "LoadCMeanVector: ParmKind mismatch %s not a subset of %s",
              ParmKind2Str (pk, mfname), ParmKind2Str (cf->tgtPK, buf));
@@ -3126,7 +3239,9 @@ static void LoadVarScaleVector(MemHeap* x, IOConfig cf, char *fname)
    static char mfname_prev[MAXFNAMELEN] = "";
    static Vector varVector = NULL;
    char mfname[MAXFNAMELEN]; /* actual mean filename */
+   char pname[MAXFNAMELEN];  /* actual path name */
    char buf[MAXSTRLEN];    /* temporary working buffer */
+   char buf2[MAXSTRLEN];   /* temporary working buffer */
    Source src;
    ParmKind pk;
    int dim,i,NewFDim,FDim;
@@ -3138,7 +3253,14 @@ static void LoadVarScaleVector(MemHeap* x, IOConfig cf, char *fname)
    if (!MaskMatch (cf->varScaleMask, mfname, fname))
       HError (6376, "LoadVarScaleVector: non-matching mask %s", cf->varScaleMask);
 
-   MakeFN (mfname, cf->varScaleDN, 0, buf);
+   if ( cf->varScalePathMask != 0 ){
+      if (!MaskMatch (cf->varScalePathMask, pname, fname))
+         HError (6376, "LoadVarScaleVector: non-matching path mask %s", cf->varScalePathMask);
+      MakeFN (pname, cf->varScaleDN, 0, buf2);
+      MakeFN (mfname, buf2, 0, buf);
+   }
+   else
+      MakeFN (mfname, cf->varScaleDN, 0, buf);
    
    /* caching of vector: if the same side as the previous one, just use the cached one */
    if (strcmp (buf, mfname_prev) == 0 ){ /* names match , old vector must be the same */
@@ -3163,7 +3285,7 @@ static void LoadVarScaleVector(MemHeap* x, IOConfig cf, char *fname)
 
    /* check if ParmKind matches with target ParmKind */
 
-   if (cf->tgtPK != pk)
+   if ( (cf->tgtPK != pk) && ( cf->tgtPK != (pk | HASVQ)))
       HError (6376 ,"LoadVarScaleVector: ParmKind mismatch %s != %s ", 
               ParmKind2Str (pk, mfname), ParmKind2Str (cf->tgtPK, buf));
 
@@ -3254,7 +3376,7 @@ static Boolean GetCRCCFrame(ParmBuf pbuf,void *data,int n,int s,Boolean bSwap)
    static unsigned short lastReadShort;
    unsigned int crcc=cf->crcc;
    unsigned short *sp,s1,s2;
-   int j;
+   int j = 0;
 
    sp = (unsigned short *) data;
    if (pbuf->crcc==CRCC_NONE || pbuf->crcc==CRCC_AT_CLOSE) {
@@ -3582,7 +3704,7 @@ static ReturnStatus OpenParmChannel(ParmBuf pbuf,char *fname, int *ret_val)
 
       if (cf->MatTranFN != NULL) {
          if (cf->preQual)
-            cf->tgtUsed = NumRows(cf->MatTran)*(1+HasDelta(cf->tgtPK)+HasAccs(cf->tgtPK));
+            cf->tgtUsed = NumRows(cf->MatTran)*(1+HasDelta(cf->tgtPK)+HasAccs(cf->tgtPK)+HasThird(cf->tgtPK));
          else 
             cf->tgtUsed = NumRows(cf->MatTran);
       } else 
@@ -3699,7 +3821,7 @@ static int GetFrameFromChannel(ParmBuf pbuf,int chType,void *vp)
 {
    IOConfig cf = pbuf->cf;
    AudioInStatus as;
-   int r,i,j,x,n;
+   int r=0,i,j,x,n;
    double m,e;
 
    /* Legacy checks for out of data */
@@ -3799,8 +3921,8 @@ static void FillBufFromChannel(ParmBuf pbuf,int minRows)
    Boolean dis,cleared;
    char b1[100];
    int availRows,newRows,space,i,head,tail,nShift;
-   short *sp1, *sp2;
-   float *fp1, *fp2;
+   short *sp1=NULL, *sp2;
+   float *fp1=NULL, *fp2;
    
    if ((trace&T_BUF) && minRows>0) {
       printf("HParm: Filling Parm Buf: max=%d, in=%d, out=%d, qst=%d, min=%d\n",
@@ -4058,10 +4180,12 @@ static ReturnStatus OpenAsChannel(ParmBuf pbuf, int maxObs,
    pbuf->qst=0;pbuf->qen=-1;pbuf->lastRow=-1;
    pbuf->qwin=0; /* set qwin wide enough to allow 1 computable frame */
    if (cf->tgtPK&HASDELTA) {
-      if (cf->tgtPK&HASACCS)  pbuf->qwin += cf->accWin; 
-      pbuf->qwin += cf->delWin;
+      if (cf->tgtPK&HASACCS) {
+      pbuf->qwin += cf->accWin;
+      if(cf->tgtPK&HASTHIRD) pbuf->qwin += cf->thirdWin;
+      }
+    pbuf->qwin += cf->delWin;
    }
-
    /* Open the input */
    switch(chType) {
    case ch_haudio:
@@ -4245,6 +4369,11 @@ ParmBuf OpenBuffer(MemHeap *x, char *fn, int maxObs, FileFormat ff,
    /* Load variance estimate into pbuf->cf */
    if (pbuf->cf->varScaleDN || pbuf->cf->varScaleMask) {
       LoadVarScaleVector (pbuf->mem, pbuf->cf, fn);
+   }
+
+   /* Load xform associated with this side if necessary */
+   if (pbuf->cf->sideXFormMask != NULL) {
+      pbuf->cf->sideXForm = LoadSideXForm(pbuf->cf,fn);
    }
 
    if(OpenAsChannel(pbuf,maxObs,fn,ff,silMeasure)<SUCCESS){

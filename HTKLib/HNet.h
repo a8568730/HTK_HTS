@@ -32,7 +32,7 @@
 /*         File: HNet.h  Network and Lattice Functions         */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HNET:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HNET:   3.3 [CUED 28/04/05] */
 
 /*
    Nets come in two forms.
@@ -288,6 +288,9 @@ ReturnStatus WriteLattice(Lattice *lat, FILE *file, LatFormat form);
 
 Lattice *ReadLattice(FILE *file, MemHeap *heap, Vocab *voc, 
 		     Boolean shortArc, Boolean add2Dict);
+
+Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc, 
+                        Boolean shortArc, Boolean add2Dict);
 /*
    Read lattice from file and creates a lattice in memory using heap.
    Word names in the lattice are mapped to the internal Word type
@@ -296,6 +299,8 @@ Lattice *ReadLattice(FILE *file, MemHeap *heap, Vocab *voc,
    If add2Dict is TRUE then ReadLattice will add unseen words to voc
    rather than generating an error.
 */
+
+
 
 SubLatDef *AdjSubList(Lattice *lat,LabId subLatId,Lattice *subLat,int adj);
 /* 

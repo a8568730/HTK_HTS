@@ -1,6 +1,20 @@
-2003-10-15  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+2005-05-19  Anna Langley <jal58@cam.ac.uk>
+	
+	* Autoconf now handles 32 bit compilation on x86_64
 
-	* HTK 3.2.1 released.
+2005-04-22  Anna Langley <jal58@cam.ac.uk>
+
+	* README updated with revised installation instructions for
+	autoconf and more detailed instructions for Windows
+	installations. 
+	* LICENSE reformatted so it is readable on an 80 column terminal
+	window. 
+	* configure: updated
+	* README.autoconf: added
+	
+2005-02-24  Anna Langley <jal58@cam.ac.uk>
+
+	* Files for autoconf installs added
 
 2002-12-19  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 

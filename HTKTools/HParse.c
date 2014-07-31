@@ -19,8 +19,8 @@
 /*     File: HParse.c: HParse based word-network definition    */
 /* ----------------------------------------------------------- */
 
-char *hparse_version = "!HVER!HParse:   3.2.1 [CUED 15/10/03]";
-char *hparse_vc_id = "$Id: HParse.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+char *hparse_version = "!HVER!HParse:   3.3 [CUED 28/04/05]";
+char *hparse_vc_id = "$Id: HParse.c,v 1.2 2005/05/12 15:51:28 jal58 Exp $";
 
 /* The HParse program reads in a set of HTK  HParse rewrite rules
    (as used in HTK V1.x) and writes out an HTK V2 lattice and
@@ -1344,7 +1344,7 @@ static void PGetIdent(void)
       if (ch==ESCAPE) PGetCh();
       if (i<MAXIDENT) id[i++]=ch;
       PGetCh();
-   } while ( !isspace(ch) && ch!='{' && ch!='}' && ch!='[' && ch!=']' &&
+   } while ( !isspace((int) ch) && ch!='{' && ch!='}' && ch!='[' && ch!=']' &&
              ch!='<' && ch!='>' && ch!='(' && ch!=')' && ch!='=' && 
              ch!=';' && ch!='|' && ch!='/' && ch!='%');
    id[i]='\0';
@@ -1354,8 +1354,8 @@ static void PGetIdent(void)
 /* PGetSym: get next symbol -> symbol */
 static void PGetSym(void)
 {
-   while (isspace(ch) || (ch=='/' && inlyne[curpos]=='*') ) {
-      if (isspace(ch))  /* skip space */
+   while (isspace((int) ch) || (ch=='/' && inlyne[curpos]=='*') ) {
+      if (isspace((int) ch))  /* skip space */
          PGetCh();
       else {            /* skip comment */
          PGetCh(); PGetCh();

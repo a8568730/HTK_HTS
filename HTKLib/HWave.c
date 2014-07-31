@@ -32,8 +32,8 @@
 /*         File: HWave.c:   Speech Wave File Input/Output      */
 /* ----------------------------------------------------------- */
 
-char *hwave_version = "!HVER!HWave:   3.2.1 [CUED 15/10/03]";
-char *hwave_vc_id = "$Id: HWave.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hwave_version = "!HVER!HWave:   3.3 [CUED 28/04/05]";
+char *hwave_vc_id = "$Id: HWave.c,v 1.1.1.1 2005/05/12 10:52:52 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -719,7 +719,7 @@ static int GetShortPackBlock(char **inData, short **outData)
    char *in;   /* dereferenced forms of the arguments */
    short *out;
    unsigned char nSamp, nBits;
-   unsigned char buf;
+   unsigned char buf = '\0';
    int i,k;
    Boolean negative;
    int charBits=0;  
@@ -806,6 +806,7 @@ static void DecodeIMuLaw(Wave w)
    /* Convert data */
    src = (unsigned char *) w->data;
    tgt = w->data;  
+   sample = 0;
    for (i=1; i<=w->nSamples; i++,tgt++) {
       lchan = NISTmutab[*src++];
       rchan = NISTmutab[*src++];
@@ -1174,6 +1175,7 @@ ReturnStatus ConvertWAVData(Wave w, InputAction *ia)
       }
       srcs = (short *) w->data;
       tgt = w->data;  
+	  sample = 0;
       for (i=1; i<=w->nSamples; i++,tgt++) {
          lchan = *srcs++;
          rchan = *srcs++;

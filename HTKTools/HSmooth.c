@@ -19,8 +19,8 @@
 /* File: HSmooth.c: Perform Parameter Smoothing on a HMM Set   */
 /* ----------------------------------------------------------- */
 
-char *hsmooth_version = "!HVER!HSmooth:   3.2.1 [CUED 15/10/03]";
-char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hsmooth_version = "!HVER!HSmooth:   3.3 [CUED 28/04/05]";
+char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.1.1.1 2005/05/12 10:52:55 jal58 Exp $";
 
 
 #include "HShell.h"     /* HMM ToolKit Modules */
@@ -55,8 +55,6 @@ static float mixWeightFloor=0.0; /* Floor for mixture weights */
 static int minEgs    = 3;        /* min examples to train a model */
 static int maxStep   = 16;       /* max number of binary chops */
 static float epsilon = 0.0001;   /* binary chop convergence criterion */
-enum _UPDSet{UPMEANS=1,UPVARS=2,UPTRANS=4,UPMIXES=8};
-typedef enum _UPDSet UPDSet;
 static UPDSet uFlags = (UPDSet) (UPMEANS|UPVARS|UPTRANS|UPMIXES);   /* update flags */
 static Boolean stats = FALSE;    /* enable statistics reports */
 static Boolean saveBinary = FALSE;  /* save output in binary  */
@@ -250,7 +248,7 @@ int main(int argc, char *argv[])
       if (NextArg()!=STRINGARG)
          HError(2419,"HSmooth: accumulator file name expected");
       accfn = GetStrArg();
-      src=LoadAccs(&hset,accfn);
+      src=LoadAccs(&hset,accfn,uFlags);
       ReadFloat(&src,&tmpFlt,1,ldBinary);
       totalPr += (LogDouble)tmpFlt;
       ReadInt(&src,&tmpInt,1,ldBinary);
@@ -401,8 +399,8 @@ void Initialise(char *hmmListFn)
       HError(2429,"Initialise: MakeHMMSet failed");
    if(LoadHMMSet( &hset,hmmDir,newExt)<SUCCESS)
       HError(2429,"Initialise: LoadHMMSet failed");
-   AttachAccs(&hset, &gstack);
-   ZeroAccs(&hset);   
+   AttachAccs(&hset, &gstack,uFlags);
+   ZeroAccs(&hset,uFlags);   
    nPhyHmms = hset.numPhyHMM;
    nLogHmms = hset.numLogHMM;
    vSize = hset.vecSize;
@@ -702,7 +700,7 @@ float LambdaOpt(StreamElem *ste, int M)
 void Interpolate(void)
 {
    LabId x;
-   int i,N,p,s,b,j,M;
+   int i,N,p,s,b,j,M=0;
    float l;
    StreamElem *ste;
    
@@ -833,7 +831,7 @@ void FloorDProbs(ShortVec mixes, int M, float floor)
 /* UpdateWeights: use acc values to calc new estimate of mix weights */
 void UpdateWeights(HLink hmm)
 {
-   int i,s,m,M,N;
+   int i,s,m,M=0,N;
    float x,occi;
    WALink wa;
    StateElem *se;
@@ -1044,7 +1042,7 @@ void UpdateModels(void)
       fflush(stdout);
    }
 
-   if(SaveHMMSet(&hset,newDir,newExt,saveBinary)<SUCCESS)
+   if(SaveHMMSet(&hset,newDir,newExt,NULL,saveBinary)<SUCCESS)
       HError(2411,"UpdateModels: SaveHMMSet failed");
    ResetHeaps();                               /* Clean Up */
    if (trace&T_TOP)

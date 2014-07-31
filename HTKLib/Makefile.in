@@ -1,0 +1,61 @@
+# @configure_input@
+
+SHELL = /bin/sh
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+VPATH = @srcdir@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+sbindir = @sbindir@
+libexecdir = @libexecdir@
+datadir = @datadir@
+sysconfdir = @sysconfdir@
+sharedstatedir = @sharedstatedir@
+localstatedir = @localstatedir@
+libdir = @libdir@
+infodir = @infodir@
+mandir = @mandir@
+includedir = @includedir@
+oldincludedir = /usr/include
+
+hlib = .
+HLIBS = ${exec_prefix}/lib/HTKLib.a
+
+CC     = @CC@
+CFLAGS = @CFLAGS@ -I. 
+RANLIB = @RANLIB@
+INSTALL= @INSTALL@
+target = HTKLib.a
+modules = HShell.o HMath.o HSigP.o HWave.o HAudio.o HParm.o HVQ.o \
+          HGraf.o HLabel.o HModel.o HUtil.o HTrain.o HDict.o HLM.o \
+          HRec.o HNet.o HAdapt.o HFB.o HMem.o HLat.o HMap.o \
+          esignal.o esig_asc.o esig_edr.o \
+          esig_nat.o strarr.o
+
+all:    HTKLib.a
+
+$(target): $(modules)
+	if [ -f $@ ] ; then  /bin/rm $@ ; fi
+	ar rv $@ $^
+	$(RANLIB) $@
+
+.PHONY: clean cleanup depend mkinstalldir install
+
+clean:
+	-rm -f $(modules) $(target)
+
+cleanup:
+	-rm -f $(modules) 
+
+depend:
+	-makedepend -Y *.c
+
+distclean: clean
+	-rm -f Makefile
+
+install: $(target) mkinstalldir 
+	$(INSTALL) -m 755 $< $(libdir)
+
+mkinstalldir:
+	-mkdir -p $(libdir)

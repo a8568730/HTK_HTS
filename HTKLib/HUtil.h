@@ -19,7 +19,7 @@
 /*         File: HUtil.h      HMM utility routines             */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HUtil:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HUtil:   3.3 [CUED 28/04/05] */
 
 #ifndef _HUTIL_H_
 #define _HUTIL_H_
@@ -54,6 +54,12 @@ void InitUtil(void);
    Initialise the module
 */
 
+/* EXPORT->ResetUtilItemList: frees all the memory from the ItelList heap */
+void ResetUtilItemList();
+
+/* EXPORT->SetParsePhysicalHMM: only parse physical HMMs */
+void SetParsePhysicalHMM(Boolean parse);
+
 /* ---------------- General Purpose Routines ----------------- */
 
 SVector CloneSVector(MemHeap *hmem, SVector s, Boolean sharing);
@@ -77,6 +83,21 @@ void ConvDiagC(HMMSet *hset, Boolean convData);
   or vice versa. If convData is TRUE then each variance element is
   replaced by its reciprocal - otherwise only the CovKind in each HMM
   is changed and no data conversions are performed.
+*/
+
+void ForceDiagC(HMMSet *hset);
+/*
+  Converts all the HMMs in the HMMSet hset to DIAGC from INVDIAGC.
+*/
+
+void ConvLogWt(HMMSet *hset);
+/*
+  Converts all the mixture weights into log-weights.
+*/
+
+void ConvExpWt(HMMSet *hset);
+/*
+  Converts all the mixture log-weights into weights.
 */
 
 /* ------------------ HMM Scan Routines -------------------- */
@@ -148,14 +169,6 @@ char *HMMPhysName(HMMSet *hset,HLink hmm);
    a separate MHEAP created during InitUtil() and so can be freed in
    any order.
 */
-
-typedef struct _ItemRec *ILink;
-
-typedef struct _ItemRec {
-   HLink owner;      /* HMM owning this item */
-   Ptr item;         /* -> to a HMM structure */
-   ILink next;
-}ItemRec;
 
 void AddItem(HLink owner, Ptr item, ILink *list);
 int NumItems(ILink list);

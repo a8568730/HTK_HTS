@@ -75,7 +75,6 @@ StrArrToRect(char **strarr, long **dimenp, void **datap)
    void *data;
    long i, j;
    char *str, *row;
-   long two = 2;
 
    len = StrArrLen(strarr);
    wid = StrArrMaxLen(strarr) + 1;

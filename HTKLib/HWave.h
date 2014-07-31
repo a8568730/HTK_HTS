@@ -18,7 +18,7 @@
 /* ----------------------------------------------------------- */
 /*         File: HWave.h: Speech Waveform File Input           */
 /* ----------------------------------------------------------- */
-/* !HVER!HWave:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HWave:   3.3 [CUED 28/04/05] */
 
 /*  Configuration Parameters:
    NSAMPLES       - num samples in alien file input via a pipe

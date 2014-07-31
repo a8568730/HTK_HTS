@@ -32,7 +32,7 @@
 /*         File: HShell.h:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HShell:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HShell:   3.3 [CUED 28/04/05] */
 
 #ifndef _HSHELL_H_
 #define _HSHELL_H_
@@ -53,6 +53,10 @@
 #include <errno.h>
 #include <signal.h>
 #include <assert.h>
+#ifdef CYGWIN
+#include <asm/socket.h>
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -180,6 +184,12 @@ New function - print error message on stderr and don't abort.
 
 /* ------------------------ Initialisation --------------------------- */
 
+ReturnStatus SetScriptFile(char *fn); 
+/* 
+    Allows more than one script file to be used by an HTK Tool
+    For example, with the -S and -f options in HDistance
+*/
+
 
 extern Boolean vaxOrder;  
 /* 
@@ -207,6 +217,10 @@ void Register(char *ver, char *sccs);
    This information is used by PrintVersion.  It is called by
    each module's Init routine.
 */
+
+char * RegisterExtFileName(char *s);
+/* Record details of fn extended attributed if any in circular buffer */
+
 
 Boolean InfoPrinted(void);
 /*
@@ -538,21 +552,6 @@ char *RetrieveCommandLine(void);
 }
 #endif
 
-
-/* ----------------------- Timing functions for diagnostics ----------- */
-#ifndef WIN32
-typedef struct TimeStruct_s {
-   char timestr[50];
-   struct timeval time;
-   clock_t clock_time;
-} TimeStruct;
-
-void SetTime(TimeStruct *t);
-
-char *GiveTime(TimeStruct *t);  /* Gives CPU and clock time elapsed in seconds
-                                   since SetTime was called on t,
-                                   in format "?.????/clock ?.????" . */
-#endif  /* WIN32 */
 #endif  /* _HSHELL_H_ */
 
 /* ----------------------- End of HShell.h --------------------------- */

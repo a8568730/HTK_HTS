@@ -19,8 +19,8 @@
 /*    File: HResults.c: gather statistics on results           */
 /* ----------------------------------------------------------- */
 
-char *hresults_version = "!HVER!HResults:   3.2.1 [CUED 15/10/03]";
-char *hresults_vc_id = "$Id: HResults.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+char *hresults_version = "!HVER!HResults:   3.3 [CUED 28/04/05]";
+char *hresults_vc_id = "$Id: HResults.c,v 1.2 2005/05/12 15:51:29 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -379,7 +379,7 @@ void NormaliseName(LabList *ll,int lev)
          strcpy(buf,id->name);
          len = strlen(buf);
          for (ptr=buf;*ptr!=0;ptr++)
-            if (islower(*ptr)) break;
+            if (islower((int) *ptr)) break;
          if (*ptr){
             for (;*ptr!=0;ptr++)
                *ptr = toupper(*ptr);
@@ -1047,7 +1047,7 @@ void AppendPair(char *linea, char *a, char *lineb, char *b)
 void AppendCell(int i, int j, char *tb, char *rb)
 {
    char *rlab,*tlab;
-   LabId rid,tid;
+   LabId rid=NULL,tid=NULL;
    char empty[1];
 
    if (i<0 || j<0) 

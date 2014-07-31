@@ -104,7 +104,7 @@ covariance can be limited to that corresponding to a specified label.
 
 The calculation of cluster-based mean and variances estimates is
 enabled by the option \texttt{-c} which specifies the output directory
-where the estiamted vectors should be stored.
+where the estimated vectors should be stored.
 
 The detailed operation of \htool{HCompV} is controlled by the following
 command line options
@@ -117,6 +117,12 @@ command line options
   and the characters that are matched against \verb|%| are used as the
   cluster name. One mean/variance vector is estimated for each
   cluster.
+
+  \ttitem{-p s} Path pattern for cluster-based mean/variance
+  estimation. Each utterance filename is matched against the pattern
+  and the characters that are matched against \verb|%| are spliced to
+  the end of the directory string specified with option `-c' for the final
+  mean/variance vectors output. 
   
   \ttitem{-q s} For cluster-based mean/variance estimation different
   types of output can be requested. Any subset of the letters

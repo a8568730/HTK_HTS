@@ -32,7 +32,7 @@
 /*         File: HParm.h:   Speech Parameter Input/Output      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HParm:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HParm:   3.3 [CUED 28/04/05] */
 
 #ifndef _HPARM_H_
 #define _HPARM_H_

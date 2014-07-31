@@ -1160,10 +1160,10 @@ WriteHeader(FieldList  list,
 {
    FILE *temp;          /* temporary file */
    int  okay;           /* success or failure? */
-   long rec_size;       /* record size */
+   long rec_size=0L;    /* record size */
    long fld_size;       /* field-list size */
    static char  buf[BUFSIZ];    /* buffer for file copy */
-   char *architecture;  /* architecture name */
+   char *architecture=NULL;  /* architecture name */
    int  n;              /* byte count for file copy */
    long tot;            /* byte count total for file copy */
 
@@ -1573,7 +1573,7 @@ SubFieldOrder(FieldList list, char *prefix)
    FieldSpec    *fld;           /* top-level field */
    FieldSpec    **subfields;    /* linear array of subfields */
    long nsub;           /* number of subfields */
-   long preflen;        /* length of prefix */
+   long preflen = 0L;   /* length of prefix */
    char *fullname;      /* name including prefix & dot */
 
 
@@ -1879,7 +1879,7 @@ LongVal(void *src, int type, long *dest)
       case FLOAT_COMPLEX:       /* Fall through */
       case DOUBLE_COMPLEX:
          {
-            double  x;
+            double  x=0.0;
 
             switch (type)
                {

@@ -32,8 +32,8 @@
 /*  File: HCompV.c: HMM global mean/variance initialisation    */
 /* ----------------------------------------------------------- */
 
-char *hcompv_version = "!HVER!HCompV:   3.2.1 [CUED 15/10/03]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
+char *hcompv_version = "!HVER!HCompV:   3.3 [CUED 28/04/05]";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.1.1.1 2005/05/12 10:52:53 jal58 Exp $";
 
 
 /* 
@@ -128,6 +128,7 @@ typedef struct SpkrAccListItem{
 static SpkrAccListItem *salist = NULL;   /* global speaker accumulate list */
 static int vSize = 0;                    /* target observation vector size */
 static char spPattern[MAXSTRLEN];        /* speaker mask */
+static char pathPattern[MAXSTRLEN];      /* path mask */
 static char oflags[MAXSTRLEN] = "m";     /* export flags for CMV */  
 static char cmDir[MAXSTRLEN];            /* directory to export CMV */
 static char TargetPKStr[MAXSTRLEN];      /* target parm kind string */
@@ -162,6 +163,7 @@ void ReportUsage(void)
    printf(" -l s    Set segment label to s               none\n");
    printf(" -m      Update means                         off\n");
    printf(" -o fn   Store new hmm def in fn (name only)  outDir/srcfn\n");
+   printf(" -p s    path pattern for CMV                 none\n");
    printf(" -q nmv  output type flags for CMV            m\n");
    printf(" -v f    Set minimum variance to f            0.0\n");
    PrintStdOpts("BCFGHILMX");
@@ -487,7 +489,7 @@ void SaveModel(char *outfn)
 {
    if (outfn != NULL)
       macroLink->id = GetLabId(outfn,TRUE);
-   if(SaveHMMSet(&hset,outDir,NULL,saveBinary)<SUCCESS)
+   if(SaveHMMSet(&hset,outDir,NULL,NULL,saveBinary)<SUCCESS)
       HError(2011,"SaveModel: SaveHMMSet failed");
 }
 
@@ -686,13 +688,23 @@ void ExportNMV(SpkrAccListItem *sal, char *OutDirName, char *tgtPKStr)
    FILE *oFile;
    Boolean isPipe;
    char oFileName[MAXSTRLEN];
+   char pathBuffer1[MAXSTRLEN];
+   char pathBuffer2[MAXSTRLEN];
    SpkrAccListItem *p;
    int i;
 
    p = sal;
    while(p != NULL){
       /* create output file name for current spkr index */    
-      MakeFN(p->sa->SpkrName,OutDirName,NULL,oFileName);
+      if ( pathPattern[0] != '\0'){
+         if ( MaskMatch(pathPattern,pathBuffer1,p->sa->SpkrName) != TRUE ){
+            HError(2039,"HCompV: ExportNMV: path pattern matching failure on speaker: %s\n",p->sa->SpkrName);
+         }
+         MakeFN(pathBuffer1,OutDirName,NULL,pathBuffer2); 
+         MakeFN(p->sa->SpkrName,pathBuffer2,NULL,oFileName);
+      }
+      else
+         MakeFN(p->sa->SpkrName,OutDirName,NULL,oFileName);
 
       /* open and write */
       oFile = FOpen(oFileName,NoOFilter,&isPipe);
@@ -753,6 +765,7 @@ int main(int argc, char *argv[])
    SetConfParms();
 
    CreateHMMSet(&hset,&gstack,FALSE);
+   pathPattern[0]='\0';
    while (NextArg() == SWITCHARG) {
       s = GetSwtArg();
       if (strlen(s)!=1) 
@@ -791,6 +804,13 @@ int main(int argc, char *argv[])
             HError(2019,"HCompV: CMV output dir expected");
          strcpy(cmDir,GetStrArg());
          DoCMV = TRUE;
+         break;
+      case 'p':
+         if (NextArg() != STRINGARG)
+            HError(2019,"HCompV: path pattern expected");
+         strcpy(pathPattern,GetStrArg());
+         if (strchr(pathPattern,'%')==NULL)
+            HError(2019,"HCompV: Path mask invalid");
          break;
       case 'q':
          if (NextArg() != STRINGARG)

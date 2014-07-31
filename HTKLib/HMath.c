@@ -19,8 +19,8 @@
 /*         File: HMath.c   Math Support Module                 */
 /* ----------------------------------------------------------- */
 
-char *hmath_version = "!HVER!HMath:   3.2.1 [CUED 15/10/03]";
-char *hmath_vc_id = "$Id: HMath.c,v 1.10 2003/10/15 08:10:12 ge204 Exp $";
+char *hmath_version = "!HVER!HMath:   3.3 [CUED 28/04/05]";
+char *hmath_vc_id = "$Id: HMath.c,v 1.1.1.1 2005/05/12 10:52:50 jal58 Exp $";
 
 /*
    This library provides math support in the following three areas
@@ -1233,6 +1233,330 @@ void InvSVD(DMatrix A, DMatrix U, DVector W, DMatrix V, DMatrix Result)
    FreeDMatrix(&gstack,tmp1);
 }
 
+/* LUDecompose: perform LU decomposition on Matrix a, the permutation
+       of the rows is returned in perm and sign is returned as +/-1
+       depending on whether there was an even/odd number of row 
+       interchanges */
+static Boolean LUDecompose(Matrix a, int *perm, int *sign)
+{
+   int i,imax,j,k,n;
+   double scale,sum,xx,yy;
+   Vector vv,tmp;
+   
+   n = NumRows(a); imax = 0;
+   vv = CreateVector(&gstack,n);
+   *sign = 1;
+   for (i=1; i<=n; i++) {
+      scale = 0.0;
+      for (j=1; j<=n; j++)
+         if ((xx = fabs(a[i][j])) > scale )
+            scale = xx;
+      if (scale == 0.0) {
+         HError(-1,"LUDecompose: Matrix is Singular");
+	 return(FALSE);
+      }
+      vv[i] = 1.0/scale;
+   }
+   for (j=1; j<=n; j++) {
+      for (i=1; i<j; i++) {
+         sum = a[i][j];
+         for (k=1; k<i; k++) sum -= a[i][k]*a[k][j];
+         a[i][j]=sum;
+      }
+      scale=0.0;
+      for (i=j; i<=n; i++) {
+         sum = a[i][j];
+         for (k=1; k<j; k++) sum -= a[i][k]*a[k][j];
+         a[i][j]=sum;
+         if ( (yy=vv[i]*fabs(sum)) >=scale) {
+            scale = yy; imax = i;
+         }
+      }
+      if (j != imax) {
+         tmp = a[imax]; a[imax] = a[j]; a[j] = tmp;
+         *sign = -(*sign);
+         vv[imax]=vv[j];
+      }
+      perm[j]=imax;
+      if (a[j][j] == 0.0) {
+         HError(-1,"LUDecompose: Matrix is Singular");
+	 return(FALSE);
+      }
+      if (j != n) {
+         yy = 1.0/a[j][j];
+         for (i=j+1; i<=n;i++) a[i][j] *= yy;
+      }
+   }
+   return(TRUE);
+}
+
+
+/* EXPORT->MatDet: determinant of a matrix */
+float MatDet(Matrix c)
+{
+   Matrix a;
+   float det;
+   int n,perm[1600],i,sign;
+   
+   n=NumRows(c);
+   a=CreateMatrix(&gstack,n,n);
+   CopyMatrix(c,a);                /* Make a copy of c */
+   LUDecompose(a,perm,&sign);      /* Do LU Decomposition */
+   det = sign;                     /* Calc Det(c) */
+   for (i=1; i<=n; i++) {
+      det *= a[i][i];
+   }
+   FreeMatrix(&gstack,a);
+   return det;
+}
+
+
+/* DLUDecompose: perform LU decomposition on Matrix a, the permutation
+       of the rows is returned in perm and sign is returned as +/-1
+       depending on whether there was an even/odd number of row 
+       interchanges */
+static Boolean DLUDecompose(DMatrix a, int *perm, int *sign)
+{
+   int i,imax,j,k,n;
+   double scale,sum,xx,yy;
+   DVector vv,tmp;
+   
+   n = NumDRows(a); imax = 0;
+   vv = CreateDVector(&gstack,n);
+   *sign = 1;
+   for (i=1; i<=n; i++) {
+      scale = 0.0;
+      for (j=1; j<=n; j++)
+         if ((xx = fabs(a[i][j])) > scale )
+            scale = xx;
+      if (scale == 0.0) {
+         HError(-1,"LUDecompose: Matrix is Singular");
+         return(FALSE);
+      }
+      vv[i] = 1.0/scale;
+   }
+   for (j=1; j<=n; j++) {
+      for (i=1; i<j; i++) {
+         sum = a[i][j];
+         for (k=1; k<i; k++) sum -= a[i][k]*a[k][j];
+         a[i][j]=sum;
+      }
+      scale=0.0;
+      for (i=j; i<=n; i++) {
+         sum = a[i][j];
+         for (k=1; k<j; k++) sum -= a[i][k]*a[k][j];
+         a[i][j]=sum;
+         if ( (yy=vv[i]*fabs(sum)) >=scale) {
+            scale = yy; imax = i;
+         }
+      }
+      if (j != imax) {
+         tmp = a[imax]; a[imax] = a[j]; a[j] = tmp;
+         *sign = -(*sign);
+         vv[imax]=vv[j];
+      }
+      perm[j]=imax;
+      if (a[j][j] == 0.0) {
+         HError(-1,"LUDecompose: Matrix is Singular");
+         return(FALSE);
+      }
+      if (j != n) {
+         yy = 1.0/a[j][j];
+         for (i=j+1; i<=n;i++) a[i][j] *= yy;
+      }
+   }
+   return(TRUE);
+}
+
+
+/* EXPORT->DMatDet: determinant of a double matrix */
+double DMatDet(DMatrix c)
+{
+   DMatrix a;
+   double det;
+   int n,perm[1600],i,sign;
+   
+   n=NumDRows(c);
+   a=CreateDMatrix(&gstack,n,n);
+   CopyDMatrix(c,a);                /* Make a copy of c */
+   DLUDecompose(a,perm,&sign);      /* Do LU Decomposition */
+   det = sign;                     /* Calc Det(c) */
+   for (i=1; i<=n; i++) {
+      det *= a[i][i];
+   }
+   FreeDMatrix(&gstack,a);
+   return det;
+}
+
+
+
+/* LinSolve: solve the set of linear equations Ax = b, returning
+        the result x in  b */
+static void LinSolve(Matrix a, int *perm, float *b)
+{
+   int i,ii=0,ip,j,n;
+   double sum;
+   
+   n=NumRows(a);
+   for (i=1;i<=n;i++) {
+      ip=perm[i]; sum=b[ip]; b[ip]=b[i];
+      if (ii)
+         for (j=ii;j<=i-1;j++) sum -=a[i][j]*b[j];
+      else
+         if (sum) ii=i;
+      b[i]=sum;
+   }
+   for (i=n; i>=1; i--) {
+      sum=b[i];
+      for (j=i+1; j<=n; j++)
+         sum -=a[i][j]*b[j];
+      b[i]=sum/a[i][i];
+   }
+}        
+
+
+/* EXPORT-> MatInvert: puts inverse of c in invc, returns Det(c) */
+float MatInvert(Matrix c, Matrix invc)
+{
+   Matrix a;
+   float col[100];
+   float det;
+   int sign;
+   int n,i,j,perm[100];
+   
+   n=NumRows(c);
+   a=CreateMatrix(&gstack,n,n);
+   CopyMatrix(c,a);           /* Make a copy of c */
+   LUDecompose(a,perm,&sign);      /* Do LU Decomposition */
+   for (j=1; j<=n; j++) {     /* Invert matrix */
+      for (i=1; i<=n; i++)
+         col[i]=0.0;
+      col[j]=1.0;
+      LinSolve(a,perm,col);
+      for (i=1; i<=n; i++)
+         invc[i][j] = col[i];
+   }  
+   det = sign;                /* Calc log(det(c)) */
+   for (i=1; i<=n; i++) {
+      det *= a[i][i];
+   }
+   FreeMatrix(&gstack,a);
+   return det;
+}                
+ 
+/* DLinSolve: solve the set of linear equations Ax = b, returning
+        the result x in  b */
+static void DLinSolve(DMatrix a, int *perm, double *b)
+{
+   int i,ii=0,ip,j,n;
+   double sum;
+   
+   n=NumDRows(a);
+   for (i=1;i<=n;i++) {
+      ip=perm[i]; sum=b[ip]; b[ip]=b[i];
+      if (ii)
+         for (j=ii;j<=i-1;j++) sum -=a[i][j]*b[j];
+      else
+         if (sum) ii=i;
+      b[i]=sum;
+   }
+   for (i=n; i>=1; i--) {
+      sum=b[i];
+      for (j=i+1; j<=n; j++)
+         sum -=a[i][j]*b[j];
+      b[i]=sum/a[i][i];
+   }
+}       
+
+/* Inverting a double matrix */
+double DMatInvert(DMatrix c, DMatrix invc)
+{
+   DMatrix a;
+   double col[100];
+   double det;
+   int sign;
+   int n,i,j,perm[100];
+   
+   n=NumDRows(c);
+   a=CreateDMatrix(&gstack,n,n);
+   CopyDMatrix(c,a);           /* Make a copy of c */
+   DLUDecompose(a,perm,&sign);      /* Do LU Decomposition */
+   for (j=1; j<=n; j++) {     /* Invert matrix */
+      for (i=1; i<=n; i++)
+         col[i]=0.0;
+      col[j]=1.0;
+      DLinSolve(a,perm,col);
+      for (i=1; i<=n; i++)
+         invc[i][j] = col[i];
+   }  
+   det = sign;                /* Calc log(det(c)) */
+   for (i=1; i<=n; i++) {
+      det *= a[i][i];
+   }
+   FreeDMatrix(&gstack,a);
+   return det;
+}
+
+/* EXPORT-> DMatCofact: generates the cofactors of row r of matrix c */
+double DMatCofact(DMatrix c, int r, DVector cofact)
+{
+   DMatrix a;
+   double col[100];
+   double det;
+   int sign;
+   int n,i,perm[100];
+   
+   n=NumDRows(c);
+   a=CreateDMatrix(&gstack,n,n);
+   CopyDMatrix(c,a);                      /* Make a copy of c */
+   if (! DLUDecompose(a,perm,&sign))      /* Do LU Decomposition */
+     return 0;
+   det = sign;                         /* Calc det(c) */
+   for (i=1; i<=n; i++) {
+      det *= a[i][i];
+   }
+   for (i=1; i<=n; i++)
+     col[i]=0.0;
+   col[r]=1.0;
+   DLinSolve(a,perm,col);
+   for (i=1; i<=n; i++)
+     cofact[i] = col[i]*det;
+   FreeDMatrix(&gstack,a);
+   return det;
+}
+
+/* EXPORT-> MatCofact: generates the cofactors of row r of matrix c */
+double MatCofact(Matrix c, int r, Vector cofact)
+{
+   DMatrix a;
+   DMatrix b;
+   double col[100];
+   float det;
+   int sign;
+   int n,i,perm[100];
+ 
+   n=NumRows(c);
+   a=CreateDMatrix(&gstack,n,n);
+   b=CreateDMatrix(&gstack,n,n);
+   Mat2DMat(c,b);
+   CopyDMatrix(b,a);                      /* Make a copy of c */
+   if (! DLUDecompose(a,perm,&sign))      /* Do LU Decomposition */
+     return 0;
+   det = sign;                         /* Calc det(c) */
+   for (i=1; i<=n; i++) {
+      det *= a[i][i];
+   }
+   for (i=1; i<=n; i++)
+     col[i]=0.0;
+   col[r]=1.0;
+   DLinSolve(a,perm,col);
+   for (i=1; i<=n; i++)
+     cofact[i] = col[i]*det;
+   
+   FreeDMatrix(&gstack,b);
+   FreeDMatrix(&gstack,a);
+   return det;
+}
 
 /* -------------------- Log Arithmetic ---------------------- */
 

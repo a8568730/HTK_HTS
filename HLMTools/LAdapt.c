@@ -29,8 +29,8 @@
 /*         File: LAdapt.c - adapt LM with new text             */
 /* ----------------------------------------------------------- */
 
-char *ladapt_version = "!HVER!LAdapt:   3.2.1 [CUED 15/10/03]";
-char *ladapt_vc_id = "$Id: LAdapt.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
+char *ladapt_version = "!HVER!LAdapt:   3.3 [CUED 28/04/05]";
+char *ladapt_vc_id = "$Id: LAdapt.c,v 1.1.1.1 2005/05/12 10:52:19 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

@@ -19,7 +19,7 @@
 /*         File: HRec.h  Viterbi Recognition Engine Library    */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HREC:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HREC:   3.3 [CUED 28/04/05] */
 
 #ifndef _HREC_H_
 #define _HREC_H_
@@ -178,7 +178,7 @@ void StartRecognition(VRecInfo *vri,Network *net,
    supplied network and language model scale and word insertion penalty
 */
 
-void ProcessObservation(VRecInfo *vri,Observation *obs,int id);
+void ProcessObservation(VRecInfo *vri,Observation *obs,int id, AdaptXForm *xform);
 /*
    Process a single observation updating traceback and status
    information in vri.  Each call to ProcessObservation should

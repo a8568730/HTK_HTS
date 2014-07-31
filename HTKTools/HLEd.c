@@ -19,8 +19,8 @@
 /*      File: HLEd.c: Edit label file(s)                       */
 /* ----------------------------------------------------------- */
 
-char *hled_version = "!HVER!HLEd:   3.2.1 [CUED 15/10/03]";
-char *hled_vc_id = "$Id: HLEd.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hled_version = "!HVER!HLEd:   3.3 [CUED 28/04/05]";
+char *hled_vc_id = "$Id: HLEd.c,v 1.2 2005/05/12 15:51:28 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -592,7 +592,7 @@ EdOp ReadCmd(Source *src)
    SkipComment(src);
    SkipWhiteSpace(src);
    if (!ReadString(src,buf)) return(NOCMD);
-   s[0]=buf[0]; s[1] = isalnum(buf[1])?buf[1]:' '; s[2]='\0';
+   s[0]=buf[0]; s[1] = isalnum((int) buf[1])?buf[1]:' '; s[2]='\0';
    if (trace&T_EDIN)
       printf(" input cmd   '%s'\n",s);
    cmdidx = CmdIndex(s);

@@ -29,8 +29,8 @@
 /*            Cluster.c: Cluster words into classes            */
 
 
-char *Cluster_version = "!HVER!Cluster:   3.2.1 [CUED 15/10/03]";
-char *Cluster_vc_id = "$Id: Cluster.c,v 1.2 2003/10/15 08:10:12 ge204 Exp $";
+char *Cluster_version = "!HVER!Cluster:   3.3 [CUED 28/04/05]";
+char *Cluster_vc_id = "$Id: Cluster.c,v 1.1.1.1 2005/05/12 10:52:19 jal58 Exp $";
 
 /* HTK/HLM libraries: */
 #include "HShell.h"

@@ -44,12 +44,12 @@ syslib = kernel32.lib user32.lib gdi32.lib winspool.lib \
 
 libs = $(syslib) 
 
-core =  HShell.obj HMath.obj  HSigP.obj  HWave.obj HAudio.obj \
-	HParm.obj HVQ.obj  HGraf_WIN32.obj HLabel.obj HModel.obj HUtil.obj HLat.obj \
-	HTrain.obj HDict.obj  HLM.obj HRec.obj HNet.obj HFB.obj HAdapt.obj HMem.obj \
-	esignal.obj esig_asc.obj esig_edr.obj \
-	esig_nat.obj strarr.obj
-
+core =  esig_asc.obj esig_edr.obj esignal.obj esig_nat.obj \ 
+	HAdapt.obj HAudio.obj HDict.obj HFB.obj HGraf.obj \
+	HGraf.null.obj HGraf_WIN32.obj HLabel.obj HLat.obj \
+	HLM.obj HMap.obj HMath.obj HMem.obj HModel.obj HNet.obj \
+	HParm.obj HRec.obj HShell.obj HSigP.obj HTrain.obj \
+	HUtil.obj HVQ.obj HWave.obj strarr.obj
 
 all: $(libHTK).lib
 

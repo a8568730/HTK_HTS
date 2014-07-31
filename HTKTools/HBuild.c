@@ -19,8 +19,8 @@
 /*     File: HBuild.c:  Word-Lattice Building                  */
 /* ----------------------------------------------------------- */
 
-char *hbuild_version = "!HVER!HBuild:   3.2.1 [CUED 15/10/03]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hbuild_version = "!HVER!HBuild:   3.3 [CUED 28/04/05]";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.1.1.1 2005/05/12 10:52:53 jal58 Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.
@@ -102,7 +102,7 @@ void ReportUsage(void)
 
 int main(int argc, char *argv[])
 {
-   char *wordListFn,*latFn,*ipFn;
+   char *wordListFn,*latFn,*ipFn=NULL;
    LModel *bigramLm;
    BuildType bType = unknown;
    Boolean saveLatBin = FALSE;
@@ -520,7 +520,7 @@ Lattice *ProcessMatBiGram(MemHeap *latHeap, Vocab *voc, MatBiLM *bg)
 /* ProcessBiGram: Convert bigram in biLM into lattice */
 Lattice *ProcessBiGram(MemHeap *latHeap, Vocab *voc, LModel *biLM)
 {
-   Lattice *lat;
+   Lattice *lat = NULL;
 
    switch (biLM->type) {
    case boNGram:
@@ -635,7 +635,7 @@ void ReadWPGrammar(WPGrammar *wpg, Vocab * voc, char *gramFn)
    char buf[255];
    int ch;
    Word newWord;
-   GramEntry *newGram;
+   GramEntry *newGram = NULL;
    Boolean newEntry;
    WordFllr *wdfllr; 
    Word sentEnd;   

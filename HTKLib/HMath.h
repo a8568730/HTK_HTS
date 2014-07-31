@@ -19,7 +19,7 @@
 /*         File: HMath.h:   Math Support                       */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HMath:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HMath:   3.3 [CUED 28/04/05] */
 
 #ifndef _HMATH_H_
 #define _HMATH_H_
@@ -173,6 +173,22 @@ LogFloat CovDet(TriMat c);
 /*
    Returns log of Det(c), c must be positive definite.
 */
+
+/* EXPORT->MatDet: determinant of a matrix */
+float MatDet(Matrix c);
+
+/* EXPORT->DMatDet: determinant of a double matrix */
+double DMatDet(DMatrix c);
+
+/* EXPORT-> MatInvert: puts inverse of c in invc, returns Det(c) */
+  float MatInvert(Matrix c, Matrix invc);
+  double DMatInvert(DMatrix c, DMatrix invc);
+ 
+/* DMatCofact: generates the cofactors of row r of doublematrix c */
+double DMatCofact(DMatrix c, int r, DVector cofact);
+
+/* MatCofact: generates the cofactors of row r of doublematrix c */
+double MatCofact(Matrix c, int r, Vector cofact);
 
 /* ------------- Singular Value Decomposition Routines --------------- */
 

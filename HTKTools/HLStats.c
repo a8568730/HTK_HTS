@@ -19,8 +19,8 @@
 /*    File: HLStats.c: gather statistics from transcriptions   */
 /* ----------------------------------------------------------- */
 
-char *hlstats_version = "!HVER!HLStats:   3.2.1 [CUED 15/10/03]";
-char *hlstats_vc_id = "$Id: HLStats.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+char *hlstats_version = "!HVER!HLStats:   3.3 [CUED 28/04/05]";
+char *hlstats_vc_id = "$Id: HLStats.c,v 1.1.1.1 2005/05/12 10:52:54 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 {
    char * labFn, *listfn, *s;
    int i,fidx;
-   MLFEntry *me;
+   MLFEntry *me = NULL;
    Transcription *t;
    void InitStats(char *listfn);
    void GatherStats(Transcription *t);

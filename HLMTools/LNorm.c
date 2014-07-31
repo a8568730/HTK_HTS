@@ -29,8 +29,8 @@
 /*    File: LNorm: normalise model                             */
 /* ----------------------------------------------------------- */
 
-char *lnorm_version = "!HVER!LNorm:   3.2.1 [CUED 15/10/03]";
-char *lnorm_vc_id = "$Id: LNorm.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
+char *lnorm_version = "!HVER!LNorm:   3.3 [CUED 28/04/05]";
+char *lnorm_vc_id = "$Id: LNorm.c,v 1.1.1.1 2005/05/12 10:52:19 jal58 Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>

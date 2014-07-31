@@ -30,8 +30,8 @@
 /* ----------------------------------------------------------- */
 
 
-char *lmodel_version = "!HVER!LModel:   3.2.1 [CUED 15/10/03]";
-char *lmodel_vc_id = "$Id: LModel.c,v 1.2 2003/10/15 08:10:12 ge204 Exp $";
+char *lmodel_version = "!HVER!LModel:   3.3 [CUED 28/04/05]";
+char *lmodel_vc_id = "$Id: LModel.c,v 1.1.1.1 2005/05/12 10:52:18 jal58 Exp $";
 
 
 #include "HShell.h"     /* HMM ToolKit Modules */

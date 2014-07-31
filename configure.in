@@ -1,0 +1,100 @@
+dnl Process this file with autoconf to produce a configure script.
+AC_INIT(HTK,3.3,htk-mgr@eng.cam.ac.uk)
+AC_COPYRIGHT(Copyright 2003-2005 University of Cambridge)
+
+dnl Checks for programs.
+AC_PROG_AWK
+AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_RANLIB
+
+dnl Checks for libraries.
+AC_CHECK_LIB([X11], [main])
+AC_CHECK_LIB([m], [main])
+
+dnl Checks for header files.
+AC_CONFIG_HEADERS
+AC_PATH_X
+AC_HEADER_STDC
+AC_CHECK_HEADERS(errno.h fcntl.h float.h limits.h malloc.h memory.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h)
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_SIZE_T
+AC_HEADER_TIME
+AC_STRUCT_TM
+
+dnl Checks for library functions.
+AC_PROG_GCC_TRADITIONAL
+AC_FUNC_MEMCMP
+AC_FUNC_MALLOC
+AC_FUNC_STRTOD
+AC_TYPE_SIGNAL
+AC_FUNC_VPRINTF
+AC_CHECK_FUNCS(floor gettimeofday memmove memset modf pow socket sqrt strchr strcspn strrchr strspn strstr strtol)
+
+AC_CANONICAL_HOST
+
+# Use -Wall if using gcc
+case "$CC" in
+	 gcc*)
+		CFLAGS="-Wall -Wno-switch $CFLAGS"
+		;;		
+esac
+
+
+# customise for htk comilpation
+case "$ac_cv_host" in
+	 *linux*)
+		host_cpu=linux
+		;;
+esac
+
+case "$host_cpu" in
+	 powerpc)
+	 	host=darwin
+		host_cpu=$host
+		;;
+esac
+
+case "$host" in
+		*x86_64*linux*)
+				CFLAGS="-m32 -ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
+				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
+				ARCH=linux
+		;;
+		*linux*)
+				CFLAGS="-ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
+				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
+				ARCH=linux
+		;;
+		*sun*)
+				CFLAGS="-ansi -I/usr/openwin/include -O2 -DSOLARIS16_AUDIO -DBSD_COMP -D'ARCH=\"$host_cpu\"' $CFLAGS"
+				LDFLAGS="-L/usr/openwin/lib -ldl -lsocket -lnsl -lintl $LDFLAGS"
+		;;
+		*sgi*)
+				CFLAGS="-O -DSGI_AUDIO  -D'ARCH=\"$host_cpu\"' $CFLAGS"
+				LDFLAGS="-laudio -lmalloc $LDFLAGS"
+		;;
+		*hp*)
+				CFLAGS="+e -O -I/usr/include/X11R5 -I/usr/include/audio -I/opt/audio/include -D_HPUX_SOURCE -Aa -DHPUX_AUDIO -DUSE_TIMER  -D'ARCH=\"$host_cpu\"' $CFLAGS"
+				LDFLAGS="-L/opt/audio/lib -lAlib $LDFLAGS"
+		;;
+		darwin)
+				CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' $CFLAGS"
+				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
+				ARCH=darwin
+				Objcopy=echo
+				PRILF="-x"
+				CPU=darwin
+				SHRLF="-shared"
+				LIBEXT=dylib
+		;;				
+esac
+
+# tweak bindir and libdir for backwards compatibility with previous versions of HTK
+bindir=${bindir}.${host_cpu}
+libdir=${libdir}.${host_cpu}
+
+AC_OUTPUT(HTKLib/Makefile HTKTools/Makefile HLMLib/Makefile HLMTools/Makefile Makefile)

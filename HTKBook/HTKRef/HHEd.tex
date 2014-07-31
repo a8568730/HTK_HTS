@@ -485,6 +485,35 @@ tying of the states in each cluster is performed exactly as for
 the Tie (\texttt{TI}) command below.  The macro for the \texttt{i}'th
 tied cluster is called \texttt{macroi}.
 
+\subsubsection*{\tt PS nstates power [numiters]   }
+
+This command sets the number of Gaussians in each HMM state
+proportional to a power of the number of frames available for training it.  The
+number of frames is obtained from a ``stats'' file output by \htool{HERest},
+which is loaded by the \texttt{LS} command.  Typical usage might be:
+\begin{verbatim}
+ LS <statsfile> 
+ PS 16 0.2 
+\end{verbatim}
+in order to acheive an average of 16 Gaussians per state with a power
+of 0.2.  
+
+It is always advisable when increasing the number of Gaussians in states to
+increase the number by small increments and re-estimate HMMs using
+\htool{HERest} once or more in between.  It may be difficult to avoid a
+large increase in number of Gaussians in particular states when moving from
+a HMM set with a constant number of Gaussians per state to one controlled
+by a power law.  Therefore the PS command has a facility for increasing
+the number of Gaussians gradually where the target is larger than the
+initial number of Gaussians, so that HERest can be run in between.  In this
+example, one could use the \htool{HHEd} command \texttt{PS}~16~0.2~3, run
+\htool{HERest}, use the command \texttt{PS}~16~0.2~2, run \htool{HERest},
+and then run \texttt{PS}~16~0.2~1 before the final re-estimation with
+\htool{HERest}.  The last argument is the number of iterations remaining.
+A fairly similar effect could be obtained by increasing the power linearly
+from zero.
+
+
 \subsubsection*{\tt QS name itemList(h)}
 
 Define a question \texttt{name} which is true for all the models in

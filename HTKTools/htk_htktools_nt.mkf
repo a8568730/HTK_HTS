@@ -43,9 +43,8 @@ libs = $(syslib) $(htklib)
 
 tools = HSLab.exe HInit.exe HRest.exe HERest.exe HVite.exe HResults.exe \
 	HList.exe HCopy.exe HLEd.exe HDMan.exe HHEd.exe HParse.exe \
-	HBuild.exe HSmooth.exe HCompV.exe HQuant.exe HSGen.exe HLStats.exe HEAdapt.exe HLRescore.exe
-
-HEAdapt.exe: HEAdapt.obj
+	HBuild.exe HSmooth.exe HCompV.exe HQuant.exe HSGen.exe HLStats.exe \
+	HLRescore.exe
 
 HSLab.exe:	HSLab.obj
 

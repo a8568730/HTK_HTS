@@ -19,8 +19,8 @@
 /*         File: HGraf.null.c:  HGraf (null implementation)    */
 /* ----------------------------------------------------------- */
 
-char *hgraf_version = "!HVER!HGraf(null):   3.1 [CUED 16/01/02]";
-char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.5 2002/12/19 16:37:11 ge204 Exp $";
+char *hgraf_version = "!HVER!HGraf(null):   3.3 [CUED 28/04/05]";
+char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.1.1.1 2005/05/12 10:52:50 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -245,6 +245,12 @@ void MakeXGraf(char *wname, int x, int y, int w, int h, int bw)
 /* EXPORT->TermHGraf: Terminate Graphics (also called via at_exit) */
 void TermHGraf()
 {
+}
+
+/* EXPORT HTextHeight: return the height of s in pixels */
+int HTextHeight(char *str)
+{
+   return 0;
 }
 
 /* ------------------------ End of HGraf.null.c ------------------------- */

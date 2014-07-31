@@ -19,8 +19,8 @@
 /*         File: HLabel.c:   Speech Label File Input           */
 /* ----------------------------------------------------------- */
 
-char *hlabel_version = "!HVER!HLabel:   3.2.1 [CUED 15/10/03]";
-char *hlabel_vc_id = "$Id: HLabel.c,v 1.11 2003/10/15 08:10:12 ge204 Exp $";
+char *hlabel_version = "!HVER!HLabel:   3.3 [CUED 28/04/05]";
+char *hlabel_vc_id = "$Id: HLabel.c,v 1.2 2005/05/12 15:51:24 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -107,6 +107,7 @@ static int transLev = 0;           /* if >0 filter all but specified level */
 static int transAlt = 0;           /* if >0 filter all but specified alt */
 static Boolean compatMode = FALSE;  /* Allow spaces around . or /// */
 static char labelQuote = 0;        /* How do we quote label names */
+static double htkLabelTimeScale = 1; /* multiply all times in HTK format labels by this on reading */
 
 /* --------------- Global MLF Data Structures  --------- */
 
@@ -131,7 +132,7 @@ static OutMLFEntry outMLFSet[MAXMLFS];      /* array of output MLFs */
 
 /* ---------------- Label Name Hashing ----------------- */
 
-#define HASHSIZE 5701                /* size of hash table */
+#define HASHSIZE 250007                /* size of hash table */
 static NameCell *hashtab[HASHSIZE];  /* the actual table */
 static MemHeap namecellHeap;         /* heap for name cells */
 static long numAccesses = 0;
@@ -167,6 +168,7 @@ void InitLabel(void)
 {
    int i;
    Boolean b;
+   double d;
    char str[MAXSTRLEN];
 
    Register(hlabel_version,hlabel_vc_id);
@@ -184,6 +186,7 @@ void InitLabel(void)
          labelQuote=str[0];
       if (GetConfInt(cParm,numParm,"TRANSALT",&i)) transAlt = i;
       if (GetConfInt(cParm,numParm,"TRANSLEV",&i)) transLev = i;
+      if (GetConfFlt(cParm,numParm,"HTKLABELTIMESCALE",&d)) htkLabelTimeScale = d;
    }
 }
 
@@ -599,10 +602,10 @@ Boolean IsNumeric(char *s)
 #endif
 
    len = strlen(s)-1;
-   if (!(isdigit(s[0])||s[0]=='+'||s[0]=='-')) return FALSE;
-   if (!(isdigit(s[len]))) return FALSE;   
+   if (!(isdigit((int) s[0])||s[0]=='+'||s[0]=='-')) return FALSE;
+   if (!(isdigit((int) s[len]))) return FALSE;   
    for (i=1; i<len; i++)
-      if (!(isdigit(s[i]) || s[i]=='.' || s[i]=='-' || s[i]=='+' || s[i]=='e' || s[i]=='E' ))
+      if (!(isdigit((int) s[i]) || s[i]=='.' || s[i]=='-' || s[i]=='+' || s[i]=='e' || s[i]=='E' ))
          return FALSE;
    return TRUE;
 }
@@ -746,7 +749,7 @@ static LabList * LoadHTKList(MemHeap *x, Source *src, int alt)
 {
    LabList  *ll = NULL;
    LabId labid, auxLab[100];
-   LLink p;
+   LLink p = NULL;
    HTime start,end;
    float score, auxScore[100];
    int n,maxAux = 0;
@@ -761,8 +764,10 @@ static LabList * LoadHTKList(MemHeap *x, Source *src, int alt)
       start = -1; end = -1; score = 0.0;
       if (trSym==TRNUM) {
          start = trNum; GetTrSym(src,TRUE);
+         start *= htkLabelTimeScale;
          if (trSym==TRNUM) {
             end = trNum; GetTrSym(src,TRUE);
+            end *= htkLabelTimeScale;
          }
       }
       if (trSym != TRSTR)
@@ -1079,11 +1084,11 @@ static Boolean NoMLFHeader(char *s)
    char *e;
    
    len = strlen(s);
-   while (isspace(*s) && len>7) {
+   while (isspace((int) *s) && len>7) {
       --len; ++s;
    }
    e = s+len-1;
-   while (isspace(*e) && len>7) {
+   while (isspace((int) *e) && len>7) {
       --len; --e;
    }
    if (len != 7) return TRUE;
@@ -1108,13 +1113,13 @@ static Boolean IsDotLine(char *s)
       }
    }
    if (compatMode) {
-      while (isspace(*s) && len>0) {
+      while (isspace((int) *s) && len>0) {
          cut=TRUE;
          --len; ++s;
       }
       e = s+len-1;
       if (*e=='\n' && len>0) --len,--e;
-      while (isspace(*e) && len>0) {
+      while (isspace((int) *e) && len>0) {
          cut=TRUE;
          --len; --e;
       }
@@ -1281,7 +1286,7 @@ static FILE * OpenLabFile(char *fname, Boolean *isMLF)
    FILE *f;
    MLFEntry *e;
    char path[1024],name[256],tryspec[1024];
-   Boolean isMatch;
+   Boolean isMatch = FALSE;
    unsigned fixedHash;     /* hash value for PAT_FIXED */
    unsigned anypathHash;   /* hash value for PAT_ANYPATH */ 
    char *fnStart;          /* start of actual file name */
@@ -1496,9 +1501,9 @@ static void SaveHTKLabels( FILE *f, Transcription *t)
       }
       for (p = hd->succ; p->succ != NULL; p = p->succ) {
          if (p->start>=0.0) {
-            fprintf(f,"%.0f ",p->start);
+            fprintf(f,"%.0f ",p->start / htkLabelTimeScale);
             if (p->end>=0.0) 
-               fprintf(f,"%.0f ",p->end);
+               fprintf(f,"%.0f ",p->end / htkLabelTimeScale);
          }
          WriteString(f,p->labid->name,labelQuote);
          if (hasScores[0])

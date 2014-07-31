@@ -764,15 +764,15 @@ Although the training and recognition techniques described previously can
 produce high performance recognition systems, these systems 
 can be improved upon by customising the HMMs to the characteristics of a 
 particular speaker. \HTK\ provides the tools 
-\htool{HEAdapt}\index{headapt@\htool{HEAdapt}} and 
+\htool{HERest}\index{headapt@\htool{HEAdapt}} and 
 \htool{HVite}\index{hvite@\htool{HVite}} to perform adaptation 
 using a small amount of enrollment or 
-adaptation data. The two tools differ in that \htool{HEAdapt} performs
+adaptation data. The two tools differ in that \htool{HERest} performs
 offline supervised adaptation while \htool{HVite} recognises the
 adaptation data and uses the generated transcriptions to 
 perform the adaptation. 
 Generally, more robust adaptation is performed in a supervised mode,
-as provided by \htool{HEAdapt}, but 
+as provided by \htool{HERest}, but 
 given an initial well trained model set, \htool{HVite} can still achieve 
 noticeable improvements in performance. 
 Full details of adaptation and how it is used in \HTK\ can be found in 

@@ -32,8 +32,8 @@
 /*         File: HShell.c:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-char *hshell_version = "!HVER!HShell:   3.2.1 [CUED 15/10/03]";
-char *hshell_vc_id = "$Id: HShell.c,v 1.14 2003/10/15 08:10:13 ge204 Exp $";
+char *hshell_version = "!HVER!HShell:   3.3 [CUED 28/04/05]";
+char *hshell_vc_id = "$Id: HShell.c,v 1.2 2005/05/12 15:51:24 jal58 Exp $";
 
 #include "HShell.h"
 
@@ -82,12 +82,15 @@ static int extFileUsed = 0;             /* total ext files in buffer */
 
 /* ------------- Extended File Name Handling ---------------- */
 
-/* RegisterExtFileName: record details of fn exts if any in circ buffer */
-static char * RegisterExtFileName(char *s)
+/* EXPORT->RegisterExtFileName: record details of fn exts if any in circ buffer */
+char * RegisterExtFileName(char *s)
 {
    char *eq,*rb,*lb,*co;
    char buf[1024];
    ExtFile *p;
+
+   if (!extendedFileNames)
+      return s;
 
    strcpy(buf,s);
    eq = strchr(buf,'=');
@@ -334,9 +337,9 @@ static ConfigEntry *FindConfEntry(char *user, char *name)
 static Boolean NumHead(char *s)
 {
    if (*s!='\0')
-      if (isdigit(*s))
+      if (isdigit((int) *s))
          return TRUE;
-   if (((*s=='-') || (*s=='+')) && (isdigit(*(s+1))))
+   if (((*s=='-') || (*s=='+')) && (isdigit((int) *(s+1))))
       return TRUE;
    return FALSE;
 }
@@ -407,7 +410,7 @@ static ReturnStatus ReadConfigFile(char *fname)
    hasUser=FALSE;
    gotParam = ReadConfName(&src,name);
    while (gotParam) {
-      while (isspace(c=GetCh(&src)));  
+      while (isspace((int) (c=GetCh(&src))));  
       if (c==':') {  /* user field given */
          hasUser = TRUE; strcpy(user,name);
          if (!ReadConfName(&src,name)){
@@ -416,7 +419,7 @@ static ReturnStatus ReadConfigFile(char *fname)
             recurse--;
             return(FAIL);
          }
-         while (isspace(c=GetCh(&src)));  
+         while (isspace((int) (c=GetCh(&src))));  
       }
       if (c != '='){
          HRError(5050,"ReadConfigFile: = expected %s",
@@ -856,7 +859,8 @@ Boolean GetIntEnvVar(char *envVar, int *value)
 static char *CheckFn(char *fn);
 
 /* SetScriptFile: open script file and count words in it */
-static ReturnStatus SetScriptFile(char *fn)
+
+ReturnStatus SetScriptFile(char *fn)
 {
    CheckFn(fn);
    if ((script = fopen(fn,"r")) == NULL){  /* Don't care if text/binary */
@@ -1073,7 +1077,7 @@ Boolean ReadLine(Source *src,char *s)
 /* EXPORT->ReadUntilLine: read to next occurrence of string */
 void ReadUntilLine (Source *src, char *s)
 {
-   char buf[MAXSTRLEN];
+   char buf[20*MAXSTRLEN];
    
    do {
       if (!ReadLine (src, buf))
@@ -1120,8 +1124,8 @@ char *ParseString(char *src, char *s)
    Boolean wasQuoted;
    int c,q;
 
-   wasQuoted=FALSE; *s=0;
-   while (isspace(*src)) src++;
+   wasQuoted=FALSE; *s=0; q=0;
+   while (isspace((int) *src)) src++;
    if (*src == DBL_QUOTE || *src == SING_QUOTE){
       wasQuoted = TRUE; q = *src;
       src++;
@@ -1131,7 +1135,7 @@ char *ParseString(char *src, char *s)
       if (wasQuoted) {
          if (*src == q) return (src+1);
       } else {
-         if (*src==0 || isspace(*src)) return (src);
+         if (*src==0 || isspace((int) *src)) return (src);
       }
       if (*src==ESCAPE_CHAR) {
          src++;
@@ -1157,6 +1161,7 @@ Boolean ReadString(Source *src, char *s){
    int i,c,n,q;
 
    src->wasQuoted=FALSE;
+   q=0;
    while (isspace(c=GetCh(src)));
    if (c == EOF) return FALSE;
    if (c == DBL_QUOTE || c == SING_QUOTE){
@@ -1201,6 +1206,7 @@ Boolean ReadStringWithLen(Source *src, char *s, int buflen)
    int i,c,n,q;
 
    src->wasQuoted=FALSE;
+   q=0;
    while (isspace(c=GetCh(src)));
    if (c == EOF) return FALSE;
    if (c == DBL_QUOTE || c == SING_QUOTE){
@@ -1732,7 +1738,7 @@ char * ExtnOf(char *fn, char *s)
 /* EXPORT->MakeFN: construct a filename from fn */
 char * MakeFN(char *fn, char *path, char *ext, char *s)
 {
-   char newPath[255], base[64], newExt[20];  /* components of new fn */
+   char newPath[MAXFNAMELEN], base[MAXSTRLEN], newExt[MAXSTRLEN];  /* components of new fn */
    int i;
    
    CheckFn(path);
@@ -1967,7 +1973,7 @@ ReturnStatus InitShell(int argc, char *argv[], char *ver, char *sccs)
       if (GetConfBool(cParm,nParm,"EXTENDFILENAMES",&b)) extendedFileNames = b;
       if (GetConfInt(cParm,nParm,"MAXTRYOPEN",&i)) {
          maxTry = i;
-         if (maxTry<1 || maxTry>25){
+         if (maxTry<1 || maxTry>3){
             HRError(5073,"InitShell: MAXTRYOPEN out of range (%d)",maxTry);
             maxTry=1;
          }
@@ -1978,30 +1984,6 @@ ReturnStatus InitShell(int argc, char *argv[], char *ver, char *sccs)
    return(SUCCESS);
 }
 
-#ifndef WIN32
-void SetTime(TimeStruct *t)
-{
-   if(gettimeofday(&(t->time),NULL)) 
-      HError(1, "Error getting time of day.");
-   t->clock_time = clock();
-}
-
-
-char *GiveTime(TimeStruct *t)
-{
-   struct timeval time;
-   clock_t clock_time;
-   int tenth_millisecs,clock_tenth_millisecs;
-   if(gettimeofday(&time,NULL)) 
-      HError(1, "Error getting time of day.");
-   clock_time = clock();
-   tenth_millisecs = (time.tv_sec-t->time.tv_sec)*10000 + (time.tv_usec-t->time.tv_usec)/100;
-   clock_tenth_millisecs = (clock_time - t->clock_time)/100;
-
-   sprintf(t->timestr, "%d.%04d/clock %d.%04d", tenth_millisecs/10000, tenth_millisecs % 10000, clock_tenth_millisecs/10000, clock_tenth_millisecs % 10000);
-   return t->timestr;
-}
-#endif
 
 /* EXPORT->PrintStdOpts: print standard options */
 void PrintStdOpts(char *opt)
@@ -2011,6 +1993,10 @@ void PrintStdOpts(char *opt)
       printf(" -B      Save HMMs/transforms as binary       off\n");
    printf(" -C cf   Set config file to cf                default\n");
    printf(" -D      Display configuration variables      off\n");
+   if (strchr(opt,'E')) {
+      printf(" -E s [s] set dir for parent xform to s       off\n");
+      printf("         and optional extension                 \n");
+   }
    if (strchr(opt,'F'))
       printf(" -F fmt  Set source data format to fmt        as config\n");
    if (strchr(opt,'G'))
@@ -2019,10 +2005,14 @@ void PrintStdOpts(char *opt)
       printf(" -H mmf  Load HMM macro file mmf\n");
    if (strchr(opt,'I'))
       printf(" -I mlf  Load master label file mlf\n");
-   if (strchr(opt,'J'))
-      printf(" -J tmf  Load transform model file tmf\n");
-   if (strchr(opt,'K'))
-      printf(" -K tmf  Save transform model file tmf\n");
+   if (strchr(opt,'J')) {
+      printf(" -J s [s] set dir for input xform to s        none\n");
+      printf("         and optional extension                 \n");
+   }
+   if (strchr(opt,'K')) {
+      printf(" -K s [s] set dir for output xform to s       none\n");
+      printf("         and optional extension                 \n");
+   }
    if (strchr(opt,'L'))
       printf(" -L dir  Set input label (or net) dir         current\n");
    if (strchr(opt,'M'))

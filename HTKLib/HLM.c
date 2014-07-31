@@ -32,8 +32,8 @@
 /*         File: HLM.c  language model handling                */
 /* ----------------------------------------------------------- */
 
-char *hlm_version = "!HVER!HLM:   3.2.1 [CUED 15/10/03]";
-char *hlm_vc_id = "$Id: HLM.c,v 1.10 2003/10/15 08:10:12 ge204 Exp $";
+char *hlm_version = "!HVER!HLM:   3.3 [CUED 28/04/05]";
+char *hlm_vc_id = "$Id: HLM.c,v 1.1.1.1 2005/05/12 10:52:50 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -376,7 +376,7 @@ static int ReadNGrams(NGramLM *nglm,int n,int count, Boolean bin)
    lmId ndx[NSIZE+1];
    NEntry *ne,*le=NULL;
    int i, g, idx, total;
-   unsigned char size, flags;
+   unsigned char size, flags=0;
 
    cse = (SEntry *) New(nglm->heap,count*sizeof(SEntry));
    for (i=1;i<=NSIZE;i++) ndx[i]=0;
@@ -410,13 +410,13 @@ static int ReadNGrams(NGramLM *nglm,int n,int count, Boolean bin)
             if (bin) {
                if (flags & BIN_ARPA_INT_LMID) {
                   unsigned int ui;
-                  if (!ReadInt (&source, &ui, 1, bin))
+                  if (!ReadInt (&source, (int *) &ui, 1, bin))
                      HError (9999, "ReadNGrams: failed reading int lm word id");
                   idx = ui;
                }
                else {
                   unsigned short us;
-                  if (!ReadShort (&source, &us, 1, bin))
+                  if (!ReadShort (&source, (short *) &us, 1, bin))
                      HError (9999, "ReadNGrams: failed reading short lm word id at");
                   idx = us;
                }

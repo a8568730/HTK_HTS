@@ -19,8 +19,8 @@
 /*       File: HQuant.c: VQ table generation                   */
 /* ----------------------------------------------------------- */
 
-char *hquant_version = "!HVER!HQuant:   3.2.1 [CUED 15/10/03]";
-char *hquant_vc_id = "$Id: HQuant.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+char *hquant_version = "!HVER!HQuant:   3.3 [CUED 28/04/05]";
+char *hquant_vc_id = "$Id: HQuant.c,v 1.1.1.1 2005/05/12 10:52:54 jal58 Exp $";
 
 /* 
    This program calculates a vector quantisation table from a
@@ -316,7 +316,7 @@ void ClusterVecs(Sequence *seq, int s)
 VQNode  AddLinEntries(ClusterSet *cs, int s)
 {
    int i,rid;
-   VQNode n, lastN = NULL;
+   VQNode n = NULL, lastN = NULL;
    Cluster *c;
    
    for (i=1,c=cs->cl+1; i<=cs->numClust; i++,c++) {
@@ -469,7 +469,7 @@ void LoadFile(char *fn)
    char labfn[80];
    Transcription *trans;
    long segStIdx,segEnIdx;  
-   int i,s,j,ncas,nObs;
+   int i,s,j,ncas,nObs=0;
    LLink p;
 
    if (segId == NULL)  {   /* load whole parameter file */

@@ -32,8 +32,8 @@
 /*    File: HDMan:   pronunciation dictionary manager          */
 /* ----------------------------------------------------------- */
 
-char *hdman_version = "!HVER!HDMan:   3.2.1 [CUED 15/10/03]";
-char *hdman_vc_id = "$Id: HDMan.c,v 1.13 2003/10/15 08:10:13 ge204 Exp $";
+char *hdman_version = "!HVER!HDMan:   3.3 [CUED 28/04/05]";
+char *hdman_vc_id = "$Id: HDMan.c,v 1.2 2005/05/12 15:51:28 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -61,7 +61,7 @@ static int nParm = 0;               /* total num params */
 #define MAXARGS  100    /* max args in any command */
 /* MAXPHONES (max phones in any pronunciation) is defined in HDict.h */
 #define MAXPRONS 100     /* max number of pronunciations per word */
-#define MAXDICTS 20     /* max number of source dictionaries */
+#define MAXDICTS 100     /* max number of source dictionaries */
 #define MAXCONS  20     /* max number of contexts per script */
 #define MAXPVOC  500    /* max num distinct phones */
 
@@ -330,9 +330,12 @@ int main(int argc, char *argv[])
    if (NextArg() != STRINGARG)
       HError(1419,"HDMan: Output dictionary file name expected");
    CreateBuffer(GetStrArg(),FALSE);
+   i = 0;
    while (NumArgs()>0){
       if (NextArg() != STRINGARG)
          HError(1419,"HDMan: Input dictionary file name expected");
+      if( ++i > MAXDICTS )
+         HError(1430,"HDMan: Number of srcDicts exceeded %d",MAXDICTS);
       CreateBuffer(GetStrArg(),TRUE);
    }
    if (wListFN != NULL) LoadWordList();
@@ -1115,7 +1118,7 @@ int DeleteSourceOp(WordBuf *wb, LabId *args)
 /* DelDefOp: Delete Word Command - marks by setting nPron to zero */
 void DelDefOp(WordBuf *wb, LabId *args)
 {
-   int i,j,idx;
+   int i,j,idx=0;
    Boolean found = FALSE;
    Pronunciation *p;
    LabId *ph;
@@ -1492,7 +1495,7 @@ void RemStress(WordBuf *wb, LabId *args)
          if (mode == cmuId) {
             strcpy(buf,p->phone[i]->name);
             j = strlen(buf) - 1;
-            if (isdigit(buf[j])){
+            if (isdigit((int) buf[j])){
                buf[j] = '\0';
                p->phone[i] = GetLabId(buf,TRUE);
             }

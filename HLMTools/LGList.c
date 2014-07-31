@@ -29,8 +29,8 @@
 /*      File: LGList.c: Display contents of a gram file        */
 /* ----------------------------------------------------------- */
 
-char *lglist_version = "!HVER!LGList:   3.2.1 [CUED 15/10/03]";
-char *lglist_vc_id = "$Id: LGList.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
+char *lglist_version = "!HVER!LGList:   3.3 [CUED 28/04/05]";
+char *lglist_vc_id = "$Id: LGList.c,v 1.1.1.1 2005/05/12 10:52:19 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

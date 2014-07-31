@@ -1,12 +1,188 @@
+2005-07-05  Mark Gales <mjfg@eng.cam.ac.uk>
+        * HAdapt.c fix
+
+2005-05-06  Anna Langley <jal58@cam.ac.uk>
+
+	* Remove references to TimeStruct, SetTime, GiveTime from:
+	* HShell.c:
+	* HShell.h:
+	* HFB.c:
+	
+2005-04-22  Matt Stuttle <mns25@eng.cam.ac.uk>
+
+	* HParm.c:
+	
+2005-02-24  Anna Langley <jal58@cam.ac.uk>
+
+        * Files for autoconf installs added
+
+2004-08-18  Andrew Liu <xl207@eng.cam.ac.uk>
+
+	* fix in HFB for component level 2 model single pass training
+
+2004-08-12  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HUtil.c (PMix): Make item list parsing work with logweights.
+
+2004-08-09  Mark Gales  <mjfg@eng.cam.ac.uk>
+
+	* HAdapt.c (EstMLLRCovXForm): Use double-precision during
+	transform estimation.
+
+2004-08-08  Mark Gales  <mjfg@eng.cam.ac.uk>
+
+	* HAdapt.c (EstCMLLRXForm): Calculate determinant directly during
+	transform estimation.
+
+2004-08-07  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HAdapt.c (FixDet): Make intermediate results double-precision.
+
+	* HLat.c (ScanLLF): Print name of lattice skipped.
+
+	* HShell.c (ReadUntilLine): Increase maximum length.
+
+2004-08-04  Antti-Veikko Rosti  <avir2@eng.cam.ac.uk>
+
+	* HFB.c: Partial distance elimination (PDE) for faster training added.
+	Mixture weights in the log-scale are supported. New block in ShStr()
+	added for the case hset->numSharedMix == 0 to speed up training.
+	
+	* HModel.c: Mixture component re-ordering implemented for PDE and a
+	config option (REORDERCOMPS=FALSE) added. The components are sorted
+	according to descending gConst values before saving the model set.
+
+	* HUtil.c, HUtil.h: Functions ConvLogWt() and ConvExtWt() added to
+	convert mixture weight into the log-scale and back.
+
+2004-07-31  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HArc.c: Make trace variable static.
+
+2004-07-29  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HForest.[hc]: new module.
+
+	* HShell.[hc] (RegisterExtFileName): Export function RegisterExtFileName.
+
+	* HLabel.c (LoadHTKList): 
+	(SaveHTKLabels): New config variable HTKLABELTIMESCALE. Times in
+	HTK format label files are multiplied by this on loading and
+	divided by on saving.
+
+2004-07-23  Mark Gales  <mjfg@eng.cam.ac.uk>
+
+       * HAdapt.c: change TMF storage to output xform directory
+       * HModel.c: bug fix for sanity check on regression class tree parse.
+       * HFBLat.c: double semi-colon removal.
+
+2004-07-17  Antti-Veikko Rosti  <avir2@eng.cam.ac.uk>
+
+	* HFBLat.c: Bug fix to correct mixture occupation caching in
+	UpMixParms().
+
+2004-07-16  Mark Huckvale <M.Huckvale@ucl.ac.uk>
+
+	* HGraf.null.c (HTextHeight): Add placeholder function.
+	* HShell.h: CYGWIN compatibility.
+
+2004-07-14  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HLat.c: Implement LLF processing to speedup loading of many
+	lattice files and reduce network traffic.
+
+2004-07-14  Antti-Veikko Rosti  <avir2@eng.cam.ac.uk>
+
+	* HFB.c, HFBLat.c: Removed unused variables and unnecessary
+	transforms in ShStrP() and UpMixParms(). Added T_TIM trace
+	flag in HFBLat.c.
+
+2004-07-12  Antti-Veikko Rosti  <avir2@eng.cam.ac.uk>
+
+	* HFB.c, HFBLat.c: increase the initial and maximum number of
+	elements in a block for heaps AlphaBetaFB and fbLatArcStore.
+	Added T_TIM trace in HFB.c.
+
+	* HArc.c, HArc.h, HFB.c, HFB.h, HFBLat.c, HTrain.c, HTrain.h:
+	added mixture component output probability caching.
+
+2004-07-06  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+        * HShell.c: Limit MAXTRYOPEN to 3 to avoid thrashing file servers.
+
+2004-06-26  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HModel.c (Str2BaseClassKind): Use correct BaseClassKind.
+
+2004-06-25  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HLM.c (ReadNGrams): Avoid compiler warnings.
+
+	* HAdapt.c (GetAlpha): use DVectorSize rather than VectorSize.
+
+	* HFB.c (SetTraceFB): Replace extern traceFB variable with
+	function
+
+	* HFBLat.c: Disable error-checking _exp() wrapper.
+
+	* Makefile (clean): Remove icc's .il files
+
+2004-06-16  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HFB.c: Make Forward Backward score check a warning rather than
+	an error.
+
+2004-06-15  Lan Wang  <lw256@cam.ac.uk>
+        * HAdapt.c: bug fix for CMLLR (USEBIAS=F)
+
+2004-06-09  Kai Yu  <ky219@cam.ac.uk>
+ 	* HFB.c: Component-level alignment in two-model re-estimation:
+	HFB:ALIGNCOMPLEVEL=TRUE to allow component-level alignment. The
+	aligned hmm and the update hmm should have the same component
+	number.
+
+2004-06-07  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HLat.c (LatPrune): New lattice pruning mode:
+	HLAT:BEAMPRUNEARCS=F do not apply beam pruning to arcs.
+
+2004-04-26  K. Yu  <ky219@eng.cam.ac.uk>
+
+	* HFBLat.[hc]: Add support for MMI priors in MPE training.
+
+2004-04-16  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HParm.c (SetParmHMMSet): Mark ~j macro read from file specified
+	in HPARM:MATTRANFN as LOADFIDX instead of CREATEFIDX. Otherwise it
+	will be saved in TMFs.
+
+2004-04-02  Bin Jia <bj214@eng.cam.ac.uk?
+
+	* HParm.c: Add config variables CMEANPATHMASK and
+	VARSCALEPATHMASK. 
+
+2004-03-21  Mark Gales <mjfg@eng.cam.ac.uk>
+
+	* *.[ch]: Various fixes for new adaptation code.
+
+2004-02-18  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HModel.h (LMINMIX): Correct value of LMINMIX.
+
+2004-01-30  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HShell.c (MakeFN): Increase number of characters allowed in
+	filen names.
+
 2003-10-14  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
-	* HModel.h: Redfine XFORM -- ugly hack to make HTK compile on
-	Windows.
+        * HModel.h: Redfine XFORM -- ugly hack to make HTK compile on
+        Windows.
 
-	* HMath.c (minab): Rename min() macro to avoid potential conflict
-	with definition from stdlib.h.
-	(InvSVD): Rename variable small to isSmall to fix compilation
-	problem in Visual C++.
+        * HMath.c (minab): Rename min() macro to avoid potential conflict
+        with definition from stdlib.h.
+        (InvSVD): Rename variable small to isSmall to fix compilation
+        problem in Visual C++.
 
 2003-10-03  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
@@ -22,37 +198,129 @@
 
 2003-09-23  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
-        * HParm.c (EmptyBuffer): Initialise chType;
+	* HParm.c (EmptyBuffer): Initialise chType;
 
 2003-09-10  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
-        * HShell.c (ParseString): Fix parsing of octal charcter codes.
-        From Tanel Alumäe <tanel.alumae@aqris.com>
+	* HShell.c (ParseString): Fix parsing of octal charcter codes.
+	From Tanel Alumäe <tanel.alumae@aqris.com>
 
 2003-07-28  Anna Langley <jal58@eng.cam.ac.uk>
-        * htk_htklib_nt.mkf: applied changed supplied by Arlindo Veiga
-        which compile the HLat library.
+	* Makefile: corrected typo ($Arch)
 
-2003-07-24  M. J. F. Gales  <mjfg@eng.cam.ac.uk>
- 
- 	* HParm.c (AddQualifiers): modified code so that the combination
- 	of a linear transform and variance normalisation is correct. For
- 	backward compatibility a config option USEOLDXFORMCVN is included -
- 	this config defaults to FALSE.
- 
+2003-07-28  Anna Langley <jal58@eng.cam.ac.uk>
+	* htk_htklib_nt.mkf: applied changed supplied by Arlindo Veiga
+	which compile the HLat library.
+
 2003-07-21  S.E. Tranter  <sej28@ceres>
        * HParm.c (OpenParmChannel): check that the end index in the
        scp file doesnt overrun the end of the coded data file
-        
+	
+2003-07-08  Anna Langley <jal58@eng.cam.ac.uk>
+	
+	* HAdapt.c, HArc.c, HMath.c, HModel.c, strarr.c: fixed compilation
+	warnings of unused variables.
+	
 2003-07-09  Anna Langley <jal58@eng.cam.ac.uk>
-        * HShell.c:
-        * HShell.h:
-        * HTrain.h: Minor modifications to allow compilation on win32
+	* HShell.c:
+	* HShell.h:
+	* HTrain.h: Minor modifications to allow compilation on win32
+	
+2003-06-03  M. J. F. Gales  <mjfg@eng.cam.ac.uk>
 
-2003-10-02  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+	* HUtil.c: added code to support optional parsing of only the 
+	physical HMMs.
 
-	* HModel.c (SetCovKindUsage): Only count covKinds for PLAIN and
-	SHARED HMM sets.
+	* HModel.c (GetBaseClass): Handle large HMM sets by only parsing 
+	the Physical models. 
+	(InitModel): added coinfig variable to allow storage of input 
+	transform. Also bug fixes for storage of input transform with MMF.
+	(GetLinXForm): fixed problem with initialisation of transform
+	determinant.
+
+
+2003-05-07  Lan Wang <lw256@eng.cam.ac.uk>
+
+	* HModel.c (GetLinXForm): Initialise xf->det.
+
+2003-04-30  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HAdapt.c: apply 2003-04-02 change again.
+
+2003-04-22  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HUtil.c (InitUtil): 
+	(ResetUtilItemList): Increase maximum size of itemHeap blocks to
+	cope with large HMM sets.
+
+2003-04-17  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HLabel.c (HASHSIZE): 
+	* HModel.h (MACHASHSIZE): Increase hash tables sizes to deal with
+	large HMM sets, e.g. Mandarin tonal models.
+
+2003-04-04  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* revert previous (2003-04-02) change.
+
+2003-04-02   Lan Wang  <lw256@eng.cam.ac.uk>
+
+	* HAdapt.c: speed-ups.
+
+2003-03-30  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HNet.c (NewLattice): 
+	(NewILattice): 
+	(ReadOneLattice): Initialise ln->score to 0.0
+
+	* HLat.c (LatSetScores): New function: set ln->score to node
+	posterior. 
+
+2003-03-27  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HParm.c: Increase limit for length of config values.
+
+2003-03-12  Mark Gales <mjfg@eng.cam.ac.uk>
+
+	* HUtil.c (PHIdent): Bug fix. Revert to old behaviour where
+	specifying non-existing models is silently ignored.
+
+2003-03-10  Dan Povey  <dp10006@eng.cam.ac.uk>
+
+	* HArc.c: Raise default trae level and check whether lattices have
+	phone marks
+
+2003-03-06  Lan Wang  <lw256@eng.cam.ac.uk>
+
+	* HAdapt.c:
+	* HFBLat.c:
+	* HModel.[hc]: Bug fixes for adaptation estimation.
+
+2003-02-14  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HModel.c (PutOptions): Save CovKind in MMF Options if it is
+	specified (i.e. not NULLC).
+
+2003-02-10  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HMem.c (Dispose): Fix sanity check.
+
+2003-02-05  Dan Povey  <dp10006@eng.cam.ac.uk>
+
+	* HExactMPE.c: 
+	* HFBLat.c: Fix for exact MPE.
+
+2003-02-05  Lan Wang  <lw256@eng.cam.ac.uk>
+
+	* HFBLat.[hc]: Bug fixes for lattice MLLR and MMI(MPE).SAT.CMLLR.
+
+2003-02-05  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HShell.c (PrintStdOpts): Add new transform options -E -J -K.
+
+2003-02-03  Mark Gales <mjfg@eng.cam.ac.uk>
+
+	* HAdapt.[hc]: New adaptation code.
 
 2002-12-19  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 

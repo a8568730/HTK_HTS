@@ -29,8 +29,8 @@
 /*         File: LGPrep - prepare a sorted GramBase           */
 /* ----------------------------------------------------------- */
 
-char *lgprep_version = "!HVER!LGPrep:   3.2.1 [CUED 15/10/03]";
-char *lgprep_vc_id = "$Id: LGPrep.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
+char *lgprep_version = "!HVER!LGPrep:   3.3 [CUED 28/04/05]";
+char *lgprep_vc_id = "$Id: LGPrep.c,v 1.2 2005/05/12 15:51:21 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -326,16 +326,16 @@ int main(int argc, char *argv[])
 /* SkipToWord: scan string till first word or end of string */
 char *SkipToWord(char *s)
 {
-   while (isspace(*s) && (*s != '\0')) ++s;
+   while (isspace((int) *s) && (*s != '\0')) ++s;
    return s;
 }
 
 /* NextWord: extract next word from given string, returning ptr to next */
 char * NextWord(char *s, char *word)
 {
-   while (isspace(*s) && (*s != '\0')) ++s;
+   while (isspace((int) *s) && (*s != '\0')) ++s;
    if (*s == '\0') return NULL;
-   while (!isspace(*s) && (*s != '\0')) *word++ = *s++;
+   while (!isspace((int) *s) && (*s != '\0')) *word++ = *s++;
    *word = '\0';
    return s;
 }

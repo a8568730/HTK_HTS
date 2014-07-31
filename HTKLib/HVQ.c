@@ -19,8 +19,8 @@
 /*         File: HVQ.c:   Vector Quantisation                  */
 /* ----------------------------------------------------------- */
 
-char *hvq_version = "!HVER!HVQ:   3.2.1 [CUED 15/10/03]";
-char *hvq_vc_id = "$Id: HVQ.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+char *hvq_version = "!HVER!HVQ:   3.3 [CUED 28/04/05]";
+char *hvq_vc_id = "$Id: HVQ.c,v 1.1.1.1 2005/05/12 10:52:52 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -195,6 +195,9 @@ static VQNode GetNode(Source *src, CovKind ck, short width)
                 SrcPosition(*src, buf));
       n = CreateVQNode(vqidx,nid,lid,rid,mean,ck,cov);
       break;
+   default:
+      n = CreateVQNode(vqidx,nid,lid,rid,mean,ck,cov);
+      break;   
    }
    return n;
 }
@@ -455,7 +458,7 @@ float VQNodeScore(VQNode n, Vector v, int size, CovKind ck)
 /* EXPORT->GetVQ: get vq indices for vectors in fv */
 void GetVQ(VQTable vqTab, int numS, Vector *fv, short *vq)
 {
-   short s,idx,size;
+   short s,idx=0,size;
    float bestx, x,xl,xr;
    VQNode n,bestn;
    Vector v;

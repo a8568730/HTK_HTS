@@ -32,7 +32,7 @@
 /*         File: HTrain.h   HMM Training Support Routines      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HTrain:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HTrain:   3.3 [CUED 28/04/05] */
 
 #ifndef _HTRAIN_H_
 #define _HTRAIN_H_
@@ -40,6 +40,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+enum _UPDSet{UPMEANS=1,UPVARS=2,UPTRANS=4,UPMIXES=8,UPXFORM=16,UPMAP=32};
+typedef enum _UPDSet UPDSet;
 
 /* Win32 modification */
 #ifdef WIN32
@@ -214,7 +217,7 @@ typedef struct {     /* attached to transP */
 typedef struct {     /* attached to StreamElem */
    Vector c;         /* array[1..M] of mixture weight */
    float occ;        /* occ for states sharing this pdf */
-   LogFloat prob;    /* PreComputed stream Log Prob */
+   float *prob;      /* PreComputed mixture Log Probs */
    int   time;       /* time for which prob is valid */
 } WtAcc;
 
@@ -240,21 +243,21 @@ typedef struct {     /* attached to MixPDF */
 } PreComp;
 
 
-void AttachAccsParallel(HMMSet *hset, MemHeap *x, int indx);
-void AttachAccs(HMMSet *hset, MemHeap *x);
+void AttachAccsParallel(HMMSet *hset, MemHeap *x, UPDSet uFlags, int indx);
+void AttachAccs(HMMSet *hset, MemHeap *x, UPDSet uFlags);
 /*
    Attach zeroed accumulators to given HMM set, also attaches PreComps
    Equals AttachAccsParallel (hset,x,1).
 */
 
-void ZeroAccsParallel(HMMSet *hset, int indx); /* if indx +ve, does 0.. indx-1; else does -indx. */
-void ZeroAccs(HMMSet *hset);
+void ZeroAccsParallel(HMMSet *hset, UPDSet uFlags, int indx); /* if indx +ve, does 0.. indx-1; else does -indx. */
+void ZeroAccs(HMMSet *hset, UPDSet uFlags);
 /*
    Zero all accumulators in given HMM set.
 */
 
-void ShowAccsParallel(HMMSet *hset, int index);
-void ShowAccs(HMMSet *hset);
+void ShowAccsParallel(HMMSet *hset, UPDSet uFlags, int index);
+void ShowAccs(HMMSet *hset, UPDSet uFlags);
 /*
    Show all accumulators attached to given HMM set
 */
@@ -276,8 +279,8 @@ void ResetHMMPreComps(HLink hmm, int nStreams);
    given HMM.
 */
 
-FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, int index);
-FILE * DumpAccs(HMMSet *hset, char *fname, int n);
+FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, UPDSet uFlags, int index);
+FILE * DumpAccs(HMMSet *hset, char *fname, UPDSet uFlags, int n);
 /* 
    Dump a copy of the accumulators attached to hset
    in file fname.  Any occurrence of the $ symbol in
@@ -285,8 +288,8 @@ FILE * DumpAccs(HMMSet *hset, char *fname, int n);
    and returned to allow extra info to be written.
 */ 
 
-Source LoadAccsParallel(HMMSet *hset, char *fname, int index);
-Source LoadAccs(HMMSet *hset, char *fname);
+Source LoadAccsParallel(HMMSet *hset, char *fname, UPDSet uFlags, int index);
+Source LoadAccs(HMMSet *hset, char *fname, UPDSet uFlags);
 /* 
    Increment the accumulators attached to hset by adding
    the values stored in fname.   Accs must be newly 

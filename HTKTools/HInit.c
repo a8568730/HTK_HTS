@@ -32,8 +32,8 @@
 /*         File: HInit.c: HMM initialisation program           */
 /* ----------------------------------------------------------- */
 
-char *hinit_version = "!HVER!HInit:   3.2.1 [CUED 15/10/03]";
-char *hinit_vc_id = "$Id: HInit.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+char *hinit_version = "!HVER!HInit:   3.3 [CUED 28/04/05]";
+char *hinit_vc_id = "$Id: HInit.c,v 1.1.1.1 2005/05/12 10:52:53 jal58 Exp $";
 
 /*
    This program is used to initialise (or tune) a single hidden
@@ -85,8 +85,6 @@ static FileFormat lff=UNDEFF;       /* label file format */
 static char *hmmfn;                 /* HMM definition file name (& part dir)*/
 static char *outfn=NULL;            /* output HMM file name (name only) */
 static char *outDir=NULL;           /* HMM output directory */
-enum _UPDSet{UPMEANS=1,UPVARS=2,UPMIXES=4,UPTRANS=8};
-typedef enum _UPDSet UPDSet;
 static UPDSet uFlags = (UPDSet) (UPMEANS|UPVARS|UPMIXES|UPTRANS); /* update flags */
 static int trace = 0;               /* Trace level */
 static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
@@ -343,7 +341,7 @@ void Initialise(void)
    SetParmHMMSet(&hset);
    if ((hset.hsKind==DISCRETEHS)||(hset.hsKind==TIEDHS))
       uFlags = (UPDSet) (uFlags & (~(UPMEANS|UPVARS)));
-   AttachAccs(&hset, &gstack);
+   AttachAccs(&hset, &gstack, uFlags);
 
    /* Get a pointer to the physical HMM and set related globals */
    hmmId = GetLabId(base,FALSE);   
@@ -543,7 +541,7 @@ void UniformSegment(void)
    Covariance cov;
    CovKind ck;
    MixPDF *mp;
-   TMixRec *tmRec;
+   TMixRec *tmRec = NULL;
    ShortVec dw;
    float x,z;
    Vector floor;
@@ -740,7 +738,7 @@ void DoTraceBack(int segLen, IntVec states, int thisState)
 /* FindBestMixes: for each state/obs pair find most likely mix component */
 void FindBestMixes(int segNum, int segLen, IntVec states, IntVec *mixes)
 {
-   int i,s,m,bestm,M;
+   int i,s,m,bestm,M=0;
    StreamElem *ste;
    IntVec smix;
    Observation obs;
@@ -879,16 +877,16 @@ LogFloat ViterbiAlign(int segNum,int segLen, IntVec states, IntVec *mixes)
 /* UpdateCounts: using frames in seg i and alignment in states/mixes */
 void UpdateCounts(int segNum, int segLen, IntVec states,IntVec *mixes)
 {
-   int M,i,j,k,s,m,state,last;
+   int M=0,i,j,k,s,m,state,last;
    StreamElem *ste;
-   MixPDF *mp;
+   MixPDF *mp = NULL;
    WtAcc *wa;
    MuAcc *ma;
    VaAcc *va;
    TrAcc *ta;
    Vector v;
    Observation obs;
-   TMixRec *tmRec;
+   TMixRec *tmRec = NULL;
    float x,y;
 
    last = 1;  /* last before 1st emitting state must be 1 */
@@ -1122,7 +1120,7 @@ void UpdateParameters(void)
    int size;
    StreamElem *ste;
    WtAcc *wa;
-   MuAcc *ma;
+   MuAcc *ma = NULL;
    VaAcc *va;
    TrAcc *ta;
    Boolean hFound = FALSE,shared;
@@ -1205,7 +1203,7 @@ void EstimateModel(void)
    }
    totalP=LZERO;
    for (iter=1; !converged && iter<=maxIter; iter++){
-      ZeroAccs(&hset);              /* Clear all accumulators */
+      ZeroAccs(&hset, uFlags);              /* Clear all accumulators */
       numSegs = NumSegs(segStore);
       /* Align on each training segment and accumulate stats */
       for (newP=0.0,i=1;i<=numSegs;i++) {
@@ -1250,7 +1248,7 @@ void SaveModel(char *outfn)
 {
    if (outfn != NULL)
       macroLink->id = GetLabId(outfn,TRUE);
-   if(SaveHMMSet(&hset,outDir,NULL,saveBinary)<SUCCESS)
+   if(SaveHMMSet(&hset,outDir,NULL,NULL,saveBinary)<SUCCESS)
       HError(2111,"SaveModel: SaveHMMSet failed");
 }
 

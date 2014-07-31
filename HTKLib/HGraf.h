@@ -20,7 +20,7 @@
 /* ----------------------------------------------------------- */
 /* Win32 port: Peter Silsbee                                   */
 
-/* !HVER!HGraf:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HGraf:   3.3 [CUED 28/04/05] */
 
 /*
    This module provides a minimal graphics facility.  It provides a 

@@ -21,7 +21,7 @@
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
 /*                                                             */
-/*               2002 Cambridge University                     */
+/*              2002  Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -32,7 +32,7 @@
 /*         File: HModel.h  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HModel:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HModel:   3.3 [CUED 28/04/05] */
 
 #ifndef _HMODEL_H_
 #define _HMODEL_H_
@@ -47,19 +47,16 @@ extern "C" {
    rapidly mapping macro/hmm names into structures.  
 */
 
-#define MACHASHSIZE 1277   /* Size of each HMM Set macro hash table */
+#define MACHASHSIZE 250007   /* Size of each HMM Set macro hash table */
 #define PTRHASHSIZE  513   /* Size of each HMM Set ptr map hash table */
 #define MINMIX  1.0E-5     /* Min usable mixture weight */
-#define LMINMIX -11.5     /* log(MINMIX) */
+#define LMINMIX -11.5129254649702     /* log(MINMIX) */
 
 #define MINDLOGP 0.000001  /* prob = exp(shortform/DLOGSCALE) */
 #define DLOGSCALE -2371.8  /* = 32767/ln(MINDLOGP) */
 #define DLOGZERO 32767  
 
-#define MixWeight(hset,weight) (weight)
-#define MixLogWeight(hset,weight) (weight<MINMIX ? LZERO : log(weight))
 #define MixFloor(hset)            ( MINMIX )
-
 
 #ifdef WIN32
 #define XFORM HTK_XFORM
@@ -76,8 +73,8 @@ typedef struct _MMFInfo{
    MILink next;            /* next external file name in list */
 } MMFInfo;
 
-/* -------------------- HMM Definition ----------------------- */
 
+/* -------------------- HMM Definition ----------------------- */
 
 enum _DurKind {NULLD, POISSOND, GAMMAD, RELD, GEND};
 typedef enum _DurKind DurKind;
@@ -90,9 +87,9 @@ typedef struct {
    CovKind ckind;       /* kind of covariance */
    Covariance cov;      /* covariance matrix or vector */
    float gConst;        /* Precomputed component of b(x) */
-   short rClass;        /* regression base class number (zero if unused) */
    int mIdx;            /* MixPDF index */
    int nUse;            /* usage counter */
+   Ptr info;            /* hook to hang information from */
    Ptr hook;            /* general hook */
 } MixPDF;
 
@@ -154,25 +151,112 @@ typedef struct {
 
 typedef HMMDef * HLink;
 
-/* ---------------------- Input Transform  ------------------- */
+/* --------------------- Enumerated Types -------------------- */
+
+enum _XFormKind {MLLRMEAN, MLLRCOV, MLLRVAR, CMLLR};
+typedef enum _XFormKind XFormKind;
+
+enum _AdaptKind {TREE, BASE};
+typedef enum _AdaptKind AdaptKind;
+
+enum _BaseClassKind {MIXBASE, MEANBASE, COVBASE};
+typedef enum _BaseClassKind BaseClassKind;
+
+/* -------------- Regression Tree Definition ----------------- */
+
+typedef struct _ItemRec *ILink;
+
+typedef struct _ItemRec {
+   HLink owner;      /* HMM owning this item */
+   Ptr item;         /* -> to a HMM structure */
+   ILink next;
+}ItemRec;
 
 typedef struct {
-   int vecSize;         /* must be matched to a stream width! */
-   IntVec blockSize;    /* block sizes in the linear transform */
-   SMatrix* xform;      /* 1..numBlocks matrix transforms */
-   SVector bias;        /* bias vector, if no bias equals NULL */
-   float det;           /* determinant of linxform */
-   int nUse;            /* usage counter */
+  char* mmfIdMask;     /* mask of model sets that appropriate for */
+  BaseClassKind bkind; /* type of parameters applicable to */
+  IntVec swidth;       /* stream width size */
+  int numClasses;      /* number of baseclasses */
+  ILink *ilist;        /* 1..numClasses of ilists */
+  int nUse;            /* usage counter */
+  char *fname;         /* filename of where the baseclass was loaded */
+} BaseClass;
+
+typedef struct _RegNode {
+  float nodeOcc;            /* occupancy for this node */
+  int vsize;                /* vector size associated with the baseclasses of this node */
+  int nodeIndex;            /* index number of node */
+  int numChild;             /* number of children - 0 if terminal */
+  struct _RegNode **child;  /* children of this node NULL if terminal */
+  IntVec baseClasses;       /* if a terminal node the set of baseclasses else NULL */
+  Ptr info;                 /* hook to hang information from */
+} RegNode ;
+
+typedef struct RegTree {
+  int numNodes;        /* number of non-terminal nodes in tree */
+  int numTNodes;       /* number of terminal nodes in tree */
+  BaseClass *bclass;   /* baseclass associated with this regression tree */
+  RegNode *root;       /* pointer to the root node of the tree */
+  Boolean valid;       /* is it valid to generate a transform at the root node */
+                       /* handles multiple stream adaptation issues */
+  float thresh;        /* split threshold to determine stopping in tree */
+  char *fname;         /* filename of where the regTree was loaded */
+} RegTree;             
+
+/* ----------------- Transform Definition -------------------- */
+
+typedef struct {       /* occupancy is always used */
+  Boolean accSum;      /* accumulate the sum of the observations */
+  Boolean accSumSq;    /* accumulate sum-squared (diag) of the observations */
+  Boolean accBTriMat;  /* accumulate weighted outer-product of observations */
+  RegTree regTree;     /* the regression tree used for transform */
+} XFormAccInfo;
+
+typedef union {         
+   Matrix wgt;          /* for interpolated transforms */
+   IntVec assign;        /* for hard assignments  */
+} AdaptWgt; 
+
+typedef struct {
+  int vecSize;         /* must be matched to a stream width! */
+  IntVec blockSize;    /* block sizes in the linear transform */
+  SMatrix* xform;      /* 1..numBlocks matrix transforms */
+  SVector bias;        /* bias vector, if no bias equals NULL */
+  float det;           /* determinant of linxform */
+  int nUse;            /* usage counter */
 } LinXForm;
 
 typedef struct {
-   char* xformName;     /* name of the transform (macroname) */
-   char* mmfIdMask;     /* mask of model sets that appropriate for */
-   char *fname;         /* filename of where the input xform was loaded */
-   ParmKind pkind;      /* parameter kind for xform to be applied to */
-   Boolean preQual;     /* is this applied prior to qualifiers? */
-   LinXForm *xform;     /* actual transform to be applied */
-   int nUse;            /* usage counter */
+  int numXForms;       /* number of transforms in this xformset */
+  XFormKind xkind;     /* transform kind (MLLRMEAN, CMLLR etc */
+  LinXForm **xforms;   /* 1..numTrans linear transforms */
+  int nUse;            /* usage counter */
+} XFormSet;
+
+typedef struct _AdaptXForm {
+  char* xformName;                  /* name of the transform (macroname) */
+  char *fname;                      /* filename of where the xform was loaded */
+  struct _AdaptXForm  *swapXForm;    /* has this transform been swapped with parent */
+  MemHeap *mem;                     /* heap used for storing transform */
+  AdaptKind akind;                  /* adaptation kind */
+  BaseClass *bclass;                /* base class for which transform applicable */
+  RegTree *rtree;                   /* regression tree to be used for adaptation */
+  int nUse;                         /* usage counter */
+  XFormAccInfo *info;               /* information abbout the accumulates for this transform */
+  struct _AdaptXForm *parentXForm;  /* parent transform, NULL if no parent parenttransform */
+  XFormSet  *xformSet;              /* set of linear transforms */
+  AdaptWgt  xformWgts;              /* set of weights for all the base classes */
+  struct _HMMSet *hset;                     /* transform is linked with a model set */
+} AdaptXForm;
+
+typedef struct {
+  char* xformName;     /* name of the transform (macroname) */
+  char* mmfIdMask;     /* mask of model sets that appropriate for */
+  char *fname;         /* filename of where the input xform was loaded */
+  ParmKind pkind;      /* parameter kind for xform to be applied to */
+  Boolean preQual;     /* is this applied prior to qualifiers? */
+  LinXForm *xform;     /* actual transform to be applied */
+  int nUse;            /* usage counter */
 } InputXForm;
 
 /* ---------------------- Macros/HMM Hashing ------------------- */
@@ -233,6 +317,17 @@ typedef struct _HMMSet{
    int numTransP;          /* Number of distinct transition matrices */
    int ckUsage[NUMCKIND];  /* Number of components using given ckind */
    InputXForm *xf;         /* Input transform of HMMSet */
+
+   /* Adaptation information accumulates */
+   Boolean attRegAccs;   /* have the set of accumulates been attached */
+   Boolean attXFormInfo; /* have the set of adapt info been attached */
+   Boolean attMInfo;     /* have the set of adapt info been attached */
+   AdaptXForm *curXForm;
+   AdaptXForm *parentXForm;
+   
+   /* Added to support LogWgts */
+   Boolean logWt;       /* Component weights are stored as Logs */
+
 } HMMSet;
 
 /* --------------------------- Initialisation ---------------------- */
@@ -241,6 +336,12 @@ void InitModel(void);
 /*
    Initialise the module
 */
+
+/* --------------- Input XForm DIrectory access -------------------- */
+
+/* EXPORT->AddInXFormDir: Add given file directory to set */
+void  AddInXFormDir(HMMSet *hset, char *dirname);
+
 
 /* ---------------- Macro Related Manipulations -------------------- */
 
@@ -295,7 +396,7 @@ void SetVFloor(HMMSet *hset, Vector *vFloor, float minVar);
 void ApplyVFloor(HMMSet *hset);
 /* 
    Apply the variance floors in hset to all covariances in the model set 
- */
+*/
 
 void PrintHMMProfile(FILE *f, HLink hmm);
 /*
@@ -367,7 +468,7 @@ void SaveInOneFile(HMMSet *hset, char *fname);
    the entire HMM set in a single file.
 */
 
-ReturnStatus SaveHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt, Boolean binary);
+ReturnStatus SaveHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt, char *macroExt, Boolean binary);
 /*
    Store the given HMM set.  Each HMM def and macro is stored in the
    same file as it was loaded from except that if hmmDir is specified
@@ -434,17 +535,6 @@ char *CovKind2Str(CovKind ckind, char *buf);
    string is stored in *buf and pointer to buf is returned
 */
 
-/* -------------------- Input Transform Operations ---------------- */
-
-InputXForm *LoadInputXForm(HMMSet *hset, char* macroname, char* fname);
-/* 
-   Loads, or returns, the specified transform 
-*/
-
-void SaveInputXForm(HMMSet *hset, InputXForm *xf, char *fname, Boolean binary);
-/* 
-   Saves an individual transform 
-*/
 
 /* ------------- HMM Output Probability Calculations --------------- */
 
@@ -474,9 +564,18 @@ LogFloat SOutP(HMMSet *hset, int s, Observation *x, StreamElem *se);
    Return Mixture log output probability for given vector x.  
 */
 
-
+Boolean PDEMOutP(Vector otvs, MixPDF *mp, LogFloat *mixp, LogFloat xwtdet);
 LogFloat MOutP(Vector x, MixPDF *mp);
+LogFloat IDOutP(Vector x, int vecSize, MixPDF *mp);
 short DProb2Short(float p);
+
+#ifdef PDE_STATS
+/* 
+   Get PDE stats
+*/
+void PrintPDEstats();
+#endif
+
 /* 
    Convert prob p to scaled log prob = ln(p)*DLOGSCALE
 */
@@ -505,6 +604,56 @@ void FixAllGConsts(HMMSet *hset);
 /*
    Sets all gConst values in all HMMs in set
 */
+
+LogFloat MixLogWeight(HMMSet *hset, float weight); 
+float MixWeight(HMMSet *hset, float weight);
+/*
+  Get the log-weight
+*/
+
+/* ---------------------- XForm support code ---------------------- */
+
+/* EXPORT->LoadInputXForm: loads, or returns, the specified transform */
+InputXForm *LoadInputXForm(HMMSet *hset, char* macroname, char* fname);
+
+/* EXPORT->SaveInputXForm: outputs an individual transform */
+void SaveInputXForm(HMMSet *hset, InputXForm *xf, char *fname, Boolean binary);
+
+/* EXPORT->LoadOneXForm: loads, or returns, the specified transform */
+AdaptXForm *LoadOneXForm(HMMSet *hset, char* macroname, char* fname);
+
+/* EXPORT->SaveOneXForm: outputs an individual transform */
+void SaveOneXForm(HMMSet *hset, AdaptXForm *xform, char *fname, Boolean binary);
+
+/* EXPORT->SaveAllXForms: outputs all generated transforms */
+void SaveAllXForms(HMMSet *hset, char *fname, Boolean binary);
+
+/* EXPORT->LoadBaseClass: loads, or returns, the specified baseclass */
+BaseClass *LoadBaseClass(HMMSet *hset, char* macroname, char *fname);
+
+/* EXPORT->LoadRegTree: loads, or returns, the specified regression tree */
+RegTree *LoadRegTree(HMMSet *hset, char* macroname, char *fname);
+
+/* EXPORT-> CreateXFormMacro: creates a macro for a transform. */
+void CreateXFormMacro(HMMSet *hset,AdaptXForm *xform, char* macroname);
+
+/* EXPORT-> XFormKind2Str: Return string representation of enum XFormKind */
+char *XFormKind2Str(XFormKind xkind, char *buf);
+
+/* EXPORT-> AdaptKind2Str: Return string representation of enum AdaptKind */
+char *AdaptKind2Str(AdaptKind akind, char *buf);
+
+/* EXPORT-> BaseClassKind2Str: Return string representation of enum BaseClassKind */
+char *BaseClassKind2Str(BaseClassKind bkind, char *buf);
+
+/* EXPORT-> Str2BaseClassKind: parse the string into the correct baseclass */
+BaseClassKind Str2BaseClassKind(char *str);
+
+/* EXPORT-> Str2XFormKind: parse the string into the correct xform kind */
+XFormKind Str2XFormKind(char *str);
+
+/* EXPORT-> Str2AdaptKind: parse the string into the correct xform kind */
+AdaptKind Str2AdaptKind(char *str);
 
 #ifdef __cplusplus
 }

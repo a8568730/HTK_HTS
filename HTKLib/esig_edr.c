@@ -2453,8 +2453,8 @@ EdrWriteUshort(Ushort *data,
       {
          u = data[n];
 
-         if (u > 0xffffU)
-            u = 0xffffU;
+         /* if (u > 0xffffU)
+            u = 0xffffU; */
 
          if (putc((u >> 8) & 0xff, file) == EOF)
             break;
@@ -2674,8 +2674,8 @@ EdrWriteWchar(Wchar     *data,
       {
          u = data[n];
 
-         if (u > 0xffffU)
-            u = 0xffffU;
+         /* if (u > 0xffffU)
+            u = 0xffffU; */
 
          if (putc((u >> 8) & 0xff, file) == EOF)
             break;

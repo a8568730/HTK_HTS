@@ -26,7 +26,7 @@
 /*       File: HLat.h:  Lattice Manipulation                   */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HLat:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HLat:   3.3 [CUED 28/04/05] */
 
 
 #ifndef _HLAT_H_
@@ -63,6 +63,8 @@ typedef enum {LATFB_SUM, LATFB_MAX} LatFBType;
 
 Transcription *LatFindBest (MemHeap *heap, Lattice *lat, int N);
 
+void LatSetScores (Lattice *lat);
+
 Lattice *LatPrune (MemHeap *heap, Lattice *lat, LogDouble thresh, float arcsPerSec);
 
 void CalcStats (Lattice *lat);
@@ -90,6 +92,13 @@ LogDouble LatForwBackw (Lattice *lat, LatFBType type);
 #ifndef NO_LAT_LM
 Lattice *LatExpand (MemHeap *heap, Lattice *lat, LModel *lm);
 #endif
+
+
+Lattice *GetLattice (char *fn, char *path, char *ext,
+                     /* arguments of ReadLattice() below */
+                     MemHeap *heap, Vocab *voc, 
+                     Boolean shortArc, Boolean add2Dict);
+
 
 #ifdef __cplusplus
 }

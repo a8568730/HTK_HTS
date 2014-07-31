@@ -32,8 +32,8 @@
 /*         File: HUtil.c      HMM utility routines             */
 /* ----------------------------------------------------------- */
 
-char *hutil_version = "!HVER!HUtil:   3.2.1 [CUED 15/10/03]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hutil_version = "!HVER!HUtil:   3.3 [CUED 28/04/05]";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.2 2005/07/22 10:17:02 mjfg Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -54,6 +54,7 @@ char *hutil_vc_id = "$Id: HUtil.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
 #define T_OCC  0004       /* Occupancy statistics tracing */
 
 static int trace = 0;
+static Boolean parsePhysicalHMM = FALSE;
 
 static MemHeap setHeap;
 static MemHeap itemHeap;
@@ -76,6 +77,20 @@ void InitUtil(void)
    CreateHeap(&itemHeap,"HUtil: ItemList Heap",MHEAP,sizeof(ItemRec),
               1.0,200,8000);
    CreateHeap(&setHeap,"HUtil: IntSet Heap",MSTAK,1,1.0,2000,16000);
+}
+
+/* EXPORT->ResetUtilItemList: frees all the memory from the ItemList heap */
+void ResetUtilItemList()
+{
+   DeleteHeap(&itemHeap);
+   CreateHeap(&itemHeap,"HUtil: ItemList Heap",MHEAP,sizeof(ItemRec),
+             1.0,200,8000);
+}
+
+/* EXPORT->SetParsePhysicalHMM: only parse physical HMMs */
+void SetParsePhysicalHMM(Boolean parse)
+{
+   parsePhysicalHMM = parse;
 }
 
 /* -------------------- Clone Routines ------------------------ */
@@ -168,7 +183,7 @@ MixtureVector CloneStream(HMMSet *hset, StreamElem *ste, Boolean sharing)
       for (m=1; m<=M; m++,sme++,tme++){
          tme->weight = sme->weight;
          tme->mpdf = 
-            (tme->weight>MINMIX)?CloneMixPDF(hset,sme->mpdf,sharing):NULL;
+            (MixWeight(hset,tme->weight)>MINMIX)?CloneMixPDF(hset,sme->mpdf,sharing):NULL;
       }
    } else if (hset->hsKind == TIEDHS) {
       mv.tpdf = CreateVector(hset->hmem,M);
@@ -268,6 +283,9 @@ Boolean GoNextHMM(HMMScanState *hss)
             if (hss->isCont){
                hss->me = hss->ste->spdf.cpdf+1;
                hss->mp = hss->me->mpdf;
+            } else if  (hss->hset->hsKind == TIEDHS) {
+               hss->mp = hss->hset->tmRecs[hss->s].mixes[hss->m];
+               hss->me = NULL;
             }
             return TRUE;
          }
@@ -302,6 +320,9 @@ Boolean GoNextState(HMMScanState *hss, Boolean noSkip)
          if (hss->isCont){
             hss->me = hss->ste->spdf.cpdf+1;
             hss->mp = hss->me->mpdf;
+         } else if  (hss->hset->hsKind == TIEDHS) {
+            hss->mp = hss->hset->tmRecs[hss->s].mixes[1];
+            hss->me = NULL;
          }
       }
       return TRUE;
@@ -334,6 +355,9 @@ Boolean GoNextStream(HMMScanState *hss, Boolean noSkip)
          if (hss->isCont){
             hss->me = hss->ste->spdf.cpdf+1;
             hss->mp = hss->me->mpdf;
+         } else if  (hss->hset->hsKind == TIEDHS) {
+            hss->mp = hss->hset->tmRecs[hss->s].mixes[1];
+            hss->me = NULL;
          }
       }
       return TRUE;
@@ -347,11 +371,17 @@ Boolean GoNextMix(HMMScanState *hss, Boolean noSkip)
 {
    Boolean ok = TRUE;
    
-   if (hss->isCont){
+   if (hss->isCont || (hss->hset->hsKind == TIEDHS)) {
       while (IsSeen(hss->mp->nUse) && ok){
          if (hss->m < hss->M) {
-            ++hss->m; ++hss->me; 
-            hss->mp = hss->me->mpdf;
+            ++hss->m; 
+            if (hss->isCont) {
+               ++hss->me; 
+               hss->mp = hss->me->mpdf;
+            } else {
+               hss->mp = hss->hset->tmRecs[hss->s].mixes[hss->m];
+               hss->me = NULL;
+            }
          } else if (noSkip)
             return FALSE;
          else
@@ -361,14 +391,8 @@ Boolean GoNextMix(HMMScanState *hss, Boolean noSkip)
          Touch(&hss->mp->nUse);
          return TRUE;
       }
-   } else {
-      if (hss->m < hss->M) {
-         ++hss->m;
-      } else if (noSkip)
-         return FALSE;
-      else
-         ok = GoNextStream(hss,FALSE);
-      if (ok) return TRUE;
+   } else { /* There are no components in a DISCRETEHS system - use GoNextStream instead */
+      HError(7231,"GoNextMix: Cannot specify mixture components unless continuous");
    }
    hss->me = NULL;
    return FALSE;
@@ -412,6 +436,65 @@ void ConvDiagC(HMMSet *hset, Boolean convData)
    }
    EndHMMScan(&hss);
    ClearSeenFlags(hset,CLR_ALL);
+}
+
+/* EXPORT->ConvDiagC Convert Diagonal Covariance Kind
+   Converts all the HMMs in hset to DIAGC from INVDIAGC */
+void ForceDiagC(HMMSet *hset)
+{
+   HMMScanState hss;
+   SVector v;
+   int k;
+
+   if (hset->hsKind == DISCRETEHS || hset->hsKind == TIEDHS) 
+      return;
+   NewHMMScan(hset, &hss);
+   while (GoNextMix(&hss,FALSE)) {
+      if (hss.mp->ckind == INVDIAGC){
+         hss.mp->ckind = DIAGC;
+         v = hss.mp->cov.var;
+         if (! IsSeenV(v)) {
+            for (k=1; k<=hset->swidth[hss.s]; k++) {
+               if (v[k] > MAXVAR) v[k] = MAXVAR;
+               if (v[k] < MINVAR) v[k] = MINVAR;
+               v[k] = 1/v[k];
+            }
+            TouchV(v);
+         }
+      }
+   }
+   EndHMMScan(&hss);
+   ClearSeenFlags(hset,CLR_ALL);
+}
+
+/* ----------------------- LogWt conversions ----------------------------- */
+
+/* EXPORT->ConvLogWt Converts all mixture weights into log-weights. */
+void ConvLogWt(HMMSet *hset)
+{
+   HMMScanState hss;
+
+   if (hset->hsKind == DISCRETEHS || hset->hsKind == TIEDHS || hset->logWt == TRUE) 
+      return;
+   NewHMMScan(hset, &hss);
+   while (GoNextMix(&hss,FALSE))
+      hss.me->weight = MixLogWeight(hset,hss.me->weight);
+   EndHMMScan(&hss);
+   hset->logWt = TRUE;
+}
+
+/* EXPORT->ConvExpWt Converts all mixture log-weights into weights. */
+void ConvExpWt(HMMSet *hset)
+{
+   HMMScanState hss;
+
+   if (hset->hsKind == DISCRETEHS || hset->hsKind == TIEDHS  || hset->logWt == FALSE) 
+      return;
+   NewHMMScan(hset, &hss);
+   while (GoNextMix(&hss,FALSE))
+      hss.me->weight = exp(hss.me->weight);
+   EndHMMScan(&hss);
+   hset->logWt = FALSE;
 }
 
 /* ---------------------- HMM Identification ------------------- */
@@ -577,7 +660,7 @@ static char *GetAlpha(char *s)
 {
    static char term[]=".,)}";
    Boolean wasQuoted;
-   int i,n,q;
+   int i,n,q=0;
 
    wasQuoted=FALSE;
    SkipSpaces();
@@ -767,7 +850,7 @@ static void PMix(ILink models, ILink *ilist, char *type,
                if (IsMember(streams,s)) {
                   me = ste->spdf.cpdf+1;
                   for (m=1; m<=ste->nMix; m++,me++) 
-                     if (me->weight>MINMIX && IsMember(mixes,m)) {
+                     if ((MixWeight(hset,me->weight) > MINMIX) && IsMember(mixes,m)) {
                         switch (what) {
                         case TMIX: /* tie ->mpdf */
                            if (trace & T_ITM)
@@ -919,18 +1002,37 @@ static void PHIdent(ILink *models, HMMSet *hset)
    char pattern[MAXSTRLEN];
    int h; 
    MLink q;
+   LabId hmmId;
+   Boolean fullName=TRUE; /* are there wildcards in the name */
+   char *p;
    
    SkipSpaces();
    GetAlpha(pattern);
-   for (h=0; h<MACHASHSIZE; h++)
-      for (q=hset->mtab[h]; q!=NULL; q=q->next)
-         if (q->type=='l') {
-            if (DoMatch(q->id->name,pattern)) {
-               if (trace & T_ITM)
-                  printf("%s ",q->id->name);
-               AddItem((HLink) q->structure, q->structure, models);
-            }
+   p = pattern; h=0;
+   while ((*p != '\0') && (h<MAXSTRLEN) && (fullName)) {
+     if ((*p=='*')||(*p=='?')||(*p=='%')) fullName=FALSE;
+     h++; 
+     p = pattern+h;
+   }
+   if (fullName) { /* this is the name of the model */
+      hmmId = GetLabId(pattern,FALSE);
+      q = FindMacroName(hset,'l',hmmId);
+      if (q != NULL) {
+         if (trace & T_ITM)
+            printf("%s ",hmmId->name);
+         AddItem((HLink) q->structure, q->structure, models);
+      }
+   } else { /* need to search for all models that match */
+     for (h=0; h<MACHASHSIZE; h++)
+       for (q=hset->mtab[h]; q!=NULL; q=q->next)
+         if (((q->type=='h') && (parsePhysicalHMM)) || ((q->type=='l') && (!parsePhysicalHMM))) {
+	   if (DoMatch(q->id->name,pattern)) {
+	     if (trace & T_ITM)
+	       printf("%s ",q->id->name);
+	     AddItem((HLink) q->structure, q->structure, models);
+	   }
          }
+   }
 }
 
 /* PHName: parse hname and return list of matching models */
@@ -1087,6 +1189,7 @@ void SetMacroHook(MLink ml,Ptr hook)
    case 'v': /* SVector */
       SetHook(ml->structure,hook); break;
    case 'r': /* fake */
+   case 'b':
    case 'j':
       break;
    case '*': /* deleted */
@@ -1122,6 +1225,7 @@ int GetMacroUse(MLink ml)
    case 'v': /* SVector */
       use=GetUse(ml->structure); break;
    case '*': /* deleted */
+   case 'b':
    case 'r':    
       use=-1; break;
    case 'o': /* fake */
@@ -1156,6 +1260,7 @@ void SetMacroUse(MLink ml,int use)
       SetUse(ml->structure,use); break;
    case '*': /* deleted */
    case 'o': /* fake */
+   case 'b':
    case 'r': 
       break;
    default:

@@ -259,7 +259,7 @@ OOV $n$-gram files can no longer be decoded by the original word map
 \begin{verbatim}
 $ LGList holmes.0/wmap lm_5k/data.0 |
   ERROR [+15330]  OpenNGramFile: Gram file map Holmes%%5k.wlist 
-	inconsistent with Holmes
+        inconsistent with Holmes
  FATAL ERROR - Terminating program LGList
 \end{verbatim} % $
 The error is due to the mismatch between the original map's name
@@ -703,12 +703,12 @@ are building the model for, and whether you intend it purely to
 interpolate with a word model.  In the latter case, for example, a
 sensible number of classes is often around the 1000 mark when using a
 64K word vocabulary.  We only have 5000 words in our vocabulary so
-we'll choose to construct 200 classes in this case.
+we'll choose to construct 150 classes in this case.
 
 Create a directory called {\tt holmes.2} and run \htool{Cluster} with
 \begin{verbatim}
 $ Cluster -T 1 -c 150 -i 1 -k -o holmes.2/class lm_5k/5k.wmap
-         holmes.1/data.0 lm_5k/data.0
+         holmes.1/data.* lm_5k/data.0
 Preparing input gram set
 Input gram file holmes.1/data.0 added (weight=1.000000)
 Input gram file lm_5k/data.0 added (weight=1.000000)
@@ -719,7 +719,7 @@ Cluster completed successfully
 The word map and gram files are passed as before -- any OOV mapping
 should be made before building the class map.  Passing the {\tt -k}
 option told \htool{Cluster} to keep the unknown word token {\tt !!UNK}
-in its own singleton class, whilst the {\tt -c 200} options specifies
+in its own singleton class, whilst the {\tt -c 150} options specifies
 that we wish to create 150 classes.  The {\tt -i 1} performs only one
 iteration of the clusterer -- performing further iterations is likely
 to give further small improvements in performance, but we won't wait
@@ -752,7 +752,7 @@ more distinctive classes.  We can now use this file to build the class
 $n$-gram component of our language model.
 \begin{verbatim}
 $ LGCopy -T 1 -d holmes.2 -m holmes.2/cmap -w holmes.2/class.1.cm
-         lm_5k/5k.wmap holmes.1/data.0 lm_5k/data.0
+         lm_5k/5k.wmap holmes.1/data.* lm_5k/data.0
 Input file holmes.1/data.0 added, weight=1.0000
 Input file lm_5k/data.0 added, weight=1.0000
 Copying 2 input files to output files with 2000000 entries
@@ -798,7 +798,7 @@ To build the word-given-class component of the model we must run
 \htool{Cluster} again.
 \begin{verbatim}
 $ Cluster -l holmes.2/class.1.cm -i 0 -q lm_5k/cl150-counts.wc
-     lm_5k/5k.wmap holmes.1/data.0 lm_5k/data.0
+     lm_5k/5k.wmap holmes.1/data.* lm_5k/data.0
 \end{verbatim} % $
 
 This is very similar to how we ran \htool{Cluster} earlier, except
@@ -832,13 +832,13 @@ the performance of with \htool{LPlex}.
 \begin{verbatim}
 $ LPlex -n 3 -t lm_5k/cl150-tg_1_1 test/red-headed_league.txt
 LPlex test #0: 3-gram
-perplexity 129.9225, var 7.5378, utterances 556, words predicted 9187
+perplexity 125.9065, var 7.4139, utterances 556, words predicted 8127
 num tokens 10408, OOV 665, OOV rate 6.75% (excl. </s>)
- 
+
 Access statistics for lm_5k/cl150-tg_1_1:
 Lang model  requested  exact backed    n/a     mean    stdev
-    bigram       3104  95.5%   4.5%   0.0%    -4.67     1.62
-   trigram       9187  66.2%  23.9%   9.9%    -4.87     2.75
+    bigram       2867  95.4%   4.6%   0.0%    -4.61     1.64
+   trigram       8127  64.7%  24.1%  11.2%    -4.84     2.72
 \end{verbatim} % $
 
 The class trigram model performs worse than the word trigram (which

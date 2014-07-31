@@ -32,8 +32,8 @@
 /*         File: HRest.c: HMM initialisation program           */
 /* ----------------------------------------------------------- */
 
-char *hrest_version = "!HVER!HRest:   3.2.1 [CUED 15/10/03]";
-char *hrest_vc_id = "$Id: HRest.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hrest_version = "!HVER!HRest:   3.3 [CUED 28/04/05]";
+char *hrest_vc_id = "$Id: HRest.c,v 1.1.1.1 2005/05/12 10:52:54 jal58 Exp $";
 
 /*
    This program is used to estimate the transition parameters,
@@ -94,8 +94,6 @@ static float mixWeightFloor=0.0; /* Floor for mixture weights */
 static float tMPruneThresh = 10.0;    /* tied mix prune threshold */
 static char *hmmfn;              /* HMM definition file name */
 static char *outfn=NULL;         /* output definition file name */
-enum _UPDSet{UPMEANS=1,UPVARS=2,UPTRANS=4,UPMIXES=8};
-typedef enum _UPDSet UPDSet;
 static UPDSet uFlags = (UPDSet) (UPMEANS|UPVARS|UPTRANS|UPMIXES);     /* update flags */
 static int  trace    = 0;        /* Trace level */
 static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
@@ -304,7 +302,7 @@ int main(int argc, char *argv[])
    }
    ReEstimateModel();
 
-   if(SaveHMMSet(&hset,outDir,NULL,saveBinary)<SUCCESS)
+   if(SaveHMMSet(&hset,outDir,NULL,NULL,saveBinary)<SUCCESS)
       HError(2211,"HRest: SaveHMMSet failed");
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
@@ -372,7 +370,7 @@ void Initialise1(void)
    CreateHeap(&accsStack,"AccsStore", MSTAK, 1, 0.0, 1000, 1000);
    CreateHeap(&transStack,"TransStore", MSTAK, 1, 0.0, 1000, 1000);
    CreateHeap(&bufferStack,"BufferStore", MSTAK, 1, 0.0, 1000, 1000);
-   AttachAccs(&hset, &accsStack);
+   AttachAccs(&hset, &accsStack, uFlags);
 
    SetVFloor( &hset, vFloor, minVar);
 
@@ -557,7 +555,7 @@ void ShowSegNum(int seg)
 /* SetOutP: Set the output and mix prob matrices */                        
 void SetOutP(int seg)
 {
-   int i,t,m,mx,s,nMix;
+   int i,t,m,mx,s,nMix=0;
    StreamElem *se;
    MixtureElem *me;
    StateInfo *si;
@@ -566,8 +564,8 @@ void SetOutP(int seg)
    Vector strp = NULL;
    Observation obs;
    TMixRec *tmRec = NULL;
-   float wght,tmp;
-   MixPDF *mpdf;
+   float wght=0.0,tmp;
+   MixPDF *mpdf=NULL;
    PreComp *pMix;
    
    for (t=1;t<=T;t++) {
@@ -843,12 +841,12 @@ void UpTranCounts(LogDouble pr,int seg)
 void UpStreamCounts(int j, int s, StreamElem *se, int vSize, LogDouble pr, int seg,
                     DVector alphj, DVector betaj)
 {
-   int i,m,nMix,k,l,t,ss,idx;
+   int i,m,nMix=0,k,l,t,ss,idx;
    MixtureElem *me;
-   MixPDF *mpdf;
-   MuAcc *ma;
+   MixPDF *mpdf=NULL;
+   MuAcc *ma=NULL;
    WtAcc *wa;
-   VaAcc *va;
+   VaAcc *va=NULL;
    Matrix *mixp_j;
    Vector ot, strpt;
    LogFloat a_ij,w;
@@ -856,7 +854,7 @@ void UpStreamCounts(int j, int s, StreamElem *se, int vSize, LogDouble pr, int s
    double y;
    Observation obs;
    TMixRec *tmRec = NULL;
-   float wght;
+   float wght=0.0;
    
    wa = (WtAcc *)se->hook;
    switch (hsKind){       /* Get nMix */
@@ -1126,7 +1124,7 @@ void FloorDProbs(ShortVec mixes, int M, float floor)
 void RestMixWeights(int state, int s, StreamElem *se)
 {
    WtAcc *wa;
-   int m,M;
+   int m,M=0;
    float x;
    MixtureElem *me;
    
@@ -1317,7 +1315,7 @@ void ReEstimateModel(void)
    iteration=0; 
    oldP=LZERO;
    do {        /*main re-est loop*/   
-      ZeroAccs(&hset); newP = 0.0; ++iteration;
+      ZeroAccs(&hset, uFlags); newP = 0.0; ++iteration;
       nTokUsed = 0;
       for (seg=1;seg<=nSeg;seg++) {
          T=SegLength(segStore,seg);

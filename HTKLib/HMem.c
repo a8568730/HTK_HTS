@@ -19,8 +19,8 @@
 /*         File: HMem.c:   Memory Management Module            */
 /* ----------------------------------------------------------- */
 
-char *hmem_version = "!HVER!HMem:   3.2.1 [CUED 15/10/03]";
-char *hmem_vc_id = "$Id: HMem.c,v 1.11 2003/10/15 08:10:12 ge204 Exp $";
+char *hmem_version = "!HVER!HMem:   3.3 [CUED 28/04/05]";
+char *hmem_vc_id = "$Id: HMem.c,v 1.1.1.1 2005/05/12 10:52:50 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -205,7 +205,7 @@ void InitMem(void)
 void CreateHeap(MemHeap *x, char *name, HeapType type, size_t elemSize, 
                 float growf, size_t numElem, size_t maxElem)
 {
-   char c;
+   char c=0;
 
    if (growf<0.0)
       HError(5170,"CreateHeap: -ve grow factor in heap %s",name);
@@ -474,7 +474,7 @@ void Dispose(MemHeap *x, void *p)
          HError(5175,"Dispose: Item to free in MSTAK %s not found",x->name);
       /* finally cut back the stack in the current block */
       size = ((ByteP)cur->data + cur->firstFree) - (ByteP)p;
-      if (size < 0)
+      if (((ByteP)cur->data + cur->firstFree) < (ByteP)p)
          HError(5175,"Dispose: item to free in MSTAK %s is above stack top",
                 x->name);
       cur->firstFree -= size;
@@ -498,7 +498,7 @@ void Dispose(MemHeap *x, void *p)
 /* EXPORT->PrintHeapStats: print summary stats for given memory heap */
 void PrintHeapStats(MemHeap *x)
 {
-   char tc;
+   char tc=0;
    BlockP p;
    int nBlocks = 0;
    

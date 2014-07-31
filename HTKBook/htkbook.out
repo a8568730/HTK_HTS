@@ -1,0 +1,387 @@
+\BOOKMARK [-1][-]{part.1}{I Tutorial Overview}{}
+\BOOKMARK [0][-]{chapter.1}{The Fundamentals of HTK}{part.1}
+\BOOKMARK [1][-]{section.1.1}{General Principles of HMMs}{chapter.1}
+\BOOKMARK [1][-]{section.1.2}{Isolated Word Recognition}{chapter.1}
+\BOOKMARK [1][-]{section.1.3}{Output Probability Specification}{chapter.1}
+\BOOKMARK [1][-]{section.1.4}{Baum-Welch Re-Estimation}{chapter.1}
+\BOOKMARK [1][-]{section.1.5}{Recognition and Viterbi Decoding}{chapter.1}
+\BOOKMARK [1][-]{section.1.6}{Continuous Speech Recognition}{chapter.1}
+\BOOKMARK [1][-]{section.1.7}{Speaker Adaptation}{chapter.1}
+\BOOKMARK [0][-]{chapter.2}{An Overview of the HTK Toolkit}{part.1}
+\BOOKMARK [1][-]{section.2.1}{HTK Software Architecture}{chapter.2}
+\BOOKMARK [1][-]{section.2.2}{Generic Properties of a HTK Tool}{chapter.2}
+\BOOKMARK [1][-]{section.2.3}{The Toolkit}{chapter.2}
+\BOOKMARK [2][-]{subsection.2.3.1}{Data Preparation Tools}{section.2.3}
+\BOOKMARK [2][-]{subsection.2.3.2}{Training Tools}{section.2.3}
+\BOOKMARK [2][-]{subsection.2.3.3}{Recognition Tools}{section.2.3}
+\BOOKMARK [2][-]{subsection.2.3.4}{Analysis Tool}{section.2.3}
+\BOOKMARK [1][-]{section.2.4}{Whats New In Version 3.2}{chapter.2}
+\BOOKMARK [2][-]{subsection.2.4.1}{New In Version 3.1}{section.2.4}
+\BOOKMARK [2][-]{subsection.2.4.2}{New In Version 2.2}{section.2.4}
+\BOOKMARK [2][-]{subsection.2.4.3}{Features Added To Version 2.1}{section.2.4}
+\BOOKMARK [0][-]{chapter.3}{A Tutorial Example of Using HTK}{part.1}
+\BOOKMARK [1][-]{section.3.1}{Data Preparation}{chapter.3}
+\BOOKMARK [2][-]{subsection.3.1.1}{Step 1 - the Task Grammar}{section.3.1}
+\BOOKMARK [2][-]{subsection.3.1.2}{Step 2 - the Dictionary}{section.3.1}
+\BOOKMARK [2][-]{subsection.3.1.3}{Step 3 - Recording the Data}{section.3.1}
+\BOOKMARK [2][-]{subsection.3.1.4}{Step 4 - Creating the Transcription Files}{section.3.1}
+\BOOKMARK [2][-]{subsection.3.1.5}{Step 5 - Coding the Data}{section.3.1}
+\BOOKMARK [1][-]{section.3.2}{Creating Monophone HMMs}{chapter.3}
+\BOOKMARK [2][-]{subsection.3.2.1}{Step 6 - Creating Flat Start Monophones}{section.3.2}
+\BOOKMARK [2][-]{subsection.3.2.2}{Step 7 - Fixing the Silence Models}{section.3.2}
+\BOOKMARK [2][-]{subsection.3.2.3}{Step 8 - Realigning the Training Data}{section.3.2}
+\BOOKMARK [1][-]{section.3.3}{Creating Tied-State Triphones}{chapter.3}
+\BOOKMARK [2][-]{subsection.3.3.1}{Step 9 - Making Triphones from Monophones}{section.3.3}
+\BOOKMARK [2][-]{subsection.3.3.2}{Step 10 - Making Tied-State Triphones}{section.3.3}
+\BOOKMARK [1][-]{section.3.4}{Recogniser Evaluation}{chapter.3}
+\BOOKMARK [2][-]{subsection.3.4.1}{Step 11 - Recognising the Test Data}{section.3.4}
+\BOOKMARK [1][-]{section.3.5}{Running the Recogniser Live}{chapter.3}
+\BOOKMARK [1][-]{section.3.6}{Summary}{chapter.3}
+\BOOKMARK [-1][-]{part.2}{II HTK in Depth}{}
+\BOOKMARK [0][-]{chapter.4}{The Operating Environment}{part.2}
+\BOOKMARK [1][-]{section.4.1}{The Command Line}{chapter.4}
+\BOOKMARK [1][-]{section.4.2}{Script Files}{chapter.4}
+\BOOKMARK [1][-]{section.4.3}{Configuration Files}{chapter.4}
+\BOOKMARK [1][-]{section.4.4}{Standard Options}{chapter.4}
+\BOOKMARK [1][-]{section.4.5}{Error Reporting}{chapter.4}
+\BOOKMARK [1][-]{section.4.6}{Strings and Names}{chapter.4}
+\BOOKMARK [1][-]{section.4.7}{Memory Management}{chapter.4}
+\BOOKMARK [1][-]{section.4.8}{Input/Output via Pipes and Networks}{chapter.4}
+\BOOKMARK [1][-]{section.4.9}{Byte-swapping of HTK data files}{chapter.4}
+\BOOKMARK [1][-]{section.4.10}{Summary}{chapter.4}
+\BOOKMARK [0][-]{chapter.5}{Speech Input/Output}{part.2}
+\BOOKMARK [1][-]{section.5.1}{General Mechanism}{chapter.5}
+\BOOKMARK [1][-]{section.5.2}{Speech Signal Processing}{chapter.5}
+\BOOKMARK [1][-]{section.5.3}{Linear Prediction Analysis}{chapter.5}
+\BOOKMARK [1][-]{section.5.4}{Filterbank Analysis}{chapter.5}
+\BOOKMARK [1][-]{section.5.5}{Vocal Tract Length Normalisation}{chapter.5}
+\BOOKMARK [1][-]{section.5.6}{Cepstral Features}{chapter.5}
+\BOOKMARK [1][-]{section.5.7}{Perceptual Linear Prediction}{chapter.5}
+\BOOKMARK [1][-]{section.5.8}{Energy Measures}{chapter.5}
+\BOOKMARK [1][-]{section.5.9}{Delta, Acceleration and Third Differential Coefficients}{chapter.5}
+\BOOKMARK [1][-]{section.5.10}{Storage of Parameter Files}{chapter.5}
+\BOOKMARK [2][-]{subsection.5.10.1}{HTK Format Parameter Files}{section.5.10}
+\BOOKMARK [2][-]{subsection.5.10.2}{Esignal Format Parameter Files}{section.5.10}
+\BOOKMARK [1][-]{section.5.11}{Waveform File Formats}{chapter.5}
+\BOOKMARK [2][-]{subsection.5.11.1}{HTK File Format}{section.5.11}
+\BOOKMARK [2][-]{subsection.5.11.2}{Esignal File Format}{section.5.11}
+\BOOKMARK [2][-]{subsection.5.11.3}{TIMIT File Format}{section.5.11}
+\BOOKMARK [2][-]{subsection.5.11.4}{NIST File Format}{section.5.11}
+\BOOKMARK [2][-]{subsection.5.11.5}{SCRIBE File Format}{section.5.11}
+\BOOKMARK [2][-]{subsection.5.11.6}{SDES1 File Format}{section.5.11}
+\BOOKMARK [2][-]{subsection.5.11.7}{AIFF File Format}{section.5.11}
+\BOOKMARK [2][-]{subsection.5.11.8}{SUNAU8 File Format}{section.5.11}
+\BOOKMARK [2][-]{subsection.5.11.9}{OGI File Format}{section.5.11}
+\BOOKMARK [2][-]{subsection.5.11.10}{WAV File Format}{section.5.11}
+\BOOKMARK [2][-]{subsection.5.11.11}{ALIEN and NOHEAD File Formats}{section.5.11}
+\BOOKMARK [1][-]{section.5.12}{Direct Audio Input/Output}{chapter.5}
+\BOOKMARK [1][-]{section.5.13}{Multiple Input Streams}{chapter.5}
+\BOOKMARK [1][-]{section.5.14}{Vector Quantisation}{chapter.5}
+\BOOKMARK [1][-]{section.5.15}{Viewing Speech with HList}{chapter.5}
+\BOOKMARK [1][-]{section.5.16}{Copying and Coding using HCopy}{chapter.5}
+\BOOKMARK [1][-]{section.5.17}{Version 1.5 Compatibility}{chapter.5}
+\BOOKMARK [1][-]{section.5.18}{Summary}{chapter.5}
+\BOOKMARK [0][-]{chapter.6}{Transcriptions and Label Files}{part.2}
+\BOOKMARK [1][-]{section.6.1}{Label File Structure}{chapter.6}
+\BOOKMARK [1][-]{section.6.2}{Label File Formats}{chapter.6}
+\BOOKMARK [2][-]{subsection.6.2.1}{HTK Label Files}{section.6.2}
+\BOOKMARK [2][-]{subsection.6.2.2}{ESPS Label Files}{section.6.2}
+\BOOKMARK [2][-]{subsection.6.2.3}{TIMIT Label Files}{section.6.2}
+\BOOKMARK [2][-]{subsection.6.2.4}{SCRIBE Label Files}{section.6.2}
+\BOOKMARK [1][-]{section.6.3}{Master Label Files}{chapter.6}
+\BOOKMARK [2][-]{subsection.6.3.1}{General Principles of MLFs}{section.6.3}
+\BOOKMARK [2][-]{subsection.6.3.2}{Syntax and Semantics}{section.6.3}
+\BOOKMARK [2][-]{subsection.6.3.3}{MLF Search}{section.6.3}
+\BOOKMARK [2][-]{subsection.6.3.4}{MLF Examples}{section.6.3}
+\BOOKMARK [1][-]{section.6.4}{Editing Label Files}{chapter.6}
+\BOOKMARK [1][-]{section.6.5}{Summary}{chapter.6}
+\BOOKMARK [0][-]{chapter.7}{HMM Definition Files}{part.2}
+\BOOKMARK [1][-]{section.7.1}{The HMM Parameters}{chapter.7}
+\BOOKMARK [1][-]{section.7.2}{Basic HMM Definitions}{chapter.7}
+\BOOKMARK [1][-]{section.7.3}{Macro Definitions}{chapter.7}
+\BOOKMARK [1][-]{section.7.4}{HMM Sets}{chapter.7}
+\BOOKMARK [1][-]{section.7.5}{Tied-Mixture Systems}{chapter.7}
+\BOOKMARK [1][-]{section.7.6}{Discrete Probability HMMs}{chapter.7}
+\BOOKMARK [1][-]{section.7.7}{Input Linear Transforms}{chapter.7}
+\BOOKMARK [1][-]{section.7.8}{Tee Models}{chapter.7}
+\BOOKMARK [1][-]{section.7.9}{Regression Class Trees for Adaptation}{chapter.7}
+\BOOKMARK [1][-]{section.7.10}{Binary Storage Format}{chapter.7}
+\BOOKMARK [1][-]{section.7.11}{The HMM Definition Language}{chapter.7}
+\BOOKMARK [0][-]{chapter.8}{HMM Parameter Estimation}{part.2}
+\BOOKMARK [1][-]{section.8.1}{Training Strategies}{chapter.8}
+\BOOKMARK [1][-]{section.8.2}{Initialisation using HInit}{chapter.8}
+\BOOKMARK [1][-]{section.8.3}{Flat Starting with HCompV}{chapter.8}
+\BOOKMARK [1][-]{section.8.4}{Isolated Unit Re-Estimation using HRest}{chapter.8}
+\BOOKMARK [1][-]{section.8.5}{Embedded Training using HERest}{chapter.8}
+\BOOKMARK [1][-]{section.8.6}{Single-Pass Retraining}{chapter.8}
+\BOOKMARK [1][-]{section.8.7}{Two-model Re-Estimation}{chapter.8}
+\BOOKMARK [1][-]{section.8.8}{Parameter Re-Estimation Formulae}{chapter.8}
+\BOOKMARK [2][-]{subsection.8.8.1}{Viterbi Training \(HInit\)}{section.8.8}
+\BOOKMARK [2][-]{subsection.8.8.2}{Forward/Backward Probabilities}{section.8.8}
+\BOOKMARK [2][-]{subsection.8.8.3}{Single Model Reestimation\(HRest\)}{section.8.8}
+\BOOKMARK [2][-]{subsection.8.8.4}{Embedded Model Reestimation\(HERest\)}{section.8.8}
+\BOOKMARK [0][-]{chapter.9}{HMM Adaptation}{part.2}
+\BOOKMARK [1][-]{section.9.1}{Model Adaptation using Linear Transformations}{chapter.9}
+\BOOKMARK [2][-]{subsection.9.1.1}{Linear Transformations}{section.9.1}
+\BOOKMARK [2][-]{subsection.9.1.2}{Base Class Definitions}{section.9.1}
+\BOOKMARK [2][-]{subsection.9.1.3}{Regression Class Trees}{section.9.1}
+\BOOKMARK [2][-]{subsection.9.1.4}{Transform Model File Format}{section.9.1}
+\BOOKMARK [2][-]{subsection.9.1.5}{Hierarchy of Transform}{section.9.1}
+\BOOKMARK [2][-]{subsection.9.1.6}{Mutiple Stream Systems}{section.9.1}
+\BOOKMARK [1][-]{section.9.2}{Adaptive Training with Linear Transforms}{chapter.9}
+\BOOKMARK [1][-]{section.9.3}{Model Adaptation using MAP}{chapter.9}
+\BOOKMARK [1][-]{section.9.4}{MLLR Formulae}{chapter.9}
+\BOOKMARK [2][-]{subsection.9.4.1}{Estimation of the Mean Transformation Matrix}{section.9.4}
+\BOOKMARK [2][-]{subsection.9.4.2}{Estimation of the Diagonal Variance Transformation Matrix}{section.9.4}
+\BOOKMARK [0][-]{chapter.10}{HMM System Refinement}{part.2}
+\BOOKMARK [1][-]{section.10.1}{Using HHEd}{chapter.10}
+\BOOKMARK [1][-]{section.10.2}{Constructing Context-Dependent Models}{chapter.10}
+\BOOKMARK [1][-]{section.10.3}{Parameter Tying and Item Lists}{chapter.10}
+\BOOKMARK [1][-]{section.10.4}{Data-Driven Clustering}{chapter.10}
+\BOOKMARK [1][-]{section.10.5}{Tree-Based Clustering}{chapter.10}
+\BOOKMARK [1][-]{section.10.6}{Mixture Incrementing}{chapter.10}
+\BOOKMARK [1][-]{section.10.7}{Regression Class Tree Construction}{chapter.10}
+\BOOKMARK [1][-]{section.10.8}{Miscellaneous Operations}{chapter.10}
+\BOOKMARK [0][-]{chapter.11}{Discrete and Tied-Mixture Models}{part.2}
+\BOOKMARK [1][-]{section.11.1}{Modelling Discrete Sequences}{chapter.11}
+\BOOKMARK [1][-]{section.11.2}{Using Discrete Models with Speech}{chapter.11}
+\BOOKMARK [1][-]{section.11.3}{Tied Mixture Systems}{chapter.11}
+\BOOKMARK [1][-]{section.11.4}{Parameter Smoothing}{chapter.11}
+\BOOKMARK [0][-]{chapter.12}{Networks, Dictionaries and Language Models}{part.2}
+\BOOKMARK [1][-]{section.12.1}{How Networks are Used}{chapter.12}
+\BOOKMARK [1][-]{section.12.2}{Word Networks and Standard Lattice Format}{chapter.12}
+\BOOKMARK [1][-]{section.12.3}{Building a Word Network with HParse}{chapter.12}
+\BOOKMARK [1][-]{section.12.4}{Bigram Language Models}{chapter.12}
+\BOOKMARK [1][-]{section.12.5}{Building a Word Network with HBuild}{chapter.12}
+\BOOKMARK [1][-]{section.12.6}{Testing a Word Network using HSGen}{chapter.12}
+\BOOKMARK [1][-]{section.12.7}{Constructing a Dictionary}{chapter.12}
+\BOOKMARK [1][-]{section.12.8}{Word Network Expansion}{chapter.12}
+\BOOKMARK [1][-]{section.12.9}{Other Kinds of Recognition System}{chapter.12}
+\BOOKMARK [0][-]{chapter.13}{Decoding}{part.2}
+\BOOKMARK [1][-]{section.13.1}{Decoder Operation}{chapter.13}
+\BOOKMARK [1][-]{section.13.2}{Decoder Organisation}{chapter.13}
+\BOOKMARK [1][-]{section.13.3}{Recognition using Test Databases}{chapter.13}
+\BOOKMARK [1][-]{section.13.4}{Evaluating Recognition Results}{chapter.13}
+\BOOKMARK [1][-]{section.13.5}{Generating Forced Alignments}{chapter.13}
+\BOOKMARK [1][-]{section.13.6}{Decoding and Adaptation}{chapter.13}
+\BOOKMARK [2][-]{subsection.13.6.1}{Recognition with Adapted HMMs}{section.13.6}
+\BOOKMARK [2][-]{subsection.13.6.2}{Unsupervised Adaptation}{section.13.6}
+\BOOKMARK [1][-]{section.13.7}{Recognition using Direct Audio Input}{chapter.13}
+\BOOKMARK [1][-]{section.13.8}{N-Best Lists and Lattices}{chapter.13}
+\BOOKMARK [-1][-]{part.3}{III Language Modelling}{}
+\BOOKMARK [0][-]{chapter.14}{Fundamentals of language modelling}{part.3}
+\BOOKMARK [1][-]{section.14.1}{n-gram language models}{chapter.14}
+\BOOKMARK [2][-]{subsection.14.1.1}{Word n-gram models}{section.14.1}
+\BOOKMARK [2][-]{subsection.14.1.2}{Equivalence classes}{section.14.1}
+\BOOKMARK [2][-]{subsection.14.1.3}{Class n-gram models}{section.14.1}
+\BOOKMARK [1][-]{section.14.2}{Statistically-derived Class Maps}{chapter.14}
+\BOOKMARK [2][-]{subsection.14.2.1}{Word exchange algorithm}{section.14.2}
+\BOOKMARK [1][-]{section.14.3}{Robust model estimation}{chapter.14}
+\BOOKMARK [2][-]{subsection.14.3.1}{Estimating probabilities}{section.14.3}
+\BOOKMARK [2][-]{subsection.14.3.2}{Smoothing probabilities}{section.14.3}
+\BOOKMARK [1][-]{section.14.4}{Perplexity}{chapter.14}
+\BOOKMARK [1][-]{section.14.5}{Overview of n-Gram Construction Process}{chapter.14}
+\BOOKMARK [1][-]{section.14.6}{Class-Based Language Models}{chapter.14}
+\BOOKMARK [0][-]{chapter.15}{A Tutorial Example of Building Language Models}{part.3}
+\BOOKMARK [1][-]{section.15.1}{Database preparation}{chapter.15}
+\BOOKMARK [1][-]{section.15.2}{Mapping OOV words}{chapter.15}
+\BOOKMARK [1][-]{section.15.3}{Language model generation}{chapter.15}
+\BOOKMARK [1][-]{section.15.4}{Testing the LM perplexity}{chapter.15}
+\BOOKMARK [1][-]{section.15.5}{Generating and using count-based models}{chapter.15}
+\BOOKMARK [1][-]{section.15.6}{Model interpolation}{chapter.15}
+\BOOKMARK [1][-]{section.15.7}{Class-based models}{chapter.15}
+\BOOKMARK [1][-]{section.15.8}{Problem solving}{chapter.15}
+\BOOKMARK [2][-]{subsection.15.8.1}{File format problems}{section.15.8}
+\BOOKMARK [2][-]{subsection.15.8.2}{Command syntax problems}{section.15.8}
+\BOOKMARK [2][-]{subsection.15.8.3}{Word maps}{section.15.8}
+\BOOKMARK [2][-]{subsection.15.8.4}{Memory problems}{section.15.8}
+\BOOKMARK [2][-]{subsection.15.8.5}{Unexpected perplexities}{section.15.8}
+\BOOKMARK [0][-]{chapter.16}{Language Modelling Reference}{part.3}
+\BOOKMARK [1][-]{section.16.1}{Words and Classes}{chapter.16}
+\BOOKMARK [1][-]{section.16.2}{Data File Headers}{chapter.16}
+\BOOKMARK [1][-]{section.16.3}{Word Map Files}{chapter.16}
+\BOOKMARK [1][-]{section.16.4}{Class Map Files}{chapter.16}
+\BOOKMARK [1][-]{section.16.5}{Gram Files}{chapter.16}
+\BOOKMARK [1][-]{section.16.6}{Frequency-of-frequency \(FoF\) Files}{chapter.16}
+\BOOKMARK [1][-]{section.16.7}{Word LM file formats}{chapter.16}
+\BOOKMARK [2][-]{subsection.16.7.1}{The ARPA-MIT LM format}{section.16.7}
+\BOOKMARK [2][-]{subsection.16.7.2}{The modified ARPA-MIT format}{section.16.7}
+\BOOKMARK [2][-]{subsection.16.7.3}{The binary LM format}{section.16.7}
+\BOOKMARK [1][-]{section.16.8}{Class LM file formats}{chapter.16}
+\BOOKMARK [2][-]{subsection.16.8.1}{Class counts format}{section.16.8}
+\BOOKMARK [2][-]{subsection.16.8.2}{The class probabilities format}{section.16.8}
+\BOOKMARK [2][-]{subsection.16.8.3}{The class LM three file format}{section.16.8}
+\BOOKMARK [2][-]{subsection.16.8.4}{The class LM single file format}{section.16.8}
+\BOOKMARK [1][-]{section.16.9}{Language modelling tracing}{chapter.16}
+\BOOKMARK [2][-]{subsection.16.9.1}{LCMap}{section.16.9}
+\BOOKMARK [2][-]{subsection.16.9.2}{LGBase}{section.16.9}
+\BOOKMARK [2][-]{subsection.16.9.3}{LModel}{section.16.9}
+\BOOKMARK [2][-]{subsection.16.9.4}{LPCalc}{section.16.9}
+\BOOKMARK [2][-]{subsection.16.9.5}{LPMerge}{section.16.9}
+\BOOKMARK [2][-]{subsection.16.9.6}{LUtil}{section.16.9}
+\BOOKMARK [2][-]{subsection.16.9.7}{LWMap}{section.16.9}
+\BOOKMARK [1][-]{section.16.10}{Run-time configuration parameters}{chapter.16}
+\BOOKMARK [2][-]{subsection.16.10.1}{USEINTID}{section.16.10}
+\BOOKMARK [1][-]{section.16.11}{Compile-time configuration parameters}{chapter.16}
+\BOOKMARK [2][-]{subsection.16.11.1}{LM\137ID\137SHORT}{section.16.11}
+\BOOKMARK [2][-]{subsection.16.11.2}{LM\137COMPACT}{section.16.11}
+\BOOKMARK [2][-]{subsection.16.11.3}{LMPROB\137SHORT}{section.16.11}
+\BOOKMARK [2][-]{subsection.16.11.4}{INTERPOLATE\137MAX}{section.16.11}
+\BOOKMARK [2][-]{subsection.16.11.5}{SANITY}{section.16.11}
+\BOOKMARK [2][-]{subsection.16.11.6}{INTEGRITY\137CHECK}{section.16.11}
+\BOOKMARK [-1][-]{part.4}{IV Reference Section}{}
+\BOOKMARK [0][-]{chapter.17}{The HTK Tools}{part.4}
+\BOOKMARK [1][-]{section.17.1}{Cluster}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.1.1}{Function}{section.17.1}
+\BOOKMARK [2][-]{subsection.17.1.2}{Use}{section.17.1}
+\BOOKMARK [2][-]{subsection.17.1.3}{Tracing}{section.17.1}
+\BOOKMARK [1][-]{section.17.2}{HBuild}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.2.1}{Function}{section.17.2}
+\BOOKMARK [2][-]{subsection.17.2.2}{Use}{section.17.2}
+\BOOKMARK [2][-]{subsection.17.2.3}{Tracing}{section.17.2}
+\BOOKMARK [1][-]{section.17.3}{HCompV}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.3.1}{Function}{section.17.3}
+\BOOKMARK [2][-]{subsection.17.3.2}{Use}{section.17.3}
+\BOOKMARK [2][-]{subsection.17.3.3}{Tracing}{section.17.3}
+\BOOKMARK [1][-]{section.17.4}{HCopy}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.4.1}{Function}{section.17.4}
+\BOOKMARK [2][-]{subsection.17.4.2}{Use}{section.17.4}
+\BOOKMARK [2][-]{subsection.17.4.3}{Trace Output}{section.17.4}
+\BOOKMARK [1][-]{section.17.5}{HDMan}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.5.1}{Function}{section.17.5}
+\BOOKMARK [2][-]{subsection.17.5.2}{Use}{section.17.5}
+\BOOKMARK [2][-]{subsection.17.5.3}{Tracing}{section.17.5}
+\BOOKMARK [1][-]{section.17.6}{HERest}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.6.1}{Function}{section.17.6}
+\BOOKMARK [2][-]{subsection.17.6.2}{Use}{section.17.6}
+\BOOKMARK [2][-]{subsection.17.6.3}{Tracing}{section.17.6}
+\BOOKMARK [1][-]{section.17.7}{HHEd}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.7.1}{Function}{section.17.7}
+\BOOKMARK [2][-]{subsection.17.7.2}{Use}{section.17.7}
+\BOOKMARK [2][-]{subsection.17.7.3}{Tracing}{section.17.7}
+\BOOKMARK [1][-]{section.17.8}{HInit}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.8.1}{Function}{section.17.8}
+\BOOKMARK [2][-]{subsection.17.8.2}{Use}{section.17.8}
+\BOOKMARK [2][-]{subsection.17.8.3}{Tracing}{section.17.8}
+\BOOKMARK [1][-]{section.17.9}{HLEd}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.9.1}{Function}{section.17.9}
+\BOOKMARK [2][-]{subsection.17.9.2}{Use}{section.17.9}
+\BOOKMARK [2][-]{subsection.17.9.3}{Tracing}{section.17.9}
+\BOOKMARK [1][-]{section.17.10}{HList}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.10.1}{Function}{section.17.10}
+\BOOKMARK [2][-]{subsection.17.10.2}{Use}{section.17.10}
+\BOOKMARK [2][-]{subsection.17.10.3}{Tracing}{section.17.10}
+\BOOKMARK [1][-]{section.17.11}{HLMCopy}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.11.1}{Function}{section.17.11}
+\BOOKMARK [2][-]{subsection.17.11.2}{Use}{section.17.11}
+\BOOKMARK [2][-]{subsection.17.11.3}{Tracing}{section.17.11}
+\BOOKMARK [1][-]{section.17.12}{HLRescore}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.12.1}{Function}{section.17.12}
+\BOOKMARK [2][-]{subsection.17.12.2}{Use}{section.17.12}
+\BOOKMARK [2][-]{subsection.17.12.3}{Tracing}{section.17.12}
+\BOOKMARK [1][-]{section.17.13}{HLStats}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.13.1}{Function}{section.17.13}
+\BOOKMARK [2][-]{subsection.17.13.2}{Bigram Generation}{section.17.13}
+\BOOKMARK [2][-]{subsection.17.13.3}{Use}{section.17.13}
+\BOOKMARK [2][-]{subsection.17.13.4}{Tracing}{section.17.13}
+\BOOKMARK [1][-]{section.17.14}{HMMIRest}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.14.1}{Function}{section.17.14}
+\BOOKMARK [2][-]{subsection.17.14.2}{Use}{section.17.14}
+\BOOKMARK [2][-]{subsection.17.14.3}{Command-line options}{section.17.14}
+\BOOKMARK [2][-]{subsection.17.14.4}{Tracing}{section.17.14}
+\BOOKMARK [2][-]{subsection.17.14.5}{Configuration variables}{section.17.14}
+\BOOKMARK [1][-]{section.17.15}{HParse}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.15.1}{Function}{section.17.15}
+\BOOKMARK [2][-]{subsection.17.15.2}{Network Definition}{section.17.15}
+\BOOKMARK [2][-]{subsection.17.15.3}{Compatibility Mode}{section.17.15}
+\BOOKMARK [2][-]{subsection.17.15.4}{Use}{section.17.15}
+\BOOKMARK [2][-]{subsection.17.15.5}{Tracing}{section.17.15}
+\BOOKMARK [1][-]{section.17.16}{HQuant}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.16.1}{Function}{section.17.16}
+\BOOKMARK [2][-]{subsection.17.16.2}{VQ Codebook Format}{section.17.16}
+\BOOKMARK [2][-]{subsection.17.16.3}{Use}{section.17.16}
+\BOOKMARK [2][-]{subsection.17.16.4}{Tracing}{section.17.16}
+\BOOKMARK [1][-]{section.17.17}{HRest}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.17.1}{Function}{section.17.17}
+\BOOKMARK [2][-]{subsection.17.17.2}{Use}{section.17.17}
+\BOOKMARK [2][-]{subsection.17.17.3}{Tracing}{section.17.17}
+\BOOKMARK [1][-]{section.17.18}{HResults}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.18.1}{Function}{section.17.18}
+\BOOKMARK [2][-]{subsection.17.18.2}{Use}{section.17.18}
+\BOOKMARK [2][-]{subsection.17.18.3}{Tracing}{section.17.18}
+\BOOKMARK [1][-]{section.17.19}{HSGen}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.19.1}{Function}{section.17.19}
+\BOOKMARK [2][-]{subsection.17.19.2}{Use}{section.17.19}
+\BOOKMARK [2][-]{subsection.17.19.3}{Tracing}{section.17.19}
+\BOOKMARK [1][-]{section.17.20}{HSLab}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.20.1}{Function}{section.17.20}
+\BOOKMARK [2][-]{subsection.17.20.2}{Use}{section.17.20}
+\BOOKMARK [2][-]{subsection.17.20.3}{Tracing}{section.17.20}
+\BOOKMARK [1][-]{section.17.21}{HSmooth}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.21.1}{Function}{section.17.21}
+\BOOKMARK [2][-]{subsection.17.21.2}{Use}{section.17.21}
+\BOOKMARK [2][-]{subsection.17.21.3}{Tracing}{section.17.21}
+\BOOKMARK [1][-]{section.17.22}{HVite}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.22.1}{Function}{section.17.22}
+\BOOKMARK [2][-]{subsection.17.22.2}{Use}{section.17.22}
+\BOOKMARK [2][-]{subsection.17.22.3}{Tracing}{section.17.22}
+\BOOKMARK [1][-]{section.17.23}{LAdapt}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.23.1}{Function}{section.17.23}
+\BOOKMARK [2][-]{subsection.17.23.2}{Use}{section.17.23}
+\BOOKMARK [2][-]{subsection.17.23.3}{Tracing}{section.17.23}
+\BOOKMARK [1][-]{section.17.24}{LBuild}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.24.1}{Function}{section.17.24}
+\BOOKMARK [2][-]{subsection.17.24.2}{Use}{section.17.24}
+\BOOKMARK [2][-]{subsection.17.24.3}{Tracing}{section.17.24}
+\BOOKMARK [1][-]{section.17.25}{LFoF}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.25.1}{Function}{section.17.25}
+\BOOKMARK [2][-]{subsection.17.25.2}{Use}{section.17.25}
+\BOOKMARK [2][-]{subsection.17.25.3}{Tracing}{section.17.25}
+\BOOKMARK [1][-]{section.17.26}{LGCopy}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.26.1}{Function}{section.17.26}
+\BOOKMARK [2][-]{subsection.17.26.2}{Use}{section.17.26}
+\BOOKMARK [2][-]{subsection.17.26.3}{Tracing}{section.17.26}
+\BOOKMARK [1][-]{section.17.27}{LGList}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.27.1}{Function}{section.17.27}
+\BOOKMARK [2][-]{subsection.17.27.2}{Use}{section.17.27}
+\BOOKMARK [2][-]{subsection.17.27.3}{Tracing}{section.17.27}
+\BOOKMARK [1][-]{section.17.28}{LGPrep}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.28.1}{Function}{section.17.28}
+\BOOKMARK [2][-]{subsection.17.28.2}{Use}{section.17.28}
+\BOOKMARK [2][-]{subsection.17.28.3}{Tracing}{section.17.28}
+\BOOKMARK [1][-]{section.17.29}{LLink}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.29.1}{Function}{section.17.29}
+\BOOKMARK [2][-]{subsection.17.29.2}{Use}{section.17.29}
+\BOOKMARK [2][-]{subsection.17.29.3}{Tracing}{section.17.29}
+\BOOKMARK [1][-]{section.17.30}{LMerge}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.30.1}{Function}{section.17.30}
+\BOOKMARK [2][-]{subsection.17.30.2}{Use}{section.17.30}
+\BOOKMARK [2][-]{subsection.17.30.3}{Tracing}{section.17.30}
+\BOOKMARK [1][-]{section.17.31}{LNewMap}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.31.1}{Function}{section.17.31}
+\BOOKMARK [2][-]{subsection.17.31.2}{Use}{section.17.31}
+\BOOKMARK [2][-]{subsection.17.31.3}{Tracing}{section.17.31}
+\BOOKMARK [1][-]{section.17.32}{LNorm}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.32.1}{Function}{section.17.32}
+\BOOKMARK [2][-]{subsection.17.32.2}{Use}{section.17.32}
+\BOOKMARK [2][-]{subsection.17.32.3}{Tracing}{section.17.32}
+\BOOKMARK [1][-]{section.17.33}{LPlex}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.33.1}{Function}{section.17.33}
+\BOOKMARK [2][-]{subsection.17.33.2}{Use}{section.17.33}
+\BOOKMARK [2][-]{subsection.17.33.3}{Tracing}{section.17.33}
+\BOOKMARK [1][-]{section.17.34}{LSubset}{chapter.17}
+\BOOKMARK [2][-]{subsection.17.34.1}{Function}{section.17.34}
+\BOOKMARK [2][-]{subsection.17.34.2}{Use}{section.17.34}
+\BOOKMARK [2][-]{subsection.17.34.3}{Tracing}{section.17.34}
+\BOOKMARK [0][-]{chapter.18}{Configuration Variables}{part.4}
+\BOOKMARK [1][-]{section.18.1}{Configuration Variables used in Library Modules}{chapter.18}
+\BOOKMARK [1][-]{section.18.2}{Configuration Variables used in Tools}{chapter.18}
+\BOOKMARK [0][-]{chapter.19}{Error and Warning Codes}{part.4}
+\BOOKMARK [1][-]{section.19.1}{Generic Errors}{chapter.19}
+\BOOKMARK [1][-]{section.19.2}{Summary of Errors by Tool and Module}{chapter.19}
+\BOOKMARK [0][-]{chapter.20}{HTK Standard Lattice Format \(SLF\)}{part.4}
+\BOOKMARK [1][-]{section.20.1}{SLF Files}{chapter.20}
+\BOOKMARK [1][-]{section.20.2}{Format}{chapter.20}
+\BOOKMARK [1][-]{section.20.3}{Syntax}{chapter.20}
+\BOOKMARK [1][-]{section.20.4}{Field Types}{chapter.20}
+\BOOKMARK [1][-]{section.20.5}{Example SLF file}{chapter.20}

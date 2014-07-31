@@ -449,7 +449,7 @@ WriteAsciiSamples(void      *data,
 {
    int          type;
    long length;
-   long rtn;
+   long rtn = 0L;
    FieldSpec    *field;
    int          i, rank;
    long j, step, stride, recnum;
@@ -861,8 +861,8 @@ static int
 ReadAsciiName(int depth, char **names, FILE *file)
 {
    int     n_id;                /* number of component identifiers */
-   char    *id;         /* component to match */
-   int     n_ch;                /* number of characters */
+   char    *id = NULL;          /* component to match */
+   int     n_ch = 0;            /* number of characters */
    int     ch;                  /* input character */
    long    alloc_size;
 
@@ -3047,7 +3047,7 @@ AsciiWriteChar(char     *data,
                  * break (e.g. "\x2f" "f") resolves the ambiguity.
                  */
                 fprintf(file,
-                        (j < size - 1 && isxdigit(data[j+1]))
+                        (j < size - 1 && isxdigit((int) data[j+1]))
                         ? "\\x%02x\" \""
                         : "\\x%02x",
                         ch);
@@ -3132,8 +3132,8 @@ AsciiWriteWchar(Wchar   *data,
                      fprintf(file,
                              (j < size - 1 && (((Ulong) data[j+1] < 0x7f)
                                                && isxdigit(data[j+1])))
-                             ? "\\x%04x\" \""
-                             : "\\x%04x",
+                             ? "\\x%04lx\" \""
+                             : "\\x%04lx",
                              ch);
                   }
                break;

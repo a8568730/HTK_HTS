@@ -21,7 +21,7 @@
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
 /*                                                             */
-/*          2001-2002 Cambridge University                     */
+/*          2001-2004 Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -32,8 +32,8 @@
 /*         File: HNet.c  Network and Lattice Functions         */
 /* ----------------------------------------------------------- */
 
-char *hnet_version = "!HVER!HNet:   3.2.1 [CUED 15/10/03]";
-char *hnet_vc_id = "$Id: HNet.c,v 1.15 2003/10/15 08:10:12 ge204 Exp $";
+char *hnet_version = "!HVER!HNet:   3.3 [CUED 28/04/05]";
+char *hnet_vc_id = "$Id: HNet.c,v 1.2 2005/05/12 15:51:24 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -175,6 +175,7 @@ Lattice *NewLattice(MemHeap *heap,int nn,int na)
 
    for(i=0,ln=lat->lnodes;i<nn;i++,ln++) {
       ln->time=0.0;ln->word=NULL;ln->tag=NULL;
+      ln->score=0.0;
       ln->foll=ln->pred=NARC;
       ln->hook=NULL;
       ln->sublat=NULL;
@@ -263,6 +264,7 @@ Lattice *NewILattice(MemHeap *heap,int nn,int na,Lattice *info)
    else
       for(i=0,ln=lat->lnodes;i<lat->nn;i++,ln++) {
          ln->time=0.0;ln->word=NULL;ln->tag=NULL;
+         ln->score=0.0;
          ln->foll=ln->pred=NARC;
          ln->hook=NULL;
          ln->sublat=NULL;
@@ -528,7 +530,7 @@ static void OutputAlign(LArc *la,int format,FILE *file)
 ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
 {
    int i, *order, *rorder, st, en;
-   LNode *ln;
+   LNode *ln = NULL;
    LArc *la;
 
    /* Rather than return an error assume labels on nodes !! */
@@ -772,9 +774,9 @@ static LatFieldType ParseNumber(double *rval,char *buf)
    LatFieldType type;
 
    type=STR_FIELD;
-   if (isdigit(buf[0]) || 
+   if (isdigit((int) buf[0]) || 
        ((buf[0]=='-' || buf[0]=='+') && 
-        isdigit(buf[1]))) {
+        isdigit((int) buf[1]))) {
       val=strtod(buf,&ptr);
       if (ptr != buf) {
          type=INT_FIELD;
@@ -873,7 +875,7 @@ static int ReadAlign(Lattice *lat,LArc *la,char *buf)
 }
 
 /* ReadOneLattice: Read (one level) of lattice from file */
-static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc, 
+Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc, 
                                Boolean shortArc, Boolean add2Dict)
 {
    int i,s,e,n,v=0,nn,na;
@@ -890,7 +892,7 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
    float logbase = 1.0, tscale = 1.0;
 
    char *uttstr,*lmnstr,*vocstr,*hmmstr,*sublatstr,*tag;
-   SubLatDef *subLatId;
+   SubLatDef *subLatId = NULL;
 
    lat = (Lattice *) New(heap,sizeof(Lattice));
    lat->heap=heap; lat->subLatId=NULL; lat->chain=NULL;
@@ -985,6 +987,7 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
       ln->hook=NULL;
       ln->pred=NULL;
       ln->foll=NULL;
+      ln->score=0.0;
    }
    for(i=0, la=lat->larcs; i<na; i++, la=NextLArc(lat,la)) {
       la->lmlike=0.0;
