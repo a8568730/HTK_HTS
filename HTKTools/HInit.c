@@ -32,7 +32,7 @@
 /*         File: HInit.c: HMM initialisation program           */
 /* ----------------------------------------------------------- */
 
-char *hinit_version = "!HVER!HInit:   3.4 [CUED 25/04/06]";
+char *hinit_version = "!HVER!HInit:   3.4.1 [CUED 12/03/09]";
 char *hinit_vc_id = "$Id: HInit.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 /*

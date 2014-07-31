@@ -32,7 +32,7 @@
 /*    File: HDMan:   pronunciation dictionary manager          */
 /* ----------------------------------------------------------- */
 
-char *hdman_version = "!HVER!HDMan:   3.4 [CUED 25/04/06]";
+char *hdman_version = "!HVER!HDMan:   3.4.1 [CUED 12/03/09]";
 char *hdman_vc_id = "$Id: HDMan.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 #include "HShell.h"
@@ -60,7 +60,7 @@ static int nParm = 0;               /* total num params */
 
 #define MAXARGS  100    /* max args in any command */
 /* MAXPHONES (max phones in any pronunciation) is defined in HDict.h */
-#define MAXPRONS 200     /* max number of pronunciations per word */
+#define MAXPRONS 400     /* max number of pronunciations per word */
 #define MAXDICTS 100     /* max number of source dictionaries */
 #define MAXCONS  20     /* max number of contexts per script */
 #define MAXPVOC  500    /* max num distinct phones */

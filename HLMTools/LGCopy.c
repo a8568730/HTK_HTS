@@ -29,7 +29,7 @@
 /*   File: LGCopy - copy ngram files and optionally map OOVs   */
 /* ----------------------------------------------------------- */
 
-char *lgcopy_version = "!HVER!LGCopy:   3.4 [CUED 25/04/06]";
+char *lgcopy_version = "!HVER!LGCopy:   3.4.1 [CUED 12/03/09]";
 char *lgcopy_vc_id = "$Id: LGCopy.c,v 1.1.1.1 2006/10/11 09:54:44 jal58 Exp $";
 
 #include "HShell.h"

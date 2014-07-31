@@ -29,7 +29,7 @@
 /*      File: LFile.c: link LM files to make a class LM        */
 /* ----------------------------------------------------------- */
 
-char *llink_version = "!HVER!LLink:   3.4 [CUED 25/04/06]";
+char *llink_version = "!HVER!LLink:   3.4.1 [CUED 12/03/09]";
 char *llink_vc_id = "$Id: LLink.c,v 1.1.1.1 2006/10/11 09:54:44 jal58 Exp $";
 
 #include "HShell.h"

@@ -19,7 +19,7 @@
 /*         File: HDict.h  Dictionary Storage                   */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HDict:   3.3 [CUED 28/04/05] */
+/* !HVER!HDict:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HDICT_H_
 #define _HDICT_H_

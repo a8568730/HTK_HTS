@@ -26,7 +26,7 @@
 /*         File: HArc.c   Forward Backward routines        */
 /* ----------------------------------------------------------- */
 
-char *arc_version = "!HVER!HArc:   3.4 [CUED 25/04/06]";
+char *arc_version = "!HVER!HArc:   3.4.1 [CUED 12/03/09]";
 char *arc_vc_id = "$Id: HArc.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 

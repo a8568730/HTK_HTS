@@ -474,7 +474,32 @@ and \textit{Receiver Operating Curve} (ROC) information.
 \index{NIST}\index{FOM}\index{Figure of Merit}
 
 
-\mysect{What's New In Version 3.4}{whatsnew}
+\mysect{What's New In Version 3.4.1}{whatsnew}
+
+This \index{new features!in Version 3.4.1} section lists the new
+features in \HTK\ Version 3.4.1 compared to the preceding Version~3.4.
+
+\begin{enumerate}
+\item The HTK Book has been extended to include tutorial sections on
+  \htool{HDecode} and discriminative training. An initial description of the
+  theory and options for discriminative training has also been added.
+
+\item \htool{HDecode} has been extended to support decoding with trigram
+  language models.
+
+\item Lattice generation with \htool{HDecode} has been improved to yield a
+  greater lattice density.
+
+\item \htool{HVite} now supports model-marking of lattices.
+
+\item Issues with \htool{HERest} using single-pass retraining with HLDA and
+  other input transforms have been resolved.
+
+\item Many other smaller changes and bug fixes have been integrated.
+\end{enumerate}
+
+
+\mysubsect{New In Version 3.4}{nv3.4}
 
 This \index{new features!in Version 3.4} section lists the new
 features in \HTK\ Version 3.4 compared to the preceding Version~3.3.
@@ -499,7 +524,7 @@ semitied and HLDA transformations.
 \item Many other smaller changes and bug fixes have been integrated.
 \end{enumerate}
 
-\mysubsect{New In Version 3.3}{}
+\mysubsect{New In Version 3.3}{nv3.3}
 
 This \index{new features!in Version 3.3} section lists the new
 features in \HTK\ Version 3.3 compared to the preceding Version~3.2.
@@ -513,7 +538,7 @@ adaptive training with constrained MLLR transforms.
 \item Many other smaller changes and bug fixes have been integrated.
 \end{enumerate}
 
-\mysubsect{New In Version 3.2}{}
+\mysubsect{New In Version 3.2}{nv3.2}
 
 This \index{new features!in Version 3.2} section lists the new
 features in \HTK\ Version 3.2 compared to the preceding Version~3.1.
@@ -640,7 +665,7 @@ recognition.
 binary files (waveforms, binary MMFs, binary SLFs, \htool{HERest} accumulators)
 across different machine architectures incorporating automatic byte swapping.
 By default, all binary data files handled by the tools are now written/read in
-big-endian (\texttt{NONVAX}) byte order. The default behavior can be changed
+big-endian (\texttt{NONVAX}) byte order. The default behaviour can be changed
 via the configuration parameters \texttt{NATURALREADORDER} and
 \texttt{NATURALWRITEORDER}.
 

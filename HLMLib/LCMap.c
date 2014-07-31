@@ -29,7 +29,7 @@
 /*      File: LCMap:  Class Map Routines                       */
 /* ----------------------------------------------------------- */
 
-char *lcmap_version = "!HVER!LCMap:   3.4 [CUED 25/04/06]";
+char *lcmap_version = "!HVER!LCMap:   3.4.1 [CUED 12/03/09]";
 char *lcmap_vc_id = "$Id: LCMap.c,v 1.1.1.1 2006/10/11 09:54:43 jal58 Exp $";
 
 #include "HShell.h"

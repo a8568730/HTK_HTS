@@ -29,7 +29,7 @@
 /*      File: LUtil:    General Utility Routines               */
 /* ----------------------------------------------------------- */
 
-char *lutil_version = "!HVER!LUtil:   3.4 [CUED 25/04/06]";
+char *lutil_version = "!HVER!LUtil:   3.4.1 [CUED 12/03/09]";
 char *lutil_vc_id = "$Id: LUtil.c,v 1.1.1.1 2006/10/11 09:54:43 jal58 Exp $";
 
 #include "HShell.h"

@@ -32,7 +32,7 @@
 /*      File: HList.c: List a Speech File or Audio Source      */
 /* ----------------------------------------------------------- */
 
-char *hlist_version = "!HVER!HList:   3.4 [CUED 25/04/06]";
+char *hlist_version = "!HVER!HList:   3.4.1 [CUED 12/03/09]";
 char *hlist_vc_id = "$Id: HList.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 #include "HShell.h"

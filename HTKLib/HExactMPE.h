@@ -27,7 +27,7 @@
 /*         File: HExactMPE.h   MPE implementation (exact)      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HExactMPE:   3.4 [CUED 08/07/05] */
+/* !HVER!HExactMPE:   3.4.1 [CUED 12/03/09] */
 
 
 /* A (rather long) routine called from HFBLat.c, relating to the 

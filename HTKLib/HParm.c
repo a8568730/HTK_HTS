@@ -32,7 +32,7 @@
 /*       File: HParm.c:  Speech Parameter File Input/Output    */
 /* ----------------------------------------------------------- */
 
-char *hparm_version = "!HVER!HParm:   3.4 [CUED 25/04/06]";
+char *hparm_version = "!HVER!HParm:   3.4.1 [CUED 12/03/09]";
 char *hparm_vc_id = "$Id: HParm.c,v 1.1.1.1 2006/10/11 09:54:58 jal58 Exp $";
 
 #include "HShell.h"
@@ -705,7 +705,7 @@ void SetParmHMMSet(Ptr aset)
    Load a global feature transform given in the channel config setup via a function
    defined in HModel since the transform is also treated as a macro. Afterwards check 
    the consistency between the transform's model id. If the channel global feature 
-   transform setup is empty the pass on all the information from the loaded transform
+   transform setup is empty then pass on all the information from the loaded transform
 */
 static void LoadMat (MemHeap *x, IOConfig cf)  /*static??*/
 {
@@ -719,7 +719,7 @@ static void LoadMat (MemHeap *x, IOConfig cf)  /*static??*/
       SetInputXFormConfig(cf,xf);
    } else { /* check that transform is the same as the model one */
       if (strcmp(xf->xformName,cf->xform->xformName)) {
-         HRError(999,"Possibly incompatible XForm macros in MMF and config file %s and %s",
+         HRError(999,"Possibly incompatible XForm macros in MMF and config file %s and %s (SPR?)",
                  xf->xformName,cf->xform->xformName);   
          SetInputXFormConfig(cf,xf);
       }    
@@ -743,7 +743,7 @@ static AdaptXForm *LoadSideXForm(IOConfig cf, char *fname)
 
    /* Check that this is a valid side XForm */
    if (xf->bclass->numClasses != 1) HError(999,"Can only use global bseclasses for sideXforms");
-   if (xf->parentXForm != NULL) HError(999,"Cannot have parent xfprms with sideXforms");
+   if (xf->parentXForm != NULL) HError(999,"Cannot have parent xforms with sideXforms");
    if (xf->xformSet->xkind != CMLLR) HError(999,"Can only use CMLLR as sideXforms");
 
    return xf;
@@ -946,8 +946,10 @@ ReturnStatus SetChannel(char *confName)
    char buf[MAXSTRLEN],*in,*out;
    Boolean b;
 
-   if (confName==NULL) curChan=defChan;
-   else {
+   if (confName==NULL) {
+      curChan=defChan;
+       buf[0] = '\0';
+   } else {
       for (in=confName,out=buf;*in!=0;in++,out++) *out=toupper(*in);
       *out=0;
       for(curChan=defChan;curChan!=NULL;curChan=curChan->next) 
@@ -969,10 +971,18 @@ ReturnStatus SetChannel(char *confName)
       }
       /* Default are the standard HPARM parameters */
       curChan->cf=defChan->cf;
+      /* Need to reset the transforms so that the alignment channel assumes nothing */
+      (curChan->cf).MatTranFN = NULL;
       ReadIOConfig(&curChan->cf);
-      /* This should be after setting the model up. Set input xform */
-      hset->xf = (curChan->cf).xform;
-      if (hset->xf != NULL) hset->xf->nUse++;
+      if (((curChan->cf).MatTranFN == NULL) &&  ((curChan->cf).xform != NULL))
+         (curChan->cf).MatTranFN = (defChan->cf).MatTranFN;
+      /* This should be after setting the model up. Set input xform if HPARM1 is being used */
+      if ((hset->xf == NULL) && (strcmp("HPARM1",buf)==0)) {
+         hset->xf = (curChan->cf).xform;
+      } else {
+         /* commented out so that stored in header, rather than separately */
+         /*  if (hset->xf != NULL) hset->xf->nUse++; */
+      }
       if(ReadChanFiles(curChan)<SUCCESS){
          HRError(6350,"SetChannel: ReadChanFiles for new channel failed");
          return(FAIL);
@@ -1642,7 +1652,7 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
    }
    if ((cf->MatTranFN != NULL) && (!cf->preQual)) { 
       tgtBase = cf->tgtPK&BASEMASK;
-      if ((cf->curPK&BASEMASK)!=tgtBase && (tgtBase==LPCEPSTRA || tgtBase==MFCC || tgtBase==PLP))
+      if ((cf->srcPK&BASEMASK)!=tgtBase && (tgtBase==LPCEPSTRA || tgtBase==MFCC || tgtBase==PLP))
          size = TotalComps(cf->numCepCoef,cf->tgtPK);
       else 
 	size = TotalComps(NumStatic(cf->srcUsed,cf->srcPK),cf->tgtPK);
@@ -1676,23 +1686,23 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
       AddDiffs(data+cf->nCols*ds,de-ds+1,cf->nCols,si,ti,d,cf->accWin,
 	       hdValid+ds,tlValid-ds,cf->v1Compat,cf->simpleDiffs);
       cf->curPK |= HASACCS;  cf->nUsed += d;
-      if ((cf->tgtPK&HASTHIRD) && !(cf->curPK&HASTHIRD)) {
-         d = span[9]-span[8]+1; si = span[6]; ti = span[8];
-         if (trace&T_QUA)
-            printf("\nHParm:  adding %d thirds to %d rows",d,nRows);
-         AddDiffs(data,nRows,cf->nCols,si,ti,d,cf->thirdWin,
+   }
+   if ((cf->tgtPK&HASTHIRD) && !(cf->curPK&HASTHIRD)) {
+     d = span[9]-span[8]+1; si = span[6]; ti = span[8];
+     if (trace&T_QUA)
+         printf("\nHParm:  adding %d thirds to %d rows",d,nRows);
+     AddDiffs(data,nRows,cf->nCols,si,ti,d,cf->thirdWin,
                   hdValid,tlValid,cf->v1Compat,cf->simpleDiffs);
-         cf->curPK |= HASTHIRD;  cf->nUsed += d;
-         /* Adding fourth order differentials */
-         if (highDiff == TRUE) {
-            d = span[11]-span[10]+1; si = span[8]; ti = span[10];
-            if (trace&T_QUA)
-               printf("\nHParm:  adding %d fourths to %d rows\n",d,nRows);
-            AddDiffs(data,nRows,cf->nCols,si,ti,d,cf->fourthWin,
-                     hdValid,tlValid,cf->v1Compat,cf->simpleDiffs);
-            cf->nUsed += d;
-         }
-      }
+     cf->curPK |= HASTHIRD;  cf->nUsed += d;
+     /* Adding fourth order differentials */
+     if (highDiff == TRUE) {
+       d = span[11]-span[10]+1; si = span[8]; ti = span[10];
+       if (trace&T_QUA)
+           printf("\nHParm:  adding %d fourths to %d rows\n",d,nRows);
+       AddDiffs(data,nRows,cf->nCols,si,ti,d,cf->fourthWin,
+                    hdValid,tlValid,cf->v1Compat,cf->simpleDiffs);
+       cf->nUsed += d;
+     }
    }
 
    /* Zero Mean the static coefficients if required */
@@ -4647,6 +4657,7 @@ void GetBufferInfo(ParmBuf pbuf, BufferInfo *info)
    info->saveCompressed = cf->saveCompressed;
    info->saveWithCRC = cf->saveWithCRC;
    info->matTranFN = cf->MatTranFN;
+   info->xform = cf->xform;
 
    /* Fake spDetParmsSet to make self calibrating appear always set */
    info->spDetParmsSet=(chan->spDetParmsSet||(cf->selfCalSilDet!=0));

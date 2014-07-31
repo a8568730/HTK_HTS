@@ -32,7 +32,7 @@
 /*         File: HTrain.c   HMM Training Support Routines      */
 /* ----------------------------------------------------------- */
 
-char *htrain_version = "!HVER!HTrain:   3.4 [CUED 25/04/06]";
+char *htrain_version = "!HVER!HTrain:   3.4.1 [CUED 12/03/09]";
 char *htrain_vc_id = "$Id: HTrain.c,v 1.1.1.1 2006/10/11 09:54:58 jal58 Exp $";
 
 #include "HShell.h"

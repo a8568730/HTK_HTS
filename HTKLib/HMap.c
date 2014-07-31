@@ -38,7 +38,7 @@
   (ie the forward-backward allignments have been performed).
 */
 
-char *hmap_version = "!HVER!HMap: 3.4 [CUED 25/04/06]";
+char *hmap_version = "!HVER!HMap: 3.4.1 [CUED 12/03/09]";
 char *hmap_vc_id = "$Id: HMap.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */

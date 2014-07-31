@@ -19,7 +19,7 @@
 /*         File: HMath.c   Math Support Module                 */
 /* ----------------------------------------------------------- */
 
-char *hmath_version = "!HVER!HMath:   3.4 [CUED 25/04/06]";
+char *hmath_version = "!HVER!HMath:   3.4.1 [CUED 12/03/09]";
 char *hmath_vc_id = "$Id: HMath.c,v 1.1.1.1 2006/10/11 09:54:58 jal58 Exp $";
 
 /*
@@ -1287,6 +1287,7 @@ static Boolean LUDecompose(Matrix a, int *perm, int *sign)
          for (i=j+1; i<=n;i++) a[i][j] *= yy;
       }
    }
+   FreeVector(&gstack,vv);
    return(TRUE);
 }
 
@@ -1365,6 +1366,7 @@ static Boolean DLUDecompose(DMatrix a, int *perm, int *sign)
          for (i=j+1; i<=n;i++) a[i][j] *= yy;
       }
    }
+   FreeDVector(&gstack,vv);
    return(TRUE);
 }
 

@@ -8,7 +8,7 @@
 #                                                             
 # ----------------------------------------------------------- 
 #         Copyright: Cambridge University
-#          1995-2005 Engineering Department
+#          1995-2009 Engineering Department
 #                    http://htk.eng.cam.ac.uk
 #                    http://mi.eng.cam.ac.uk
 #                 
@@ -22,8 +22,8 @@
 
 # After editing this file, run "autoconf" to regenerate "configure".
 
-AC_INIT(HTK,3.4,htk-mgr@eng.cam.ac.uk)
-AC_COPYRIGHT(Copyright 2003-2005 University of Cambridge)
+AC_INIT(HTK,3.4.1,htk-mgr@eng.cam.ac.uk)
+AC_COPYRIGHT(Copyright 2003-2009 University of Cambridge)
 
 dnl Checks for programs.
 AC_PROG_MAKE_SET
@@ -141,6 +141,16 @@ case "$host" in
 				ARCH=ASCII
 				CPU=darwin
 				BINARY_EXTENSION=.exe
+		;;				
+		i386*darwin*)
+				CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' -I/usr/include/malloc $CFLAGS"
+				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
+				ARCH=darwin
+				Objcopy=echo
+				PRILF="-x"
+				CPU=darwin
+				SHRLF="-shared"
+				LIBEXT=dylib
 		;;				
 		darwin)
 				CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' $CFLAGS"

@@ -30,7 +30,7 @@ SYSLF = /nologo /subsystem:console /incremental:no
 #SYSLF = /DEBUG /DEBUGTYPE:BOTH /nologo /subsystem:console /incremental:no
 
 # the following is for HTK tools linked with HTKLib
-HTKCF = /I "..\HTKLib" /I "."
+HTKCF = /I "..\HTKLib" /I "." /D "PHNALG"
 
 htklib = ..\HTKLib\HTKLib.$(CPU).lib 
 
@@ -41,7 +41,7 @@ syslib = winmm.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib \
 
 libs = $(syslib) $(htklib) 
 
-tools = HSLab.exe HInit.exe HRest.exe HERest.exe HVite.exe HResults.exe \
+tools = HMMIRest.exe HSLab.exe HInit.exe HRest.exe HERest.exe HVite.exe HResults.exe \
 	HList.exe HCopy.exe HLEd.exe HDMan.exe HHEd.exe HParse.exe \
 	HBuild.exe HSmooth.exe HCompV.exe HQuant.exe HSGen.exe HLStats.exe \
 	HLRescore.exe
@@ -83,6 +83,8 @@ HERest.exe:	HERest.obj
 HRest.exe:	HRest.obj
 
 HLRescore.exe:	HLRescore.obj
+
+HMMIRest.exe:	HMMIRest.obj
 
 all:	$(tools)
 	echo done

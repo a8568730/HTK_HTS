@@ -19,7 +19,7 @@
 /*    File: HLStats.c: gather statistics from transcriptions   */
 /* ----------------------------------------------------------- */
 
-char *hlstats_version = "!HVER!HLStats:   3.4 [CUED 25/04/06]";
+char *hlstats_version = "!HVER!HLStats:   3.4.1 [CUED 12/03/09]";
 char *hlstats_vc_id = "$Id: HLStats.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 #include "HShell.h"

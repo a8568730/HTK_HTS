@@ -26,7 +26,7 @@
 /*       File: HLat.h:  Lattice Manipulation                   */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HLat:   3.3 [CUED 28/04/05] */
+/* !HVER!HLat:   3.4.1 [CUED 12/03/09] */
 
 
 #ifndef _HLAT_H_

@@ -27,7 +27,7 @@
 /*         File: HFBLat.c   Lattice Forward Backward routines  */
 /* ----------------------------------------------------------- */
 
-char *hfblat_version = "!HVER!HFBLat:   3.4 [CUED 25/04/06]";
+char *hfblat_version = "!HVER!HFBLat:   3.4.1 [CUED 12/03/09]";
 char *hfblat_vc_id = "$Id: HFBLat.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 /*
@@ -850,8 +850,13 @@ static void Setotprob(int t)
                switch (fbInfo->hsKind){
                case TIEDHS:	 /* SOutP deals with tied mix calculation */
                case DISCRETEHS:
-		  outprob[j][0] = NewOtprobVec(fbInfo->aInfo->mem,1);
-		  outprob[j][0][0] = SOutP(fbInfo->hset, s, &fbInfo->al_ot, ste);
+                  if (fbInfo->S==1) {
+                     outprob[j][0] = NewOtprobVec(fbInfo->aInfo->mem,1);
+                     outprob[j][0][0] = SOutP(fbInfo->hset,s,&fbInfo->al_ot, ste);
+                  } else {
+                     outprob[j][s] = NewOtprobVec(fbInfo->aInfo->mem,1);
+                     outprob[j][s][0] = SOutP(fbInfo->hset,s,&fbInfo->al_ot, ste);
+                  }
 		  break;
                case PLAINHS: /* x = SOutP(fbInfo->hset,s,&ot,ste);    break; commented out by dp10006 since
                                 sharing is needed in any case for lattices. */
@@ -1098,7 +1103,7 @@ void DoAllMixUpdates(int t){
              up_otvs = ApplyCompFXForm(mp,fbInfo->al_ot.fv[s],fbInfo->paXForm,&det,t);
          } 
          if (fbInfo->uFlags&UPXFORM) 
-            AccAdaptFrame(Lr, up_otvs, mp, t);   /* note: discriminative transform update needs to be investigated further */
+            AccAdaptFrame(fbInfo->hset,Lr, up_otvs, mp, t);   /* note: discriminative transform update needs to be investigated further */
 
          /* -------------------- (c) Std Mixture updates --------------------*/
          if (fbInfo->uFlags&UPMEANS) { /* cant update vars but not means. */

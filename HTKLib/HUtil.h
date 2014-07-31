@@ -19,7 +19,7 @@
 /*         File: HUtil.h      HMM utility routines             */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HUtil:   3.3 [CUED 28/04/05] */
+/* !HVER!HUtil:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HUTIL_H_
 #define _HUTIL_H_

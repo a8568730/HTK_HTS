@@ -92,13 +92,13 @@ Module & Name & Default & Description  \\ \hline\hline}
   & \texttt{USEHAMMING} & \texttt{T} & Use a Hamming window \\ \cline{2-4}
   & \texttt{DOUBLEFFT} & \texttt{F} & Use twice the required size for FFT \\ \cline{2-4}
   & \texttt{PREEMCOEF} & \texttt{0.97} & Set pre-emphasis coefficient \\ \cline{2-4}
-  & \texttt{LPCORDER} &  \texttt{12} &  Order of lpc analysis \\ \cline{2-4}
+  & \texttt{LPCORDER} &  \texttt{12} &  Order of LPC analysis \\ \cline{2-4}
   & \texttt{NUMCHANS} & \texttt{20} & Number of filterbank channels \\ \cline{2-4}
   & \texttt{LOFREQ} & \texttt{-1.0} & Low frequency cut-off in fbank analysis \\ \cline{2-4}
   & \texttt{HIFREQ}  & \texttt{-1.0} & High frequency cut-off in fbank analysis \\  \cline{2-4}
   & \texttt{WARPFREQ} & \texttt{1.0} & Frequency warping factor \\ \cline{2-4}
   & \texttt{WARPLCUTOFF} &  & Lower frequency threshold for non-linear warping  \\ \cline{2-4}
-  & \texttt{CMEANDIR} &  & Directory to find cepstral mean vecotrs  \\ \cline{2-4}
+  & \texttt{CMEANDIR} &  & Directory to find cepstral mean vectors  \\ \cline{2-4}
   & \texttt{CMEANMASK} &  & Filename mask for cepstral mean vectors  \\ \cline{2-4}
   & \texttt{CMEANPATHMASK} &  & Path name mask for cepstral mean vectors, the matched string is used to extend CMEANDIR string \\ \cline{2-4}
   & \texttt{VARSCALEDIR} &  & Directory to find cepstral variance vectors  \\ \cline{2-4}
@@ -273,7 +273,8 @@ normally be measured rather than supplied in configuration \\ \cline{2-4}
   & \texttt{KEEPXFORMDISTINCT} & \texttt{T} & Save transforms separate files rather than a TMF \\ \cline{2-4}
   & \texttt{MAXSEMITIEDITER} & \texttt{10} & Maximum iterations of model/transform updates for semitied systems \\ \cline{2-4}
   & \texttt{SEMITIEDMACRO} & \texttt{SEMITIED} & Macroname for the semitied transform\\ \cline{2-4}
-  & \texttt{INITNUISANCEFR} & \texttt{T} & Initiliase nuisance dimensions using Fisher ratios\\ \cline{2-4}
+  & \texttt{SEMITIED2INPUTXFORM} & \texttt{F} & Store the semi-tied transform as an input xform\\ \cline{2-4}
+  & \texttt{INITNUISANCEFR} & \texttt{T} & Initialise nuisance dimensions using Fisher ratios\\ \cline{2-4}
   & \texttt{NUMNUISANCEDIM} & 0 & Number of dimensions to remove using HLDA\\ \hline
 
 
@@ -377,7 +378,7 @@ Module & Name & Default & Description  \\ \hline\hline}
   & \texttt{ALIGNMODELMMF} & & MMF file for alignment (2-model reest)  \\ \cline{2-4}
   & \texttt{ALIGNHMMLIST}  & & Model list for alignment (2-model reest) \\ \cline{2-4}
   & \texttt{ALIGNMODELDIR} & & Dir containing HMMs for alignment (2-model reest).  \\ \cline{2-4}
-  & \texttt{ALIGNXFORMDIR} & & Ext to be used with above Dir (2model-reest) \\  \cline{2-4}
+  & \texttt{ALIGNMODELEXT} & & Ext to be used with above Dir (2model-reest) \\  \cline{2-4}
   & \texttt{ALIGNXFORMEXT} & & Input transform ext to be used with 2model-reest \\  \cline{2-4}
   & \texttt{ALIGNXFORMDIR} & & Input transform dir to be used with 2model-reest \\  \cline{2-4}
   & \texttt{INXFORMMASK} & & Input transform mask (default output transform mask) \\  \cline{2-4}
@@ -421,7 +422,7 @@ Module & Name & Default & Description  \\ \hline\hline}
 & \texttt{PRIORTAU} & \texttt{0.0} & Prior smoothing constant value for Gaussian means and variances \\ \cline{2-4}
 & \texttt{PRIORTAUW} & \texttt{0.0} & Prior smoothing constant value for component weights \\ \cline{2-4}
 & \texttt{PRIORTAUT} & \texttt{0.0} & Prior smoothing constant value for transition probabilities \\ \cline{2-4}
-& \texttt{PRIORK} & \texttt{0.0} & Weights (between 0 and 1) on the prior. \\ \cline{2-4}
+& \texttt{STATICPRIOR} & \texttt{F} & Use a static prior for parameter estimation \\ \cline{2-4}
 & \texttt{MIXWEIGHTFLOOR} & \texttt{2.0} & Component weights floor (as the number of times of \texttt{MINMIX}) \\ \cline{2-4}
 & \texttt{LATFILEMASK} & \texttt{NULL} & Mask for lattice filename \\ \cline{2-4}
 & \texttt{LATMASKNUM} & \texttt{NULL} & Mask for numerator lattice directory \\ \cline{2-4}
@@ -429,7 +430,9 @@ Module & Name & Default & Description  \\ \hline\hline}
 & \texttt{INXFORMMASK} & \texttt{NULL} & Speaker mask for loading input adaptation transforms \\ \cline{2-4}
 & \texttt{PAXFORMMASK} & \texttt{NULL} & Speaker mask for loading parent adaptation transforms \\ \cline{2-4}
 & \texttt{USELLF} & \texttt{F} & Load lattices in LLF format \\ \cline{2-4}
-& \texttt{UPDATEMODE} & \texttt{UPMODE\_UPDATE} & Update mode. Possible values are \texttt{UPMODE\_UPDATE}, \texttt{UPMODE\_DUMP} or \texttt{UPMODE\_BOTH}\\ \hline
+  & \texttt{UPDATEMODE} & & with \texttt{-p 0} choose mode:
+  \texttt{UDATE} update models (default), \texttt{DUMP} dump sum of
+  accumulators, \texttt{BOTH} do both\\  \hline
 
 % HParse
 \htool{HParse} & \texttt{V1COMPAT} & \texttt{F} & Enable compatibility with HTK V1.X \\ \hline
@@ -440,7 +443,7 @@ Module & Name & Default & Description  \\ \hline\hline}
   & \texttt{STRIPCONTEXT} & \texttt{F} & Strip triphone contexts \\ \cline{2-4}
 \htool{HResults} & \texttt{IGNORECASE} & \texttt{F} & If enabled,
   converts labels to uppercase \\ \cline{2-4}
-  & \texttt{NISTSCORE} & \texttt{F} & Use NIST fomatting \\ \cline{2-4}
+  & \texttt{NISTSCORE} & \texttt{F} & Use NIST formatting \\ \cline{2-4}
   & \texttt{PHRASELABEL} & \texttt{SENT} & Label for phrase level statistics \\ \cline{2-4}
   & \texttt{PHONELABEL} & \texttt{WORD} & Label for word level statistics \\ \cline{2-4}
   & \texttt{SPEAKERMASK} & \texttt{NULL} & If set then report on a per
@@ -467,7 +470,7 @@ Module & Name & Default & Description  \\ \hline\hline}
   & \texttt{TRACE} & \texttt{0} & Trace setting\\ \hline
 
 \htool{HDecode}
-& \texttt{USEHMODEL} & F & Use adaptation data structure and likelihood calulation routine of 
+& \texttt{USEHMODEL} & F & Use adaptation data structure and likelihood calculation routine of 
 \htool{HModel} \\\cline{2-4}
  & \texttt{STARTWORD} & $<$s$>$ & Word used as the start of network \\\cline{2-4}
  & \texttt{ENDWORD} & $<$/s$>$ & Word used as the end of network \\\cline{2-4}

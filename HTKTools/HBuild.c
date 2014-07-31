@@ -19,7 +19,7 @@
 /*     File: HBuild.c:  Word-Lattice Building                  */
 /* ----------------------------------------------------------- */
 
-char *hbuild_version = "!HVER!HBuild:   3.4 [CUED 25/04/06]";
+char *hbuild_version = "!HVER!HBuild:   3.4.1 [CUED 12/03/09]";
 char *hbuild_vc_id = "$Id: HBuild.c,v 1.1.1.1 2006/10/11 09:54:59 jal58 Exp $";
 
 /* The HBuild program takes input files in a number of different

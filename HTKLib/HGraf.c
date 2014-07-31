@@ -19,7 +19,7 @@
 /*         File: HGraf.X.c:  HGraf for X-Windows               */
 /* ----------------------------------------------------------- */
 
-char *hgraf_version = "!HVER!HGraf(X):   3.4 [CUED 25/04/06]";
+char *hgraf_version = "!HVER!HGraf(X):   3.4.1 [CUED 12/03/09]";
 char *hgraf_vc_id = "$Id: HGraf.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 /*

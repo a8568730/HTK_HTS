@@ -19,7 +19,7 @@
 /*         File: HVQ.c:   Vector Quantisation                  */
 /* ----------------------------------------------------------- */
 
-char *hvq_version = "!HVER!HVQ:   3.4 [CUED 25/04/06]";
+char *hvq_version = "!HVER!HVQ:   3.4.1 [CUED 12/03/09]";
 char *hvq_vc_id = "$Id: HVQ.c,v 1.1.1.1 2006/10/11 09:54:59 jal58 Exp $";
 
 #include "HShell.h"

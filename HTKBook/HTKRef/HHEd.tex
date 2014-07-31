@@ -460,8 +460,8 @@ mixture Gaussians use
   d(i,j) = \frac{1}{S} \sum_{s=1}^S
         \left[  
            \frac{1}{V_s} \sum_{k=1}^{V_s}
-                 \frac{(\bm{\mu}_{isk} - \bm{\mu}_{jsk})^2}{
-                         \bm{\sigma}_{isk}\bm{\sigma}_{jsk}}
+                 \frac{({\mu}_{isk} - {\mu}_{jsk})^2}{
+                         {\sigma}_{isk}{\sigma}_{jsk}}
         \right]^{\frac{1}{2}}
 \end{equation}
 where $V_s$ is the dimensionality of stream $s$.  Fully tied
@@ -488,7 +488,7 @@ tied cluster is called \texttt{macroi}.
 \subsubsection*{\tt PR }
 
 This command takes a model set that has been estimated with an HLDA transform,
-but storead as a semi-tied transform rather than an input transform and 
+but stored as a semi-tied transform rather than an input transform and 
 transforms it into a model-set with the projected number of dimensions and
 an input transform.
 
@@ -502,7 +502,7 @@ which is loaded by the \texttt{LS} command.  Typical usage might be:
  LS <statsfile> 
  PS 16 0.2 
 \end{verbatim}
-in order to acheive an average of 16 Gaussians per state with a power
+in order to achieve an average of 16 Gaussians per state with a power
 of 0.2.  
 
 It is always advisable when increasing the number of Gaussians in states to
@@ -544,8 +544,8 @@ using the \texttt{LS} command. It is also possible to specify an
 \texttt{itemlist} containing the ``non-speech'' sound components 
 such as the silence mixture components. If this is included then the
 first split made will result in one leaf containing the specified
-non-speech sound conmponents, while the other leaf will contain the
-rest of the model set components. Tree contruction then continues as usual.
+non-speech sound components, while the other leaf will contain the
+rest of the model set components. Tree construction then continues as usual.
 
 \subsubsection*{\tt RN hmmIdName}
 

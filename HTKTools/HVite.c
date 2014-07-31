@@ -32,7 +32,7 @@
 /*      File: HVite.c: recognise or align file or audio        */
 /* ----------------------------------------------------------- */
 
-char *hvite_version = "!HVER!HVite:   3.4 [CUED 25/04/06]";
+char *hvite_version = "!HVER!HVite:   3.4.1 [CUED 12/03/09]";
 char *hvite_vc_id = "$Id: HVite.c,v 1.1.1.1 2006/10/11 09:55:02 jal58 Exp $";
 
 #include "HShell.h"
@@ -91,6 +91,7 @@ static char * latForm = NULL;     /* output lattice format */
 static char * labInDir = NULL;    /* input network/label file directory */
 static char * labInExt = "lab";   /* input network/label file extension */
 static char * latExt = NULL;      /* output lattice file extension */
+static char * labFileMask = NULL; /* mask for reading lablels (lattices) */
 static FileFormat dfmt=UNDEFF;    /* Data input file format */
 static FileFormat ifmt=UNDEFF;    /* Label input file format */
 static FileFormat ofmt=UNDEFF;    /* Label output file format */
@@ -166,6 +167,9 @@ void SetConfParms(void)
          roSuffix=CopyString(&gstack,buf);
       if (GetConfBool(cParm,nParm,"SAVEBINARY",&b)) 
          saveBinary = b;
+      if (GetConfStr(cParm,nParm,"LABFILEMASK",buf)) {
+         labFileMask = CopyString(&gstack, buf);
+      }
    }
 }
 
@@ -440,8 +444,10 @@ int main(int argc, char *argv[])
       HError(3219,"HVite: HMM list  file name expected");
    hmmListFn = GetStrArg();
 
+#ifndef PHNALG
    if ((states || models) && nToks>1)
       HError(3230,"HVite: Alignment using multiple tokens is not supported");
+#endif
    if (NumArgs()==0 && wdNetFn==NULL)
       HError(3230,"HVite: Network must be specified for recognition from audio");
    if (loadNetworks && loadLabels)
@@ -824,7 +830,7 @@ Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam,
 void DoAlignment(void)
 {
    FILE *nf;
-   char lfn[255];
+   char lfn[MAXSTRLEN], buf[MAXSTRLEN];
    Transcription *trans;
    Network *net;
    Boolean isPipe;
@@ -847,7 +853,13 @@ void DoAlignment(void)
       if (trace&T_TOP) {
          printf("Aligning File: %s\n",datFN);  fflush(stdout);
       }
-      MakeFN(datFN,labInDir,labInExt,lfn);
+      if (labFileMask != NULL ) { /* support for rescoring lattice masks */
+         if (!MaskMatch(labFileMask,buf,datFN))
+            HError(2319,"DoAlignment: mask %s has no match with segemnt %s",labFileMask,datFN);
+         MakeFN(buf,labInDir,labInExt,lfn);
+      } else {
+         MakeFN(datFN,labInDir,labInExt,lfn);
+      }
       if (loadNetworks) {
          if ( (nf = FOpen(lfn,NetFilter,&isPipe)) == NULL)
             HError(3210,"DoAlignment: Cannot open Word Net file %s",lfn);

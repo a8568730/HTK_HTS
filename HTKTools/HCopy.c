@@ -19,7 +19,7 @@
 /*      File: HCopy.c: Copy one Speech File to another         */
 /* ----------------------------------------------------------- */
 
-char *hcopy_version = "!HVER!HCopy:   3.4 [CUED 25/04/06]";
+char *hcopy_version = "!HVER!HCopy:   3.4.1 [CUED 12/03/09]";
 char *hcopy_vc_id = "$Id: HCopy.c,v 1.1.1.1 2006/10/11 09:54:59 jal58 Exp $";
 
 #include "HShell.h"

@@ -77,7 +77,7 @@ void TidyBaseAccs();
 */
 
 
-void AccAdaptFrame(double Lr, Vector svec, MixPDF *mp, int t);
+void AccAdaptFrame(HMMSet *hset, double Lr, Vector svec, MixPDF *mp, int t);
 /* 
    Accumulate frame stats into specific mixture comp transformed using parent
 */

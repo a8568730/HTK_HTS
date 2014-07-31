@@ -19,7 +19,7 @@
 /*      File: HAudio.c: Audio Input/Output Interface           */
 /* ----------------------------------------------------------- */
 
-char *haudio_version = "!HVER!HAudio:   3.4 [CUED 25/04/06]";
+char *haudio_version = "!HVER!HAudio:   3.4.1 [CUED 12/03/09]";
 char *haudio_vc_id = "$Id: HAudio.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 #include "HShell.h"        /* HTK Libraries */

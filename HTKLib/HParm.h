@@ -32,7 +32,7 @@
 /*         File: HParm.h:   Speech Parameter Input/Output      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HParm:   3.3 [CUED 28/04/05] */
+/* !HVER!HParm:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HPARM_H_
 #define _HPARM_H_
@@ -151,6 +151,7 @@ typedef struct {
    int spDetSt;               /* Frame number of first frame of buffer */
    int spDetEn;               /* Frame number of last frame of buffer */
    char *matTranFN;           /* Matrix transformation name */
+   Ptr xform;                 /* Used for input xform associated with this buffer */
 }BufferInfo;
 
 /*

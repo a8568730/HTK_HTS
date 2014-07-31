@@ -32,7 +32,7 @@
 /*         File: HUtil.c      HMM utility routines             */
 /* ----------------------------------------------------------- */
 
-char *hutil_version = "!HVER!HUtil:   3.4 [CUED 25/04/06]";
+char *hutil_version = "!HVER!HUtil:   3.4.1 [CUED 12/03/09]";
 char *hutil_vc_id = "$Id: HUtil.c,v 1.1.1.1 2006/10/11 09:54:59 jal58 Exp $";
 
 #include "HShell.h"
@@ -151,6 +151,7 @@ MixPDF *CloneMixPDF(HMMSet *hset, MixPDF *s, Boolean sharing)
    }
    t = (MixPDF*)New(hset->hmem,sizeof(MixPDF));
    t->nUse = 0; t->hook = NULL; t->gConst = s->gConst;
+   t->info = s->info; /* handles semi-tied case */
    t->mean = CloneSVector(hset->hmem,s->mean,sharing);
    t->ckind = s->ckind;
    switch(s->ckind) {

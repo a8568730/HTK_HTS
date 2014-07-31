@@ -211,7 +211,7 @@
 2003-09-10  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
 	* HShell.c (ParseString): Fix parsing of octal charcter codes.
-	From Tanel Alumäe <tanel.alumae@aqris.com>
+	From Tanel Alumï¿½e <tanel.alumae@aqris.com>
 
 2003-07-28  Anna Langley <jal58@eng.cam.ac.uk>
 	* Makefile: corrected typo ($Arch)

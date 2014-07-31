@@ -32,7 +32,7 @@
 /*         File: HModel.c  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
-char *hmodel_version = "!HVER!HModel:   3.4 [CUED 25/04/06]";
+char *hmodel_version = "!HVER!HModel:   3.4.1 [CUED 12/03/09]";
 char *hmodel_vc_id = "$Id: HModel.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 #include "HShell.h"
@@ -1664,7 +1664,7 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
    } else {
       mp = (MixPDF *)New(hset->hmem,sizeof(MixPDF));
       mp->nUse = 0; mp->hook = NULL; mp->gConst = LZERO;
-      mp->mIdx = 0; mp->stream = 0; mp->vFloor = NULL;
+      mp->mIdx = 0; mp->stream = 0; mp->vFloor = NULL; mp->info = NULL;
       if((mp->mean = GetMean(hset,src,tok))==NULL){      
          HMError(src,"GetMean Failed");
          return(NULL);
@@ -3999,7 +3999,11 @@ void SetIndexes(HMMSet *hset)
    if (hset->hsKind == PLAINHS || hset->hsKind == SHAREDHS) {
       NewHMMScan(hset,&hss);
       while(GoNextMix(&hss,FALSE))
-         if (hss.mp->mIdx<0) hss.mp->mIdx=++nm;
+         /* ensure that defunct components are correctly handled */
+         if (hss.mp->mIdx<0) {
+            if (MixWeight(hss.hset,hss.me->weight) > MINMIX) 
+               hss.mp->mIdx=++nm;
+         }
       EndHMMScan(&hss);
    }
    hset->numStates=ns; hset->numSharedStates=nss;

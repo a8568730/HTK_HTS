@@ -32,7 +32,7 @@
 /*         File: HERest.c: Embedded B-W ReEstimation           */
 /* ----------------------------------------------------------- */
 
-char *herest_version = "!HVER!HERest:   3.4 [CUED 25/04/06]";
+char *herest_version = "!HVER!HERest:   3.4.1 [CUED 12/03/09]";
 char *herest_vc_id = "$Id: HERest.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 /*
@@ -216,7 +216,7 @@ void ReportUsage(void)
    printf("         ...using two parameterisations       off\n");
    printf(" -s s    print statistics to file s           off\n");
    printf(" -t f [i l] set pruning to f [inc limit]      inf\n");
-   printf(" -u tmvwap  update t)rans m)eans v)ars w)ghts tmvw\n");
+   printf(" -u tmvwaps  update t)rans m)eans v)ars w)ghts tmvw\n");
    printf("                a)daptation xform p)rior used     \n");
    printf("                s)semi-tied xform                 \n");
    printf(" -v f    set minimum variance to f            0.0\n");
@@ -1328,6 +1328,7 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
    int maxM;
    static char str[100];
    BufferInfo info2;
+   char macroname[MAXSTRLEN];
 
    if (trace&T_UPD){
       printf("Starting Model Update\n"); fflush(stdout);
@@ -1375,9 +1376,14 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
          nParm = GetConfig("HPARM2", TRUE, cParm, MAXGLOBS);
          if (GetConfStr(cParm,nParm,"TARGETKIND",str))
             hset->pkind = Str2ParmKind(str);
-      }else{
+	 if (GetConfStr(cParm,nParm,"MATTRANFN",str)) {
+            /* The transform needs to be set-up */
+            hset->xf = LoadInputXForm(hset,NameOf(str,macroname),str);
+         }
+      } else {
          GetBufferInfo(pbuf2,&info2);
          hset->pkind = info2.tgtPK;
+	 hset->xf = info2.xform;
       }
    }
    SaveHMMSet(hset,newDir,newExt,NULL,saveBinary);

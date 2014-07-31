@@ -117,7 +117,7 @@ is\index{output probability!continuous case}
 \hequation{
 {\cal N}(\bm{o}; \bm{\mu}, \bm{\Sigma}) =
        \frac{1}{\sqrt{(2 \pi)^n | \bm{\Sigma} |}} 
-       e^{- \frac{1}{2}(\bm{o}-\bm{\mu})' \bm{\Sigma}^{-1}(\bm{o}-\bm{\mu})}
+       e^{- \frac{1}{2}(\bm{o}-\bm{\mu})^\transpose \bm{\Sigma}^{-1}(\bm{o}-\bm{\mu})}
 }{gnorm}
 where $n$ is the dimensionality of $\bm{o}$.  The exponent $\gamma_s$ is
 a stream weight\index{stream weight} and its 
@@ -348,8 +348,8 @@ Gaussian can be individually configured.
 Another possible way to store covariance information is in the form
 of the Choleski decomposition\index{Choleski decomposition} $L$ of the 
 inverse covariance matrix
-i.e. $\bm{\Sigma}^{-1} = LL'$.
-Again this is stored externally in upper triangular form so $L'$ is
+i.e. $\bm{\Sigma}^{-1} = LL^\transpose$.
+Again this is stored externally in upper triangular form so $L^\transpose$ is
 actually stored.  It is distinguished from the normal inverse covariance
 matrix by using the keyword \hmkw{LLTCovar}\index{lltcovar@$<$LLTCovar$>$} 
 in place of \hmkw{InvCovar}\footnote{
@@ -360,7 +360,7 @@ The definition for \textsf{hmm3} also illustrates another
 macro type, that is, \hmmt{o}.  This macro is used as an alternative
 way of specifying global options and, in fact, it is the format used
 by \HTK\ tools when they write out a HMM definition.  It is provided so that global
-options can be specifed ahead of any other HMM parameters.  As will
+options can be specified ahead of any other HMM parameters.  As will
 be seen later, this is useful when using many types of macro.
 \index{HMM definition!global options macro}
 
@@ -585,7 +585,7 @@ can be tied.
 \> \hmmt{u} \>  shared mean vector \\
 \> \hmmt{v} \>  shared diagonal variance vector \\
 \> \hmmt{i} \>  shared inverse full covariance matrix \\
-\> \hmmt{c} \>  shared choleski $L'$ matrix \\
+\> \hmmt{c} \>  shared Choleski $L^\transpose$ matrix \\
 \> \hmmt{x} \>  shared arbitrary transform matrix\footnote{
 Transform matrices are not used by any of the supported HTK tools.
 }
@@ -1027,7 +1027,7 @@ a vector size of 2.
 
 By default the linear transform is stored with the HMM. This is
 achieved by adding the \hmkw{InputXform} keyword and specifying the
-transform or macroname. To allow compatibilty with tools only
+transform or macroname. To allow compatibility with tools only
 supporting the old format models it is possible to specify that no
 linear transform is to be stored with the model. 
 \begin{verbatim}
@@ -1489,12 +1489,12 @@ int \{ int \}) \{ node \}
 \end{tabbing}
 }
 \noindent
-For the definition of a node ($<$Node$>$) in {\sf node} the first integrer is the 
+For the definition of a node ($<$Node$>$) in {\sf node} the first integer is the 
 node number, the second the number of children followed the of children
 node numbers\footnote{Though the notation support n-ary trees, the regression
 class tree code can only generate binary regression class trees.}. The 
 integers in the definition of a terminal node ($<$TNode$>$) define the node number, 
-number of base classes associated with the teminal and the base class-index numbers.
+number of base classes associated with the terminal and the base class-index numbers.
 
 Adaptation transforms are defined using
 {\sf

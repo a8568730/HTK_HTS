@@ -30,7 +30,7 @@
 
 #define EXITSTATUS 0 /*2 for gprof.*/
 
-char *hmmirest_version = "!HVER!HMMIRest:   3.4 [CUED 25/04/06]";
+char *hmmirest_version = "!HVER!HMMIRest:   3.4.1 [CUED 12/03/09]";
 char *hmmirest_vc_id = "$Id: HMMIRest.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 
@@ -208,7 +208,6 @@ static LogDouble totalPr1=0,totalPr2=0,totalPr3=0;              /* total log pro
 
 
 static Vector vFloor[SMAX];          /* variance floor - default is all zero */
-static float minVar;                 /* variance floor if vFloor not specified in hmm set. */
 
 static MemHeap accStack;           /* accumulated statistics */
 static MemHeap hmmStack;           /* HMM defs and related structures */
@@ -225,6 +224,9 @@ static double TotalCorr=0;
 
 /* information about transforms */
 static XFInfo xfInfo;
+
+/* static prior */
+static Boolean STATICPRIOR = FALSE;
 
 /* ------------------ Process Command Line -------------------------- */
    
@@ -268,8 +270,11 @@ void SetConfParms(void)
       if (GetConfFlt(cParm,nParm,"PRIORTAU",&f)){ PriorTau = f; } 
       if (GetConfFlt(cParm,nParm,"PRIORTAUW",&f)){ PriorTauWeights = f; } 
       if (GetConfFlt(cParm,nParm,"PRIORTAUT",&f)){ PriorTauTrans = f; } 
-      if (GetConfFlt(cParm,nParm,"PRIORK",&f)){ PriorK = f; } 
-
+      if (GetConfFlt(cParm,nParm,"PRIORK",&f)){ PriorK = f; }
+      if (GetConfBool(cParm,nParm,"STATICPRIOR",&b)) {
+         STATICPRIOR=b;
+         if (STATICPRIOR) PriorK = 1.0; else PriorK = 0.0;
+      }
 
       if (GetConfFlt(cParm,nParm,"MIXWEIGHTFLOOR",&f)){ mixWeightFloor = MINMIX * f; }
 
@@ -307,8 +312,9 @@ void SetConfParms(void)
 
    }
 
-   if(MPE && uFlagsMLE) HError(1, "Can't combine MPE with ML update of some parameters (code could be simply added).");
-   if(MMIPrior && !THREEACCS) HError(999, "MMI Prior must be used in MPE update (THREEACCS).");
+   if (MPE && uFlagsMLE) HError(1, "Can't combine MPE with ML update of some parameters (code could be simply added).");
+   if (MMIPrior && !THREEACCS) HError(999, "MMI Prior must be used in MPE update (THREEACCS).");
+   if ((STATICPRIOR && PriorK==0.0) || (!STATICPRIOR && PriorK==1.0)) HError(999, "Specify either PRIORK or STATICPRIOR (PRIORK overwrites value given by STATICPRIOR).");
    /*   if(ISmoothTau && !ISmoothTauTransSet){ ISmoothTauTrans = 10; printf("Smoothing transitions with tau=%f since ISMOOTHTAUT not set\n",ISmoothTauTrans); }
         if(ISmoothTau && !ISmoothTauWeightsSet){ ISmoothTauTrans = 10; printf("Smoothing weights with tau=%f since ISMOOTHTAUW not set\n",ISmoothTauWeights); } */
 }
@@ -317,9 +323,12 @@ void ReportUsage(void)
 {
    printf("\nUSAGE: HMMIRest [options] hmmList dataFiles...\n\n");
    printf(" Option                                   Default\n\n");
+   printf(" -a      Use an input linear transform        off\n");
    printf(" -d s    dir to find hmm definitions       current\n");
    printf(" -D f    dictionary file.                  none   \n");
    printf(" -g      MLE updates only.                   \n");
+   printf(" -h s    set output speaker name pattern   *.%%%%%%\n");
+   printf("         to s, optionally set input and parent patterns\n");
    printf(" -l N    set max sentences (useful for debug) all\n"); 
    printf(" -m N    set min examples needed per model   3\n");
    printf(" -o s    extension for new hmm files        as src\n");
@@ -337,9 +346,9 @@ void ReportUsage(void)
    printf(" -w f    set mix weight floor to f*MINMIX   0.0\n");
    printf(" -x s    extension for hmm files            none\n");
    /* printf(" -y f    dictionary file.                   none\n");  not needed now. */
-   printf(" -z   combine all accs into one acc, HDR0.acc.{1,2,3}  off \n"); /*TODO*/
+   /* printf(" -z   combine all accs into one acc, HDR0.acc.{1,2,3}  off \n"); */
    printf(" -Q      Lattice file extension              lat \n");
-   PrintStdOpts("BFHIMSTX"); /*E,J,K,G,L removed*/
+   PrintStdOpts("BEFHIMSTJX"); /*K,G,L removed*/
    printf(" Note: doesn't work if means and variances are shared independently.\n");
    printf("\n\n");
 }
@@ -701,12 +710,12 @@ int main(int argc, char *argv[])
 
             if(nDenLats > 0){ /* Load denominator (recognition) lattices. */
                char buf1[1024],buf2[1024],buf3[1024];
-               if ( denLatSubDirPat[0] )
-                  if ( !MaskMatch( denLatSubDirPat , buf1 , datafn_lat ) )
-                     HError(2319,"HERest: mask %s has no match with segemnt %s" , denLatSubDirPat , datafn_lat );
                for(latn = 0; latn<nDenLats;latn++){
-                  if ( denLatSubDirPat[0] )
+                  if ( denLatSubDirPat[0] ){
+                     if ( !MaskMatch( denLatSubDirPat , buf1 , datafn_lat ) )
+                        HError(2319,"HERest: mask %s has no match with segemnt %s" , denLatSubDirPat , datafn_lat );
                      MakeFN(buf1,denLatDir[latn],NULL,buf2);
+                  }
                   else
                      strcpy(buf2,denLatDir[latn]);
                   if ( LatMask_Denominator != NULL ){
@@ -724,6 +733,7 @@ int main(int argc, char *argv[])
                      MakeFN(datafn_lat,buf2,latExt,latfn);
                      f = FOpen(latfn, NetFilter, &isPipe);
                      if(!f) HError(1, "Couldn't open file %s\n", latfn);
+                     printf("Reading lattice from file: %s\n", latfn); fflush(stdout);
                      denLats[latn] = ReadLattice(f, &latStack, &vocab, FALSE/*shortArc*/, TRUE/*add2Dict*/);
                      FClose(f, isPipe);
                   }
@@ -732,13 +742,12 @@ int main(int argc, char *argv[])
 
             if(nNumLats > 0){  /* Load numerator (correct transcription) lattices. */
                char buf1[1024],buf2[1024],buf3[1024];
-               if ( numLatSubDirPat[0] )
-                  if ( !MaskMatch( numLatSubDirPat , buf1 , datafn_lat ) )
-                     HError(2319,"HERest: mask %s has no match with segemnt %s" , numLatSubDirPat , datafn_lat );
-
                for(latn=0;latn<nNumLats;latn++){
-                  if ( numLatSubDirPat[0] )
+                  if ( numLatSubDirPat[0] ){
+                     if ( !MaskMatch( numLatSubDirPat , buf1 , datafn_lat ) )
+                        HError(2319,"HERest: mask %s has no match with segemnt %s" , numLatSubDirPat , datafn_lat );
                      MakeFN(buf1,numLatDir[latn],NULL,buf2);
+                  }
                   else
                      strcpy(buf2,numLatDir[latn]);
                   if ( LatMask_Numerator != NULL ){

@@ -19,7 +19,7 @@
 /*    File: HSGen: Generate Sentences from a Lattice           */
 /* ----------------------------------------------------------- */
 
-char *hsgen_version = "!HVER!HSGen:   3.4 [CUED 25/04/06]";
+char *hsgen_version = "!HVER!HSGen:   3.4.1 [CUED 12/03/09]";
 char *hsgen_vc_id = "$Id: HSGen.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 #include "HShell.h"

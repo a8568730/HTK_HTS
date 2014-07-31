@@ -57,7 +57,7 @@ stream (see chapter~\ref{c:Training}).  The configuration variable {\tt
 VARFLOORPERCENTILE} allows the same thing to be done in a different way
 which appears to improve recognition results.  By setting this to e.g. 20,
 the variances from each dimension are floored to the 20th percentile of the
-distribution of variances for that dimensioon.
+distribution of variances for that dimension.
 
 %as suggested in:
 %\bibitem[Lee, Giachin, Rabiner, Pieraccini \& Rosenberg, 1992]{lee92csl}
@@ -67,7 +67,7 @@ distribution of variances for that dimensioon.
 %103-127.
 
 
-\htool{HERest} supports two specific methods for initilisation of
+\htool{HERest} supports two specific methods for initialisation of
 model parameters , \textit{single pass retraining} and \textit{2-model
   reestimation}.
 
@@ -81,15 +81,15 @@ training data, but then switching to a new set of training data to
 compute the new parameter estimates.
 
 In \textit{2-model re-estimation} one model set can be used to obtain
-the forward backward probablilites which then are used to update the
+the forward backward probabilities which then are used to update the
 parameters of another model set. Contrary to \textit{single pass
   retraining} the two model sets are not required to be tied in the
-same fashion.  This is particulary useful for training of single
+same fashion.  This is particularly useful for training of single
 mixture models prior to decision-tree based state clustering. The use
 of 2-model re-estimation in \htool{HERest} is triggered by setting the
 config variables {\tt ALIGNMODELMMF} or {\tt ALIGNMODELDIR} and {\tt
   ALIGNMODELEXT} together with {\tt ALIGNHMMLIST} (see section \ref{s:twomodel}).
-As the model list can differ for the alignment model set a seperate set of
+As the model list can differ for the alignment model set a separate set of
 input transforms may be specified using the {\tt ALIGNXFORMDIR} and
 {\tt ALIGNXFORMEXT}. 
 
@@ -157,11 +157,11 @@ model, or features, on which the model set or transform is to be
 generated. For transform estimation this allows {\em cascades} of transforms
 to be used to adapt the model parameters. For model estimation this 
 supports {\em speaker adaptive training}. Note the current implementation 
-only supports adaptove training with CMLLR. Any parent transform can be
+only supports adaptive training with CMLLR. Any parent transform can be
 used when generating transforms.
 \end{itemize}
 When input or parent transforms are specified the transforms may 
-physically be stored in multple diirectories. Which transform to be used 
+physically be stored in multiple directories. Which transform to be used 
 is determined in the following search order:
 order is used.
 \begin{enumerate}
@@ -190,7 +190,7 @@ Baseclasses and regression classes may also be loaded using the
 
 \htool{HERest} can also estimate semi-tied transformations by
 specifying the {\tt s} update option with the {\tt -u} flag. This uses the same baseclass
-speicification as the linear transformation adaptation code to allow
+specification as the linear transformation adaptation code to allow
 multiple transformations to be estimated. The specification of the
 baseclasses is identical to that used for linear adaptation. Updating
 semi-tied transforms always updates the means and diagonal covariance
@@ -298,7 +298,7 @@ command line options
       
   \ttitem{-u flags} By default, \htool{HERest} updates all of the HMM parameters,
       that is, means, variances, mixture weights and 
-      transition probabilies. This 
+      transition probabilities. This 
       option causes just the parameters indicated by the {\tt flags}
       argument to be updated, this argument is a string containing one
       or more of the letters {\tt m} (mean), {\tt v} (variance) ,

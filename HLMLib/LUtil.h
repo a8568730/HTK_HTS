@@ -29,7 +29,7 @@
 /*      File: LUtil:    General Utility Routines               */
 /* ----------------------------------------------------------- */
 
-/* !HVER!LUtil:   3.3 [CUED 28/04/05] */
+/* !HVER!LUtil:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _LUTIL_H
 #define _LUTIL_H

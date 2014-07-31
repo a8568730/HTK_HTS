@@ -28,7 +28,7 @@
 /*         An alternative kind of lattice format used there.   */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HArc:   3.4 [CUED 08/07/05] */
+/* !HVER!HArc:   3.4.1 [CUED 12/03/09] */
 
 
 /*

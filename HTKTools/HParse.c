@@ -19,7 +19,7 @@
 /*     File: HParse.c: HParse based word-network definition    */
 /* ----------------------------------------------------------- */
 
-char *hparse_version = "!HVER!HParse:   3.4 [CUED 25/04/06]";
+char *hparse_version = "!HVER!HParse:   3.4.1 [CUED 12/03/09]";
 char *hparse_vc_id = "$Id: HParse.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 /* The HParse program reads in a set of HTK  HParse rewrite rules

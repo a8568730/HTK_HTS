@@ -32,7 +32,7 @@
 /*      File: HSigP.h:   Signal Processing Routines            */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HSigP:   3.3 [CUED 28/04/05] */
+/* !HVER!HSigP:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HSIGP_H_
 #define _HSIGP_H_

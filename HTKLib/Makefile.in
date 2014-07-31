@@ -42,7 +42,7 @@ hlib = .
 HLIBS = ${exec_prefix}/lib/HTKLib.a
 
 CC     = @CC@
-CFLAGS := $(CFLAGS) @CFLAGS@ -I. 
+CFLAGS := $(CFLAGS) @CFLAGS@ -I. -DPHNALG
 RANLIB = @RANLIB@
 INSTALL= @INSTALL@
 target = HTKLib.a

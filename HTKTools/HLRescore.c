@@ -33,7 +33,7 @@
      - allow batch processing?
 */
 
-char *hlrescore_version = "!HVER!HLRescore:   3.4 [CUED 25/04/06]";
+char *hlrescore_version = "!HVER!HLRescore:   3.4.1 [CUED 12/03/09]";
 char *hlrescore_vc_id = "$Id: HLRescore.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 #include "HShell.h"

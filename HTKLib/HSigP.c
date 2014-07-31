@@ -32,7 +32,7 @@
 /*      File: HSigP.c:   Signal Processing Routines            */
 /* ----------------------------------------------------------- */
 
-char *hsigp_version = "!HVER!HSigP:   3.4 [CUED 25/04/06]";
+char *hsigp_version = "!HVER!HSigP:   3.4.1 [CUED 12/03/09]";
 char *hsigp_vc_id = "$Id: HSigP.c,v 1.1.1.1 2006/10/11 09:54:58 jal58 Exp $";
 
 #include "HShell.h"        /* HTK Libraries */

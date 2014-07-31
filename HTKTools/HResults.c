@@ -19,7 +19,7 @@
 /*    File: HResults.c: gather statistics on results           */
 /* ----------------------------------------------------------- */
 
-char *hresults_version = "!HVER!HResults:   3.4 [CUED 25/04/06]";
+char *hresults_version = "!HVER!HResults:   3.4.1 [CUED 12/03/09]";
 char *hresults_vc_id = "$Id: HResults.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 #include "HShell.h"
@@ -81,6 +81,7 @@ static int maxNDepth=1;               /* find best of 1..max lists */
 static char * spkrMask = NULL;        /* non-null report on per spkr basis */
 static char * phraseStr = "SENT";     /* label for phrase level stats */
 static char * phoneStr  = "WORD";     /* label for phone level stats */
+static int maxWordLen = 5;
 
 /* ---------------------- Global Variables ----------------------- */
 
@@ -124,6 +125,8 @@ void SetConfParms(void)
          phoneStr=CopyString(&permHeap,s);
       if (GetConfStr(cParm,nParm,"SPEAKERMASK",s))
          spkrMask=CopyString(&permHeap,s);
+      if (GetConfInt(cParm,nParm,"MAXWORDLEN",&i))
+	 maxWordLen = i;
    }
 }
 
@@ -1199,7 +1202,7 @@ void OutConMat(void)
       k = strlen(names[i]->name);
       if (k > maxlen) maxlen = k;
    }
-   if (maxlen>5) maxlen = 5;
+   if (maxlen>maxWordLen) maxlen = maxWordLen;
    PrintBar(0,htkWidth,'-',"Confusion Matrix");
    for (j=1; j<=nLabs; j++) {
       for (i=1,k=conIns[j];i<=nLabs;i++) k+=conMat[i][j];
@@ -1219,7 +1222,7 @@ void OutConMat(void)
       printf("\n");
    }
    for (i=1;i<=nLabs;i++){
-      for (j=1,k=conDel[j];j<=nLabs;j++) k+=conMat[i][j];
+      for (j=1,k=conDel[i];j<=nLabs;j++) k+=conMat[i][j];
       if (k==0) continue;
 
       strcpy(buf,names[i]->name); buf[4] = '\0';

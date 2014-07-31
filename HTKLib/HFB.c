@@ -32,7 +32,7 @@
 /*         File: HFB.c: Forward Backward routines module       */
 /* ----------------------------------------------------------- */
 
-char *hfb_version = "!HVER!HFB:   3.4 [CUED 25/04/06]";
+char *hfb_version = "!HVER!HFB:   3.4.1 [CUED 12/03/09]";
 char *hfb_vc_id = "$Id: HFB.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
@@ -1620,7 +1620,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                   steSumLr += Lr;
                   /* update the adaptation statistic counts */
                   if (fbInfo->uFlags&UPXFORM)
-                     AccAdaptFrame(Lr, otvs, mp, t);
+                     AccAdaptFrame(hset, Lr, otvs, mp, t);
                   /* 
                      update the semi-tied statistic counts
                      this accumulates "true" outer products to allow multiple streams

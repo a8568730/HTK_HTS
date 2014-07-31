@@ -5,12 +5,16 @@
 
 .c.obj:
 	$(CC) /nologo /c $(CFLAGS) $<
+
+.c.olv:
+	$(CC) /nologo /c /Fo$@ /D "NO_LAT_LM" $(CFLAGS) $<
+
 CC=cl
 CL=link
 CPU=win32
 
 # the MSDOS is needed to set _fmode to binary in HShell.c
-HTKCF = /I "." /D "WIN32_AUDIO"  /D ARCH=\"WIN32\"
+HTKCF = /I "." /D "WIN32_AUDIO"  /D ARCH=\"WIN32\" /D "PHNALG"
 
 # use the following for optimised compilation
 SYSCF = /ML /W0 /GX /O2 /G5 /Ob2 /D "NDEBUG" /D "WIN32" /D "_WINDOWS"
@@ -37,6 +41,7 @@ SYSLF = /nologo /subsystem:windows /dll /incremental:no /machine:I386
 # /Ob2 allow inlining of functions not tagged with _inline
 
 libHTK = HTKLib.$(CPU)
+libHTKlv = HTKLiblv.$(CPU)
 	
 syslib = kernel32.lib user32.lib gdi32.lib winspool.lib \
 	comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib \
@@ -52,14 +57,26 @@ core =  esig_asc.obj esig_edr.obj esignal.obj esig_nat.obj \
 	HUtil.obj HVQ.obj HWave.obj strarr.obj \
 	HExactMPE.obj HFBLat.obj HArc.obj
 
-all: $(libHTK).lib
+corelv =  esig_asc.olv esig_edr.olv esignal.olv esig_nat.olv \
+	HAdapt.olv HAudio.olv HDict.olv HFB.olv \
+	HGraf.null.olv HLabel.olv HLat.olv \
+	HLM.olv HMap.olv HMath.olv HMem.olv HModel.olv HNet.olv \
+	HParm.olv HRec.olv HShell.olv HSigP.olv HTrain.olv \
+	HUtil.olv HVQ.olv HWave.olv strarr.olv \
+	HExactMPE.olv HFBLat.olv HArc.olv
+
+all: $(libHTK).lib $(libHTKlv).lib
 
 $(libHTK).lib:  $(core)
 	lib /OUT:$(libHTK).lib $(core)
 	lib /list $(libHTK).lib
 
+$(libHTKlv).lib:  $(corelv)
+	lib /OUT:$(libHTKlv).lib $(corelv)
+	lib /list $(libHTKlv).lib
+
 clean:
-	del *.obj $(libHTK).lib
+	del *.obj *.olv $(libHTK).lib $(libHTKlv).lib
 
 cleanup:
 	del *.obj

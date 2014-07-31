@@ -119,7 +119,7 @@ setting this limit to a larger value.
 
 The \texttt{-b} option sets the internal $n$-gram buffer size to
 200,000 $n$-gram entries. This setting has a direct effect on the
-overall process size. The memory requirent for the internal buffer can
+overall process size. The memory requirement for the internal buffer can
 be calculated according to $mem_{bytes} = (n+1)*4*b$ where $n$ is the
 $n$-gram size (set with the \texttt{-n} option) and $b$ is the buffer
 size.  In the above example, the $n$-gram size is set to four which
@@ -332,7 +332,7 @@ language model is to produce a frequency of frequency (FoF) table for
 the chosen vocabulary list.  This is performed automatically by
 \htool{LBuild}, but optionally you can generate this yourself using
 the \htool{LFoF} tool and pass the result into \htool{LBuild}.  This
-has only a negligable effect on computation time, but the result is
+has only a negligible effect on computation time, but the result is
 interesting in itself because it provides useful information for
 setting cut-offs.  Cut-offs are where you choose to discard low
 frequency events from the training text -- you might wish to do this
@@ -721,7 +721,7 @@ should be made before building the class map.  Passing the {\tt -k}
 option told \htool{Cluster} to keep the unknown word token {\tt !!UNK}
 in its own singleton class, whilst the {\tt -c 150} options specifies
 that we wish to create 150 classes.  The {\tt -i 1} performs only one
-iteration of the clusterer -- performing further iterations is likely
+iteration of the clustering -- performing further iterations is likely
 to give further small improvements in performance, but we won't wait
 for this here.  Whilst \htool{Cluster} is running you can look at the
 end of the {\tt holmes.2/class.1.log} to see how far it has got.  On a

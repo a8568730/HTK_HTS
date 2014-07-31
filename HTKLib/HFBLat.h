@@ -27,7 +27,7 @@
 /*         File: HFBLat.h   Lattice Forward Backward routines  */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HNET:   3.4 [CUED 08/07/05] */
+/* !HVER!HNET:   3.4.1 [CUED 12/03/09] */
 
 
 /*

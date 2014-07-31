@@ -34,7 +34,7 @@
 */
 
 
-char *hlat_version = "!HVER!HLat:   3.4 [CUED 25/04/06]";
+char *hlat_version = "!HVER!HLat:   3.4.1 [CUED 12/03/09]";
 char *hlat_vc_id = "$Id: HLat.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 

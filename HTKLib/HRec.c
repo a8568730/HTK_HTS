@@ -19,7 +19,7 @@
 /*         File: HRec.c  Viterbi Recognition Engine Library    */
 /* ----------------------------------------------------------- */
 
-char *hrec_version = "!HVER!HRec:   3.4 [CUED 25/04/06]";
+char *hrec_version = "!HVER!HRec:   3.4.1 [CUED 12/03/09]";
 char *hrec_vc_id = "$Id: HRec.c,v 1.1.1.1 2006/10/11 09:54:58 jal58 Exp $";
 
 #include "HShell.h"
@@ -55,13 +55,17 @@ const Token null_token={LZERO,0.0,NULL,NULL};
 #define node_tr0(node) ((node)->type & n_tr0)
 #define node_wd0(node) ((node)->type & n_wd0)
 
+#define SP "sp"
+
 /* Reduced storage requirements for merged paths */
 struct nxtpath
 {
    Path *prev;          /* Previous word record */
    LogDouble like;      /* Likelihood at boundary */
    LogFloat lm;         /* LM likelihood of current word */
-   
+#ifdef PHNALG
+  Align *align;
+#endif
    NxtPath *chain;      /* Next of NBest Paths */
 };
 
@@ -88,6 +92,9 @@ typedef struct reltoken
    LogFloat like;       /* Relative Likelihood of token */
    LogFloat lm;         /* LM likelihood of token */
    Path *path;          /* Route (word level) through network */
+#ifdef PHNALG
+  Align *align;
+#endif
 }
 RelToken;
 
@@ -101,8 +108,16 @@ typedef struct tokenset
 TokenSet;
 
 /* Need some null RelTokens */
-static const RelToken rmax={0.0,0.0,NULL};    /* First rtok same as tok */
-static const RelToken rnull={LZERO,0.0,NULL}; /* Rest can be LZERO */
+static const RelToken rmax={0.0,0.0,NULL
+#ifdef PHNALG
+			    ,NULL
+#endif
+};    /* First rtok same as tok */
+static const RelToken rnull={LZERO,0.0,NULL
+#ifdef PHNALG
+			     ,NULL
+#endif
+}; /* Rest can be LZERO */
 
 /* The instances actually store tokens and links etc */
 /* Instances are stored in creation/token propagation order to allow */
@@ -275,6 +290,16 @@ static void TokSetMerge(TokenSet *res,Token *cmp,TokenSet *src)
       HError(8590,"TokSetMerge: Not doing NBest");
    if ((res->n!=0 && src->n==0) || (res->n==0 && src->n!=0))
       HError(8590,"TokSetMerge: TokenSet size mismatch");
+#ifdef PHNALG
+   if (res->tok.path!=res->set->path&&res->tok.like>pri->nThresh) 
+      HError(8590,"TokSetMerge: res path mismatch !\n");
+   if (res->tok.align!=res->set->align&&res->tok.like>pri->nThresh) 
+      HError(8590,"TokSetMerge: res align mismatch !\n");
+   if (cmp->path!=src->set->path&&src->tok.like>pri->nThresh) 
+      HError(8590,"TokSetMerge: src path mismatch !\n");
+   if (cmp->align!=src->set->align&&src->tok.like>pri->nThresh) 
+      HError(8590,"TokSetMerge: src align mismatch !\n");
+#endif
 #endif
 
    /*  Do >= to ensure that when equal new token will be used every time in */
@@ -397,6 +422,9 @@ static void TokSetMerge(TokenSet *res,Token *cmp,TokenSet *src)
          mch++;
 
          mch->path=cur->path;mch->lm=cur->lm;
+#ifdef PHNALG
+	 mch->align=cur->align;
+#endif
          mch->like=like;
       }
    }
@@ -622,6 +650,9 @@ static void StepHMM1(NetNode *node) /* Model internal propagation NBEST */
    LogFloat outp;
    Matrix trP;
    short **seIndex;
+#ifdef PHNALG
+   int n;
+#endif
    
    inst=node->inst;
    max=null_token;
@@ -664,7 +695,23 @@ static void StepHMM1(NetNode *node) /* Model internal propagation NBEST */
                                   res->tok.like-outp-res->tok.lm*pri->scale,
                                   pri->frame-1,res->tok.align);
                res->tok.align=align;
+#ifdef PHNALG
+	       if (pri->nToks>1)
+		 res->set[0].align=align;
+#endif
             }
+#ifdef PHNALG
+	    for (n=1;n<res->n;n++) {
+	      if (res->set[n].align==NULL?TRUE:
+		  (res->set[n].align->state!=j||
+		   res->set[n].align->node!=node)) {
+		align=NewNRefAlign(node,j,
+				   res->tok.like-outp-res->tok.lm*pri->scale,
+				   pri->frame-1,res->set[n].align);
+		res->set[n].align=align;
+	      }
+	    }
+#endif
          }
       } 
       else {
@@ -722,6 +769,16 @@ static void StepHMM1(NetNode *node) /* Model internal propagation NBEST */
                             res->tok.like-res->tok.lm*pri->scale,
                             pri->frame,res->tok.align);
          res->tok.align=align;
+#ifdef PHNALG
+	 if (pri->nToks>1)
+           res->set[0].align=align;
+         for (n=1;n<res->n;n++) {
+           align=NewNRefAlign(node,-1,
+                              res->tok.like-res->tok.lm*pri->scale,
+                              pri->frame,res->set[n].align);
+           res->set[n].align=align;
+         }
+#endif
       }
    } else {
       inst->exit->tok=null_token;
@@ -737,6 +794,9 @@ static void StepHMM2(NetNode *node)
    TokenSet cmp,*res,*cur;
    Align *align;
    int N;
+#ifdef PHNALG
+   int n;
+#endif
 
    inst=node->inst;
 
@@ -761,6 +821,16 @@ static void StepHMM2(NetNode *node)
                          res->tok.like-res->tok.lm*pri->scale,
                          pri->frame,res->tok.align);
       res->tok.align=align;
+#ifdef PHNALG
+      if (pri->nToks>1)
+        res->set[0].align=align;
+      for (n=1;n<res->n;n++) {
+        align=NewNRefAlign(node,-1,
+                           res->tok.like-res->tok.lm*pri->scale,
+                           pri->frame,res->set[n].align);
+        res->set[n].align=align;
+      }
+#endif
    }
 }
 
@@ -881,6 +951,13 @@ static void CollectPaths(void)
                   if (path->usage!=0) MovePathYesRef(path);
                   path->used=TRUE;
                }
+#ifdef PHNALG
+	       align=cur->set[k].align;
+               if (align && !align->used) {
+                 if (align->usage!=0) MoveAlignYesRef(align);
+		 align->used=TRUE;
+               }
+#endif
             }
             align=cur->tok.align;
             if (align && !align->used) {
@@ -904,6 +981,13 @@ static void CollectPaths(void)
                if (path->usage!=0) MovePathYesRef(path);
                path->used=TRUE;
             }
+#ifdef PHNALG
+	    align=inst->exit->set[k].align;
+            if (align && !align->used) {
+	      if (align->usage!=0) MoveAlignYesRef(align);
+	      align->used=TRUE;
+            }
+#endif
          }
          align=inst->exit->tok.align;
          if (align && !align->used) {
@@ -1010,7 +1094,10 @@ static void StepWord2(NetNode *node) /* Update the path - may be repeated */
             rth->lm=cur->lm;
             if ((rth->prev=cur->path)!=NULL)
                RefPath(cur->path);
-
+#ifdef PHNALG
+	    if ((rth->align=cur->align)!=NULL)
+	      RefAlign(cur->align);
+#endif
             for (i=2,cur++;i<inst->state->n;i++,cur++) {
                rth->chain=(NxtPath*) New(&pri->rPthHeap,0);
                rth=rth->chain;
@@ -1019,6 +1106,10 @@ static void StepWord2(NetNode *node) /* Update the path - may be repeated */
                rth->lm=cur->lm;
                if ((rth->prev=cur->path)!=NULL)
                   RefPath(cur->path);
+#ifdef PHNALG
+	       if ((rth->align=cur->align)!=NULL)
+		 RefAlign(cur->align);
+#endif
             }
          }
       }
@@ -1213,6 +1304,11 @@ static void SetEntryState(NetNode *node,TokenSet *src)
 {
    NetInst *inst;
    TokenSet *res;
+#ifdef SANITY
+#ifdef PHNALG
+   int i;
+#endif
+#endif
 
    if (node->inst==NULL)
       AttachInst(node);
@@ -1226,6 +1322,16 @@ static void SetEntryState(NetNode *node,TokenSet *src)
      if (src->tok.like>LSMALL && 
      src->tok.path!=NULL && src->tok.path->node->info.pron==NULL)
      HError(8590,"SetEntryState: NULL word propagated into path"); */
+#ifdef PHNALG
+   if (node_word(node)&&node->info.pron&&(pri->models||pri->states)) {
+     for(i=0;i<src->n;i++)
+       if (!src->set[i].align&&src->set[i].path)
+	 HError(8590,"SetEntryState: NULL align try to enter word node [%s] (word might have nil pronunciation)!",node->info.pron->word->wordName->name);
+     for(i=0;i<res->n;i++)
+       if (!res->set[i].align&&res->set[i].path)
+	 HError(8590,"SetEntryState: NULL align in word node!");
+   }
+#endif
 #endif
    if (res->n==0) {
       if (src->tok.like > res->tok.like)
@@ -1411,17 +1517,21 @@ static void LatFromPaths(Path *path,int *ln,Lattice *lat)
    NxtPath tmp,*pth;
    Align *align,*al,*pr;
    MLink ml;
-   LabId labid,labpr = NULL;
+   LabId labid,splabid,labpr = NULL;
    char buf[80];
    int i,frame;
    double prlk,dur,like,wp;
 
    nullwordId = GetWord(lat->voc,GetLabId("!NULL",FALSE),FALSE);
+   splabid = GetLabId(SP,FALSE);
 
    tmp.prev=path->prev;
    tmp.like=path->like;
    tmp.chain=path->chain;
    tmp.lm=path->lm;
+#ifdef PHNALG
+   tmp.align=path->align;
+#endif
 
    ne=lat->lnodes-path->usage;
    ne->time=path->frame*lat->framedur;
@@ -1463,6 +1573,9 @@ static void LatFromPaths(Path *path,int *ln,Lattice *lat)
       
       if (pth->prev!=NULL && ns->word==NULL)
          LatFromPaths(pth->prev,ln,lat);
+#ifdef PHNALG
+      align=pth->align;
+#endif
 
       if (align!=NULL) {
          i=0;
@@ -1472,7 +1585,11 @@ static void LatFromPaths(Path *path,int *ln,Lattice *lat)
          la->lAlign=(LAlign*) New(lat->heap,sizeof(LAlign)*i);
          frame=path->frame;pr=NULL;
          /* Allow for wp diff between path and align */
+#ifdef PHNALG
+	 like=pth->like-pth->lm*pri->scale-wp;
+#else
          like=path->like-pth->lm*pri->scale-wp; 
+#endif
          for (al=align;al!=NULL;al=al->prev) {
             ml=FindMacroStruct(pri->psi->hset,'h',al->node->info.hmm);
             if (ml==NULL)
@@ -1504,24 +1621,40 @@ static void LatFromPaths(Path *path,int *ln,Lattice *lat)
             i--;
             la->lAlign[i].state=al->state;
             la->lAlign[i].label=labid;
+#ifdef PHNALG
+	    /* didn't handle model that allow 0 frame */
+            if (dur<=0 && labid != splabid) HError(8522,"LatFromPaths: Align  have dur<=0");
+#endif
             la->lAlign[i].dur=dur;
             la->lAlign[i].like=like;
             like=al->like;
          }
          if (pr!=NULL) {
+#ifdef PHNALG
+	    if (pth->prev!=NULL)
+               dur=(pr->frame-pth->prev->frame)*lat->framedur,
+                  like=pr->like-pth->prev->like;
+#else
             if (path->prev!=NULL)
                dur=(pr->frame-path->prev->frame)*lat->framedur,
                   like=pr->like-path->prev->like;
+#endif
             else
                dur=pr->frame*lat->framedur,
                   like=pr->like;
             i--;
             la->lAlign[i].state=-1;
             la->lAlign[i].label=labpr;
+#ifdef PHNALG
+	    /* didn't handle model that allow 0 frame */
+            if (dur<=0 && labid != splabid) HError(8522,"LatFromPaths: Align have dur<=0 ");
+#endif
             la->lAlign[i].dur=dur;
             la->lAlign[i].like=like;
          }
+#ifndef PHNALG
          align=NULL;
+#endif
       }
    }
 }
@@ -1573,6 +1706,9 @@ static Lattice *CreateLattice(MemHeap *heap,TokenSet *res,HTime framedur)
          rth[i].like=res->tok.like+cur->like;
          rth[i].lm=cur->lm;
          rth[i].prev=cur->path;
+#ifdef PHNALG
+	 rth[i].align=cur->align;
+#endif
          rth[i].chain=NULL;
          rth[i-1].chain=rth+i;
       }

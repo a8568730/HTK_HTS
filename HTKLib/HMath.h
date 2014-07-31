@@ -19,10 +19,16 @@
 /*         File: HMath.h:   Math Support                       */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HMath:   3.3 [CUED 28/04/05] */
+/* !HVER!HMath:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HMATH_H_
 #define _HMATH_H_
+
+
+#ifdef WIN32
+#include <float.h>
+#define isnan _isnan
+#endif
 
 #ifdef __cplusplus
 extern "C" {

@@ -32,7 +32,7 @@
 /*         File: HShell.h:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HShell:   3.3 [CUED 28/04/05] */
+/* !HVER!HShell:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HSHELL_H_
 #define _HSHELL_H_

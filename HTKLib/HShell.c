@@ -32,7 +32,7 @@
 /*         File: HShell.c:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-char *hshell_version = "!HVER!HShell:   3.4 [CUED 25/04/06]";
+char *hshell_version = "!HVER!HShell:   3.4.1 [CUED 12/03/09]";
 char *hshell_vc_id = "$Id: HShell.c,v 1.1.1.1 2006/10/11 09:54:58 jal58 Exp $";
 
 #include "HShell.h"

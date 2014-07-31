@@ -29,7 +29,7 @@
 /*      File: LWMap:  Word List and Word Map Routines          */
 /* ----------------------------------------------------------- */
 
-char *lwmap_version = "!HVER!LWMap:   3.4 [CUED 25/04/06]";
+char *lwmap_version = "!HVER!LWMap:   3.4.1 [CUED 12/03/09]";
 char *lwmap_vc_id = "$Id: LWMap.c,v 1.1.1.1 2006/10/11 09:54:43 jal58 Exp $";
 
 #include "HShell.h"

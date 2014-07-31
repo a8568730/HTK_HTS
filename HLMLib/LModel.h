@@ -29,7 +29,7 @@
 /*      File: LModel:    ARPA style LM handling                */
 /* ----------------------------------------------------------- */
 
-/* !HVER!LModel:   3.3 [CUED 28/04/05] */
+/* !HVER!LModel:   3.4.1 [CUED 12/03/09] */
 
 /*
    Language model handling

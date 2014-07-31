@@ -32,7 +32,7 @@
 /*         File: HHEd:  HMM Source Definition Editor           */
 /* ----------------------------------------------------------- */
 
-char *hhed_version = "!HVER!HHEd:   3.4 [CUED 25/04/06]";
+char *hhed_version = "!HVER!HHEd:   3.4.1 [CUED 12/03/09]";
 char *hhed_vc_id = "$Id: HHEd.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 /*
@@ -127,6 +127,7 @@ static int lastCommand=0;              /* index of previous command */
 static Boolean equivState = TRUE;      /* TRUE if states can be equivalent */
                                        /*  but not identical */
 static Boolean useModelName = TRUE;    /* Use base-phone name as tree name */
+static Boolean saveHMMSet   = TRUE;    /* Save the HMMSet */
 
 /* ---------------- Configuration Parameters --------------------- */
 
@@ -183,6 +184,7 @@ void Summary(void)
    printf("NC n macro itemlist  - N-Cluster specified components and tie\n");
    printf("QS name itemlist     - define a question as a list of model names\n");
    printf("RC n id [itemList]   - Build n regression classes (for adaptation purposes)\n");
+   printf("                       this disables the storing of the models\n");  
    printf("PR                   - Convert model-set with PROJSIZE to compact form\n");
    printf("                       also supplying a regression tree identifier/label name\n");
    printf("                       Optional itemList to specify non-speech sounds\n");
@@ -4547,7 +4549,7 @@ void SplitStreamCommand(Boolean userWidths)
       DeleteMacroStruct(hset,'v',v);
       for (s=1,next=1;s<=S;s++) {
          sprintf(buf,"varFloor%d",s);
-         if (simple || s<=S) 
+         if (simple || s<S) 
             vf[s] = SliceVector(v,next,next+swidth[s]-1);
          else
             vf[s] = ChopVector(v,epos[0],epos[1],epos[2]);
@@ -6210,7 +6212,11 @@ void RegClassesCommand(void)
 
   /* now store the baseclasses and regression classes */
   MakeFN(buf,newDir,"tree",fname);
+  /* ar527: sometimes an output filter does exist
   if ((f=FOpen(fname,NoOFilter,&isPipe)) == NULL){
+    HError(999,"RC: Cannot create output file %s",fname);
+  }*/
+  if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
     HError(999,"RC: Cannot create output file %s",fname);
   }
   MakeFN(buf,NULL,"tree",tname);
@@ -6218,7 +6224,11 @@ void RegClassesCommand(void)
   PrintRegTree(f,regTree,nNodes,tname,bname);
   FClose(f,isPipe);  
   MakeFN(buf,newDir,"base",fname2);
+  /* ar527: sometimes an output filter does exist
   if ((f=FOpen(fname2,NoOFilter,&isPipe)) == NULL){
+    HError(999,"RC: Cannot create output file %s",bname);
+  }*/
+  if ((f=FOpen(fname2,HMMDefOFilter,&isPipe)) == NULL){
     HError(999,"RC: Cannot create output file %s",bname);
   }
   PrintBaseClass(f,regTree,nNodes,bname); 
@@ -6227,6 +6237,12 @@ void RegClassesCommand(void)
   /* Create the macros so they can be stored with the models */
   LoadBaseClass(hset,NameOf(bname,macroname),fname2);  
   LoadRegTree(hset,NameOf(fname,macroname),fname);  
+
+  /* 
+     In practice the above commands are wasteful, but useful to check
+     macronames. Turn off model storage instead.
+  */
+  saveHMMSet = FALSE;
 }
 
 
@@ -6444,18 +6460,21 @@ void DoEdit(char * editFn)
    }
    CloseSource(&source);
    
-   /* Save the Edited HMM Files */
-   if (trace & T_BID) {
-      printf("\nSaving new HMM files ...\n");
-      fflush(stdout);
+   if (saveHMMSet) {
+      /* Save the Edited HMM Files */
+      if (trace & T_BID) {
+         printf("\nSaving new HMM files ...\n");
+         fflush(stdout);
+      }
+      FixAllGConsts(hset);         /* in case any bad gConsts around */
+      badGC=FALSE;
+      PurgeMacros(hset);
+      if (mmfFn!=NULL)
+         SaveInOneFile(hset,mmfFn);
+      if(SaveHMMSet(&hSet,newDir,newExt,NULL,inBinary)<SUCCESS)
+         HError(2611,"DoEdit: SaveHMMSet failed");
    }
-   FixAllGConsts(hset);         /* in case any bad gConsts around */
-   badGC=FALSE;
-   PurgeMacros(hset);
-   if (mmfFn!=NULL)
-      SaveInOneFile(hset,mmfFn);
-   if(SaveHMMSet(&hSet,newDir,newExt,NULL,inBinary)<SUCCESS)
-      HError(2611,"DoEdit: SaveHMMSet failed");
+
    if (trace & T_BID) {
       printf("Edit Complete\n");
       fflush(stdout);
