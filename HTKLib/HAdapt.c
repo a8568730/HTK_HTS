@@ -19,8 +19,8 @@
 /*         File: HAdapt.c      Adaptation Library module       */
 /* ----------------------------------------------------------- */
 
-char *hadapt_version = "!HVER!HAdapt:   3.1.1 [CUED 05/06/02]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.7 2002/06/05 14:06:45 ge204 Exp $";
+char *hadapt_version = "!HVER!HAdapt:   3.2 [CUED 09/12/02]";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.9 2002/12/19 16:37:11 ge204 Exp $";
 
 
 #include <stdio.h>      /* Standard C Libraries */
@@ -78,6 +78,12 @@ static Matrix *Gg;
 static Matrix Zg;
 static Vector Hg;
 static Matrix Wg;
+
+static DMatrix blkZ;
+static DMatrix blkG;
+static DMatrix blku;
+static DMatrix blkv;
+static DVector blkw;
 
 ConfParam *cParm[MAXGLOBS];      /* config parameters */
 int nParm = 0;
@@ -1822,7 +1828,7 @@ static void InitialiseRegClasses(HMMSet *hset, RegTransInfo *rt)
 void InitialiseTransform( HMMSet *hset, MemHeap *x, RegTransInfo *rt,
                           Boolean adapt )
 {  
-   int vSize;
+   int vSize, bSize;
    TransformId *tId;
    HSetKind hsKind;
    int L;               /* number of logical HMM's */
@@ -1889,6 +1895,14 @@ void InitialiseTransform( HMMSet *hset, MemHeap *x, RegTransInfo *rt,
    u1      = CreateDMatrix(rt->hmem, vSize, vSize);
    v1      = CreateDMatrix(rt->hmem, vSize, vSize);
    w1      = CreateDVector(rt->hmem, vSize);
+
+   /* allocate space for  blkZ & blkG */
+   bSize = vSize/(rt->nBlocks);
+   blkZ = CreateDMatrix(rt->hmem, bSize, bSize+1);
+   blkG = CreateDMatrix(rt->hmem, bSize+1, bSize+1);
+   blku = CreateDMatrix(rt->hmem, bSize+1, bSize+1);
+   blkv = CreateDMatrix(rt->hmem, bSize+1, bSize+1);
+   blkw = CreateDVector(rt->hmem, bSize+1);
 
    /* allocate space for the transform information identifier */
    tId = (TransformId *) New(x, sizeof(TransformId));
@@ -2742,6 +2756,66 @@ static void AccCovarTrans(MixPDF *mp, Vector Z, Vector mean,
 /*              Mean Transformation Calculation Functions                */
 /* ----------------------------------------------------------------------*/
 
+static void CalcAdaptXFromAllZAllG(RegTransInfo *rt, Matrix* AllG, 
+                                   Matrix AllZ, OffsetBMat* adaptX)
+{
+   int vSize, nBlocks, bSize, q, fullq, cntBlk, bStart, fullk, i, k, row, col, fullrow, fullcol;
+   Matrix allGq, xan;
+   BlockMatrix xa;
+   Vector xb;
+   double dbltmp;
+
+   vSize = rt->vSize;
+   nBlocks = rt->nBlocks;
+   bSize = vSize / nBlocks;
+
+   xa = adaptX->a;
+   xb = adaptX->b;
+
+   bStart=0;
+   for(cntBlk = 1; cntBlk <= nBlocks; cntBlk++) {
+      xan = xa[cntBlk];
+      for(q=1; q<=bSize; q++) {
+         /* fetch the sub Z */
+         fullq = bStart + q;
+         blkZ[q][1] = AllZ[fullq][1];
+         for(k=1; k<=bSize; k++) {
+            fullk = bStart + k;
+            blkZ[q][k+1] = AllZ[fullq][fullk+1];
+         }
+         /* fetch the sub G */
+         allGq = AllG[fullq];
+         blkG[1][1] = allGq[1][1];
+         for(row=1; row<=bSize; row++) {
+            fullrow = bStart+row;
+            blkG[row+1][1]= blkG[1][row+1] = allGq[fullrow+1][1];
+            for(col=1; col<=bSize; col++) {
+               fullcol = bStart + col;
+               blkG[row+1][col+1]= allGq[fullrow+1][fullcol+1];
+            }
+         }
+         /* inverse the sub G */
+         InvSVD(blkG, blku, blkw, blkv, blkG);
+         /* calc the current row of X */
+         fullq = bStart + q;
+         dbltmp = 0.0;
+         for(k=1; k<=bSize+1; k++) {
+            dbltmp += blkZ[q][k]*blkG[k][1];
+         }
+         xb[fullq] = dbltmp;
+         for(i=1; i<=bSize; i++) {
+            dbltmp = 0.0;
+            for(k=1; k<=bSize+1; k++) {
+               dbltmp += blkZ[q][k]*blkG[k][i+1];
+            }
+            xan[q][i] = dbltmp;
+         }
+         
+      }
+      bStart += bSize;
+      
+   }
+}
 
 /* Calculate the G and Z regression accumulates for each regression class */
 static float GetMeanClassAccumulates(BaseformAcc *base, RegTransInfo *rt)
@@ -2776,7 +2850,6 @@ static void GetMeanTransform(RegNode *n, MemHeap *x, RegTransInfo *rt)
    OffsetBMat *m;
    BlockMatrix a;
    Vector b;
-   Vector Zi, Gij;
    Matrix Gk, Gi;
    OffsetTriBMat *Gti;
    Boolean newTransform=FALSE;
@@ -2827,30 +2900,11 @@ static void GetMeanTransform(RegNode *n, MemHeap *x, RegTransInfo *rt)
 
    for (i = 1; i <= vSize; i++) {
       Gi = Gg[i];
-      Zi = Zg[i];
       for (j = 1; j<=vSize+1;j++)
          for (k = 1; k<=j; k++)
             Gi[k][j] = Gi[j][k];
-  
-      Mat2DMat(Gi, svdMat);
-  
-      InvSVD(svdMat, u, w, v, svdMat);
-  
-      DMat2Mat(svdMat, Gi);
-  
-      /* do the bias */
-      for (k = 1; k<=vSize+1; k++)
-         b[i] += Gi[1][k] * Zi[k];
-      
-      for (j = 2; j<=vSize+1;j++) {
-         Gij = Gi[j];
-         for (k = 1; k<=vSize+1;k++) {
-            Wg[i][j-1] += Gij[k] * Zi[k];
-         }
-      }
    }
-
-   ConvertMat2BlockMat(Wg, m, vSize, nBlocks);
+   CalcAdaptXFromAllZAllG(rt, Gg, Zg, m);
 }
 
 /* Calculate the mean transform for each regression class */

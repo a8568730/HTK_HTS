@@ -19,8 +19,8 @@
 /*       File: HQuant.c: VQ table generation                   */
 /* ----------------------------------------------------------- */
 
-char *hquant_version = "!HVER!HQuant:   3.1.1 [CUED 05/06/02]";
-char *hquant_vc_id = "$Id: HQuant.c,v 1.7 2002/06/05 14:07:14 ge204 Exp $";
+char *hquant_version = "!HVER!HQuant:   3.2 [CUED 09/12/02]";
+char *hquant_vc_id = "$Id: HQuant.c,v 1.8 2002/12/19 16:37:40 ge204 Exp $";
 
 /* 
    This program calculates a vector quantisation table from a

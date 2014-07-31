@@ -21,7 +21,7 @@
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
 /*                                                             */
-/*              2001  Cambridge University                     */
+/*          2001-2002 Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -32,8 +32,8 @@
 /*         File: HNet.c  Network and Lattice Functions         */
 /* ----------------------------------------------------------- */
 
-char *hnet_version = "!HVER!HNet:   3.1.1 [CUED 05/06/02]";
-char *hnet_vc_id = "$Id: HNet.c,v 1.10 2002/06/05 14:06:45 ge204 Exp $";
+char *hnet_version = "!HVER!HNet:   3.2 [CUED 09/12/02]";
+char *hnet_vc_id = "$Id: HNet.c,v 1.14 2002/12/19 16:37:11 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -157,8 +157,11 @@ Lattice *NewLattice(MemHeap *heap,int nn,int na)
    lat->format=0;
    lat->utterance=lat->vocab=NULL;
    lat->net=lat->hmms=NULL;
+   lat->acscale=1.0;
    lat->lmscale=1.0; lat->wdpenalty=0.0;
    lat->prscale=0.0; lat->framedur=0.0;
+   lat->logbase = 1.0;
+   lat->tscale = 1.0;
    lat->subList = NULL;
    lat->refList = NULL;
    lat->subLatId = NULL;
@@ -207,10 +210,13 @@ Lattice *NewILattice(MemHeap *heap,int nn,int na,Lattice *info)
    lat->vocab = SafeCopyString(heap,info->vocab);
    lat->hmms = SafeCopyString(heap,info->hmms);
    lat->net = SafeCopyString(heap,info->net);
+   lat->acscale = info->acscale;
    lat->lmscale = info->lmscale;
    lat->wdpenalty = info->wdpenalty;
    lat->prscale = info->prscale;
    lat->framedur = info->framedur;
+   lat->logbase = info->logbase;
+   lat->tscale = info->tscale;
 
    if (nn==-1) {
       lat->lnodes=(LNode *) New(heap, sizeof(LNode)*info->nn);
@@ -508,13 +514,23 @@ static void OutputAlign(LArc *la,int format,FILE *file)
    }
 }
 
+/* convert log likelihoods from/to external represnation with specified base.
+   internal representation is ALWAYS natural logs, i.e. base e 
+   base = 0.0   no logs
+   base = 1.0   natural logs (no conversion required)
+*/
+#define ConvLogLikeFromBase(base, ll) ((base) == 0.0 ? log(ll) : \
+                                       (base) == 1.0 ? (ll) : (ll) * log(base))
+#define ConvLogLikeToBase(base, ll)  ((base) == 0.0 ? exp(ll) : \
+                                      ((base) == 1.0 ? (ll) : (ll) / log(base)))
+
 /* WriteOneLattice: Write a single lattice to file */
 ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
 {
    int i, *order, *rorder, st, en;
    LNode *ln;
    LArc *la;
-   
+
    /* Rather than return an error assume labels on nodes !! */
    order=(int *) New(&gstack, sizeof(int)*(lat->nn<lat->na ? lat->na+1 : lat->nn+1));
    rorder=(int *) New(&gstack, sizeof(int)*lat->nn);
@@ -537,7 +553,7 @@ ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
          ln->n = i;
          OutputIntField('I',i,format&HLAT_LBIN,"%-4d",file);
          if (format&HLAT_TIMES)
-            OutputFloatField('t',ln->time,format&HLAT_LBIN,"%-5.2f",file);
+            OutputFloatField('t',ln->time / lat->tscale,format&HLAT_LBIN,"%-5.2f",file);
          if (!(format&HLAT_ALABS)) {
             if (ln->word==lat->voc->subLatWord && ln->sublat!=NULL)
                fprintf(file,"L=%-19s ",
@@ -559,6 +575,9 @@ ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
          fprintf(file,"\n");
       }
    }
+   else
+      for (i=0; i < lat->nn; i++)
+         rorder[order[i]]=i;
 
    for (i=0;i<lat->na;i++)
       order[i]=i;
@@ -584,16 +603,16 @@ ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
             OutputIntField('v',la->end->v,format&HLAT_LBIN,"%-2d",file);
       }
       if (!(lat->format&HLAT_SHARC) && (format&HLAT_ACLIKE))
-         OutputFloatField('a',la->aclike,format&HLAT_LBIN,"%-9.2f",file);
+         OutputFloatField ('a', ConvLogLikeToBase(lat->logbase, la->aclike), format&HLAT_LBIN, "%-9.2f", file);
       if (format&HLAT_LMLIKE) {
          if (lat->net==NULL)
-            OutputFloatField('l',la->lmlike*lat->lmscale+lat->wdpenalty,
+            OutputFloatField('l', ConvLogLikeToBase(lat->logbase, la->lmlike*lat->lmscale+lat->wdpenalty),
                              format&HLAT_LBIN,"%-8.2f",file);
          else
-            OutputFloatField('l',la->lmlike,format&HLAT_LBIN,"%-7.3f",file);
+            OutputFloatField('l',ConvLogLikeToBase(lat->logbase, la->lmlike), format&HLAT_LBIN, "%-7.3f", file);
       }
       if (!(lat->format&HLAT_SHARC) && (format&HLAT_PRLIKE))
-         OutputFloatField('r',la->prlike,format&HLAT_LBIN,"%-6.2f",file);
+         OutputFloatField('r', ConvLogLikeToBase(lat->logbase, la->prlike), format&HLAT_LBIN, "%-6.2f", file);
       if (!(lat->format&HLAT_SHARC) && (format&HLAT_ALIGN) && la->nAlign>0)
          OutputAlign(la,format,file);
       fprintf(file,"\n");
@@ -621,8 +640,12 @@ ReturnStatus WriteLattice(Lattice *lat,FILE *file,LatFormat format)
    }
    if (format&HLAT_PRLIKE)
       fprintf(file,"prscale=%-6.2f\n",lat->prscale);
+   if (format&HLAT_ACLIKE)
+      fprintf(file,"acscale=%-6.2f\n",lat->acscale);
    if (lat->vocab!=NULL) fprintf(file,"vocab=%s\n",lat->vocab);
    if (lat->hmms!=NULL) fprintf(file,"hmms=%s\n",lat->hmms);
+   if (lat->logbase != 1.0) fprintf(file,"base=%f\n",lat->logbase);
+   if (lat->tscale != 1.0) fprintf(file,"tscale=%f\n",lat->tscale);
 
    /* First write all subsidiary sublattices */
    if (lat->subList!=NULL && !(format&HLAT_NOSUBS)) {
@@ -721,9 +744,9 @@ static char *GetNextFieldName(char *buf, char *del, Source *src)
 }  
 
 /* GetFieldValue: into buf and return type */
-static LatFieldType GetFieldValue(char *buf, Source *src)
+static LatFieldType GetFieldValue(char *buf, Source *src, int buflen)
 {
-   static char tmp[MAXSTRLEN];
+   static char tmp[MAXSTRLEN*10];
    int ch;
   
    ch=GetCh(src);
@@ -731,9 +754,10 @@ static LatFieldType GetFieldValue(char *buf, Source *src)
       HError(8250,"GetFieldValue: Field value expected");
    UnGetCh(ch,src);
    if (buf==NULL)
-      ReadString(src,tmp);
+      ReadStringWithLen(src,tmp,MAXSTRLEN*10);
    else
-      ReadString(src,buf);
+     if(!buflen)  ReadString(src,buf);
+     else ReadStringWithLen(src,buf,buflen);
    if (src->wasQuoted)
       return(STR_FIELD);
    else
@@ -773,7 +797,7 @@ static int GetIntField(char ntype,char del,char *vbuf,Source *src)
    int fldtype;
   
    if (del=='=') {
-      if ((vtype=GetFieldValue(vbuf,src))==STR_FIELD)
+      if ((vtype=GetFieldValue(vbuf,src,0))==STR_FIELD)
          HError(8250,"GetIntField: %c field expects numeric value (%s)",
                 ntype,vbuf);
       if ((fldtype = ParseNumber(&rv,vbuf))!=INT_FIELD)
@@ -796,7 +820,7 @@ static double GetFltField(char ntype,char del,char *vbuf,Source *src)
    float fv;
   
    if (del=='=') {
-      if ((vtype=GetFieldValue(vbuf,src))==STR_FIELD)
+      if ((vtype=GetFieldValue(vbuf,src,0))==STR_FIELD)
          HError(8250,"GetFltField: %c field expects numeric value (%s)",ntype,vbuf);
       if (ParseNumber(&rv,vbuf)==STR_FIELD)
          HError(8250,"GetFltField: %c field expects numeric value (%s)",ntype,vbuf);
@@ -852,7 +876,7 @@ static int ReadAlign(Lattice *lat,LArc *la,char *buf)
 static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc, 
                                Boolean shortArc, Boolean add2Dict)
 {
-   int i,s,e,n,v,nn,na;
+   int i,s,e,n,v=0,nn,na;
    Lattice *lat;
    LNode *ln;
    LArc *la;
@@ -860,8 +884,10 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
    double time,aclike,lmlike;
    double prlike;
    char nbuf[132],vbuf[132],*ptr,ntype,del;
-   char dbuf[4096];
-   double lmscl=1.0,lmpen=0.0;
+#define DBUFLEN 4096
+   char dbuf[DBUFLEN];
+   double lmscl=1.0, lmpen=0.0, acscl=1.0, prscl=1.0;
+   float logbase = 1.0, tscale = 1.0;
 
    char *uttstr,*lmnstr,*vocstr,*hmmstr,*sublatstr,*tag;
    SubLatDef *subLatId;
@@ -887,27 +913,35 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
             na=GetIntField('L',del,vbuf,src);
             break;
          default:
-            GetFieldValue(0,src);
+            GetFieldValue(0,src,0);
             break;
          }
       }
       else {
          if (!strcmp(ptr,"UTTERANCE"))
-            GetFieldValue(vbuf,src),uttstr=CopyString(heap,vbuf);
+            GetFieldValue(vbuf,src,0),uttstr=CopyString(heap,vbuf);
          else if (!strcmp(ptr,"SUBLAT"))
-            GetFieldValue(vbuf,src),sublatstr=CopyString(heap,vbuf);
+            GetFieldValue(vbuf,src,0),sublatstr=CopyString(heap,vbuf);
          else if (!strcmp(ptr,"vocab"))
-            GetFieldValue(vbuf,src),vocstr=CopyString(heap,vbuf);
+            GetFieldValue(vbuf,src,0),vocstr=CopyString(heap,vbuf);
          else if (!strcmp(ptr,"hmms"))
-            GetFieldValue(vbuf,src),hmmstr=CopyString(heap,vbuf);
+            GetFieldValue(vbuf,src,0),hmmstr=CopyString(heap,vbuf);
          else if (!strcmp(ptr,"lmname"))
-            GetFieldValue(vbuf,src),lmnstr=CopyString(heap,vbuf);
+            GetFieldValue(vbuf,src,0),lmnstr=CopyString(heap,vbuf);
          else if (!strcmp(ptr,"wdpenalty"))
             lmpen=GetFltField('p',del,vbuf,src);
          else if (!strcmp(ptr,"lmscale"))
             lmscl=GetFltField('s',del,vbuf,src);
+         else if (!strcmp(ptr,"prscale"))
+            prscl=GetFltField('s',del,vbuf,src);
+         else if (!strcmp(ptr,"acscale"))
+            acscl=GetFltField('a',del,vbuf,src);
+         else if (!strcmp(ptr,"base"))
+            logbase=GetFltField('b',del,vbuf,src);
+         else if (!strcmp(ptr,"tscale"))
+            tscale=GetFltField('t',del,vbuf,src);
          else
-            GetFieldValue(NULL,src);
+            GetFieldValue(NULL,src,0);
       }
    }
 
@@ -923,6 +957,15 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
    lat->na=na;
    lat->utterance=uttstr;lat->vocab=vocstr;lat->hmms=hmmstr;
    lat->net=lmnstr;lat->lmscale=lmscl;lat->wdpenalty=lmpen;
+   lat->acscale = acscl;
+   lat->logbase = logbase;
+   lat->tscale = tscale;
+   lat->framedur=0;
+   lat->prscale=prscl;
+
+   if (logbase < 0.0)
+      HError (8251, "ReadLattice: Illegal log base in lattice");
+
    /* Set format to indicate type and default word label position */
    lat->format=(shortArc?HLAT_SHARC|HLAT_ALABS:HLAT_ALABS);
 
@@ -993,10 +1036,11 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
                switch(ntype) {
                case 't':
                   time=GetFltField('t',del,vbuf,src);
+                  time *= tscale;
                   lat->format |= HLAT_TIMES;
                   break;
                case 'W':
-                  GetFieldValue(vbuf,src);
+                  GetFieldValue(vbuf,src,0);
                   wordId=GetWord(voc,GetLabId(vbuf,add2Dict),add2Dict);
                   if (wordId==NULL){
                      Dispose(heap, lat);
@@ -1005,12 +1049,12 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
                   }
                   break;
                case 's':
-                  GetFieldValue(vbuf,src);
+                  GetFieldValue(vbuf,src,0);
                   tag=CopyString(heap,vbuf);
                   lat->format |= HLAT_TAGS;
                   break;
                case 'L':
-                  GetFieldValue(vbuf,src);
+                  GetFieldValue(vbuf,src,0);
                   wordId=voc->subLatWord;
                   if((subLatId=AdjSubList(lat,GetLabId(vbuf,TRUE),NULL,+1))==NULL) {
                      HRError(8251,"ReadLattice: AdjSubLat failed");
@@ -1023,7 +1067,7 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
                   v=GetIntField('v',del,vbuf,src);
                   break;
                default:
-                  GetFieldValue(0,src);
+                  GetFieldValue(0,src,0);
                   break;
                }
             }
@@ -1080,7 +1124,7 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
                      }
                      break;
                   case 'W':
-                     GetFieldValue(vbuf,src);
+                     GetFieldValue(vbuf,src,0);
                      wordId=GetWord(voc,GetLabId(vbuf,add2Dict),add2Dict);
                      if (wordId==NULL || wordId==voc->subLatWord){
                         Dispose(heap, lat);
@@ -1093,29 +1137,29 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
                      lat->format |= HLAT_PRON;
                      v=GetIntField('v',del,vbuf,src);
                      break;
-                  case 't':
-                     v=GetIntField('t',del,vbuf,src);
-                     break;
                   case 'a':
                      lat->format |= HLAT_ACLIKE;
                      aclike=GetFltField('a',del,vbuf,src);
+                     aclike = ConvLogLikeFromBase(logbase, aclike);
                      break;
                   case 'l':
                      lat->format |= HLAT_LMLIKE;
                      lmlike=GetFltField('l',del,vbuf,src);
+                     lmlike = ConvLogLikeFromBase(logbase, lmlike);
                      break;
                   case 'r':
                      lat->format |= HLAT_PRLIKE;
                      prlike=GetFltField('r',del,vbuf,src);
+                     prlike = ConvLogLikeFromBase(logbase, prlike);
                      break;
                   case 'd':
                      lat->format |= HLAT_ALIGN;
-                     GetFieldValue(dbuf,src);
+                     GetFieldValue(dbuf,src,DBUFLEN);
                      if (!shortArc)
                         la->nAlign=ReadAlign(lat,la,dbuf);
                      break;
                   default:
-                     GetFieldValue(0,src);
+                     GetFieldValue(0,src,0);
                      break;
                   }
             }
@@ -1129,8 +1173,10 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
          la->end=lat->lnodes+e;
          la->lmlike=lmlike;
            
-         if ((lat->format&HLAT_ALABS) && la->end->word == voc->nullWord)
+         if ((lat->format&HLAT_ALABS) && la->end->word == voc->nullWord){
             la->end->word=wordId;
+	    la->end->v = v;
+	 }
          if (wordId != NULL && la->end->word != wordId){
             Dispose(heap, lat);
             HRError(8251,"ReadLattice: Lattice arc (%d) W field (%s) different from node (%s)",  n,wordId->wordName->name,la->end->word->wordName->name);
@@ -1148,10 +1194,10 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
          na--;
          break;
       default:
-         GetFieldValue(0,src);
+         GetFieldValue(0,src,0);
          while ((ptr=GetNextFieldName(nbuf,&del,src))) {
             if (nbuf[0]=='\n') break;
-            else GetFieldValue(0,src);
+            else GetFieldValue(0,src,0);
          }
          break;
       }
@@ -1272,6 +1318,7 @@ void CopyLattice(Lattice *lat, Lattice *newlat,
                newArc = NumbLArc(newlat,*newArcs+LArcNumb(oldArc,lat));
                newArc->start = newNode;
                newArc->lmlike = oldArc->lmlike;
+               newArc->prlike = oldArc->prlike;
             }
          }
          else
@@ -1283,6 +1330,7 @@ void CopyLattice(Lattice *lat, Lattice *newlat,
                newArc = NumbLArc(newlat,*newArcs+LArcNumb(oldArc,lat));
                newArc->end = newNode;
                newArc->lmlike = oldArc->lmlike;
+               newArc->prlike = oldArc->prlike;
             }
          }
          else
@@ -1500,6 +1548,7 @@ Lattice *LatticeFromLabels(LabList *ll,LabId bnd,Vocab *voc,MemHeap *heap)
          la->start=ln-1;
          la->end=ln;
          la->lmlike=0.0;
+         la->prlike=0.0;
          la->farc=la->parc=NULL;
          la->end->pred=la->start->foll=la;
       }

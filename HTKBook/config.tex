@@ -32,6 +32,7 @@
 %
 % HTKBook - Dave Ollason and Steve Young 11/11/95
 %
+% Language modelling details added by Gareth Moore 15-16/01/02
 
 \mychap{Configuration Variables}{confvars}
 
@@ -93,7 +94,6 @@ Module & Name & Default & Description  \\ \hline\hline}
   & \texttt{HIFREQ}  & \texttt{-1.0} & High frequency cut-off in fbank analysis \\  \cline{2-4}
   & \texttt{WARPFREQ} & \texttt{1.0} & Frequency warping factor \\ \cline{2-4}
   & \texttt{WARPLCUTOFF} &  & Lower frequency threshold for non-linear warping  \\ \cline{2-4}
-
   & \texttt{CMEANDIR} &  & Directory to find cepstral mean vecotrs  \\ \cline{2-4}
   & \texttt{CMEANMASK} &  & Filename mask for cepstral mean vecotrs  \\ \cline{2-4}
   & \texttt{VARSCALEDIR} &  & Directory to find cepstral variance vecotrs  \\ \cline{2-4}
@@ -242,36 +242,56 @@ normally be measured rather than supplied in configuration \\ \cline{2-4}
 % all
   & \texttt{TRACE} & \texttt{0} & Trace setting\\ \hline
 
- & \texttt{HWAVEFILTER}  &  & Filter for waveform file input\\
- & \texttt{HPARMFILTER}  &  &  Filter for parameter file input\\
- & \texttt{HLANGMODFILTER}& & Filter for language model file input\\
- & \texttt{HMMLISTFILTER}  && Filter for HMM list file input\\
- & \texttt{HMMDEFFILTER}   && Filter for HMM definition file input\\
- & \texttt{HLABELFILTER}   && Filter for Label file input\\
- & \texttt{HNETFILTER}     && Filter for Network file input\\
- & \texttt{HDICTFILTER}    && Filter for Dictionary file input \\ 
- & \texttt{LGRAMFILTER}    & & Filter for gram file input\\
- & \texttt{LWMAPFILTER}    & &  Filter for word map file input\\
-\htool{HShell} & \texttt{LCMAPFILTER}    & &  Filter for class map file input\\
- & \texttt{HWAVEOFILTER}   & & Filter for waveform file output\\
- & \texttt{HPARMOFILTER}   & & Filter for parameter file output\\
- & \texttt{HLANGMODOFILTER}& & Filter for language model file output\\
- & \texttt{HMMLISTOFILTER} & & Filter for HMM list file output\\
- & \texttt{HMMDEFOFILTER}  & & Filter for HMM definition file output\\
- & \texttt{HLABELOFILTER}  & & Filter for Label file output\\
- & \texttt{HNETOFILTER}    & & Filter for Network file output\\
- & \texttt{HDICTOFILTER}   & & Filter for Dictionary file output \\ 
- & \texttt{LGRAMOFILTER}   & & Filter for gram file output\\
- & \texttt{LWMAPOFILTER}   & & Filter for word map file output\\
+ & \texttt{HWAVEFILTER}    & & Filter for waveform file input\\ \cline{2-4}
+ & \texttt{HPARMFILTER}    & & Filter for parameter file input\\ \cline{2-4}
+ & \texttt{HLANGMODFILTER} & & Filter for language model file input\\ \cline{2-4}
+ & \texttt{HMMLISTFILTER}  & & Filter for HMM list file input\\ \cline{2-4}
+ & \texttt{HMMDEFFILTER}   & & Filter for HMM definition file input\\ \cline{2-4}
+ & \texttt{HLABELFILTER}   & & Filter for Label file input\\ \cline{2-4}
+ & \texttt{HNETFILTER}     & & Filter for Network file input\\ \cline{2-4}
+ & \texttt{HDICTFILTER}    & & Filter for Dictionary file input \\  \cline{2-4}
+ & \texttt{LGRAMFILTER}    & & Filter for gram file input\\ \cline{2-4}
+ & \texttt{LWMAPFILTER}    & & Filter for word map file input\\ \cline{2-4}
+\htool{HShell} & \texttt{LCMAPFILTER}    & &  Filter for class map file input\\ \cline{2-4}
+ & \texttt{LMTEXTFILTER}   & & Filter for text file input\\ \cline{2-4}
+ & \texttt{HWAVEOFILTER}   & & Filter for waveform file output\\ \cline{2-4}
+ & \texttt{HPARMOFILTER}   & & Filter for parameter file output\\ \cline{2-4}
+ & \texttt{HLANGMODOFILTER}& & Filter for language model file output\\ \cline{2-4}
+ & \texttt{HMMLISTOFILTER} & & Filter for HMM list file output\\ \cline{2-4}
+ & \texttt{HMMDEFOFILTER}  & & Filter for HMM definition file output\\ \cline{2-4}
+ & \texttt{HLABELOFILTER}  & & Filter for Label file output\\ \cline{2-4}
+ & \texttt{HNETOFILTER}    & & Filter for Network file output\\ \cline{2-4}
+ & \texttt{HDICTOFILTER}   & & Filter for Dictionary file output \\  \cline{2-4}
+ & \texttt{LGRAMOFILTER}   & & Filter for gram file output\\ \cline{2-4}
+ & \texttt{LWMAPOFILTER}   & & Filter for word map file output\\ \cline{2-4}
  & \texttt{LCMAPOFILTER}   & & Filter for class map file
 output\\
 \hline
- & \texttt{STARTWORD}       & {\tt <s>}    & Set sentence start symbol\\
- & \texttt{ENDWORD}         & {\tt </s>}   & Set sentence end symbol\\
- & \texttt{UNKNOWNNAME}     & {\tt !!UNK}  & Set OOV class symbol\\
- & \texttt{RAWMITFORMAT}    & \texttt{F}   & Disable \HTK\ escaping
-for LM tools\\
+\htool{LModel} & \texttt{RAWMITFORMAT}& \texttt{F}  & Disable \HTK\ escaping for LM tools\\ \cline{2-4}
+               & \texttt{USEINTID}  & \texttt{F}    & Use 4 byte ID fields to save binary models \\
 \hline
+
+               & \texttt{INWMAPRAW}  & \texttt{F}   & Disable \HTK\ escaping for input word lists and maps \\ \cline{2-4}
+\htool{LWMap}  & \texttt{OUTWMAPRAW} & \texttt{F}   & Disable \HTK\ escaping for output word lists and maps \\ \cline{2-4}
+               & \texttt{STARTWORD}  & {\tt <s>}    & Set sentence start symbol\\ \cline{2-4}
+               & \texttt{ENDWORD}    & {\tt </s>}   & Set sentence end symbol\\
+\hline
+
+               & \texttt{INCMAPRAW}  & \texttt{F}   & Disable \HTK\ escaping for input class lists and maps \\ \cline{2-4}
+\htool{LCMap}  & \texttt{OUTCMAPRAW} & \texttt{F}   & Disable \HTK\ escaping for output class lists and maps \\ \cline{2-4}
+               & \texttt{UNKNOWNNAME}& {\tt !!UNK}  & Set OOV class symbol\\ \cline{2-4}
+               & \texttt{UNKNOWNID}  & \texttt{1}   & Set unknown symbol class ID \\
+\hline
+
+               & \texttt{UNIFLOOR}   & {\tt 1}      & Unigram floor count \\ \cline{2-4}
+\htool{LPCalc}  & \texttt{KRANGE}     & {\tt 7}      & Good-Turing discounting range \\ \cline{2-4}
+               & \texttt{\textit{n}G\_CUTOFF} & {\tt 1} & \textit{n}-gram cutoff
+               (eg. \texttt{2G\_CUTOFF})\\ \cline{2-4}
+               & \texttt{DCTYPE}     & \texttt{TG}  & Discounting type
+                (\texttt{TG} for Turing-Good or \texttt{ABS} for Absolute\\ 
+% or  \texttt{LIN} for Linear)  - this seems not to have been fully implemented (!) \\
+\hline
+\htool{LGBase} & \texttt{CHECKORDER} & \texttt{F}   & Check N-gram ordering in files \\
 \end{supertabular}
 \end{center}
 %\caption{Library Module Configuration Variables (cont)}
@@ -300,19 +320,25 @@ Module & Name & Default & Description  \\ \hline\hline
   & \texttt{TARGETKIND} & \texttt{ANON} & Parameter kind of target \\ \hline
 
 %HERest
-\htool{HERest} & \texttt{SAVEBINARY} & \texttt{F} & Load/Save in binary format \\
-  \cline{2-4}
-  & \texttt{BINARYACFORMAT} & \texttt{T} & Load/Save accumulators in
-  binary format \\ \hline
+\htool{HERest} 
+  & \texttt{SAVEBINARY} & \texttt{F} & Load/Save in binary format \\ \cline{2-4}
+  & \texttt{BINARYACFORMAT} & \texttt{T} & Load/Save accumulators in binary format \\ \cline{2-4}
+  & \texttt{ALIGNMODELMMF} & & MMF file for alignment (2-model reest)  \\ \cline{2-4}
+  & \texttt{ALIGNHMMLIST}  & & Model list for alignment (2-model reest) \\ \cline{2-4}
+  & \texttt{ALIGNMODELDIR} & & Dir containing HMMs for alignment (2-model reest).  \\ \cline{2-4}
+  & \texttt{ALIGNMODELEXT} & & Ext to be used with above Dir (2model-reest) \\ 
+\hline
 
 % HEAdapt
 \htool{HEAdapt} & \texttt{SAVEBINARY} & \texttt{F} & Load/Save in
   binary format \\ \hline
 
 % HHEd
-\htool{HHEd} & \texttt{TREEMERGE} & \texttt{T} & After tree splitting,
-  merge leaves \\ \cline{2-4}
-  & \texttt{TIEDMIXNAME} & \texttt{TM} & Tied mixture base name \\ \hline
+\htool{HHEd} & \texttt{TREEMERGE} & \texttt{T} & After tree splitting, merge leaves \\ \cline{2-4}
+  & \texttt{TIEDMIXNAME} & \texttt{TM} & Tied mixture base name \\ \cline{2-4}
+  & \texttt{APPLYVFLOOR} & \texttt{T} & Apply variance floor to model set \\  \cline{2-4}
+  & \texttt{USELEAFSTATS} & \texttt{T} & Use stats to obtain tied state pdf's \\
+ \hline
 
 % HParse
 \htool{HParse} & \texttt{V1COMPAT} & \texttt{F} & Enable compatibility with HTK V1.X \\ \hline

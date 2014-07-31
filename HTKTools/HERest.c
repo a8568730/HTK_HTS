@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2002  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HERest.c: Embedded B-W ReEstimation           */
 /* ----------------------------------------------------------- */
 
-char *herest_version = "!HVER!HERest:   3.1.1 [CUED 05/06/02]";
-char *herest_vc_id = "$Id: HERest.c,v 1.9 2002/06/05 14:07:14 ge204 Exp $";
+char *herest_version = "!HVER!HERest:   3.2 [CUED 09/12/02]";
+char *herest_vc_id = "$Id: HERest.c,v 1.10 2002/12/19 16:37:40 ge204 Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -75,7 +88,6 @@ static char * statFN;            /* stats file, if any */
 static float minVar  = 0.0;      /* minimum variance (diagonal only) */
 static float mixWeightFloor=0.0; /* Floor for mixture weights */
 static int minEgs    = 3;        /* min examples to train a model */
-
 static UPDSet uFlags = (UPDSet) (UPMEANS|UPVARS|UPTRANS|UPMIXES); /* update flags */
 static int parMode   = -1;       /* enable one of the // modes */
 static Boolean stats = FALSE;    /* enable statistics reports */
@@ -90,11 +102,18 @@ static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
 static int nParm = 0;               /* total num params */
 Boolean traceHFB = FALSE;        /* pass to HFB to retain top-level tracing */
 
+static Boolean al_hmmUsed = FALSE;   /* Set for 2-model ReEstimation */
+static char al_hmmDir[MAXFNAMELEN];  /* dir to look for alignment hmm defs */
+static char al_hmmExt[MAXSTRLEN];  	 /* alignment hmm def file extension */
+static char al_hmmMMF[MAXFNAMELEN];  /* alignment hmm MMF */
+static char al_hmmLst[MAXFNAMELEN];  /* alignment hmm list */
+static HMMSet al_hset ;      	 /* Option 2nd set of models for alignment */
+
 /* Global Data Structures - valid for all training utterances */
 static LogDouble pruneInit = NOPRUNE;    /* pruning threshold initially */
 static LogDouble pruneInc = 0.0;         /* pruning threshold increment */
 static LogDouble pruneLim = NOPRUNE;     /* pruning threshold limit */
-static float minFrwdP = 10.0;    /* mix prune threshold */
+static float minFrwdP = NOPRUNE;         /* mix prune threshold */
 
 
 static Boolean firstTime = TRUE;    /* Flag used to enable creation of ot */
@@ -115,12 +134,27 @@ void SetConfParms(void)
 {
    int i;
    Boolean b;
+   char buf[MAXSTRLEN];
    
    nParm = GetConfig("HEREST", TRUE, cParm, MAXGLOBS);
    if (nParm>0) {
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
       if (GetConfBool(cParm,nParm,"SAVEBINARY",&b)) saveBinary = b;
       if (GetConfBool(cParm,nParm,"BINARYACCFORMAT",&b)) ldBinary = b;
+      /* 2-model reestimation alignment model set */
+      if (GetConfStr(cParm,nParm,"ALIGNMODELMMF",buf)) {
+          strcpy(al_hmmMMF,buf); al_hmmUsed = TRUE;
+      }
+      if (GetConfStr(cParm,nParm,"ALIGNHMMLIST",buf)) {
+          strcpy(al_hmmLst,buf); al_hmmUsed = TRUE;
+      }
+      /* allow multiple individual model files */
+      if (GetConfStr(cParm,nParm,"ALIGNMODELDIR",buf)) {
+          strcpy(al_hmmDir,buf); al_hmmUsed = TRUE;
+      }
+      if (GetConfStr(cParm,nParm,"ALIGNMODELEXT",buf)) {
+          strcpy(al_hmmExt,buf); al_hmmUsed = TRUE;
+      }
    }
 }
 
@@ -220,16 +254,17 @@ int main(int argc, char *argv[])
    InitMem();    InitMath();
    InitSigP();   InitAudio();
    InitWave();   InitVQ();
-   InitLabel();
+   InitLabel();  InitModel();
    if(InitParm()<SUCCESS)  
       HError(2300,"HERest: InitParm failed");
-   InitModel();  InitTrain();
+   InitTrain();
    InitUtil();   InitFB();
 
    if (!InfoPrinted() && NumArgs() == 0)
       ReportUsage();
    if (NumArgs() == 0) Exit(0);
-
+   al_hmmDir[0] = '\0'; al_hmmExt[0] = '\0'; 
+   al_hmmMMF[0] = '\0'; al_hmmLst[0] = '\0'; 
    SetConfParms();
    CreateHeap(&hmmStack,"HmmStore", MSTAK, 1, 1.0, 50000, 500000);
    CreateHMMSet(&hset,&hmmStack,TRUE);
@@ -404,6 +439,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
       HError(2321,"Initialise: MakeHMMSet failed");
    if(LoadHMMSet( hset,hmmDir,hmmExt)<SUCCESS)
       HError(2321,"Initialise: LoadHMMSet failed");
+   SetParmHMMSet(hset);
    AttachAccs(hset, &gstack);
    ZeroAccs(hset);
    P = hset->numPhyHMM;
@@ -426,13 +462,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
       printf("\n\n ");
   
       if (parMode>=0) printf("Parallel-Mode[%d] ",parMode);
-      if (pruneInit < NOPRUNE) 
-         if (pruneInc != 0.0)
-            printf("Pruning-On[%.1f %.1f %.1f]\n",pruneInit,pruneInc,pruneLim);
-         else
-            printf("Pruning-On[%.1f]\n",pruneInit);
-      else
-         printf("Pruning-Off");
+
       printf("System is ");
       switch (hsKind){
       case PLAINHS:  printf("PLAIN\n");  break;
@@ -440,6 +470,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
       case TIEDHS:   printf("TIED\n"); break;
       case DISCRETEHS: printf("DISCRETE\n"); break;
       }
+
       printf("%d Logical/%d Physical Models Loaded, VecSize=%d\n",L,P,vSize);
       if (hset->numFiles>0)
          printf("%d MMF input files\n",hset->numFiles);
@@ -453,6 +484,58 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
    /* initialise and  pass information to the forward backward library */
    InitialiseForBack(fbInfo, x, hset, NULL, uFlags, pruneInit, pruneInc,
                      pruneLim, minFrwdP);
+
+   /* 2-model reestimation */
+   if (al_hmmUsed){
+       if (trace&T_TOP)
+           printf("2-model re-estimation enabled\n");
+       /* load alignment HMM set */
+       CreateHMMSet(&al_hset,&hmmStack,TRUE);
+       /* load multiple MMFs */
+       if (strlen(al_hmmMMF) > 0 ) {
+           char *p,*q;
+           Boolean eos;
+           p=q=al_hmmMMF;
+           for(;;) {
+               eos = (*p=='\0');
+               if ( ( isspace(*p) || *p == '\0' ) && (q!=p) ) {
+                   *p='\0';
+                   if (trace&T_TOP) { 
+                       printf("Loading alignment HMM set %s\n",q);
+                   }
+                   AddMMF(&al_hset,q);
+                   if (eos)
+                       break;
+                   q=p+1;
+               }
+               p++;
+           }
+       }
+       if (strlen(al_hmmLst) > 0 ) 
+           MakeHMMSet(&al_hset, al_hmmLst );
+       else /* use same hmmList */
+           MakeHMMSet(&al_hset, hmmListFn );
+       if (strlen(al_hmmDir) > 0 )
+           LoadHMMSet(&al_hset,al_hmmDir,al_hmmExt);
+       else
+           LoadHMMSet(&al_hset,NULL,NULL);
+
+       /* switch model set */
+       UseAlignHMMSet(fbInfo,x,&al_hset);
+
+       /* and echo status */
+       if (trace&T_TOP) { 
+           if (strlen(al_hmmDir) > 0 )
+               printf(" HMM Dir %s",al_hmmDir);
+           if (strlen(al_hmmExt) > 0 )
+               printf(" Ext %s",al_hmmExt);
+           printf("\n");
+           if (strlen(al_hmmLst) > 0 )
+               printf("HMM List %s\n",al_hmmLst);
+           printf(" %d Logical/%d Physical Models Loaded, VecSize=%d\n",
+                  al_hset.numLogHMM,al_hset.numPhyHMM,al_hset.vecSize);
+       }
+   }
 }
 
 /* ------------------- Statistics Reporting  -------------------- */
@@ -506,15 +589,15 @@ void StatReport(HMMSet *hset)
 void DoForwardBackward(FBInfo *fbInfo, UttInfo *utt, char * datafn, char * datafn2)
 {
    utt->twoDataFiles = twoDataFiles ;
-   utt->S = fbInfo->hset->swidth[0];
+   utt->S = fbInfo->al_hset->swidth[0];
 
    /* Load the labels */
    LoadLabs(utt, lff, datafn, labDir, labExt);
    /* Load the data */
-   LoadData(fbInfo->hset, utt, dff, datafn, datafn2);
+   LoadData(fbInfo->al_hset, utt, dff, datafn, datafn2);
 
    if (firstTime) {
-      InitUttObservations(utt, fbInfo->hset, datafn, fbInfo->maxMixInS);
+      InitUttObservations(utt, fbInfo->al_hset, datafn, fbInfo->maxMixInS);
       firstTime = FALSE;
    }
   
@@ -989,7 +1072,7 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
    }
    if (trace&T_TOP){
       if (mmfFn == NULL)
-         printf("Saving hmm's to dir %s\n",(newDir==NULL)?"Current":newDir); 
+         printf("Saving hmm's to dir %s\n",(newDir==NULL)?"Current":newDir);
       else
          printf("Saving hmm's to MMF %s\n",mmfFn);
       fflush(stdout);
@@ -1007,11 +1090,18 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
       }
    }
    SaveHMMSet(hset,newDir,newExt,saveBinary);
-   if (trace&T_TOP)
+   if (trace&T_TOP) {
       printf("Reestimation complete - average log prob per frame = %e\n",
              totalPr/totalT);
+      printf("     - total frames seen          = %e\n", (double)totalT);
+   }
 }
 
 /* ----------------------------------------------------------- */
 /*                      END:  HERest.c                         */
 /* ----------------------------------------------------------- */
+
+
+
+
+

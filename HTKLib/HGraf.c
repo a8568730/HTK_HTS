@@ -20,7 +20,7 @@
 /* ----------------------------------------------------------- */
 
 char *hgraf_version = "!HVER!HGraf(X):   3.1 [CUED 16/01/02]";
-char *hgraf_vc_id = "$Id: HGraf.c,v 1.7 2002/01/16 18:11:28 ge204 Exp $";
+char *hgraf_vc_id = "$Id: HGraf.c,v 1.8 2002/12/19 16:37:11 ge204 Exp $";
 
 /*
    This is the X Windows implementation of HGraf.  It is server

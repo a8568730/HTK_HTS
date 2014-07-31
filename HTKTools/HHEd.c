@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2002  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HHEd:  HMM Source Definition Editor           */
 /* ----------------------------------------------------------- */
 
-char *hhed_version = "!HVER!HHEd:   3.1.1 [CUED 05/06/02]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.10 2002/06/05 14:07:14 ge204 Exp $";
+char *hhed_version = "!HVER!HHEd:   3.2 [CUED 09/12/02]";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.12 2002/12/19 16:37:40 ge204 Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -72,7 +85,7 @@ char *hhed_vc_id = "$Id: HHEd.c,v 1.10 2002/06/05 14:07:14 ge204 Exp $";
 #define T_TREE       0xf400 /* Any specific tree tracing */
 #define T_IND        0x0006 /* Intermediate or detailed tracing */
 #define T_BID        0x0007 /* Basic, intermediate or detailed tracing */
-
+#define T_MD         0x10000 /* Trace mix down detail merge */
 
 static MemHeap questHeap;   /* Heap holds all questions */
 static MemHeap hmmHeap;     /* Heap holds all hmm related info */
@@ -120,7 +133,8 @@ static ConfParam *cParm[MAXGLOBS];
 static int nParm = 0;            /* total num params */
 static Boolean treeMerge = TRUE; /* After tree spltting merge leaves */
 static char tiedMixName[MAXSTRLEN] = "TM"; /* Tied mixture base name */
-
+static Boolean useLeafStats = TRUE; /* Use leaf stats to init macros */
+static Boolean applyVFloor = TRUE; /* apply modfied varFloors to vars in model set */ 
 
 /* ------------------ Process Command Line -------------------------- */
 
@@ -133,9 +147,9 @@ void SetConfParms(void)
    if (nParm>0) {
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
       if (GetConfBool(cParm,nParm,"TREEMERGE",&b)) treeMerge = b;
+      if (GetConfBool(cParm,nParm,"USELEAFSTATS",&b)) useLeafStats = b;
+      if (GetConfBool(cParm,nParm,"APPLYVFLOOR",&b)) applyVFloor = b;
       GetConfStr(cParm,nParm,"TIEDMIXNAME",tiedMixName);
-
-
    }
 }
 
@@ -151,10 +165,14 @@ void Summary(void)
    printf("DP s n id ...        - Duplicate the hmm set n times using id to differentiate\n");
    printf("                       the new hmms and macros.  Only macros the type of which\n");
    printf("                       appears in s will be duplicated, others will be shared.\n");
+   printf("FA f                 - Set variance floor to average within state variance * f\n");
+   printf("FV vFloorfile        - Load variance floor from file\n");
+   printf("FC                   - Convert diagonal variances to full covariances\n");
    printf("HK hsetkind          - change current set to hsetkind\n");
    printf("JO size floor        - set size and min mix weight for a JOin\n");
    printf("LS statsfile         - load named statsfile\n");
    printf("LT filename          - Load Questions and Trees from filename\n");
+   printf("MD n itemlist        - MixDown command, change mixtures in itemlist to n\n");
    printf("MM s itemlist        - make each item in list into a macro with usage==1\n");
    printf("MT triHmmList        - Make Triphones from loaded biphones\n");
    printf("MU n itemlist        - MixUp command, change mixtures in itemlist to n\n");
@@ -184,6 +202,7 @@ void Summary(void)
    printf("TI macro itemlist    - TIe the specified components\n");
    printf("TR n                 - set trace level to n (overrides -T option)\n");
    printf("UT itemlist          - UnTie the specified components\n");
+   printf("XF filename          - Set the Input Xform to filename\n");
    Exit(0);
 }
 
@@ -2144,7 +2163,7 @@ int CountDefunctMix(StreamElem *ste)
    return defunct;
 }
 
-/* FixDefunctMix: restore n defunct mixtures */
+/* FixDefunctMix: restore n defunct mixtures by successive mixture splitting */
 void FixDefunctMix(char *hname,StreamElem *ste, int n)
 {
    MixtureElem *me,m1,m2;
@@ -2160,6 +2179,196 @@ void FixDefunctMix(char *hname,StreamElem *ste, int n)
       SplitMix(me+m,&m1,&m2,vSize);
       me[m] = m1; me[l] = m2;
    }
+}
+
+/* ------------------- MixDown Operations --------------------- */
+
+/* MixMergeCost: compute cost of merging me1 and me2 */
+float MixMergeCost(MixtureElem *me1,MixtureElem *me2)
+{
+   float w1,w2,v,d=0.0,v1k,v2k;
+   int vs,k;
+   Vector m1,m2,v1,v2;
+   
+   /* normalise weight */
+   w1=me1->weight/(me1->weight+me2->weight);
+   w2=me2->weight/(me1->weight+me2->weight);
+   m1=me1->mpdf->mean;
+   m2=me2->mpdf->mean;
+   v1=me1->mpdf->cov.var;
+   v2=me2->mpdf->cov.var;
+   vs=VectorSize(m1);
+
+   for (k=1; k<=vs; k++) {
+      v1k = v1[k]; v2k = v2[k];
+      v = w1*v1k+w2*v2k+m1[k]*m1[k]*(w1-w1*w1)+m2[k]*m2[k]*(w2-w2*w2)-
+         2*m1[k]*m2[k]*w1*w2;
+      d += -0.5*(me1->weight*(log(TPI*v)-log(TPI*v1k))+
+                 me2->weight*(log(TPI*v)-log(TPI*v2k)));
+   }
+   return(d);
+}
+   
+/* MergeMix: merge components p and q from given stream elem.  If inPlace
+   overwrite existing components, otherwise create new mix component */
+void MergeMix(StreamElem *ste,int p,int q, Boolean inPlace)
+{
+   float w1,w2,m,v,p0,p1,p2,v1k,v2k;
+   int vs,k;
+   Vector m1,m2,v1,v2,mt,vt;
+   MixtureElem me, *meq, *mep;
+
+   if (q!=ste->nMix) {
+      if (p==ste->nMix) {
+         p=q; q=ste->nMix;
+      }
+      else {
+         me=ste->spdf.cpdf[q];
+         ste->spdf.cpdf[q]=ste->spdf.cpdf[ste->nMix];
+         ste->spdf.cpdf[ste->nMix]=me;
+         q=ste->nMix;
+      }
+   }
+   /* the mixuture components */ 
+   meq = ste->spdf.cpdf + q;                   mep = ste->spdf.cpdf + p;
+   w1=mep->weight/(mep->weight+meq->weight);   w2=meq->weight/(mep->weight+meq->weight);
+   m1=mep->mpdf->mean;                         m2=meq->mpdf->mean;
+   v1=mep->mpdf->cov.var;                      v2=meq->mpdf->cov.var;
+   vs=VectorSize(m1);
+
+   if (inPlace) {
+      mt = m1; vt = v1;
+   } else {
+      mep->mpdf->mean = mt = CreateSVector(&hmmHeap,vs);
+      vt = CreateSVector(&hmmHeap,vs);
+      mep->mpdf->cov.var = vt;
+   }
+
+   p0=p1=p2=0.0;
+   for (k=1;k<=vs;k++) {
+      v1k = v1[k]; v2k = v2[k];
+      m=w1*m1[k]+w2*m2[k];
+      v=w1*v1k+w2*v2k+m1[k]*m1[k]*(w1-w1*w1)+m2[k]*m2[k]*(w2-w2*w2)-
+         2*m1[k]*m2[k]*w1*w2;
+      if (trace & T_DET) {
+         p0+=-0.5*(1.0+log(TPI*v));
+         p1+=-0.5*(1.0+log(TPI*v1k));
+         p2+=-0.5*(1.0+log(TPI*v2k));
+      }
+      mt[k]=m;
+      vt[k]=v;
+   }
+   
+   mep->weight += meq->weight;
+   if (trace & T_DET)
+      printf("     Likelihood from %.2f,%.2f to %.2f\n",p1,p2,p0);
+}
+
+/* DownMixSingle
+   replace the mixture with a single Gaussian
+ */
+void DownMixSingle(StreamElem *ste,Boolean inPlace)
+{
+    int k,i,vs;
+    float w;
+    SVector mt,vt;
+    MixPDF *m;
+    MixtureElem *me;
+    
+    me = ste->spdf.cpdf; m=(me+1)->mpdf;
+    vs=VectorSize(m->mean);
+    mt=CreateSVector(&hmmHeap,vs);
+    vt=CreateSVector(&hmmHeap,vs);
+    for (k=1;k<=vs;k++) {
+       /* mean */
+       mt[k] = 0.0; 
+       for (i=1; i<=ste->nMix; i++) {
+          m=(me+i)->mpdf;w=(me+i)->weight;
+          if ( m->ckind != DIAGC ) /* only support DIAGC */
+             HError(2640,"DownMix: covariance type not supported");
+          mt[k] += w*m->mean[k]; 
+       }
+       /* variance */
+       vt[k] = 0.0;
+       for (i=1; i<=ste->nMix; i++) { 
+          m=(me+i)->mpdf; w=(me+i)->weight;
+          vt[k] +=w*m->cov.var[k]-w*m->mean[k]*(mt[k]-m->mean[k]);
+       }
+    }
+    /* decrement use of mean and var */
+    for(i=2;i<=ste->nMix;i++) {
+       m=(me+i)->mpdf;
+       DecUse(m->mean); DecUse(m->cov.var);
+    }
+    m=(me+1)->mpdf;
+    if (inPlace) {
+       /* copy vectors */
+       for (k=1;k<=vs;k++) {
+          m->mean[k] = mt[k]; m->cov.var[k] = vt[k];
+       }
+       FreeSVector(&hmmHeap,vt);
+       FreeSVector(&hmmHeap,mt);
+    }
+    else {
+       DecUse(m->mean); DecUse(m->cov.var);
+       m->mean = mt; m->cov.var = vt; 
+    }
+    (me+1)->weight=1.0;
+    ste->nMix=1;
+}
+
+/* DownMix: merge mixtures in stream to maxMix. If inPlace then existing
+   mean and variance vectors will be overwritten.  Otherwise, new vectors
+   are created for changed components */
+void DownMix(char *hname, StreamElem *ste, int maxMix, Boolean inPlace)
+{
+   int i,j,m,p,q,oldM,k,V;
+   float bc,mc;
+   MixPDF *m1,*m2;
+   float x,v1,v2,sum=0.0;
+    
+   oldM=m=ste->nMix;
+   if (trace & T_IND)
+      printf("   Mix Down for %s\n",hname);
+
+   /* special case mixdown to single Gaussian */
+   if (maxMix==1)
+      DownMixSingle(ste,inPlace);
+
+   while(ste->nMix>maxMix) { /* merge pairs until maxMix */
+      p=q=0;
+      bc = LZERO;
+      /* find paur with lowest cost */ 
+      for (i=1; i<=ste->nMix; i++) {
+         /* only support for CovKind  DIAGC */
+         if ( (MixtureElem*)(ste->spdf.cpdf+i)->mpdf->ckind != DIAGC )
+            HError(2640,"DownMix: covariance type not supported");
+         for (j=i+1; j<=ste->nMix; j++) {
+            mc=MixMergeCost(ste->spdf.cpdf+i,ste->spdf.cpdf+j);
+            if (trace & T_MD) {
+               printf("Could merge %d (%.2f) with %d (%.2f) for %f\n",
+                      i,ste->spdf.cpdf[i].weight,j,ste->spdf.cpdf[j].weight,mc);
+               m1 = (ste->spdf.cpdf+i)->mpdf; m2 = (ste->spdf.cpdf+j)->mpdf;
+               V = VectorSize(m1->mean);
+               for (k=1; k<=V; k++){
+                  x = m1->mean[k] - m2->mean[k];
+                  v1 = m1->cov.var[k]; v2 = m2->cov.var[k];
+                  sum += x*x / sqrt(v1*v2);
+               }
+               printf("Divergence %.2f\n",sqrt(sum/V));
+            }
+            if (mc>bc) {
+               p=i; q=j; bc=mc;
+            }
+         }
+      }
+      if (trace & T_DET)
+         printf("    Merging %d with %d for %f\n",p,q,bc);
+      MergeMix(ste,p,q,inPlace);
+      ste->nMix--;
+   }
+   if ((trace & T_DET) && (ste->nMix!=oldM))
+      printf("    %s: mixdown %d -> %d\n",hname,oldM,ste->nMix);
 }
 
 /* ------------------- Tree Building Routines ------------------- */
@@ -2638,8 +2847,22 @@ void TieLeafNodes(Tree *tree, char *macRoot)
    Node *node;
    int numItems = 0;
    LabId id;
+   SVector vf[SMAX];
+   SVector mean, var;
+   int l;
+   Boolean vfSet; 
 
    if (trace & T_CLUSTERS) printf("\n Nodes for %s\n",macRoot);
+   if (useLeafStats) { 
+      int k;
+      /* get vFloor vectors and flag if present in hset */
+      SetVFloor(hset,vf,-1.0);
+      vfSet=TRUE;
+      l=VectorSize(vf[1]);
+      for (k=1;k<=l;k++)
+         if (vf[1][k]<0.0)
+            vfSet = FALSE;
+   }
    cprob=0.0; occ=0.0;
    clidx = numTreeClust;
    for (node=tree->leaf;node!=NULL;node=node->next) {
@@ -2667,11 +2890,33 @@ void TieLeafNodes(Tree *tree, char *macRoot)
       }
       numItems += NumItems(ilist);
       if (trace & T_CLUSTERS)
-         printf("\n");
+          printf("\n");
+      if ((ilist->item != ilist->owner) && useLeafStats) {
+         /* get cluster stats */
+         l = VectorSize(no.sum);
+         ZeroAccSum(&no);
+         for(cl=node->clist;cl!=NULL;cl=cl->next) 
+            IncSumSqr(((StateElem*)cl->item->item)->info,FALSE,&no,NULL,l);
+      }
       ApplyTie(ilist,buf,(ilist->item==ilist->owner?'h':'s'));
       id=GetLabId(buf,FALSE);
-      node->macro = FindMacroName(hset,(ilist->item==ilist->owner?
-                                        'h':'s'),id);
+      node->macro = FindMacroName(hset,((ilist->item==ilist->owner)?'h':'s'),id);
+      if ((ilist->item != ilist->owner) && useLeafStats) {
+         int k;
+         StreamElem *ste;
+         MixPDF *mp;
+         ste = (((StateElem *)ilist->item)->info->pdf)+1;
+         mp = ste->spdf.cpdf[1].mpdf;
+         mean = mp->mean;
+         var  = mp->cov.var;
+         for (k=1;k<=l;k++) {
+            mean[k] = no.sum[k]/no.occ;
+            var[k] = no.sqr[k]/no.occ - mean[k]*mean[k];
+            /* floor variances */
+            if (vfSet && (var[k] < vf[1][k]) )
+               var[k] = vf[1][k];
+         }
+      }
       FreeItems(&ilist);        /* free items at this node */
       node->clist=NULL;
    }
@@ -3249,7 +3494,6 @@ void CloneCommand(void)
    CreateHMMSet(tmpSet,&hmmHeap,TRUE);
    if(MakeHMMSet(tmpSet,buf)<SUCCESS)
       HError(2628,"CloneCommand: MakeHMMSet failed");
-
    
    for (h=0; h<MACHASHSIZE; h++)
       for (q=tmpSet->mtab[h]; q!=NULL; q=q->next) 
@@ -3754,7 +3998,6 @@ void MixUpCommand(void)
       UnGetCh(ch,&source);
       trg = ChkedInt("Mix target",1,INT_MAX);
    }
-
    if (trace & T_BID) {
       if (trg>0)
          printf("\nMU %d {}\n Mixup to %d components per stream\n",trg,trg);
@@ -4841,6 +5084,318 @@ void UseCommand(void)
    fidx=mil->fidx;
 }
 
+/* -------------------------- FA Command ------------------------- */
+void FloorAverageCommand(void)
+{
+   HMMScanState hss;
+   StateInfo *si   ;
+   StreamElem *ste;
+   SVector var , mean;
+   DVector *varAcc;
+   double occAcc;
+   float weight;
+   float occ; 
+   int l,k,i,s,S;
+   float varScale;
+
+   /*  need stats for operation */
+   if (!occStatsLoaded)
+      HError(1,"FloorAverageCommand: stats must be loaded before calling FA");
+   varScale = ChkedFloat("Variance Scale Value",0.0,FLOAT_MAX);
+   if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
+      HError(2640,"FloorAverageCommand: Only possible for continuous models");
+   if (hset->ckind != DIAGC)
+      HError(2640,"FloorAverageCommand: Only implemented for DIAGC models");
+   S= hset->swidth[0];
+
+   /* allocate accumulators */
+   varAcc = (DVector*)New(&gstack,S*sizeof(DVector));
+   for (s=1;s<=S;s++) {
+      varAcc[s] = CreateDVector(&gstack,hset->swidth[s]);
+      ZeroDVector(varAcc[s]);
+   }
+   NewHMMScan(hset,&hss);
+   occAcc = 0.0;
+   while(GoNextState(&hss,FALSE)) {
+      si = hss.si;
+      memcpy(&occ,&(si->hook),sizeof(float));
+      occAcc += occ;
+      s=0;
+      while (GoNextStream(&hss,TRUE)) {
+         l=hset->swidth[hss.s];
+         ste = hss.ste;
+         s++;
+         if ( ste->nMix > 1 ) { 
+            for (k=1;k<=l;k++) { /* loop over k-th dimension */
+               double    rvar  = 0.0;
+               double    rmean = 0.0;
+               for (i=1; i<= ste->nMix; i++) {
+                  weight = ste->spdf.cpdf[i].weight;
+                  var  = ste->spdf.cpdf[i].mpdf->cov.var;
+                  mean = ste->spdf.cpdf[i].mpdf->mean;
+                  
+                  rvar  += weight * ( var[k] + mean[k] * mean[k] );
+                  rmean += weight * mean[k];
+               }
+               rvar -= rmean * rmean;
+               varAcc[s][k] += rvar * occ ;
+            }
+         }
+         else { /* single mix */
+            var  = ste->spdf.cpdf[1].mpdf->cov.var;
+            for (k=1;k<=l;k++) 
+               varAcc[s][k] += var[k]*occ;
+         }
+      }
+   }
+   EndHMMScan(&hss);
+   /* normalisation */
+   for (s=1;s<=S;s++)
+      for (k=1;k<=l;k++)
+         varAcc[s][k] /= occAcc;
+   /* set the varFloorN macros */
+   for (s=1; s<=S; s++){
+      int size;
+      LabId id;
+      SVector v;
+      char mac[MAXSTRLEN];
+      MLink m;
+      sprintf(mac,"varFloor%d",s);
+      id = GetLabId(mac,FALSE);
+      if (id != NULL  && (m=FindMacroName(hset,'v',id)) != NULL){
+         v = (SVector)m->structure;
+         SetUse(v,1);
+         /* check vector sizes */
+         size = VectorSize(v);
+         if (size != hset->swidth[s])
+            HError(7023,"FloorAverageCommand: Macro %s has vector size %d, should be %d",
+                   mac,size,hset->swidth[s]);
+      }
+      else { /* create new macro */
+         id = GetLabId(mac,TRUE);
+         v = CreateSVector(hset->hmem,hset->swidth[s]);
+         NewMacro(hset,hset->numFiles,'v',id,v);
+      }
+      /* scale and store */
+      for (k=1;k<=l;k++)
+         v[k] = varAcc[s][k]*varScale;
+   }
+   /* and apply floors */
+   if (applyVFloor)
+       ApplyVFloor(hset);
+   else
+       HError(-7023,"FloorAverageCommand: variance floors have not been applied to mixes");
+   Dispose(&gstack,varAcc);
+}
+
+/* -------------------------- FV Command ------------------------- */
+void FloorVectorCommand(void)
+{
+   /* read macro file as generated by HCompV 
+       and copy floor vectors to model set */
+   char fn[MAXFNAMELEN],mac[MAXSTRLEN],buf[MAXSTRLEN];
+   Source src;
+   int s,S,n,i;
+   char c,h;
+   LabId id;
+   SVector v;
+   MLink m;
+
+   ChkedAlpha("FV file containing variance floor value(s)",fn);
+   if (trace & T_BID) {
+      printf("\nFV: loading variance floor(s) from file %s\n",fn);
+      fflush(stdout);
+   }
+   /* check model set */
+   if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
+      HError(2640,"FloorVectorCommand: Only possible for continuous models");
+   S=hset->swidth[0];
+
+   /* load variance floor macro */
+   if(InitSource(fn, &src, NoFilter)<SUCCESS)
+      HError(2610,"FloorVectorCommand: Can't open file");
+   do {
+      while ( (c=GetCh(&src)) != '~' && c!= EOF);
+      c = tolower(GetCh(&src));
+      if (c == 'v' ) { 
+         /* found variance vector */
+         if (!ReadString(&src,buf))
+            HError(2613,"FloorVectorCommand: cannot parse file %s",fn);
+         strcpy(mac,"varFloor");
+         h=buf[strlen(mac)];
+         buf[strlen(mac)]='\0';
+         if (strcmp(mac,buf)!=0) /* not a varFloor */
+            continue;
+         assert(SMAX<10); s=h-'0';
+         if(s<1||s>S)
+            HError(2613,"FloorVectorCommand: undefined stream %d in HMM set",s);
+         mac[strlen(buf)]=h;
+         mac[strlen(buf)+1]='\0';
+         if (trace & T_BID) {
+            printf("loading vector %s\n",mac);
+         }
+          
+         /* obtain vector */
+         id = GetLabId(mac,FALSE);
+         if (id != NULL  && (m=FindMacroName(hset,'v',id)) != NULL){
+            v = (SVector)m->structure;
+            SetUse(v,1);
+         }
+         else { /* create new macro */
+            id = GetLabId(mac,TRUE);
+            v = CreateSVector(hset->hmem,hset->swidth[s]);
+            NewMacro(hset,hset->numFiles,'v',id,v);
+         }
+         /* load vector */
+         if (!ReadString(&src,buf))
+            HError(2613,"FloorVectorCommand: cannot parse file %s",fn);
+         for (n=strlen(buf),i=0;i<n;i++)
+            buf[i]=tolower(buf[i]);
+         if (strcmp("<variance>",buf)!=0)
+            HError(2613,"FloorVectorCommand: variance vector expected",fn);
+         if (!ReadInt(&src,&n,1,FALSE))
+            HError(2613,"FloorVectorCommand: cannot parse file %s",fn);
+         if (n!=hset->swidth[s])
+            HError(2613,"FloorVectorCommand: stream width mismatch (stream %d)",s);
+         if (!ReadFloat(&src,v+1,n,FALSE))
+            HError(2613,"FloorVectorCommand: cannot load variance vector");
+      }
+   } while(c!=EOF);
+   CloseSource(&src);
+
+   /* and apply floors */
+   if (applyVFloor)
+       ApplyVFloor(hset);
+   else
+       HError(-7023,"FloorVectorCommand: variance floors have not been applied to mixes");
+}
+
+/* -------------------------- MD Command ------------------------- */
+
+void MixDownCommand(void)
+{
+   ILink i,ilist = NULL;		/* list of items to mixdown */
+   char type = 'p';		        /* type of items must be p */
+   int trg;
+   int m,M;
+   int totm=0,totM=0;
+   StreamElem *ste;
+   HMMDef *hmm;
+   char *hname;
+   int nDefunct,nDefunctMix;
+    
+   trg = ChkedInt("MD: Mix Target",1,INT_MAX);
+   if (trace & T_BID){
+      printf("Executing Mix Down Command to %d\n",trg);
+      fflush(stdout);
+   }
+   /* check compatibility with model set */
+   if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
+      HError(2640,"MixDownCommand: MixDown only possible for continuous models");
+
+   /* get itemlist */
+   PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+   if (ilist == NULL) {
+      HError(-2631,"MixDownCommand: No mixtures to decrease!");
+      return;
+   }
+   /* touch all mixture models to avoid duplicates */
+   nDefunct = nDefunctMix= 0; 
+   for (i=ilist; i!=NULL; i=i->next) {
+      ste = (StreamElem *)i->item;
+      M = ste->nMix;
+      if (M>0) ste->nMix=-M;
+   }
+
+   /* mix down all pdf's */
+   nDefunct = nDefunctMix= 0; 
+   for (i=ilist; i!=NULL; i=i->next){
+      hmm = i->owner;
+      ste = (StreamElem *)i->item; 
+      M = ste->nMix;
+      if (M<0) { 
+         /* mix not yet processed */
+         M = ste->nMix = -M;
+         hname = HMMPhysName(hset,hmm);
+         /* remove defunct mixture compoonents */
+         for (m=1; m<=M; m++)
+            if (ste->spdf.cpdf[m].weight <= MINMIX) {
+               MixPDF *mp=ste->spdf.cpdf[m].mpdf;
+               if (mp->nUse) mp->nUse--; /* decrement MixPDF use */
+               ste->spdf.cpdf[m] = ste->spdf.cpdf[M]; M--; 
+               nDefunct++;
+            }
+         if(ste->nMix>M) {
+            if ( trace & T_DET) 
+               printf("MD %12s : %d out of %d mixes defunct\n",hname,ste->nMix-M,ste->nMix);
+            nDefunctMix++;
+            ste->nMix = M;
+         }
+         /* downmix if necessary */
+         if (trg<M) {
+            DownMix(hname,ste,trg,TRUE);
+            totm+=trg;
+         }
+         else 
+            totm+=M;
+         totM+=M;
+      }
+   }
+   FreeItems(&ilist);
+   if (trace & T_BID) {
+      if (nDefunct>0)
+         printf("MD: deleted %d defunct mix comps in %d pdfs \n",nDefunct,nDefunctMix);
+      else
+         printf("MD: no defunct mixcomps found \n");
+      printf("MD: Number of mixes decreased from %d to %d\n",totM,totm);
+      fflush(stdout);
+   }
+}
+
+/* ------------- FC - FullCovar Command ----------------- */
+
+void FullCovarCommand(void)
+{
+   HMMScanState hss;
+   int i,u,z;
+   SVector var;
+   STriMat invcov;
+   MLink ml;
+
+   if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
+      HError(2640,"FullCovarCommand: Only possible for continuous models");
+   if (hset->ckind != DIAGC)
+      HError(2640,"FullCovarCommand: Only implemented for DIAGC models");
+
+   ConvDiagC(hset,TRUE);
+
+   NewHMMScan(hset,&hss);
+   while(GoNextMix(&hss,FALSE)) {
+      var = hss.me->mpdf->cov.var;
+      hss.me->mpdf->ckind = FULLC;
+      u = GetUse(var);
+      if (u==0 || !IsSeen(u)) {
+         z = VectorSize(var);
+         invcov = CreateSTriMat(&hmmHeap,z);
+         ZeroTriMat(invcov);
+         for (i=1; i<=z; i++) 
+            invcov[i][i] = var[i];
+         if (u!=0) {
+            ml = FindMacroStruct(hset,'v',var);
+            DeleteMacro(hset,ml);                  /* this needs to delete */
+            NewMacro(hset,fidx,'i',ml->id,invcov); /* the macro name also */
+            TouchV(var);
+            SetUse(invcov,u);
+            SetHook(var,invcov);
+         }
+      }
+      else  /* a macro that we have already seen */
+         invcov = GetHook(var);
+      hss.me->mpdf->cov.inv = invcov;
+   }
+   EndHMMScan(&hss);
+   hset->ckind = FULLC;
+}
 
 /* -----Regression Class Clustering Tree Building Routines -------------- */
 
@@ -5506,6 +6061,22 @@ void RegClassesCommand(void) {
    StoreBaseClassNumbers(regTree);
 }
 
+/* ----------------- InputXForm Command -------------------- */
+
+void InputXFormCommand()
+{
+   char fn[256], macroname[256];
+   InputXForm *xf;
+
+   ChkedAlpha("XF input Xform file name",fn); 
+   if (trace & T_BID) {
+      printf("\nXF %s\n Setting HMMSet inpuit XForm\n", fn);
+      fflush(stdout);
+   }
+   xf = LoadInputXForm(hset, NameOf(fn,macroname), fn);
+   xf->nUse++;
+   hset->xf = xf;
+}
 
 
 
@@ -5539,21 +6110,21 @@ void Initialise(char *hmmListFn)
 /* -------------------- Top Level of Editing ---------------- */
 
 
-static int  nCmds = 34;
+static int  nCmds = 37;
 
 static char *cmdmap[] = {"AT","RT","SS","CL","CO","JO","MU","TI","UF","NC",
                          "TC","UT","MT","SH","SU","SW","SK",
                          "RC",
                          "RO","RM","RN",
                          "LS","QS","TB","TR","AU","GQ","MD","ST","LT",
-                         "MM","DP","HK","" };
+                         "MM","DP","HK","FC","FA","FV","XF","" };
 
 typedef enum           { AT=1, RT , SS , CL , CO , JO , MU , TI , UF , NC ,
                          TC , UT , MT , SH , SU , SW , SK ,
                          RC ,
                          RO , RM , RN ,
                          LS , QS , TB , TR , AU , GQ , MD , ST , LT ,
-                         MM , DP , HK }
+                         MM , DP , HK , FC , FA , FV, XF }
 cmdNum;
 
 /* CmdIndex: return index 1..N of given command */
@@ -5596,6 +6167,7 @@ void DoEdit(char * editFn)
       case CO: CompactCommand(); break;
       case JO: JoinSizeCommand(); break;
       case MU: MixUpCommand(); break;
+      case MD: MixDownCommand(); break;
       case TI: TieCommand(); break;
       case NC: ClusterCommand(TRUE); break;
       case TC: ClusterCommand(FALSE); break;
@@ -5619,7 +6191,11 @@ void DoEdit(char * editFn)
       case LT: LoadTreesCommand(); break;
       case MM: MakeIntoMacrosCommand(); break;
       case DP: DuplicateCommand(); break;
+      case XF: InputXFormCommand(); break;
       case UF: UseCommand(); break;
+      case FA: FloorAverageCommand(); break;
+      case FC: FullCovarCommand(); break;
+      case FV: FloorVectorCommand(); break;
       default: 
          HError(2650,"DoEdit: Command %s not recognised",cmds);
       }

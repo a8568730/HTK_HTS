@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*               2002 Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HModel.c  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
-char *hmodel_version = "!HVER!HModel:   3.1.1 [CUED 05/06/02]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.8 2002/06/05 14:06:45 ge204 Exp $";
+char *hmodel_version = "!HVER!HModel:   3.2 [CUED 09/12/02]";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -47,6 +60,21 @@ static int trace = 0;
 #define T_ORP  00100       /* Orphan macro handling */
 #define T_BTR  00200       /* Decision Tree handling */
 #define T_GMX  00400       /* GMP optimisation */
+#define T_XFM  01000       /* Loading of xform macros */
+#define T_XFD  02000       /* Additional detail of loading of xform macros */
+
+#define CREATEFIDX -1
+#define LOADFIDX   -2
+
+/* ------------------ Input XForm directory info ------------------- */
+
+typedef struct _XFDirInfo *XFDirLink;
+
+typedef struct _XFDirInfo {
+   char *dirName;           /* input XForm directory name */
+   XFDirLink next;          /* next directory name in list */
+} XFDirInfo;
+
 /* --------------------------- Initialisation ---------------------- */
 
 static ConfParam *cParm[MAXGLOBS];      /* config parameters */
@@ -63,6 +91,10 @@ static Boolean allowOthers=TRUE;        /* allow unseen models in files */
 static HSetKind cfHSKind;
 static char orphanMacFile[100]; /* last resort file for new macros */
 
+static XFDirLink xformDirNames = NULL;  /* linked list of input transform directories */
+static Boolean saveInputXForm = TRUE;   /* save input xforms with models set */
+static MemHeap xformStack;              /* For Storage of xforms with no model sets ... */
+
 void InitSymNames(void);
 
 /* EXPORT->InitModel: initialise memory and configuration parameters */
@@ -73,6 +105,7 @@ void InitModel(void)
    char buf[MAXSTRLEN];
    
    Register(hmodel_version,hmodel_vc_id);
+   CreateHeap(&xformStack,"XFormStore",MSTAK, 1, 0.5, 100 ,  1000 );
    strcpy(orphanMacFile,"newMacros");
    InitSymNames();
    nParm = GetConfig("HMODEL", TRUE, cParm, MAXGLOBS);
@@ -83,6 +116,7 @@ void InitModel(void)
       if (GetConfBool(cParm,nParm,"KEEPDISTINCT",&b)) keepDistinct = b;
       if (GetConfBool(cParm,nParm,"SAVEGLOBOPTS",&b)) saveGlobOpts = b;
       if (GetConfBool(cParm,nParm,"SAVEREGCLASS",&b)) saveRegClass = b;
+      if (GetConfBool(cParm,nParm,"SAVEINPUTXFORM",&b)) saveInputXForm = b;
       if (GetConfBool(cParm,nParm,"ALLOWOTHERHMMS",&b)) allowOthers = b;
       if (GetConfBool(cParm,nParm,"DISCRETELZERO",&b)) discreteLZero = b;
       if (GetConfStr (cParm,nParm,"ORPHANMACFILE",buf))
@@ -326,6 +360,10 @@ typedef enum {   /* Only a character big !! */
    STATE, TMIX, MIXTURE, STREAM, SWEIGHTS,
    MEAN, VARIANCE, INVCOVAR, XFORM, GCONST,
    DURATION, INVDIAGCOV, TRANSP, DPROB, LLTCOV, LLTCOVAR,
+   XFORMKIND=90, PARENTXFORM, NUMXFORMS, XFORMSET,
+   LINXFORM, OFFSET, BIAS, BLOCKINFO, BLOCK, BASECLASS, 
+   CLASS, XFORMWGTSET, CLASSXFORM, MMFIDMASK, PARAMETERS,
+   NUMCLASSES, ADAPTKIND, PREQUAL, INPUTXFORM,
    RCLASS=110, REGTREE, NODE, TNODE,
    HMMSETID=119,
    PARMKIND=120, 
@@ -358,6 +396,16 @@ static struct {
      { "HMMSETID", HMMSETID }, 
      { "PARMKIND", PARMKIND }, { "MACRO", MACRO }, 
      { "EOF", EOFSYM }, 
+     /* Transformation symbols */
+     {"XFORMKIND", XFORMKIND } , {"PARENTXFORM", PARENTXFORM },
+     {"NUMXFORMS", NUMXFORMS }, {"XFORMSET", XFORMSET },
+     {"LINXFORM", LINXFORM }, {"OFFSET", OFFSET }, 
+     {"BIAS", BIAS }, {"BLOCKINFO", BLOCKINFO }, {"BLOCK", BLOCK }, 
+     {"BASECLASS", BASECLASS }, {"CLASS", CLASS }, 
+     {"XFORMWGTSET", XFORMWGTSET }, {"CLASSXFORM", CLASSXFORM }, 
+     {"MMFIDMASK", MMFIDMASK }, {"PARAMETERS", PARAMETERS },
+     {"NUMCLASSES", NUMCLASSES }, {"ADAPTKIND", ADAPTKIND },
+     {"PREQUAL", PREQUAL }, {"INPUTXFORM", INPUTXFORM },
      { "", NULLSYM } };
 
 /* Reverse lookup table for above */
@@ -426,7 +474,7 @@ static ReturnStatus GetToken(Source *src, Token *tok)
    if (c == '~'){                    /* If macro sym return immediately */
       c = tolower(GetCh(src));
       if (c!='s' && c!='m' && c!='u' && c!='x' && c!='d' && c!='c' &&
-          c!='r' &&
+          c!='r' && c!='a' && c!='b' && c!='g' && c!='f' && c!='y' && c!='j' &&
           c!='v' && c!='i' && c!='t' && c!='w' && c!='h' && c!='o')
          {
             HMError(src,"GetToken: Illegal macro type");
@@ -469,7 +517,7 @@ static ReturnStatus GetToken(Source *src, Token *tok)
          HMError(src,"GetToken: > missing in symbol");
          return(FAIL);
       }
-      for (sym=0; sym<NUMSYM-4; sym++) /* Look symbol up in symMap */
+      for (sym=0; sym<NUMSYM; sym++) /* Look symbol up in symMap */
          if (strcmp(symMap[sym].name,buf) == 0) {
             tok->sym = symMap[sym].sym;
             if (trace&T_TOK) printf("HModel:   tok=<%s>\n",buf);
@@ -497,6 +545,46 @@ static ReturnStatus GetToken(Source *src, Token *tok)
    return(FAIL);
 }
 
+/*
+  Looks for the macroname in the current directory. If it is 
+  notfound search through the input transform directories
+  in order. FOpen is used to allow optional generation of
+  Error messages using T_XFD
+*/
+static char *InitXFormScanner(HMMSet *hset, char *macroname, char *fname,
+			      Source *src, Token *tok)
+{
+   static char buf[MAXSTRLEN];
+   XFDirLink p;
+   Boolean isPipe;
+   FILE *f;
+
+   if ((fname==NULL) || ((f=FOpen(fname,NoFilter,&isPipe)) == NULL)) {
+      if ((trace&T_XFD) && (fname!=NULL))
+         HRError(7010,"InitXFormScanner: Cannot open source file %s",fname);
+      p = xformDirNames;
+      while ((p!=NULL) && 
+             ((f=FOpen(MakeFN(macroname,p->dirName,NULL,buf),NoFilter,&isPipe)) == NULL)) {
+         if (trace&T_XFD) 
+            HRError(7010,"InitXFormScanner: Cannot open source file %s",buf);
+         p = p->next;
+      }
+      if (p==NULL) { /* Failed to find macroname */
+         HError(7035,"Failed to find macroname %s",macroname);
+      } else { /* Close file and initialise scanner */
+         FClose(f,isPipe);
+         InitScanner(buf,src,tok,hset);
+      }
+      if (trace&T_TOP) printf("Loading macro file %s\n",buf);
+      return buf;
+   } else {
+      FClose(f,isPipe);
+      if (trace&T_TOP) printf("Loading macro file %s\n",fname);
+      InitScanner(fname,src,tok,hset);
+      return fname;
+   }
+}
+
 /* ------------------- HMM 'option' handling ----------------------- */
 
 
@@ -513,6 +601,9 @@ static ReturnStatus GetOption(HMMSet *hset, Source *src, Token *tok, int *nState
    char buf[MAXSTRLEN];
    short vs,sw[SMAX],nSt=0;
    int i;
+   Boolean ntok=TRUE;
+
+   static InputXForm* GetInputXForm(HMMSet *hset, Source *src, Token *tok);
 
    switch (tok->sym) {
    case NUMSTATES:
@@ -542,6 +633,21 @@ static ReturnStatus GetOption(HMMSet *hset, Source *src, Token *tok, int *nState
       }
       hset->hmmSetId=CopyString(hset->hmem,buf);
       SkipWhiteSpace(src);
+      break;
+   case INPUTXFORM:
+      if(GetToken(src,tok)<SUCCESS){
+         HMError(src,"GetOption: GetToken failed");
+         return(FAIL);     
+      }
+      if (tok->sym==MACRO && tok->macroType=='j') {
+         if (!ReadString(src,buf))
+            HError(7013,"GetOption: cannot read input xform macro name");
+         hset->xf = LoadInputXForm(hset,buf,NULL);	
+      } else {
+         hset->xf = GetInputXForm(hset,src,tok);
+         hset->xf->xformName = CopyString(hset->hmem,src->name);
+         ntok = FALSE;
+      }     
       break;
    case VECSIZE:
       if (!ReadShort(src,&vs,1,tok->binForm)){
@@ -592,7 +698,7 @@ static ReturnStatus GetOption(HMMSet *hset, Source *src, Token *tok, int *nState
       HMError(src,"GetOption: Ilegal Option Symbol");
       return(FAIL);
    }
-   if(GetToken(src,tok)<SUCCESS){
+   if (ntok && (GetToken(src,tok)<SUCCESS)){
       HMError(src,"GetOption: GetToken failed");
       return(FAIL);     
    }
@@ -634,6 +740,25 @@ static ReturnStatus CheckOptions(HMMSet *hset)
       return(FAIL);
    }
    return(SUCCESS);
+}
+
+/* ---------------------- Input XForm Directory Handling ---------------------- */
+
+/* EXPORT->AddInXFormDir: Add given file name to set */
+/* Doesn't check for repeated specification! */
+void AddInXFormDir(HMMSet *hset, char *dirname)
+{
+  XFDirLink p,q;
+   
+  p = (XFDirLink)New(hset->hmem,sizeof(XFDirInfo));
+  p->next = NULL;
+  p->dirName = CopyString(hset->hmem,dirname);
+  if (xformDirNames == NULL)
+    xformDirNames = p;
+  else {  /* store in order of arrival */
+    for (q=xformDirNames; q->next != NULL; q=q->next);
+    q->next = p;
+  }
 }
 
 /* ---------------------- MMF File Name Handling ---------------------- */
@@ -862,7 +987,7 @@ static ReturnStatus GetOptions(HMMSet *hset, Source *src, Token *tok, int *nStat
       return(FAIL);
    }
    while (tok->sym == PARMKIND || tok->sym == INVDIAGCOV || 
-          tok->sym == HMMSETID  ||
+          tok->sym == HMMSETID  || tok->sym == INPUTXFORM ||
           (tok->sym >= NUMSTATES && tok->sym <= XFORMCOV)){
       if(GetOption(hset,src,tok,&p)<SUCCESS){
          HMError(src,"GetOptions: GetOption failed");
@@ -1126,10 +1251,13 @@ static STriMat GetCovar(HMMSet *hset, Source *src, Token *tok)
 static SMatrix GetTransform(HMMSet *hset, Source *src, Token *tok)
 {
    SMatrix m = NULL;
+   MemHeap *hmem;
    short xformRows,xformCols;
    
    if (trace&T_PAR) printf("HModel: GetTransform\n");
    if (tok->sym==XFORM) {
+      if (hset==NULL) hmem = &xformStack;
+      else hmem = hset->hmem;
       if (!ReadShort(src,&xformRows,1,tok->binForm)){
          HMError(src,"Num Rows in Xform matrix expected");
          return(NULL);
@@ -1138,12 +1266,12 @@ static SMatrix GetTransform(HMMSet *hset, Source *src, Token *tok)
          HMError(src,"Num Cols in Xform matrix expected");
          return(NULL);
       }
-      m = CreateSMatrix(hset->hmem,xformRows,xformCols);
+      m = CreateSMatrix(hmem,xformRows,xformCols);
       if (!ReadMatrix(src,m,tok->binForm)){
          HMError(src,"Transform Matrix expected");
          return(NULL);
       }
-   } else  if (tok->sym==MACRO && tok->macroType=='x'){
+   }  else  if ((tok->sym==MACRO && tok->macroType=='x') && (hset != NULL)) {
       if((m=(SMatrix)GetStructure(hset,src,'x'))==NULL){
          HMError(src,"GetStructure Failed");
          return(NULL);
@@ -1746,6 +1874,198 @@ static ReturnStatus GetHMMDef(HMMSet *hset, Source *src, Token *tok,
    return(SUCCESS);
 }
 
+/* GetBias: parse src and return Bias structure */
+static SVector GetBias(HMMSet *hset, Source *src, Token *tok)
+{
+   SVector m = NULL;
+   MemHeap *hmem;
+   short size;
+   
+   if (trace&T_PAR) printf("HModel: GetBias\n");
+   if (tok->sym==BIAS) {      
+      if (hset==NULL) hmem = &xformStack;
+      else hmem = hset->hmem;
+      if (!ReadShort(src,&size,1,tok->binForm)){
+         HMError(src,"Size of Bias Vector expected");
+         return(NULL);
+      }
+      m = CreateSVector(hmem,size);
+      if (!ReadVector(src,m,tok->binForm)){
+         HMError(src,"Bias Vector expected");
+         return(NULL);
+      }
+   }
+   
+   else if ((tok->sym==MACRO && tok->macroType=='y') && (hset != NULL)) {
+      if((m=(SVector)GetStructure(hset,src,'y'))==NULL){
+         HMError(src,"GetStructure Failed");
+         return(NULL);
+      }
+      IncUse(m);
+   } else{
+      HMError(src,"<BIAS> symbol expected in GetBias");
+      return(NULL);
+   }
+   if(GetToken(src,tok)<SUCCESS){
+      HMError(src,"GetToken failed");
+      return(NULL);
+   }
+   return m;
+}
+
+/* GetLinXForm: get a linear transformations */
+static LinXForm* GetLinXForm(HMMSet *hset, Source *src, Token *tok)
+{
+   LinXForm *xf;
+   MemHeap *hmem;
+   int i,b;
+   int numBlocks;
+
+   if (trace&T_PAR) printf("HModel: GetLinXForm\n");
+   if (tok->sym == VECSIZE) {
+      if (hset==NULL) hmem = &xformStack;
+      else hmem = hset->hmem;
+      xf = (LinXForm *)New(hmem,sizeof(LinXForm));
+      if (!ReadInt(src,&(xf->vecSize),1,tok->binForm)){
+         HRError(7013,"GetLinXForm: cannot read vector size");
+         return(NULL);
+      }
+      if(GetToken(src,tok)<SUCCESS){
+         HMError(src,"GetToken failed");
+         return(NULL);
+      }
+      if (tok->sym == OFFSET){
+         if(GetToken(src,tok)<SUCCESS){
+            HMError(src,"GetToken failed");
+            return(NULL);
+         }
+         xf->bias = GetBias(hset,src,tok);
+      } else {
+         xf->bias = NULL;
+      }
+      if (tok->sym!=BLOCKINFO){
+         HMError(src,"<BLOCKINFO> symbol expected");
+         return(NULL);
+      }
+      if (!ReadInt(src,&numBlocks,1,tok->binForm)){
+         HMError(src,"Number of transform blocks expected");
+         return(NULL);
+      }
+      xf->blockSize = CreateIntVec(hmem,numBlocks);
+      if (!ReadInt(src,xf->blockSize+1,numBlocks,tok->binForm)){
+         HMError(src,"Size of blocks expected");
+         return(NULL);
+      }    
+      xf->xform = (Matrix *)New(hmem,(numBlocks+1)*sizeof(Matrix));
+      if(GetToken(src,tok)<SUCCESS){
+         HMError(src,"GetToken failed");
+         return(NULL);
+      }
+      for (i=1;i<=numBlocks;i++) {
+         if (tok->sym != BLOCK){
+            HMError(src,"<NUMXFORMS> symbol expected");
+            return(NULL);
+         }
+         if (!ReadInt(src,&b,1,tok->binForm)){
+            HMError(src,"Weight class expected");
+            return(NULL);
+         }      
+         if (b != i) {
+            HMError(src,"Inconsistency in transform definition");
+            return(NULL);
+         }
+         if(GetToken(src,tok)<SUCCESS){
+            HMError(src,"GetToken failed");
+            return(NULL);
+         }
+         xf->xform[i] = GetTransform(hset,src,tok);
+      }
+      xf->nUse = 0;
+   }
+   else if ((tok->sym==MACRO && tok->macroType=='f') && (hset != NULL)){
+      if((xf=(LinXForm *)GetStructure(hset,src,'f'))==NULL){
+         HMError(src,"GetStructure Failed");
+         return(NULL);
+      }
+      xf->nUse++;
+      if(GetToken(src,tok)<SUCCESS){
+         HMError(src,"GetToken failed");
+         return(NULL);
+      }
+   } else{
+      HMError(src,"<VECSIZE> symbol expected in GetXFormSet");
+      return(NULL);
+   }
+   return xf;
+}
+
+/* GetInputXForm: get the input linear transformations */
+static InputXForm* GetInputXForm(HMMSet *hset, Source *src, Token *tok)
+{
+   char buf[MAXSTRLEN];
+   MemHeap *hmem;
+   InputXForm *xf;
+
+   if (trace&T_PAR) printf("HModel: GetXForm\n");
+   if (tok->sym == MMFIDMASK) { 
+      if (hset==NULL) hmem = &xformStack;
+      else hmem = hset->hmem;
+      xf = (InputXForm *)New(hmem,sizeof(InputXForm));
+      xf->fname = CopyString(hmem,src->name);
+      xf->xformName = NULL;
+      if (!ReadString(src,buf)){
+         HRError(7013,"GetInputXForm: cannot read MMFIDMASK");
+         return(NULL);
+      }
+      xf->mmfIdMask = CopyString(hmem,buf);
+      if(GetToken(src,tok)<SUCCESS){
+         HMError(src,"GetToken failed");
+         return(NULL);
+      }
+      if (tok->sym != PARMKIND) {
+         HMError(src,"parameter kind symbol expected");
+         return(NULL);
+      }
+      xf->pkind = tok->pkind;
+      if(GetToken(src,tok)<SUCCESS){
+         HMError(src,"GetToken failed");
+         return(NULL);
+      }
+      if (tok->sym == PREQUAL) {
+         xf->preQual = TRUE;
+         if(GetToken(src,tok)<SUCCESS){
+            HMError(src,"GetToken failed");
+            return(NULL);
+         }
+      } else 
+         xf->preQual = FALSE;
+      if (tok->sym != LINXFORM){
+         HMError(src,"<LINXFORM> symbol expected");
+         return(NULL);
+      }
+      if(GetToken(src,tok)<SUCCESS){
+         HMError(src,"GetToken failed");
+         return(NULL);
+      }
+      xf->xform = GetLinXForm(hset,src,tok);
+      xf->nUse=0;
+   }
+   else if ((tok->sym==MACRO && tok->macroType=='j') && (hset != NULL)){
+      if((xf=(InputXForm *)GetStructure(hset,src,'j'))==NULL){
+         HMError(src,"GetStructure Failed");
+         return(NULL);
+      }
+      xf->nUse++;
+      if(GetToken(src,tok)<SUCCESS){
+         HMError(src,"GetToken failed");
+         return(NULL);
+      }
+   } else{
+      HMError(src,"<MMFIDMASK> symbol expected in GetInputXForm");
+      return(NULL);
+   }
+   return xf;
+}
 
 /* ---------------------- Symbol Output Routine ------------------------ */
 
@@ -2288,6 +2608,75 @@ static void PutStateInfo(HMMSet *hset, FILE *f, MLink q, StateInfo *si,
    }
 }
 
+/* PutBias: output bias vector to stream f */
+static void PutBias(HMMSet *hset, FILE *f, MLink q, SVector m, 
+                    Boolean inMacro, Boolean binary)
+{
+   int nUse;
+   short size;
+   
+   nUse = GetUse(m);
+   if (nUse > 0 || inMacro) 
+      PutMacroHdr(hset,f,q,'y',m,binary);
+   if (nUse == 0 || inMacro) {
+      PutSymbol(f,BIAS,binary);
+      size = VectorSize(m);
+      WriteShort(f,&size,1,binary);
+      if (!binary) fprintf(f,"\n");
+      WriteVector(f,m,binary);
+   }
+}
+
+static void PutLinXForm(HMMSet *hset, FILE *f, MLink q, LinXForm *xf, 
+                        Boolean inMacro, Boolean binary)
+{
+   int i;
+
+   if (xf->nUse > 0 || inMacro) 
+      PutMacroHdr(hset,f,q,'f',xf,binary);
+   if (xf->nUse == 0 || inMacro){
+      PutSymbol(f,VECSIZE,binary);
+      WriteInt(f,&(xf->vecSize),1,binary);
+      if (!binary) fprintf(f,"\n");
+      if (xf->bias != NULL) {
+         PutSymbol(f,OFFSET,binary);
+         if (!binary) fprintf(f,"\n");
+         PutBias(hset,f,NULL,xf->bias,inMacro,binary);      
+      }
+      PutSymbol(f,BLOCKINFO,binary);
+      WriteInt(f,xf->blockSize,1,binary);
+      for (i=1;i<=IntVecSize(xf->blockSize);i++) {
+         WriteInt(f,xf->blockSize+i,1,binary);
+      }
+      if (!binary) fprintf(f,"\n");
+      for (i=1;i<=IntVecSize(xf->blockSize);i++) {
+         PutSymbol(f,BLOCK,binary);
+         WriteInt(f,&i,1,binary);
+         if (!binary) fprintf(f,"\n");
+         PutTransform(hset,f,NULL,xf->xform[i],inMacro,binary);
+      }
+   }
+}
+
+static void PutInputXForm(HMMSet *hset, FILE *f, MLink q, InputXForm *xf, 
+			  Boolean inMacro, Boolean binary)
+{
+   char buf[MAXSTRLEN];
+  
+   if (xf->nUse > 0 || inMacro) 
+      PutMacroHdr(hset,f,q,'j',xf,binary);
+   if (xf->nUse == 0 || inMacro){
+      PutSymbol(f,MMFIDMASK,binary);
+      fprintf(f," %s ",xf->mmfIdMask);
+      fprintf(f,"<%s>", ParmKind2Str(xf->pkind,buf));
+      if (xf->preQual)
+         PutSymbol(f,PREQUAL,binary);
+      if (!binary) fprintf(f,"\n");
+      PutSymbol(f,LINXFORM,binary);
+      PutLinXForm(hset,f,NULL,xf->xform,FALSE,binary);
+   }
+}
+
 /* PutOptions: write the current global options to f */
 static void PutOptions(HMMSet *hset, FILE *f, Boolean binary)
 {
@@ -2308,7 +2697,13 @@ static void PutOptions(HMMSet *hset, FILE *f, Boolean binary)
    WriteShort(f,&hset->vecSize,1,binary);
    PutSymbol(f, (Symbol) (NDUR+hset->dkind), binary);
    fprintf(f,"<%s>", ParmKind2Str(hset->pkind,buf));
+   if (hset->ckind != NULLC)
+      fprintf(f,"<%s>", CovKind2Str(hset->ckind,buf));
    if (!binary) fprintf(f,"\n");
+   if ((saveInputXForm) && (hset->xf != NULL)) {
+      PutSymbol(f,INPUTXFORM, binary);
+      PutInputXForm(hset,f,NULL,hset->xf,FALSE,binary);          
+   }
 }
 
 /* PutHMMDef: Save the model hmm to given stream in either text or binary */
@@ -2496,7 +2891,7 @@ Boolean HasMacros(HMMSet *hset, char * types)
 void SetVFloor(HMMSet *hset, Vector *vFloor, float minVar)
 {
    int j,s,S,size;
-   char mac[256], num[10];
+   char mac[MAXSTRLEN], num[10];
    LabId id;
    MLink m;
    SVector v;
@@ -2524,6 +2919,97 @@ void SetVFloor(HMMSet *hset, Vector *vFloor, float minVar)
       }
    }
 }
+
+/* EXPORT->ApplyVFloor: apply the variance floors in hset to all mix comps */
+void ApplyVFloor(HMMSet *hset)
+{
+   int s,S,k,vSize;
+   int nFloorVar,nFloorVarMix,nMix;
+   Boolean mixFloored;
+   Vector vFloor[SMAX],minv;
+   Covariance cov;
+   MLink m;
+   LabId id;
+   char mac[32];
+   HMMScanState hss;
+   LogFloat ldet;
+
+   /* get varFloor vectors */
+   S=hset->swidth[0];
+   for (s=1;s<=S;s++) {
+      sprintf(mac,"varFloor%d",s);
+      id = GetLabId(mac,FALSE);
+      if (id != NULL  && (m=FindMacroName(hset,'v',id)) != NULL) {
+         vFloor[s] = (Vector)m->structure;
+         vSize = VectorSize(vFloor[s]);
+         if (vSize != hset->swidth[s])
+            HError(7023,"SetVFloor: Macro %s has vector size %d, should be %d",
+                   mac,vSize,hset->swidth[s]);
+      }
+      else
+         HError(7023,"ApplyVFLoor: variance floor macro %s not found",mac);
+   }
+
+   /* apply the variance floors to the mixcomps */
+   NewHMMScan(hset,&hss);
+   nMix = nFloorVar = nFloorVarMix = 0 ;
+   do {
+      nMix++;
+      mixFloored = FALSE;
+      cov=hss.mp->cov;
+      minv = vFloor[hss.s];
+      vSize = VectorSize(minv);
+      switch (hss.mp->ckind) {
+      case DIAGC: /* diagonal covariance matrix */ 
+         for (k=1; k<=vSize; k++){
+            if (cov.var[k]<minv[k]) {
+               cov.var[k] = minv[k];
+               nFloorVar++;
+               mixFloored = TRUE;
+            }
+         }
+         FixDiagGConst(hss.mp); 
+         break;
+      case INVDIAGC: /* inverse diagonal covariance matrix */ 
+         for (k=1; k<=vSize; k++){
+            if (cov.var[k]> 1.0/minv[k]) {
+               cov.var[k] = 1.0/minv[k];
+               nFloorVar++;
+               mixFloored = TRUE;
+            }
+         }
+         FixInvDiagGConst(hss.mp); 
+         break;
+      case FULLC: /* full covariance matrix */ 
+         CovInvert(cov.inv,cov.inv);
+         for (k=1; k<=vSize; k++){
+            if (cov.inv[k][k]<minv[k]) {
+               cov.inv[k][k] = minv[k];
+               nFloorVar++;
+               mixFloored = TRUE;
+            }
+         }
+         FixFullGConst(hss.mp, -CovInvert(cov.inv,cov.inv) ); 
+         break;
+      case LLTC:
+      case XFORMC:   
+      default:
+         HError(7023,"ApplyVFLoor: CovKind not (yet) supported");
+      }
+
+      if (mixFloored == TRUE) nFloorVarMix++;
+   } while (GoNextMix(&hss,FALSE));
+   EndHMMScan(&hss);
+
+   /* summary */
+   if (trace&T_TOP) {
+      if (nFloorVar > 0)
+         printf("ApplyVFloor: Total %d floored variance elements in %d out of %d mixture components\n",
+                nFloorVar,nFloorVarMix,nMix);
+      fflush(stdout);
+   }
+}
+
 
 /* ---------------------- Print Profile Routines ---------------------- */
 
@@ -2591,6 +3077,7 @@ void PrintHSetProfile(FILE *f, HMMSet *hset)
 {
    char buf[20];
    MILink p;
+   CovKind ck;
    int i,S;
    
    fprintf(f," Memory: "); PrintHeapStats(hset->hmem);
@@ -2620,6 +3107,12 @@ void PrintHSetProfile(FILE *f, HMMSet *hset)
    case TIEDHS:   fprintf(f,"TIEDHS\n"); break;
    case DISCRETEHS:   fprintf(f,"DISCRETEHS\n"); break;
    }
+
+   fprintf (f, " Global CovKind = %s\n", CovKind2Str(hset->ckind, buf));
+   for (ck = 0; ck < NUMCKIND; ck++) 
+      if (hset->ckUsage[ck] > 0 ) 
+	 fprintf (f, "   CK %-8s = %d mixcomps\n", CovKind2Str (ck, buf), hset->ckUsage[ck]);
+
    PrintHashUsage(f,hset);
 }
 
@@ -2717,7 +3210,8 @@ static ReturnStatus LoadAllMacros(HMMSet *hset, char *fname, short fidx)
                m->fidx = fidx;
             }
          } else {             /* load a shared structure */
-            if(CheckOptions(hset)<SUCCESS){
+            /* input transforms are store prior to the options !! */
+            if ((type != 'j') && (CheckOptions(hset)<SUCCESS)) {
                TermScanner(&src);
                HMError(&src,"LoadAllMacros: CheckOptions failed");
                return(FAIL);
@@ -2739,6 +3233,13 @@ static ReturnStatus LoadAllMacros(HMMSet *hset, char *fname, short fidx)
             case 't': structure = GetTransMat(hset,&src,&tok);  break;
             case 'd': structure = GetDuration(hset,&src,&tok);  break;
             case 'r': structure = GetRegTree(hset,&src,&tok);   break;
+               /* code for input transform support */
+            case 'f': structure = GetLinXForm(hset,&src,&tok);  break;
+            case 'y': structure = GetBias(hset,&src,&tok);   break;
+            case 'j': 
+               structure = GetInputXForm(hset,&src,&tok);   
+               ((InputXForm *)structure)->xformName = CopyString(hset->hmem,id->name);
+               break;
             default :
                TermScanner(&src);
                HRError(7037,"LoadAllMacros: bad macro type in MMF %s",fname);
@@ -2877,6 +3378,40 @@ void SetIndexes(HMMSet *hset)
 }
 
 
+/* SetCovKindUsage
+
+     Count number of mixtures for using each covKind.
+     Set covKind at HMMSet level, if it is currently NULLC and it is the same for
+     all mixtures.
+*/
+void SetCovKindUsage (HMMSet *hset)
+{
+   HMMScanState hss;
+   CovKind ck;
+
+   for (ck = 0; ck < NUMCKIND; ck++)
+      hset->ckUsage[ck] =0;
+
+   NewHMMScan(hset,&hss);
+   while(GoNextMix(&hss,FALSE))
+      ++hset->ckUsage[hss.mp->ckind];
+   EndHMMScan(&hss);
+
+   /* set global covKind if currently unset (i.e. NULLC) */
+   if (hset->ckind == NULLC) {
+      CovKind lastSeenCK;
+      int nCK = 0;
+
+      for (ck = 0; ck < NUMCKIND; ck++)
+         if (hset->ckUsage[ck] > 0) {
+            ++nCK;
+            lastSeenCK = ck;
+         }
+      if (nCK == 1)
+         hset->ckind = lastSeenCK;
+   }
+}
+
 /*ResetHMMSet. New function ResetHMMSet - both hash tables removed and values of numLogHMM etc. set to zero. Dispose() done assuming MSTAK */
 void ResetHMMSet(HMMSet *hset)
 {
@@ -3000,6 +3535,7 @@ ReturnStatus LoadHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt)
          return(FAIL);
       }
    SetIndexes(hset);
+   SetCovKindUsage(hset);
    return(SUCCESS);
 }
 
@@ -3018,6 +3554,7 @@ void CreateHMMSet(HMMSet *hset, MemHeap *heap, Boolean allowTMods)
    hset->vecSize = 0; hset->swidth[0] = 0;
    hset->dkind = NULLD; hset->ckind = NULLC; hset->pkind = 0;
    hset->numPhyHMM = hset->numLogHMM = hset->numMacros = 0;
+   hset->xf = NULL;
    for (s=1; s<SMAX; s++) {
       hset->tmRecs[s].nMix = 0; hset->tmRecs[s].mixId = NULL;
       hset->tmRecs[s].probs = NULL; hset->tmRecs[s].mixes = NULL;
@@ -3155,6 +3692,19 @@ static void SaveMacros(FILE *f, HMMSet *hset, short fidx, Boolean binary)
    MLink m;
    int h;
       
+   /* 
+      First thing is to store the InputXForm if necessary. Rules are:
+      1) If read from Macro file store using related file
+      2) If Loaded using a config variable/Created  store in the first macrofile
+   */
+   if (saveInputXForm) { 
+      for (h=0; h<MACHASHSIZE; h++)
+         for (m=hset->mtab[h]; m!=NULL; m=m->next)
+            if ((m->type == 'j') && (((InputXForm *)m->structure)->nUse>0) &&
+		(((fidx == 1) && ((m->fidx == LOADFIDX) || (m->fidx == CREATEFIDX))) ||
+		 (m->fidx == fidx)))
+               PutInputXForm(hset,f,m,(InputXForm *)m->structure,TRUE,binary);     
+   }
    fprintf(f,"~o\n");
    PutOptions(hset,f,binary);
    for (h=0; h<MACHASHSIZE; h++)
@@ -3203,6 +3753,50 @@ static void SaveMacros(FILE *f, HMMSet *hset, short fidx, Boolean binary)
       for (m=hset->mtab[h]; m!=NULL; m=m->next)
          if (m->fidx == fidx && m->type == 'h')
             PutHMMDef(hset,f,m,TRUE,binary); 
+}
+
+static ReturnStatus GetXFormMacros(HMMSet *hset, Source *src, Token *tok, int fidx)
+{
+   char type, buf[MAXSTRLEN];
+   LabId id;
+   Ptr structure;
+
+   while (tok->sym == MACRO){
+      type = tok->macroType;
+      if (!ReadString(src,buf)){
+         TermScanner(src);
+         HRError(999,"GetXFormMacros: Macro name expected in macro file %s",src->name);
+         return(FAIL);
+      }
+      id = GetLabId(buf,TRUE);
+      if(GetToken(src,tok)<SUCCESS){
+         TermScanner(src);
+         HRError(999,"GetXFormMacros: Macro name expected in macro file %s",src->name);
+         return(FAIL);
+      }
+      switch(type){
+      case 'f': structure = GetLinXForm(hset,src,tok);  break;
+      case 'x': structure = GetTransform(hset,src,tok); break;
+      case 'y': structure = GetBias(hset,src,tok);   break;
+      case 'j': 
+         structure = GetInputXForm(hset,src,tok);
+         ((InputXForm *)structure)->xformName = CopyString(hset->hmem,id->name);
+         break;
+      default :
+         TermScanner(src);
+         HRError(7037,"GetXFormMacros: bad macro type in xform file %s",src->name);
+         return(FAIL);
+      }
+      if(structure==NULL){
+         TermScanner(src);
+         HRError(7035,"GetXFormMacros: Get macro data failed in %s",src->name);
+         return(FAIL);
+      }
+      NewMacro(hset,fidx,type,id,structure);
+      if (trace&T_MAC)
+         printf("HModel: storing macro ~%c %s -> %p\n",type,id->name,structure);
+   }
+   return(SUCCESS);
 }
 
 /* EXPORT->SaveInOneFile: ignore source files and store in fname */
@@ -3588,6 +4182,110 @@ int MaxStatesInSet(HMMSet *hset)
          }
    return max;
 }
+
+/* -------------------- Input Transform Operations ---------------- */
+
+/* EXPORT->LoadInputXForm: loads, or returns, the specified transform */
+InputXForm *LoadInputXForm(HMMSet *hset, char* macroname, char *fname)
+{
+   Source src;
+   char *fn;
+   LabId id;
+   Token tok;
+   InputXForm *xf;
+   Ptr structure;
+   MLink m;
+   char buf[MAXSTRLEN], type;
+   int fidx = LOADFIDX; /* indicates that these are loaded xform macros */
+
+   if (hset == NULL) { /* read a transform with no model set */
+      fn = InitXFormScanner(hset, macroname, fname, &src, &tok);
+      SkipWhiteSpace(&src);
+      if(GetToken(&src,&tok)<SUCCESS){
+         TermScanner(&src);
+         return(NULL);
+      }
+      /* handle the case where the macro header is included */
+      if (tok.sym == MACRO) {
+         type = tok.macroType;
+         if (type != 'j') {
+            HRError(999,"LoadInputXForm: Only Input Transform can be specified with no model set %s",src.name);
+            return(NULL);
+         }
+         if (!ReadString(&src,buf)){
+            TermScanner(&src);
+            HRError(999,"LoadInputXForm: Input XForm macro name expected in macro file %s",src.name);
+            return(NULL);
+         }
+         if (strcmp(buf,macroname)) {
+            HRError(999,"LoadInputXForm: Inconsistent macro names  %s and %s in file %s",macroname,buf,src.name);
+            return(NULL);
+         }
+         if(GetToken(&src,&tok)<SUCCESS){
+            TermScanner(&src);
+            return(NULL);
+         }
+      }
+      xf = GetInputXForm(hset,&src,&tok);
+      xf->xformName = CopyString(&xformStack,macroname);
+      TermScanner(&src);
+   } else { /* First see whether the macro exists */
+      id = GetLabId(macroname,FALSE);
+      if (id == NULL) { /* macro doesn't exist go find it */
+         fn = InitXFormScanner(hset, macroname, fname, &src, &tok);
+         SkipWhiteSpace(&src);
+         if(GetToken(&src,&tok)<SUCCESS){
+            TermScanner(&src);
+            return(NULL);
+         }
+         if (GetXFormMacros(hset,&src,&tok,fidx)<SUCCESS)
+            HError(999,"Error in XForm macro file %s",fn);
+         /* All xform macros have been read. The speaker macro may be one of them */
+         id = GetLabId(macroname,FALSE);
+         if (id==NULL) { /* not stored in macro format */
+            id = GetLabId(macroname,TRUE);
+            structure = xf = GetInputXForm(hset,&src,&tok);
+            if (xf->xformName == NULL) /* may have been stored without the macro header */
+               xf->xformName = CopyString(hset->hmem,macroname);
+            NewMacro(hset,fidx,'j',id,structure);
+         } else {
+            m = FindMacroName(hset,'j',id);
+            xf = (InputXForm *)m->structure;
+         }
+         TermScanner(&src);
+      } else { /* macro already exists so just return it */
+         m = FindMacroName(hset,'j',id);
+         xf = (InputXForm *)m->structure;
+         xf->nUse++;
+      }
+   }
+   if (trace&T_XFM)
+      printf("  Using input xform macro \"%s\" from file %s\n",macroname,xf->fname);
+   return xf;
+}
+
+/* EXPORT->SaveInputXForm: outputs an individual transform */
+void SaveInputXForm(HMMSet *hset, InputXForm *xf, char *fname, Boolean binary)
+{
+   FILE *f;
+   Boolean isPipe;
+
+   binary = binary||saveBinary;
+   if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
+      HError(7011,"SaveInputXForm: Cannot create output file %s",fname);
+   }
+   if (trace&T_MAC)
+      printf("HModel: saving XForm to %s\n",fname);
+   /* 
+      store the macro header information without explicitly generating
+      the macro 
+   */
+   fprintf(f,"~a %s",ReWriteString(xf->xformName,NULL,DBL_QUOTE));
+   if (!binary) fprintf(f,"\n");
+   PutInputXForm(hset,f,NULL,xf,FALSE,binary);
+   FClose(f,isPipe);  
+}
+
 
 /* ----------------- Output Probability Calculations ---------------------- */
 

@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2002  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,7 +32,7 @@
 /*         File: HTrain.h   HMM Training Support Routines      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HTrain:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HTrain:   3.2 [CUED 09/12/02] */
 
 #ifndef _HTRAIN_H_
 #define _HTRAIN_H_
@@ -210,24 +223,40 @@ typedef struct {     /* attached to covariance vector/matrix */
    float occ;        /* occ for states sharing this mpdf */
 } VaAcc;
 
+
+#define MIX_UPDATE_SHARING
+
 typedef struct {     /* attached to MixPDF */
    LogFloat prob;    /* PreComputed Mixture Log Prob */
    int   time;       /* time for which prob is valid */
+#ifdef MIX_UPDATE_SHARING
+   int indx;
+#endif
 } PreComp;
 
+
+void AttachAccsParallel(HMMSet *hset, MemHeap *x, int indx);
 void AttachAccs(HMMSet *hset, MemHeap *x);
 /*
-   Attach zeroed accumulators to given HMM set
+   Attach zeroed accumulators to given HMM set, also attaches PreComps
+   Equals AttachAccsParallel (hset,x,1).
 */
 
+void ZeroAccsParallel(HMMSet *hset, int indx); /* if indx +ve, does 0.. indx-1; else does -indx. */
 void ZeroAccs(HMMSet *hset);
 /*
    Zero all accumulators in given HMM set.
 */
 
+void ShowAccsParallel(HMMSet *hset, int index);
 void ShowAccs(HMMSet *hset);
 /*
    Show all accumulators attached to given HMM set
+*/
+
+void AttachPreComps(HMMSet *hset, MemHeap *x);
+/*
+   Attach reset PreComps to given HMM set
 */
 
 void ResetPreComps(HMMSet *hset);
@@ -242,6 +271,7 @@ void ResetHMMPreComps(HLink hmm, int nStreams);
    given HMM.
 */
 
+FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, int index);
 FILE * DumpAccs(HMMSet *hset, char *fname, int n);
 /* 
    Dump a copy of the accumulators attached to hset
@@ -250,12 +280,25 @@ FILE * DumpAccs(HMMSet *hset, char *fname, int n);
    and returned to allow extra info to be written.
 */ 
 
+Source LoadAccsParallel(HMMSet *hset, char *fname, int index);
 Source LoadAccs(HMMSet *hset, char *fname);
 /* 
    Increment the accumulators attached to hset by adding
    the values stored in fname.   Accs must be newly 
    created before first call. The file is left open 
    and returned to allow extra info to be read.
+*/
+
+void RestoreAccsParallel(HMMSet *hset, int index);
+void RestoreAccs(HMMSet *hset);
+/* 
+   Restore accs by removing the mean offset.
+*/
+
+double ScaleAccsParallel(HMMSet *hset, float weight, int index);
+double ScaleAccs(HMMSet *hset, float weight);
+/*
+   Scales all the accumulators.  Returns summed occupancy.
 */
 
 #ifdef __cplusplus

@@ -1,0 +1,8 @@
+2002-12-16  Steve Young <sjy@eng.cam.ac.uk>
+
+	* LModel.h (UNLOG_NATURAL): Remove extra minus sign.
+
+2002-12-09  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* Initial import of HLMLib source.
+

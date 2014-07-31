@@ -19,8 +19,8 @@
 /*         File: HLabel.c:   Speech Label File Input           */
 /* ----------------------------------------------------------- */
 
-char *hlabel_version = "!HVER!HLabel:   3.1.1 [CUED 05/06/02]";
-char *hlabel_vc_id = "$Id: HLabel.c,v 1.9 2002/06/05 14:06:45 ge204 Exp $";
+char *hlabel_version = "!HVER!HLabel:   3.2 [CUED 09/12/02]";
+char *hlabel_vc_id = "$Id: HLabel.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -111,7 +111,7 @@ static char labelQuote = 0;        /* How do we quote label names */
 /* --------------- Global MLF Data Structures  --------- */
 
 #define MLFCHUNKSIZE 500
-#define MAXMLFS 20
+#define MAXMLFS 200
 
 static int      numMLFs = 0;     /* number of MLF files opened */
 static FILE   * mlfile[MAXMLFS]; /* array [0..numMLFs-1] of MLF file */
@@ -621,7 +621,7 @@ static void GetTrSym(Source *src, Boolean htk)
    int nxtch;
    Boolean trSOL;
 
-   trNum = 0.0;; trStr[0]='\0'; 
+   trNum = 0.0; trStr[0]='\0'; 
    if (trSym==TRNULL) curch = GetCh(src);
    if (trSym==TREOL || trSym==TRNULL)
       trSOL=TRUE;
@@ -679,7 +679,7 @@ static void GetTrSym(Source *src, Boolean htk)
       else {
          nxtch=0;
          do {
-            if (nxtch>255) break;
+            if (nxtch>=255) break;
             trStr[nxtch++]=curch; curch=GetCh(src);
          }
          while (!isspace(curch) && curch != ',' && curch != EOF);
@@ -718,6 +718,9 @@ static void ExtendAux(MemHeap *x, LabList *ll, int n)
    LabId *id;
    float *s;
    LLink p;
+
+   if (n>=99)
+      HError(6570, "ExtendAux: Too many auxiliary fields in label file");
    
    oldn = ll->maxAuxLab; ll->maxAuxLab = n;
    for (p=ll->head->succ; p->succ!=NULL; p=p->succ){

@@ -1,4 +1,4 @@
-export HTKCF='-ansi -g -O2 -DOSS_AUDIO'
+export HTKCF='-ansi -Wall -Wno-switch -g -O2 -DOSS_AUDIO'
 export HTKLF='-L/usr/X11R6/lib'
 export HTKCC='gcc'
 export Arch=LINUX

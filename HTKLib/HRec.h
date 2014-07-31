@@ -19,7 +19,7 @@
 /*         File: HRec.h  Viterbi Recognition Engine Library    */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HREC:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HREC:   3.2 [CUED 09/12/02] */
 
 #ifndef _HREC_H_
 #define _HREC_H_

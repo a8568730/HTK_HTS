@@ -1,3 +1,40 @@
+2002-12-19  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* speechio.tex: Document _T qualifier.
+
+	* models.tex: Document input linear transforms.
+
+	* htkoview.tex (New in 3.2): Enumerate new features.
+
+	* HTKRef/HLRescore.tex: New section.
+
+2002-12-18  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* errors.tex: Added error code docs for HLRescore and HLat.
+
+2002-11-15  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* htkbook.tex: Add Dan Povey to author list.
+
+2002-07-15  Thomas Hain  <th223@eng.cam.ac.uk>
+ 
+        * train.tex: Added section on two-model re-estimation
+        * HTKRef/HHEd.tex Added descriptions of commands FA, FV and MD.
+        * errors.tex: Added HHEd error code for CovKind mismatch.
+        * config.tex: Added config variables for HModel, HHEd and HEREst.
+
+2002-07-16  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* htkslf.tex: Update description and include new example lattice.
+
+2002-07-05  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* htkoview.tex: Document use of multiple config files.
+
+2002-06-30  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HTKRef/HHEd.tex: Document FC command.
+
 2002-04-24  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
 	* refine.tex: Correct RC command example.

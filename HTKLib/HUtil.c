@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2002  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HUtil.c      HMM utility routines             */
 /* ----------------------------------------------------------- */
 
-char *hutil_version = "!HVER!HUtil:   3.1.1 [CUED 05/06/02]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.7 2002/06/05 14:06:45 ge204 Exp $";
+char *hutil_version = "!HVER!HUtil:   3.2 [CUED 09/12/02]";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.9 2002/12/19 16:37:11 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -238,7 +251,7 @@ Boolean GoNextHMM(HMMScanState *hss)
    int M;
    MLink mac;
 
-   mac=((hss->mac!=NULL)?mac=hss->mac->next:NULL);
+   mac = hss->mac ? hss->mac->next : NULL;
    if (mac==NULL) hss->h++;
    for (;hss->h<MACHASHSIZE;hss->h++)
       for (mac=((mac==NULL)?hss->hset->mtab[hss->h]:mac);
@@ -1074,6 +1087,7 @@ void SetMacroHook(MLink ml,Ptr hook)
    case 'v': /* SVector */
       SetHook(ml->structure,hook); break;
    case 'r': /* fake */
+   case 'j':
       break;
    case '*': /* deleted */
    case 'o': /* fake */
@@ -1096,6 +1110,8 @@ int GetMacroUse(MLink ml)
       use=((StateInfo *)(ml->structure))->nUse; break;
    case 'm': /* MixPDF * */
       use=((MixPDF *)(ml->structure))->nUse; break;
+   case 'j': /* InputXForm * */
+      use=((InputXForm *)(ml->structure))->nUse; break;
    case 'c': /* STriMat */
    case 'i': /* STriMat */
    case 'x': /* SMatrix */
@@ -1127,6 +1143,8 @@ void SetMacroUse(MLink ml,int use)
       ((StateInfo *)(ml->structure))->nUse=use; break;
    case 'm': /* MixPDF * */
       ((MixPDF *)(ml->structure))->nUse=use; break;
+   case 'j': /* InputXForm * */
+      ((InputXForm *)(ml->structure))->nUse=use; break;
    case 'c': /* STriMat */
    case 'i': /* STriMat */
    case 'x': /* SMatrix */

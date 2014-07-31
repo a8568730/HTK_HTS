@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*               2002 Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,7 +32,7 @@
 /*         File: HModel.h  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HModel:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HModel:   3.2 [CUED 09/12/02] */
 
 #ifndef _HMODEL_H_
 #define _HMODEL_H_
@@ -137,6 +150,27 @@ typedef struct {
 
 typedef HMMDef * HLink;
 
+/* ---------------------- Input Transform  ------------------- */
+
+typedef struct {
+   int vecSize;         /* must be matched to a stream width! */
+   IntVec blockSize;    /* block sizes in the linear transform */
+   SMatrix* xform;      /* 1..numBlocks matrix transforms */
+   SVector bias;        /* bias vector, if no bias equals NULL */
+   float det;           /* determinant of linxform */
+   int nUse;            /* usage counter */
+} LinXForm;
+
+typedef struct {
+   char* xformName;     /* name of the transform (macroname) */
+   char* mmfIdMask;     /* mask of model sets that appropriate for */
+   char *fname;         /* filename of where the input xform was loaded */
+   ParmKind pkind;      /* parameter kind for xform to be applied to */
+   Boolean preQual;     /* is this applied prior to qualifiers? */
+   LinXForm *xform;     /* actual transform to be applied */
+   int nUse;            /* usage counter */
+} InputXForm;
+
 /* ---------------------- Macros/HMM Hashing ------------------- */
 
 /* 
@@ -193,6 +227,8 @@ typedef struct _HMMSet{
    int numMix;             /* Number of mixture components in HMMSet */
    int numSharedMix;       /* Number of shared mixtures in HMMSet */
    int numTransP;          /* Number of distinct transition matrices */
+   int ckUsage[NUMCKIND];  /* Number of components using given ckind */
+   InputXForm *xf;         /* Input transform of HMMSet */
 } HMMSet;
 
 /* --------------------------- Initialisation ---------------------- */
@@ -251,6 +287,11 @@ void SetVFloor(HMMSet *hset, Vector *vFloor, float minVar);
    length hset->swidth[s] is created in vFloor[s] and all its
    components are set to minVar.
 */
+
+void ApplyVFloor(HMMSet *hset);
+/* 
+   Apply the variance floors in hset to all covariances in the model set 
+ */
 
 void PrintHMMProfile(FILE *f, HLink hmm);
 /*
@@ -389,6 +430,17 @@ char *CovKind2Str(CovKind ckind, char *buf);
    string is stored in *buf and pointer to buf is returned
 */
 
+/* -------------------- Input Transform Operations ---------------- */
+
+InputXForm *LoadInputXForm(HMMSet *hset, char* macroname, char* fname);
+/* 
+   Loads, or returns, the specified transform 
+*/
+
+void SaveInputXForm(HMMSet *hset, InputXForm *xf, char *fname, Boolean binary);
+/* 
+   Saves an individual transform 
+*/
 
 /* ------------- HMM Output Probability Calculations --------------- */
 

@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2002  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*             File: HEAdapt.c: Adaptation Tool                */
 /* ----------------------------------------------------------- */
 
-char *headapt_version = "!HVER!HEAdapt:   3.1.1 [CUED 05/06/02]";
-char *headapt_vc_id = "$Id: HEAdapt.c,v 1.9 2002/06/05 14:07:14 ge204 Exp $";
+char *headapt_version = "!HVER!HEAdapt:   3.2 [CUED 09/12/02]";
+char *headapt_vc_id = "$Id: HEAdapt.c,v 1.10 2002/12/19 16:37:40 ge204 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -178,10 +191,10 @@ int main(int argc, char *argv[])
    InitAudio();
    InitWave();
    InitVQ();
+   InitModel();
    if(InitParm()<SUCCESS)  
       HError(2700,"HEAdapt: InitParm failed"); 
    InitLabel();
-   InitModel();
    InitTrain();
    InitUtil();
    InitFB();
@@ -425,6 +438,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset,
       HError(2728,"Initialise: MakeHMMSet failed");
    if(LoadHMMSet( hset,hmmDir,hmmExt)<SUCCESS)
       HError(2728,"Initialise: LoadHMMSet failed");
+   SetParmHMMSet(hset);
   
    /* needs to be plain or shard system for adaptation purposes */
    if (hset->hsKind == TIEDHS || hset->hsKind == DISCRETEHS)
@@ -462,14 +476,14 @@ void DoForwardBackward(FBInfo *fbInfo, UttInfo *utt, char * datafn, char * dataf
 {
 
    utt->twoDataFiles = twoDataFiles ;
-   utt->S = fbInfo->hset->swidth[0];
+   utt->S = fbInfo->up_hset->swidth[0];
 
    /* Load the labels */
    LoadLabs(utt, lff, datafn, labDir, labExt);
    /* Load the data */
-   LoadData(fbInfo->hset, utt, dff, datafn, datafn2);
+   LoadData(fbInfo->up_hset, utt, dff, datafn, datafn2);
    if (firstTime) {
-      InitUttObservations(utt, fbInfo->hset, datafn, fbInfo->maxMixInS);
+      InitUttObservations(utt, fbInfo->up_hset, datafn, fbInfo->maxMixInS);
       firstTime = FALSE;
    }
 

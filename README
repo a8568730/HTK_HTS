@@ -1,4 +1,4 @@
-		Hidden Markov Toolkit (HTK) 3.1
+		Hidden Markov Toolkit (HTK) 3.2
 
 Use of this software is governed by a license agreement, the terms and
 conditions of which are set forth in the file LICENSE in the
@@ -38,8 +38,9 @@ be found in the LICENSE file.
 Compiling & Installing HTK under UNIX
 =====================================
 
-HTK consists of a library (built from the source code in HTKLib/) and
-a set of command line tools (in HTKTools/).
+HTK consists of two libraries (built from the source code in HTKLib/
+and HLMLib/) and a set of command line tools (in HTKTools/ and
+HLMTools/).
 
 The supplied makefiles require the following environment variables
 to be set:
@@ -50,13 +51,17 @@ to be set:
  HTKCF C compiler options
  HTKLF Linker options
 
-See the makefiles in HTKLib/ or HTKTools/ for detailed information
-about how these are used. The directory env/ contains example settings
-of these variables for a range of Operating Systems.
+See the makefiles in HTKLib/, HTKTools/, HLMLib/ and HLMTools/ for
+detailed information about how these are used. The directory env/
+contains example settings of these variables for a range of Operating
+Systems.
 
 First build the library in HTKLib/ and then build the tools in
 HTKTools/. The executables will be copied to the directory
-$HBIN/bin.$CPU which should be added to your PATH.
+$HBIN/bin.$CPU which should be added to your PATH.  Then you can build
+the library in HLMLib/ and the tools in HLMTools/.  The executables
+will again be copied to the directory $HBIN/bin.$CPU which should be
+added to your PATH.
 
 Please address questions regarding building HTK to
 HTK-users@eng.cam.ac.uk
@@ -84,6 +89,14 @@ Next cd to the HTKTools directory and make the tools
 
    > nmake /f htk_htktools_nt.mkf all
 
+Change to the HLMLib directory and compile it
+
+   > nmake /f htk_hlmlib_nt.mkf all
+
+And finally change to the HLMTools directory and compile
+
+   > nmake /f htk_hlmtools_nt.mkf all
+
 This will store the final executables in the bin.win32 directory which
 should be added to your path.
 
@@ -109,6 +122,8 @@ HTKDemo/configs/monPlainM1S1.dcf. There is a README file in the
 HTKDemo directory explaining the operation of the demonstration in
 detail but, in short, you need to run the demonstration script passing
 it the configuration file configs/monPlainM1S1.dcf as input. 
+To test the language modelling tools you should follow the tutorial
+in the HTK book, using the files in the LMTutorial/ directory.
 
 Before running the demo make sure you have compiled all the HTK tools
 and the executables are in your PATH, i.e. just typing 'HInit' at the

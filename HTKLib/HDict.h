@@ -19,7 +19,7 @@
 /*         File: HDict.h  Dictionary Storage                   */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HDict:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HDict:   3.2 [CUED 09/12/02] */
 
 #ifndef _HDICT_H_
 #define _HDICT_H_
@@ -48,6 +48,7 @@ typedef struct _WordPron{   /* storage for each pronunciation */
    LabId outSym;   /* Output symbol generated when pronunciation recognised */
    Word word;      /* Word this is a pronuciation of */
    Pron next;      /* Next pronunciation of word */
+   void *aux;      /* hook for temp info */
 } WordPron;
 
 typedef struct _DictEntry{

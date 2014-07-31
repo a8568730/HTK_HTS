@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*          2001-2002 Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,7 +32,7 @@
 /*         File: HNet.h  Network and Lattice Functions         */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HNET:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HNET:   3.2 [CUED 09/12/02] */
 
 /*
    Nets come in two forms.
@@ -203,10 +216,14 @@ typedef struct lattice
    char *hmms;			/* MMF file name (NULL==unknown) */
    char *net;			/* Network file name (NULL==unknown) */
 
+   float acscale;               /* Acoustic scale factor */
    float lmscale;		/* LM scale factor */
    LogFloat wdpenalty;		/* Word insertion penalty */
    float prscale;		/* Pronunciation scale factor */
    HTime framedur;              /* Frame duration in 100ns units */
+   float logbase;               /* base of logarithm for likelihoods in lattice files
+                                   (1.0 = default (e), 0.0 = no logs) */
+   float tscale;                /* time scale factor (default: 1, i.e. seconds) */
 
    Ptr hook;                    /* User definable hook */
 }
@@ -237,7 +254,8 @@ Lattice;
 				 (la)->end->word==(lat)->voc->nullWord) ? \
 				0.0 : (lat)->wdpenalty ))
 
-#define LArcTotLike(lat,la) ((la)->aclike + (la)->lmlike*(lat)->lmscale + \
+#define LArcTotLike(lat,la) ((la)->aclike*(lat)->acscale + \
+                             (la)->lmlike*(lat)->lmscale + \
 			     (la)->prlike*(lat)->prscale + \
 			     (((la)->end->word==NULL || \
 			       (la)->end->word==(lat)->voc->nullWord) ? \

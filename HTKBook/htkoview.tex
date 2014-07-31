@@ -21,7 +21,7 @@
 %/*          1995-2000 Redmond, Washington USA                  */
 %/*                    http://www.microsoft.com                 */
 %/*                                                             */
-%/*              2001  Cambridge University                     */
+%/*          2001-2002 Cambridge University                     */
 %/*                    Engineering Department                   */
 %/*                                                             */
 %/*   Use of this software is governed by a License Agreement   */
@@ -140,7 +140,12 @@ For example, if the command
 \end{verbatim}
 is executed, the tool \htool{HFoo} will load the 
 parameters stored in the configuration
-file \texttt{config} during its initialisation procedures.  
+file \texttt{config} during its initialisation procedures.  Multiple
+configuration files can be specified by repeating the \verb|-C|
+option, e.g.\ 
+\begin{verbatim}
+    HFoo -C config1 -C config2 -f 34.3 -a -s myfile file1 file2
+\end{verbatim}
 Configuration parameters can sometimes be used as an
 alternative to using command line arguments.  For example, trace
 options can always be set within a configuration file.  However, the
@@ -390,7 +395,35 @@ and \textit{Receiver Operating Curve} (ROC) information.
 \index{NIST}\index{FOM}\index{Figure of Merit}
 
 
-\mysect{Whats New In Version 3.1}{whatsnew}
+\mysect{Whats New In Version 3.2}{whatsnew}
+
+This \index{new features!in Version 3.2} section lists the new
+features in \HTK\ Version 3.2 compared to the preceding Version~3.1.
+
+\begin{enumerate}
+\item The \htool{HLM} toolkit has been incorporated into HTK. It
+  supports the training and testing of word or class-based n-gram
+  language models. 
+\item \htool{HPARM} supports global feature space transforms.
+\item \htool{HPARM} now supports third differentials
+  ($\Delta\Delta\Delta$ parameters).
+\item A new tool named \htool{HLRescore} offers support for a number
+  of lattice post-processing operations such as lattice pruning,
+  finding the 1-best path in a lattice and language model expansion of
+  lattices.
+\item \htool{HERest} supports 2-model re-estimation which allows the
+  use of a separate alignment model set in the Baum-Welch
+  re-estimation.
+\item The initialisation of the decision-tree state clustering in
+  \htool{HHEd} has been improved.
+\item \htool{HHEd} supports a number of new commands related to
+  variance flooring and decreasing the number of mixtures.
+\item A major bug in the estimation of block-diagonal MLLR transforms
+  has been fixed.
+\item Many other smaller changes and bug fixes have been integrated.
+\end{enumerate}
+
+\subsection{New In Version 3.1}{}
 
 This \index{new features!in Version 3.1} section lists the new
 features in \HTK\ Version 3.1 compared to the preceding Version~3.0

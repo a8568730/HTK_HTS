@@ -19,7 +19,7 @@
 /*         File: HMem.h:   Memory Management Module            */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HMem:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HMem:   3.2 [CUED 09/12/02] */
 
 /*
    This module provides a type MemHeap which once initialised
@@ -128,6 +128,12 @@ Ptr New(MemHeap *x,size_t size);
    ignored, otherwise it must be the correct size for that heap.  Note
    that New aborts if requests cannot be satisfied.  It never
    returns NULL.
+*/
+
+Ptr CNew(MemHeap *x,size_t size);
+/*
+  Create a new element from heap x and initialise to zero. See
+  comment for New() above.
 */
 
 void Dispose(MemHeap *x, Ptr p);

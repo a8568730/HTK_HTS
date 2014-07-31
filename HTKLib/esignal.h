@@ -17,7 +17,7 @@
 /*                                                             */
 /* ----------------------------------------------------------- */
 
-/* !HVER!esignal:   3.1.1 [CUED 05/06/02] */
+/* !HVER!esignal:   3.2 [CUED 09/12/02] */
 /*
  *
  * Example programs for Esignal public external file format.

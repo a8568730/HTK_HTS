@@ -19,8 +19,8 @@
 /*         File: HMath.c   Math Support Module                 */
 /* ----------------------------------------------------------- */
 
-char *hmath_version = "!HVER!HMath:   3.1.1 [CUED 05/06/02]";
-char *hmath_vc_id = "$Id: HMath.c,v 1.7 2002/06/05 14:06:45 ge204 Exp $";
+char *hmath_version = "!HVER!HMath:   3.2 [CUED 09/12/02]";
+char *hmath_vc_id = "$Id: HMath.c,v 1.8 2002/12/19 16:37:11 ge204 Exp $";
 
 /*
    This library provides math support in the following three areas
@@ -606,6 +606,51 @@ LogFloat CovDet(TriMat c)
    FreeDMatrix(&gstack,l);
    return 2.0*ldet;
 }
+
+/* Quadratic prod of a full square matrix C and an arbitry full matrix transform A */
+void LinTranQuaProd(Matrix Prod, Matrix A, Matrix C)
+{
+   int i,j,k;
+   float tempElem;
+   Matrix tempMatrix_A_mult_C;
+   
+   if (NumRows(C) != NumCols(C)){
+      HError(999,"HMath: LinTranQuaProd: Matrix C is not square!\n");
+   }
+   else {
+      tempMatrix_A_mult_C = CreateMatrix(&gstack,NumRows(A),NumCols(C));
+      ZeroMatrix(tempMatrix_A_mult_C);
+      
+      for (i=1;i<=NumRows(tempMatrix_A_mult_C);i++){
+         for (j=1;j<=NumCols(tempMatrix_A_mult_C);j++){
+            tempElem = 0.0;
+            for (k=1;k<=NumCols(A);k++){
+               tempElem += A[i][k]*C[j][k];
+            }
+            tempMatrix_A_mult_C[i][j] = tempElem;
+         }
+      }
+      
+      for (i=1;i<=NumRows(Prod);i++){
+         for (j=1;j<=i;j++){
+            tempElem = 0.0;
+            for (k=1;k<=NumCols(tempMatrix_A_mult_C);k++){
+               tempElem += tempMatrix_A_mult_C[i][k]*A[j][k];
+            }
+            Prod[i][j] = tempElem;
+         }
+      }
+      
+      for (i=1;i<=NumRows(Prod);i++){
+         for (j=1;j>i;j++){
+            Prod[i][j] = Prod[j][i];
+         }
+      }
+      
+      FreeMatrix(&gstack,tempMatrix_A_mult_C);
+   }
+}
+
 
 /* ------------- Singular Value Decomposition --------------- */
 /**************************************************************************

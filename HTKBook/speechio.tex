@@ -752,18 +752,23 @@ versions of \HTK\, scaling factors set by the configuration variable
 \texttt{ESCALE} are not applied to $C_0$\footnote{ Unless \texttt{V1COMPAT} is
 set to true.  }.
 
-\mysect{Delta and Acceleration Coefficients}{delta}
+\mysect{Delta, Acceleration and Third Differential Coefficients}{delta}
 
 \index{speech input!dynamic coefficents}
 The performance of a speech recognition system can be greatly enhanced by
 adding time derivatives to the basic static parameters.  In \HTK, these are
 indicated by attaching qualifiers to the basic parameter kind.  The qualifier
 \texttt{\_D} indicates that first order regression coefficients (referred to as
-delta coefficients) are appended, and the qualifier
+delta coefficients) are appended, the qualifier
 \texttt{\_A}\index{qualifiers!aaaa@\texttt{\_A}} indicates that second order
-regression coefficients (referred to as acceleration coefficients) are
+regression coefficients (referred to as acceleration coefficients) and 
+ the qualifier
+\texttt{\_T}\index{qualifiers!aaaa@\texttt{\_T}} indicates that third order
+regression coefficients (referred to as third differential coefficients) are
 appended. The \texttt{\_A} qualifier cannot be used without also using the
-\texttt{\_D}\index{qualifiers!aaad@\texttt{\_D}} qualifier.
+\texttt{\_D}\index{qualifiers!aaad@\texttt{\_D}} qualifier. Similarly
+the \texttt{\_T} qualifier cannot be used without also using the
+\texttt{\_D} and \texttt{\_A} qualifiers.
 
 The delta coefficients\index{delta coefficients} are computed using the
 following regression formula\index{regression formula}
@@ -777,7 +782,8 @@ of $\Theta$ is set using the configuration parameter
 \texttt{DELTAWINDOW}\index{deltawindow@\texttt{DELTAWINDOW}}.  The same formula
 is applied to the delta coefficients to obtain acceleration coefficients except
 that in this case the window size is set by
-\texttt{ACCWINDOW}\index{accwindow@\texttt{ACCWINDOW}}.  Since
+\texttt{ACCWINDOW}\index{accwindow@\texttt{ACCWINDOW}}. Similarly
+the third differentials use \texttt{THIRDWINDOW}. Since
 equation~\ref{e:deltas} relies on past and future speech parameter values, 
 some modification is needed at the beginning and end of the speech.  The
 default behaviour is to replicate the first or last vector as needed to fill
@@ -1863,6 +1869,7 @@ Qualifier &  Meaning  \\ \hline
 \texttt{\_E} &  Log energy appended\\
 \texttt{\_K} &  External form has checksum appended\\
 \texttt{\_N} &  Absolute log energy suppressed \\
+\texttt{\_T} &  Third differential coefficients appended \\
 \texttt{\_V} &  VQ index appended\\
 \texttt{\_Z} &  Cepstral mean subtracted\\
 \texttt{\_0} &  Cepstral C0 coefficient appended\\ \hline

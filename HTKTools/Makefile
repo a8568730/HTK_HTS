@@ -40,7 +40,7 @@ CFLAGS = -I$(hlib) $(HTKCF)
 
 all:    HEAdapt	HList	HCompV HCopy   HDMan HERest HHEd    HInit  \
         HParse HBuild HQuant  HRest  HResults HSmooth HVite HLEd   \
-	HLStats HSGen  HSLab
+	HLRescore HLStats HSGen  HSLab
 
 HEAdapt :  $(hlib)/HTKLib.$(CPU).a HEAdapt.o
 	$(CC) HEAdapt.o $(HLIBS) -lm $(HTKLF)
@@ -69,6 +69,10 @@ HERest: $(hlib)/HTKLib.$(CPU).a HERest.o
 HLEd:   $(hlib)/HTKLib.$(CPU).a HLEd.o
 	$(CC) HLEd.o $(HLIBS) -lm $(HTKLF)
 	mv a.out $(HBIN)/bin.$(CPU)/HLEd
+
+HLRescore:   $(hlib)/HTKLib.$(CPU).a HLRescore.o
+	$(CC) HLRescore.o $(HLIBS) -lm $(HTKLF)
+	mv a.out $(HBIN)/bin.$(CPU)/HLRescore
 
 HHEd:   $(hlib)/HTKLib.$(CPU).a HHEd.o
 	$(CC) HHEd.o $(HLIBS) -lm $(HTKLF)
@@ -133,6 +137,7 @@ removetools:
 	-rm -f $(HBIN)/bin.$(CPU)/HDMan
 	-rm -f $(HBIN)/bin.$(CPU)/HERest
 	-rm -f $(HBIN)/bin.$(CPU)/HLEd
+	-rm -f $(HBIN)/bin.$(CPU)/HLRescore
 	-rm -f $(HBIN)/bin.$(CPU)/HHEd
 	-rm -f $(HBIN)/bin.$(CPU)/HInit
 	-rm -f $(HBIN)/bin.$(CPU)/HParse

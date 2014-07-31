@@ -56,13 +56,28 @@ Like all re-estimation tools, \htool{HERest} allows
 a floor to be set on each individual variance by defining a variance floor
 macro for each data stream (see chapter~\ref{c:Training}).
 
-\htool{HERest} also supports \textit{single pass retraining}.  Given
-a set of well-trained models, a set of new models using a different
-parameterisation of the training data can be generated in a single
-pass.  This is done by computing the forward and backward probabilities
-using the original well-trained models and the original training
-data, but then switching to a new set of training data to compute
-the new parameter estimates.
+\htool{HERest} supports two specific methods for initilisation of
+model parameters , \textit{single pass retraining} and \textit{2-model
+  reestimation}.
+
+\textit{Single pass retraining} is useful when the parameterisation of
+the front-end (e.g. from MFCC to PLP coefficients) is to be modified.
+Given a set of well-trained models, a set of new models using a
+different parameterisation of the training data can be generated in a
+single pass.  This is done by computing the forward and backward
+probabilities using the original well-trained models and the original
+training data, but then switching to a new set of training data to
+compute the new parameter estimates.
+
+In \textit{2-model re-estimation} one model set can be used to obtain
+the forward backward probablilites which then are used to update the
+parameters of another model set. Contrary to \textit{single pass
+  retraining} the two model sets are not required to be tied in the
+same fashion.  This is particulary useful for training of single
+mixture models prior to decision-tree based state clustering. The use
+of 2-model re-estimation in \htool{HERest} is triggered by setting the
+config variables {\tt ALIGNMODELMMF} or {\tt ALIGNMODELDIR} and {\tt
+  ALIGNMODELEXT} together with {\tt ALIGNHMMLIST} (see section \ref{s:twomodel}).
 
 \htool{HERest} operates in two distinct stages. 
 \begin{enumerate}

@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2002  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*      File: HList.c: List a Speech File or Audio Source      */
 /* ----------------------------------------------------------- */
 
-char *hlist_version = "!HVER!HList:   3.1.1 [CUED 05/06/02]";
-char *hlist_vc_id = "$Id: HList.c,v 1.8 2002/06/05 14:07:14 ge204 Exp $";
+char *hlist_version = "!HVER!HList:   3.2 [CUED 09/12/02]";
+char *hlist_vc_id = "$Id: HList.c,v 1.9 2002/12/19 16:37:40 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -30,6 +43,8 @@ char *hlist_vc_id = "$Id: HList.c,v 1.8 2002/06/05 14:07:14 ge204 Exp $";
 #include "HWave.h"
 #include "HVQ.h"
 #include "HParm.h"
+#include "HLabel.h"
+#include "HModel.h"
 
 
 /* -------------------------- Trace Flags ------------------------ */
@@ -107,7 +122,8 @@ int main(int argc, char *argv[])
    InitMem();
    InitMath();  InitSigP();
    InitWave();  InitAudio();
-   InitVQ(); 
+   InitVQ(); InitLabel();
+   InitModel();
    if(InitParm()<SUCCESS)  
       HError(1100,"HList: InitParm failed");
 

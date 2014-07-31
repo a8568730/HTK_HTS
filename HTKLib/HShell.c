@@ -21,7 +21,7 @@
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
 /*                                                             */
-/*              2001  Cambridge University                     */
+/*          2001-2002 Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -32,8 +32,8 @@
 /*         File: HShell.c:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-char *hshell_version = "!HVER!HShell:   3.1.1 [CUED 05/06/02]";
-char *hshell_vc_id = "$Id: HShell.c,v 1.11 2002/06/05 14:06:45 ge204 Exp $";
+char *hshell_version = "!HVER!HShell:   3.2 [CUED 09/12/02]";
+char *hshell_vc_id = "$Id: HShell.c,v 1.12 2002/12/19 16:37:11 ge204 Exp $";
 
 #include "HShell.h"
 
@@ -1151,8 +1151,8 @@ char *ParseString(char *src, char *s)
 }
 
 /* EXPORT->ReadString: get next string from src and store it in s */
-Boolean ReadString(Source *src, char *s)
-{
+Boolean ReadString(Source *src, char *s){  
+  /* could be just: return ReadStringWithLen(src,s,MAXSTRLEN); but this is called often so do it like this.. */
    int i,c,n,q;
 
    src->wasQuoted=FALSE;
@@ -1162,7 +1162,7 @@ Boolean ReadString(Source *src, char *s)
       src->wasQuoted = TRUE; q = c;
       c = GetCh(src);
    }
-   for (i=0; i<MAXSTRLEN ; i++){
+   for (i=0; i<MAXSTRLEN; i++){
       if (src->wasQuoted){
          if (c == EOF)
             HError(5013,"ReadString: File end within quoted string");
@@ -1190,6 +1190,50 @@ Boolean ReadString(Source *src, char *s)
       s[i] = c; c = GetCh(src);
    }     
    HError(5013,"ReadString: String too long");
+   return FALSE;
+}  
+
+
+/* EXPORT->ReadStringWithLen: get next string from src and store it in s */
+Boolean ReadStringWithLen(Source *src, char *s, int buflen)
+{
+   int i,c,n,q;
+
+   src->wasQuoted=FALSE;
+   while (isspace(c=GetCh(src)));
+   if (c == EOF) return FALSE;
+   if (c == DBL_QUOTE || c == SING_QUOTE){
+      src->wasQuoted = TRUE; q = c;
+      c = GetCh(src);
+   }
+   for (i=0; i<buflen ; i++){
+      if (src->wasQuoted){
+         if (c == EOF)
+            HError(5013,"ReadString: File end within quoted string");
+         if (c == q) {
+            s[i] = '\0';
+            return TRUE;
+         }
+      } else {
+         if (c == EOF || isspace(c)){
+            UnGetCh(c,src);
+            s[i] = '\0';
+            return TRUE;
+         }
+      }
+      if (c==ESCAPE_CHAR) {
+         c = GetCh(src); if (c == EOF) return(FALSE);
+         if (c>='0' && c<='7') {
+            n = c - '0'; 
+            c = GetCh(src); if (c == EOF || c<'0' || c>'7') return(FALSE);
+            n = n*8 + c - '0'; 
+            c = GetCh(src); if (c == EOF || c<'0' || c>'7') return(FALSE);
+            c += n*8 - '0';
+         }
+      }
+      s[i] = c; c = GetCh(src);
+   }     
+   HError(5013,"ReadStringWithLen: String too long");
    return FALSE;
 }
 
@@ -1932,6 +1976,29 @@ ReturnStatus InitShell(int argc, char *argv[], char *ver, char *sccs)
    
    return(SUCCESS);
 }
+
+void SetTime(TimeStruct *t)
+{
+   if(gettimeofday(&(t->time),NULL)) 
+      HError(1, "Error getting time of day.");
+   t->clock_time = clock();
+}
+
+char *GiveTime(TimeStruct *t)
+{
+   struct timeval time;
+   clock_t clock_time;
+   int tenth_millisecs,clock_tenth_millisecs;
+   if(gettimeofday(&time,NULL)) 
+      HError(1, "Error getting time of day.");
+   clock_time = clock();
+   tenth_millisecs = (time.tv_sec-t->time.tv_sec)*10000 + (time.tv_usec-t->time.tv_usec)/100;
+   clock_tenth_millisecs = (clock_time - t->clock_time)/100;
+
+   sprintf(t->timestr, "%d.%04d/clock %d.%04d", tenth_millisecs/10000, tenth_millisecs % 10000, clock_tenth_millisecs/10000, clock_tenth_millisecs % 10000);
+   return t->timestr;
+}
+
 
 /* EXPORT->PrintStdOpts: print standard options */
 void PrintStdOpts(char *opt)

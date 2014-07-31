@@ -7,9 +7,22 @@
 %/*                                                             */
 %/*                                                             */
 %/* ----------------------------------------------------------- */
+%/* developed at:                                               */
+%/*                                                             */
+%/*      Speech Vision and Robotics group                       */
+%/*      Cambridge University Engineering Department            */
+%/*      http://svr-www.eng.cam.ac.uk/                          */
+%/*                                                             */
+%/*      Entropic Cambridge Research Laboratory                 */
+%/*      (now part of Microsoft)                                */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
 %/*         Copyright: Microsoft Corporation                    */
 %/*          1995-2000 Redmond, Washington USA                  */
-%/*                    http://www.microsoft.com                */
+%/*                    http://www.microsoft.com                 */
+%/*                                                             */
+%/*               2002 Cambridge University                     */
+%/*                    Engineering Department                   */
 %/*                                                             */
 %/*   Use of this software is governed by a License Agreement   */
 %/*    ** See the file License for the Conditions of Use  **    */
@@ -599,7 +612,7 @@ The macros with special meanings\index{macros!special meanings} are as follows
 + \= ++++ \= ++++++++++++++ \= ++++ \=\kill
 \> \hmmt{l} \>  logical HMM \> \hmmt{h} \>  physical HMM \\
 \> \hmmt{o} \>  global option values \> \hmmt{p} \>  tied mixture \\
-\> \hmmt{r} \>  regression class tree \> \> 
+\> \hmmt{r} \>  regression class tree \> \hmmt{j} \> linear transform
 \end{tabbing}
 The distinction between logical and physical HMMs will be explained
 in the next section and option macros have already been described.
@@ -675,7 +688,7 @@ searched for in the subdirectory \texttt{hdir}.
 
 
 After loading each HMM set,\index{tied-state} \htool{HModel} marks it as belonging
-to one of the following categories (called the \textit{HSKind}\index{hskind@\textit{HSKind}}
+to one of the following categories (called the \textit{HSKind}\index{hskind@HSKind}
 \begin{itemize}
 \item \texttt{PLAINHS}
 \item \texttt{SHAREDHS}
@@ -975,6 +988,62 @@ for stream 1 is size 10 and for stream 2, it is size 2.  For consistency with
 the representation used for continuous density HMMs, these sizes are encoded 
 in the \hmkw{NumMixes}\index{nummixes@$<$NumMixes$>$} specifier.
 
+\mysect{Input Linear Transforms}{lintran}
+
+When reading feature vectors from files HTK will coerce them to the
+\texttt{TARGETKIND} specified in the config file. Often the
+\texttt{TARGETKIND} will contain certain qualifiers (specifying for
+example delta parameters). In addition to this parameter coercion it
+is possible to apply a linear transform before, or after, appending
+delta, acceleration and third derivative parameters.
+
+\putprog{lintran}{70}{Input Linear Transform}{
+\hmmc{j}{lintran.mat} \\
+\hmkw{MMFIdMask} *\\
+\hmkw{MFCC} \\
+\hmkw{PreQual}\\
+\hmkw{LinXform}\\
+\> \hmkw{VecSize} 2\\
+\> \hmkw{BlockInfo} 1 2\\
+\> \hmkw{Block} 1\\
+\> \>   \hmkw{Xform} 2 5\\
+\> \>   \> 1.0 0.1 0.2 0.1 0.4\\
+\> \>   \> 0.2 1.0 0.1 0.1 0.1
+}
+Figure~\ref{f:lintran}  shows an example linear transform. The
+\hmkw{PreQual} keyword specifies that the linear transform
+is to be applied before the delta and delta-delta
+parameters specified in \texttt{TARGETKIND} are added. The default
+mode, no \hmkw{PreQual} keyword, applies the linear transform 
+after the addition of the qualifiers.
+
+The linear transform fully supports projection from higher 
+number of features to a smaller number of features. In the 
+example, the parameterised data must consist of 5 \texttt{MFCC}
+parameters\footnote{If C0 or normalised log-energy are added
+these will be stripped prior to applying the linear transform}.
+The model sets that are generated using this transform have
+a vector size of 2.
+
+By default the linear transform is stored with the HMM. This is
+achieved by adding the \hmkw{InputXform} keyword and specifying the
+transform or macroname. To allow compatibilty with tools only
+supporting the old format models it is possible to specify that no
+linear transform is to be stored with the model. 
+\begin{verbatim}
+    # Do not store linear transform
+    HMODEL: SAVEINPUTXFORM = FALSE
+\end{verbatim}
+In addition it is possible to specify the linear transform as a
+\htool{HPARM} configuration variable, \texttt{MATRTRANFN}.
+\begin{verbatim}
+    # Specifying an input linear transform
+    HPARM: MATTRANFN = /home/test/lintran.mat
+\end{verbatim}
+When a linear transform is specified in this form it is not necessary
+to have a macroname linked with it. In this case the filename
+will be used as the macroname (having stripped the directory name)
+
 \mysect{Tee Models}{teemods}
 
 Normally, the transition probability from the non-emitting entry
@@ -1225,6 +1294,7 @@ width will be assumed.  All other options default to null.
 \>  option = \> $<$HmmSetId$>$ string $|$ \\ 
 \>\>  $<$StreamInfo$>$ short \{ short \} $|$  \\
 \>\>   $<$VecSize$>$    short $|$  \\
+\>\>   $<$InputXform$>$ inputXform $|$  \\
 \>\>   covkind $|$ \\
 \>\>   durkind $|$ \\
 \>\>   parmkind 
@@ -1274,7 +1344,7 @@ The parameter kind is any legal parameter kind including qualified forms
 {\sf
 \begin{tabbing}
 ++++ \= ++++++++ \=  \kill
-\>  parmkind =\> $<$basekind\{\_D$|$\_A$|$\_E$|$\_N$|$\_Z$|$\_O$|$\_V$|$\_C$|$\_K\}$>$ \\
+\>  parmkind =\> $<$basekind\{\_D$|$\_A$|$\_T$|$\_E$|$\_N$|$\_Z$|$\_O$|$\_V$|$\_C$|$\_K\}$>$ \\
 \>  basekind =\> $<$discrete$>$$|$$<$lpc$>$$|$$<$lpcepstra$>$$|$$<$mfcc$>$ $|$ $<$fbank$>$ $|$ \\
  \> \>          $<$melspec$>$$|$ $<$lprefc$>$$|$$<$lpdelcep$>$ $|$ $<$user$>$ 
 \end{tabbing}
@@ -1478,7 +1548,7 @@ correspond to a regression base class index as stored at the
 component level in {\sf RClass}, see above), while the {\sf int}
 refers to the number of mixture components in this leaf cluster.
 
-Finally, the transition matrix is defined by
+The transition matrix is defined by
 {\sf
 \begin{tabbing}
 ++++ \= ++++++++ \=  \kill
@@ -1488,6 +1558,24 @@ Finally, the transition matrix is defined by
 \noindent
 where the {\sf short} in this case should be equal to the number of
 states in the model. 
+
+Finally the input transform is defined by
+{\sf
+\begin{tabbing}
+++++ \= ++++++++ \=  \kill
+\>  inputXform  = \> $\sim$j macro $|$ inhead inmatrix\\
+\>  inhead      = \> $<$MMFIdMask$>$ string parmkind [$<$PreQual$>$]\\
+\>  inmatrix    = \> $<$LinXform$>$ $<$VecSize$>$ short $<$BlockInfo$>$ 
+short short \{short\} block \{block\}\\
+\>  block       = \> $<$Block$>$ short xform
+\end{tabbing}
+}
+\noindent
+where the {\sf short} following \hmkw{VecSize} is the number of dimensions
+after applyingthe linear transform and must match the vector size
+of the HMM definition. The first {\sf short} after \hmkw{BlockInfo}
+is the number of block, this is followed by the number of output
+dimensions from each of the blocks.
 
 
 %%% Local Variables: 

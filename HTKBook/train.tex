@@ -709,6 +709,60 @@ be output to \texttt{dir2}. This process of single-pass retraining is
 a significantly faster route to a new set of models than training a fresh 
 set from scratch.
 
+\mysect{Two-model Re-Estimation}{twomodel}
+
+Another method for initialisation of model parameters implemented in
+\htool{HERest} is two-model re-estimation. HMM sets often use the same
+basic units such as triphones but differ in the way the underlying HMM
+parameters are tied. In these cases two-model re-estimation can be
+used to obtain the state-level alignment using one model set which is
+used to update the parameters of a second model set. This is helpful
+when the model set to be updated is less well trained.
+
+A typical use of two-model re-estimation\index{two-model
+  re-estimation} is the initialisation of state clustered triphone
+models. In the standard case triphone models are obtained by cloning
+of monophone models and subsequent clustering of triphone states.
+However, the unclustered triphone models are considerably less
+powerful than state clustered triphone HMMs using mixtures of
+Gaussians. The consequence is poor state level alignment and thus poor
+parameter estimates, prior to clustering.  This can be ameliorated by
+the use of well-trained \textit{alignment models} for computing the
+forward-backward probabilities. In the maximisation stage of the
+Baum-Welch algorithm the state level posteriors are used to
+re-restimate the parameters of the \textit{update model set}. Note
+that
+
+As an example, suppose that we would like to update a set of cloned
+single Gaussian monophone models in {\tt dir1/hmacs} using the well
+trained state-clustered triphones in {\tt dir2/hmacs} as alignment
+models. Associated with each model set are the model lists {\tt
+  hmmlist1} and {\tt hmmlist2} respectively. In order to use the
+second model set for alignment a configuration file {\tt
+  config.2model} containing
+\begin{verbatim}
+   # alignment model set for two-model re-estimation
+   ALIGNMODELMMF = dir2/hmacs
+   ALIGNHMMLIST  = hmmlist2
+\end{verbatim}
+is necessary. \htool{HERest} only needs to be invoked using that
+configuration file.
+\begin{verbatim}
+   HERest -C config -C config.2model -S trainlist -I labs -H dir1/hmacs -M dir3 hmmlist1
+\end{verbatim}
+The models in directory {\tt dir1} are updated using the alignment
+models stored in directory {\tt dir2} and the result is written to
+directory {\tt dir3}. Note that {\tt trainlist} is a standard \HTK\ 
+script and that the above command uses the capability of HERest to
+accept multiple configuration files on the command line. If each HMM
+is stored in a separate file, the configuration variables {\tt
+  ALIGNMODELDIR} and {\tt ALIGNMODELEXT} can be used.
+
+Only the state level alignment is obtained using the alignment models.
+In the exceptional case that the update model set contains mixtures of
+Gaussians, component level posterior probabilities are obtained from
+the update models themselves.
+
 \mysect{Parameter Re-Estimation Formulae}{bwformulae}
 
 \index{model training!re-estimation formulae}

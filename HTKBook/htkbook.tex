@@ -21,7 +21,7 @@
 %/*          1995-2000 Redmond, Washington USA                  */
 %/*                    http://www.microsoft.com                 */
 %/*                                                             */
-%/*              2001  Cambridge University                     */
+%/*            2001-2  Cambridge University                     */
 %/*                    Engineering Department                   */
 %/*                                                             */
 %/*   Use of this software is governed by a License Agreement   */
@@ -36,10 +36,14 @@
 % Preamble
 \documentclass[a4paper,oneside]{book}
 
+% This next line is uncommented by the Makefile when building the
+% PDF version:
 %\usepackage[dvipdfm,colorlinks]{hyperref}
 
 \input{HTK}
 \usepackage{makeidx}
+\usepackage{amsmath}
+\usepackage{amssymb}
 
 \makeindex
 
@@ -70,6 +74,7 @@
 \noindent Gareth Moore \\
 \noindent Julian Odell \\
 \noindent Dave Ollason \\
+\noindent Dan Povey \\
 \noindent Valtcho Valtchev \\
 \noindent Phil Woodland \\
 
@@ -107,6 +112,9 @@
 \noindent Revised for HTK Version 3.1 December 2001
 \vspace{0.2cm}
 
+\noindent Revised for HTK Version 3.2 December 2002
+\vspace{0.2cm}
+
 }
 
 % TOC
@@ -135,9 +143,15 @@
 \include{netdict}
 \include{decode}
 
+\part{Language Modelling}
+\include{hlmfund}
+\include{hlmtutorial}
+\include{hlmfiles}
+
 \part{Reference Section}
 \mychap{The HTK Tools}{toolref}
 \include{HTKRef/tools}
+\include{HTKRef/Cluster}
 \include{HTKRef/HBuild}
 \include{HTKRef/HCompV}
 \include{HTKRef/HCopy}
@@ -148,6 +162,8 @@
 \include{HTKRef/HInit}
 \include{HTKRef/HLEd}
 \include{HTKRef/HList}
+\include{HTKRef/HLMCopy}
+\include{HTKRef/HLRescore}
 \include{HTKRef/HLStats}
 \include{HTKRef/HParse}
 \include{HTKRef/HQuant}
@@ -157,7 +173,18 @@
 \include{HTKRef/HSLab}
 \include{HTKRef/HSmooth}
 \include{HTKRef/HVite}
-
+\include{HTKRef/LAdapt}
+\include{HTKRef/LBuild}
+\include{HTKRef/LFoF}
+\include{HTKRef/LGCopy}
+\include{HTKRef/LGList}
+\include{HTKRef/LGPrep}
+\include{HTKRef/LLink}
+\include{HTKRef/LMerge}
+\include{HTKRef/LNewMap}
+\include{HTKRef/LNorm}
+\include{HTKRef/LPlex}
+\include{HTKRef/LSubset}
 \include{config}
 \include{errors}
 \include{htkslf}
@@ -166,3 +193,5 @@
 \markboth{\bfseries \rmfamily Index}{\bfseries \rmfamily Index}
 \printindex
 \end{document}
+
+

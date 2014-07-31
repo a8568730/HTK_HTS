@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*          2001-2002 Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,7 +32,7 @@
 /*         File: HLM.h language model handling                 */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HLM:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HLM:   3.2 [CUED 09/12/02] */
 
 #ifndef _HLM_H_
 #define _HLM_H_
@@ -28,13 +41,13 @@
 extern "C" {
 #endif
 
-typedef enum { boNGram=1, matBigram } LMType;
+typedef enum { boNGram=1, matBigram, hlmModel } LMType;
 
 #define MAX_LMID 65534          /* Max number of words */
 typedef unsigned short lmId;    /* Type used by lm to id words  1..MAX_LMID */
 typedef unsigned short lmCnt;   /* Type used by lm to count wds 0..MAX_LMID */
 
-#define NSIZE 3                 /* Max length of ngram 2==bigram etc */
+#define NSIZE 4                 /* Max length of ngram 2==bigram etc */
 
 
 
@@ -78,6 +91,7 @@ typedef struct lmodel {
    union {
       MatBiLM *matbi;
       NGramLM *ngram;
+      void *hlmModel;
    }
    data;
    MemHeap *heap;               /* Heap for allocating lm structs */
@@ -128,6 +142,12 @@ void ClearLModel(LModel *lm);
 /* 
    Clear LModel before deletion
 */
+
+#ifndef NO_LAT_LM
+typedef Ptr LMState;
+
+LogFloat LMTrans (LModel *lm, LMState src, LabId wdid, LMState *dest);
+#endif
 
 #ifdef __cplusplus
 }

@@ -21,7 +21,7 @@
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
 /*                                                             */
-/*              2001  Cambridge University                     */
+/*          2001-2002 Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -32,7 +32,7 @@
 /*         File: HShell.h:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HShell:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HShell:   3.2 [CUED 09/12/02] */
 
 #ifndef _HSHELL_H_
 #define _HSHELL_H_
@@ -45,6 +45,7 @@
 #include <math.h>
 #include <limits.h>
 #include <time.h>
+#include <sys/time.h>
 #include <errno.h>
 #include <signal.h>
 #include <assert.h>
@@ -105,7 +106,7 @@ typedef enum{       /* Input filters for various types of file */
    DictFilter,      /* Dictionary file input via HDict */
    LGramFilter,     /* NGram Input via LGBase */
    LWMapFilter,     /* LM Word Map Input via LWMap */
-   LCMapFilter,     /* LM Class Map Input via LClass */
+   LCMapFilter,     /* LM Class Map Input */
    LMTextFilter,    /* LM source text input via LGPrep */
    NoFilter,        /* Direct input - no pipe */
 
@@ -119,7 +120,7 @@ typedef enum{       /* Input filters for various types of file */
    DictOFilter,     /* Dictionary file output via HDict */
    LGramOFilter,    /* NGram Output via LGBase */
    LWMapOFilter,    /* LM Word Map Output via LWMap */
-   LCMapOFilter,    /* LM Class Map Output via LClass */
+   LCMapOFilter,    /* LM Class Map Output */
    NoOFilter        /* Direct output - no pipe */
 }IOFilter;
 
@@ -322,7 +323,8 @@ Boolean GetFileNameExt(char *logfn, char *actfn, long *st, long *en);
 
 FILE *FOpen(char *fname, IOFilter filter, Boolean *isPipe);
 /*
-   Open the file fname for reading and return a file pointer.  
+   Open the file fname for reading or writing (depending on
+   whether IOFilter is a Filter or OFilter) and return a file pointer.  
    If the environment variable HxxxxFILTER is set to a 
    command of the form "foo $ a b ..." then the given fname
    replaces the $ and popen is used to connect to the output
@@ -365,6 +367,7 @@ void UnGetCh(int c, Source *src);
 */
 
 Boolean ReadString(Source *src, char *s);
+Boolean ReadStringWithLen(Source *src, char *s, int buflen); /* With specified length of buffer*/
 char *ParseString(char *src, char *s);
 /*
    Read a string from the given source where a string is any
@@ -535,6 +538,23 @@ char *RetrieveCommandLine(void);
 #ifdef __cplusplus
 }
 #endif
+
+
+/* ----------------------- Timing functions for diagnostics ----------- */
+
+typedef struct TimeStruct_s {
+   char timestr[50];
+   struct timeval time;
+   clock_t clock_time;
+} TimeStruct;
+
+
+void SetTime(TimeStruct *t);
+
+char *GiveTime(TimeStruct *t);  /* Gives CPU and clock time elapsed in seconds
+                                   since SetTime was called on t,
+                                   in format "?.????/clock ?.????" . */
+
 
 #endif  /* _HSHELL_H_ */
 

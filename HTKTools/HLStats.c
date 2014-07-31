@@ -19,8 +19,8 @@
 /*    File: HLStats.c: gather statistics from transcriptions   */
 /* ----------------------------------------------------------- */
 
-char *hlstats_version = "!HVER!HLStats:   3.1.1 [CUED 05/06/02]";
-char *hlstats_vc_id = "$Id: HLStats.c,v 1.7 2002/06/05 14:07:14 ge204 Exp $";
+char *hlstats_version = "!HVER!HLStats:   3.2 [CUED 09/12/02]";
+char *hlstats_vc_id = "$Id: HLStats.c,v 1.8 2002/12/19 16:37:40 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

@@ -19,7 +19,7 @@
 /*         File: HMath.h:   Math Support                       */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HMath:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HMath:   3.2 [CUED 09/12/02] */
 
 #ifndef _HMATH_H_
 #define _HMATH_H_
@@ -51,7 +51,8 @@ typedef enum {  /* Various forms of covariance matrix */
    FULLC,         /* inverse full rank covariance */
    XFORMC,        /* arbitrary rectangular transform */
    LLTC,          /* L' part of Choleski decomposition */
-   NULLC         /* none - implies Euclidean in distance metrics */
+   NULLC,         /* none - implies Euclidean in distance metrics */
+   NUMCKIND       /* DON'T TOUCH -- always leave as final element */
 } CovKind;
 
 typedef union {
@@ -107,6 +108,9 @@ void ShowDVector(char * title,DVector v,int maxTerms);
 /*
    Print the title followed by upto maxTerms elements of v
 */
+
+/* Quadratic prod of a full square matrix C and an arbitry full matrix transform A */
+void LinTranQuaProd(Matrix Prod, Matrix A, Matrix C);
 
 /* ------------------ Matrix Oriented Routines ----------------------- */
 

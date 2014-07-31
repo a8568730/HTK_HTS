@@ -32,8 +32,8 @@
 /*  File: HCompV.c: HMM global mean/variance initialisation    */
 /* ----------------------------------------------------------- */
 
-char *hcompv_version = "!HVER!HCompV:   3.1.1 [CUED 05/06/02]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.10 2002/06/05 14:07:14 ge204 Exp $";
+char *hcompv_version = "!HVER!HCompV:   3.2 [CUED 09/12/02]";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.11 2002/12/19 16:37:40 ge204 Exp $";
 
 
 /* 
@@ -202,6 +202,7 @@ void Initialise(void)
       HError(2028,"Initialise: MakeOneHMM failed");
    if(LoadHMMSet(&hset,PathOf(hmmfn,path),ExtnOf(hmmfn,ext))<SUCCESS)
       HError(2028,"Initialise: LoadHMMSet failed");
+   SetParmHMMSet(&hset);
    if (hset.hsKind==DISCRETEHS || hset.hsKind==TIEDHS)
       HError(2030,"Initialise: HCompV only uses continuous models");
 

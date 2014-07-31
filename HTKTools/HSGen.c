@@ -19,8 +19,8 @@
 /*    File: HSGen: Generate Sentences from a Lattice           */
 /* ----------------------------------------------------------- */
 
-char *hsgen_version = "!HVER!HSGen:   3.1.1 [CUED 05/06/02]";
-char *hsgen_vc_id = "$Id: HSGen.c,v 1.8 2002/06/05 14:07:14 ge204 Exp $";
+char *hsgen_version = "!HVER!HSGen:   3.2 [CUED 09/12/02]";
+char *hsgen_vc_id = "$Id: HSGen.c,v 1.9 2002/12/19 16:37:40 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -189,7 +189,7 @@ int Select(NodeId n, int nfoll, LogFloat *prob)
       x = RandomValue();
       for (i=1,a = n->foll; i<=nfoll; i++, a = a->farc) {
          *prob = -a->lmlike;
-         if (x<=wtp[i]) break;
+         if (x<=wtp[i] || i==nfoll) break;
       }
       sel = i;
       FreeVector(&gstack,wtp);

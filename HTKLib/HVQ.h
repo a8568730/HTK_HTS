@@ -19,7 +19,7 @@
 /*              File: HVQ.h: Vector Quantisation               */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HVQ:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HVQ:   3.2 [CUED 09/12/02] */
 
 /*
    This module provides a datatype VQTable which is used to represent

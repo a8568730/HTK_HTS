@@ -32,6 +32,7 @@
 %
 % HTKBook - Julian Odell and Steve Young 15/11/95
 %
+% This chapter added to by Gareth Moore 17/01/02
 
 \mychap{Error and Warning Codes}{errors}
 \index{errors!full listing}\index{warning codes!full listing}
@@ -46,10 +47,12 @@ execution continues. The format of this warning message is as follows:
     WARNING [-nnnn] Function: 'Brief Explanation' in HTool
 \end{verbatim}
 
-The message consists of four parts.  On the first line is the tool name and the error number\index{error number!structure of}.
-On the second line is the function in which the
-problem occurred and a brief textual explanation.
-The reason for sending warnings to standard output is so that they are 
+The message consists of four parts.  On the first line is the tool
+name and the error number\index{error number!structure of}.  Positive
+error numbers are fatal, whilst negative numbers are warnings and
+allow execution to continue.  On the second line is the function in
+which the problem occurred and a brief textual explanation.  The
+reason for sending warnings to standard output is so that they are
 synchronised with any trace output.
 
 If an error occurs a number of error messages may be produced on
@@ -120,6 +123,15 @@ HParse   & 3100-3199     & HDict         & 8000-8099    \\
 HVite    & 3200-3299     & HLM           & 8100-8199    \\
 HResults & 3300-3399     & HNet          & 8200-8299    \\
 HSGen    & 3400-3499     & HRec          & 8500-8599    \\
+HLRescore& 4000-4100     & HLat          & 8600-8699    \\
+\hline
+LCMap    & 15000-15099   & LAdapt        & 16400-16499  \\
+LWMap    & 15100-15199   & LPlex         & 16600-16699  \\
+LUtil    & 15200-15299   & HLMCopy       & 16900-16999  \\
+LGBase   & 15300-15399   & Cluster       & 17000-17099  \\
+LModel   & 15400-15499   & LLink         & 17100-17199  \\
+LPCalc   & 15500-15599   & LNewMap       & 17200-17299  \\
+LPMerge  & 15600-15699   &               &              \\
 \hline
 \end{tabular}
 \end{center}
@@ -712,6 +724,16 @@ HSGen    & 3400-3499     & HRec          & 8500-8599    \\
 
 \end{itemize}
 
+\module{\htool{HLRescore}}
+
+\begin{itemize}
+
+\erno{-4089}    ALIEN format set\\
+        Input/output format has been set to \texttt{ALIEN}, ensure that 
+        this was intended.
+
+\end{itemize}
+
 \module{\htool{HShell}}
 
 \begin{itemize}
@@ -1046,6 +1068,10 @@ HSGen    & 3400-3499     & HRec          & 8500-8599    \\
 \erno{+7024}    Variance tending to 0.0\\
         A variance has become too low.  Start using a variance floor or 
         increase the amount of training data.
+        
+\erno{+7025} Bad covariance kind\\
+        The particular functionality does not support the covariance
+        kind of the mixture component.
 
 \erno{+7030}    HMM set incomplete or inconsistent\\
         The HMMSet contained missing or inconsistent data.  Check that the 
@@ -1297,6 +1323,7 @@ HSGen    & 3400-3499     & HRec          & 8500-8599    \\
 
 \end{itemize}
 
+
 \module{\htool{HRec}}
 
 \begin{itemize}
@@ -1324,6 +1351,39 @@ HSGen    & 3400-3499     & HRec          & 8500-8599    \\
 
 \end{itemize}
 
+
+\module{\htool{HLat}}
+
+\begin{itemize}
+
+\erno{8621}    Lattice incompatible with dictionary\\
+        The lattice refers to a pronunciation variant (filed
+        \texttt{v=}) that doesn't exist in the current dictionary.
+
+\erno{\pm 8622}    Lattice structure invalid\\
+        The lattice does not meet the requirements for some operation.
+        All lattices must have unique start and end nodes and for many
+        operations the lattices need to be acyclic (i.e.\ be a
+        Directed Acyclic Graph).
+
+\erno{8623}    Start or end word not found\\
+        The specified lattice start or end word could not be found in
+        the dictionary.
+
+\erno{8624}    Lattice end node label invalid\\
+        The lattice end node must either be labelled with \verb|!NULL|
+        or the specified end word (default: \verb|!SENT_END|)
+
+
+\erno{8690}    Lattice operation not supported\\
+        The requested operation is not supported, yet.
+\erno{8691}    Lattice processing sanity check faile\\
+        During processing an internal sanity check failed. This should
+        never happen..
+
+\end{itemize}
+
+
 \module{\htool{HGraf}}
 
 \begin{itemize}
@@ -1332,6 +1392,243 @@ HSGen    & 3400-3499     & HRec          & 8500-8599    \\
         X11 window system is configured correctly.
 
 \end{itemize}
+
+
+% Language modelling libraries and tools
+
+% LCMap
+\module{\htool{LCMap}}
+
+\begin{itemize}
+\erno{+15050}  Unlikely num map entries[\texttt{n}] in \texttt{XYZ}\\
+        A negative or infeasibly large number of class map entries
+        have been specified.
+
+\erno{+15051} ReadMapHeader: UNKxxx configs must be set for hdrless map\\
+        There is no header on the map so you must set UNKNOWNID and UNKNOWNNAME.
+
+\erno{+15052} No name in \texttt{XYZ}\\
+        No NAME header in class map.
+
+\erno{+15053} Unknown escmode \texttt{XYZ} in \texttt{XYZ}\\
+        ESCMODE header must specify either HTK or RAW.
+
+\erno{+15054} Class name  \texttt{XYZ} duplicate in \texttt{XYZ}\\
+        Two classes in the class map have the same name, which is not allowed.
+
+\erno{+15055} Bad index \texttt{n} for class \texttt{XYZ} in \texttt{XYZ}\\
+        A class index less than 1 or greater than or equal to BASEWORDNDX (defined
+        at compile time in \htool{LWMap} - default is 65536) was found
+        in the class map.  If you need more than \htool{BASEWORDNDX}
+        classes then you must recompile \HTK\ with a new base word
+        value.
+
+\erno{+15056} Number of entries =  \texttt{n} for class \texttt{XYZ} in \texttt{XYZ}\\
+        There must be at least one member in each class - empty
+        classes are not allowed.
+
+\erno{+15057} Bad type \texttt{XYZ} for class \texttt{XYZ} in \texttt{XYZ}\\
+        Classes must be defined using either IN or NOTIN.
+\end{itemize}
+
+
+% LWMap
+\module{\htool{LWMap}}
+
+\begin{itemize}
+\erno{+15150}   Word list/word map file format error\\
+        Check that the word list/word map file is correctly formatted.
+
+\erno{+15151}  Unlikely num map entries[\texttt{n}] in \texttt{XYZ}\\
+        A negative or infeasibly large number of word map entries
+        have been specified.
+
+\erno{+15152} No NAME header in \texttt{XYZ}\\
+        No NAME header in word map.
+
+\erno{+15153} No SEQNO header in \texttt{XYZ}\\
+        No SEQNO header in word map.
+
+\erno{+15154} Unknown escmode \texttt{XYZ} in \texttt{XYZ}\\
+        ESCMODE header must specify either HTK or RAW.
+
+\erno{+15155} Word name \texttt{XYZ} is duplicated in \texttt{XYZ}\\
+        There are duplicate words in the word map, which is not allowed.
+
+\end{itemize}
+
+
+% LUtil
+\module{\htool{LUtil}}
+
+\begin{itemize}
+\erno{+15250}   Header format error\\
+        Ensure that word maps and/or n-gram files used by the program start
+        with the appropriate header.
+\end{itemize}
+
+
+% LGBase
+\module{\htool{LGBase}}
+
+\begin{itemize}
+\erno{+15330}   n-gram file consistency check failure\\
+        The n-gram file is incompatible with other resources used by the
+        program.
+
+\erno{+15340}   File \texttt{XYZ} is \texttt{n}-gram but inset is \texttt{n}-gram\\
+        The specified input gram file is not of the expected gram size.
+
+\erno{+15341}   Requested N[\texttt{n}] greater than gram size [\texttt{n}]\\
+        An n-gram was requested which was larger than any of those
+        supplied in the input files.
+
+\erno{+15345}   n-grams out of order\\
+        The input gram file is not correctly sorted.
+
+\erno{+15350}   n-gram file format error\\
+        Ensure that n-gram files used by the program are formatted correctly
+        and start with the appropriate header.
+\end{itemize}
+
+
+% LModel
+\module{\htool{LModel}}
+
+\begin{itemize}
+\erno{+15420}   Cannot find n-gram component\\
+        The internal structure of the language model is corrupted. This error
+        is usually caused when an n-gram $(a,b,c)$ is encountered without
+        the presence of n-gram $(a,b)$.
+\erno{+15430}   Incompatible probability kind in conversion\\      
+        The currently used language model does not allow the required
+        conversion operation. This error is caused by attempting to prune a
+        model stored in the ultra file format.
+\erno{+15440}   Cannot prune models in ultra format\\
+        Pruning of language models stored in {\em ultra} file format is not
+        supported.
+\erno{+15445}   Word ID size error\\
+        Language models with vocabularies of over 65,536 words require the
+        use of larger word identifiers. This is a sanity check error.
+\erno{-15450}   Word \texttt{XYZ} not in unigrams - skipping n-gram.\\
+        There should be a unigram count for each word in other length grams.
+\erno{+15450}   Language model file format error\\
+        The language model file is formatted incorrectly. Check the file is
+        complete and has not been corrupted.
+\erno{-15451}   Extraneous line warning\\
+        Extra lines were found on the end of a file and are being ignored.
+\erno{-15460}   Model order reduced\\
+        Due to the effects of pruning the model order is automatically reduced.
+\end{itemize}
+
+
+% LPCalc
+\module{\htool{LPCalc}}
+
+\begin{itemize}
+\erno{+15520}   Unable to find FLEntry to attach\\
+        Indicates that the LM data structures are corrupt. This is normally caused
+        by NGram files which have not been sorted.
+\erno{+15525}   Attempt to overwrite entries when attaching\\
+        Indicates that the LM structure is corrupt. Ensure that the word map file
+        used is suitable for decoding the NGram database files.
+\erno{-15540}   \texttt{n}-gram cutoff out of range\\
+        An inapplicable cutoff was ignored.
+\erno{+15540}   Pruning error\\
+        The pruning parameters specified are not compatible with the parameters 
+        of the language model.
+\end{itemize}
+
+
+% LPMerge
+\module{\htool{LPMerge}}
+
+\begin{itemize}
+\erno{+15620}   Unable to find word in any model\\
+        Indicates that the target model vocabulary contains a word which cannot
+        be found in any of the source models.
+\end{itemize}
+
+
+
+% LPlex
+\module{\htool{LPlex}}
+
+\begin{itemize}
+\erno{+16620} symbol {\tt XYZ} not in word list\\
+        The sentence start symbol, sentence end symbol and OOV symbol (only if
+        OOVs are to be included in the perplexity calculation) must be in the
+        language model's vocabulary. Note that the vocabulary list is either 
+        specified with the {\tt -w} option or is implicitly derived from the 
+        language model.
+
+\erno{+16625} Unable to find word {\tt XYZ} in any model\\
+        Ensure that all words in the vocabulary list specified with the {\tt -w}
+        option are present in at least one of the language models.
+
+\erno{+16630} Maximum number of unique OOVs reached\\
+        Too many OOVs encountered in the input text.
+
+\erno{-16635} Transcription file {\tt fn} is empty\\
+        The label file does not contain any words.
+
+\erno{-16640} Word too long, will be split: {\tt XYZ}\\
+        The word read from the input stream is of over 200 characters.
+
+\erno{-16645} Text buffer size exceeded ({\tt n})\\ 
+        The maximum number of words allowed in a single utterance has been 
+        reached.
+
+\erno{+16650} Maximum utterance length in a label file exceeded (limit
+        is compiled to be {\tt n} tokens)\\
+        No label file utterance end has been encountered within
+        {\tt n} tokens -- perhaps this is a text file and you forgot
+        to pass the {\tt -t} option?
+\end{itemize}
+
+
+% HLMCopy
+\module{\htool{HLMCopy}}
+
+\begin{itemize}
+\erno{+16920} Maximum number of phones reached\\
+        When \htool{HLMCopy} is used to copy dictionaries, the target dictionary's
+        phone table is composed by combining the phone tables of all source
+        dictionaries. Check that the number of different phones resulting from
+        combining the phone tables of the source dictionaries does not exceed the
+        internally set limit.
+
+\erno{+16930} Cannot find definition for word {\tt XYZ}\\
+        When copying dictionaries, ensure that each word in the vocabulary list
+        occurs in at least one source dictionary.
+\end{itemize}
+
+
+% Cluster
+\module{\htool{Cluster}}
+
+\begin{itemize}
+\erno{+17050} Word {\tt XYZ} found in class map but not in word map\\
+        All words in the class map must be found in the word map too.
+
+\erno{-17051} Unknown word token {\tt XYZ} was explicitly given with -u, but
+          does not occur in the word map\\
+        This warning appears if you specify an unknown word token
+          which is not found in the word map.
+
+\erno{+17051} Token not found in word list\\
+        Sentence start, end and unknown (if used) tokens must be found
+        in the word map.
+
+\erno{+17052} Not all words were assigned to classes\\
+        A classmap was imported which did not include all words in the
+        word map.
+
+\erno{-17053} Word {\tt XYZ} is in word map but not in any gram files\\
+        The stated word will remain in whichever class it is already
+        in - either as defaulted to or supplied via the input class map.
+\end{itemize}
+
 
 \end{itemize}
 

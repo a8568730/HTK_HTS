@@ -1,3 +1,187 @@
+2002-12-19  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* *.[hc]: Bump version to 3.2.
+
+2002-12-18  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HLat.c: Fix error codes.
+
+	* HLabel.c (MAXMLFS): Increase MAXMLFS from 20 to 200.
+
+2002-12-13  Dan Povey  <dp10006@eng.cam.ac.uk>
+
+	* HNet.c (GetFieldValue): Check length of string read from source.
+
+	* HShell.[hc] (ReadStringWithLen): New function: like ReadString()
+	but checks string length.
+	
+2002-12-10  Dan Povey  <dp10006@eng.cam.ac.uk>
+
+	* HShell.h: Clarify description of FOpen().
+
+	* HNet.c (CopyLattice): Set la->prlike fields.
+	(LatticeFromLabels): 
+
+2002-11-21  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HDict.h: Add aux field to WordPron structure for use in HDecode.
+
+2002-11-15 Mark Gales <mjfg@eng.cam.ac.uk>
+
+	* HFB.c: Added compatibilty check for input transforms and 2 
+	model estimation
+
+	* HModel.c: Corrected description
+
+	* HParm.c: Corrected error codes from 999.
+
+2002-11-14  Dan Povey  <dp10006@eng.cam.ac.uk>
+
+	* HTrain.c: Use PreComps for PLAINHS in addition to SHAREDHS.
+
+	* HTrain.[hc] (CreateWtAcc): Allocate WtAcc array once.
+	(ScalePDF): 
+	(ScaleAccs): 
+	(ScaleAccsParallel): New functions.
+
+	* HShell.[hc] (SetTime):
+	(GiveTime): New functions
+
+	* HNet.c (ReadOneLattice): Add field prscale to lattices.
+
+2002-11-14  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+        * HUtil.c (GoNextHMM): Fix use of (? :) in assignment. Previous
+        version wasn't ANSI C.
+
+2002-11-11  Andrew Liu  <xl207@eng.cam.ac.uk>
+
+	* HMath.[hc] (LinTranQuaProd): New function.
+
+2002-11-08  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HUtil.c (SetMacroHook):
+	(GetMacroUse):
+	(SetMacroUse): Support for InputXForm macro ~j. 
+	* HModel.[hc]: Data Structures and functions for reading/writing
+	InputXFroms.
+	* HParm.[hc]: Apply input transform to data and variance scale
+	vectors. 
+	Suport for third and fourth differntials.
+	
+	From: Andrew Liu <xl207@eng.cam.ac.uk>
+	      Mark Gales <mjfg@eng.cam.ac.uk>
+
+2002-10-30  Zhu Dong-Lai <windonabc@sina.com>
+
+        * HAdapt.c (GetMeanTransform): Fix implementation of MLLR for
+        block-diagonal transforms.
+
+2002-10-17  Dan Povey  <dp10006@eng.cam.ac.uk>
+
+	* HTrain.[hc] (CreateMuAcc): 
+	(CreateVaAcc):
+	(CreateTrAcc): 
+	(CreateWtAcc): 
+	(TMAttachAccs): 
+	(AttachAccsParallel):
+	(TMZeroAccs): 
+	(ZeroAccsParallel): 
+	(TMShowAccs): 
+	(ShowAccsParallel): 
+	(AttachPreComps): 
+	(DumpAccsParallel):
+	(LoadAccsParallel): 
+	(RestorePDF): 
+	(RestoreAccsParallel): Support for parallel accumulators. 
+
+	(LoadWtAcc): 
+	(LoadMuAcc): 
+	(LoadVaAcc): Check for infinity in accumulator files.
+
+2002-10-16  Dan Povey  <dp10006@eng.cam.ac.uk>
+
+	* HNet.c (ReadOneLattice): Initialise lattice fields.
+	Set pronunciation variant for arclabs lattices.
+
+2002-08-28  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HFB.c (InitFB): 
+	(InitialiseForBack): Allow setting of pruning threshold via config
+	variables. Values specified via calls to InitialiseForBack() take
+	precedence.
+	(InitFB): Allow module name HFWDBKWD in config files for backward
+	compatibility. 
+
+2002-07-12  Thomas Hain  <th223@eng.cam.ac.uk>
+ 
+        * HTrain.h: Added prototype for AttachPreComps
+        * HTrain.c (AttachPreComps): Added function
+        * HFB.h: Added prototype for UseAlignHMMSet, extended structs
+                to allow 2model re-estimation.
+        * HFB.c : Added capability to use one model set for FB
+                and one for model updates.
+        * HModel.h: Added ext function prototype for ApplyVFloor
+        * HModel.c (ApplyVFloor): New function to apply variance floor to
+        hset
+
+2002-08-13  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HNet.c (ConvLogLikeFromBase): 
+	(ConvLogLikeToBase): New function for for conversion of log
+	likelihoods for reading/storing lattices in files.
+	(WriteLattice): 
+	(WriteOneLattice): 
+	(ReadOneLattice): Support for "base" and "tscale" lattice header
+	fields.
+
+2002-08-13  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HModel.c (PutOptions): Save CovKind in MMF Options if it is
+	specified (i.e. not NULLC).
+	(SetCovKindUsage): New function. Set HMMSet CovKind if it is
+	unspecified but consistent across mixtures.
+
+2002-08-09  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HLM.h: Add new LMType: hlmModel.
+
+	* HMem.h: 
+	* HMem.c (CNew): New function.
+
+	* HLabel.c (GetTrSym): Fix buffer overrun.
+	(ExtendAux): Check number of levels.
+	* HShell.h: Remove comments referring to LClass.
+	From: Gareth Moore <glm20@eng.cam.ac.uk>
+
+2002-07-16  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HNet.c (WriteOneLattice): Always re-order lattice nodes, even if
+	we don't store them.
+
+2002-06-27  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HParm.h: Add prototypes for Ext data source functions.
+	From: Peter Gober <gober@fokus.gmd.de>
+
+	* HParm.c (OpenAsChannel): Fix buffer allocation for ch_ext_wave.
+	From: Peter Gober <gober@fokus.gmd.de>
+
+2002-06-11  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HLat.c (LatFindBest): If give pronunciation variant can't be
+	found in dicitonary (e.g. if it only is a word list), then fall
+	back to word name as the output symbol.
+
+2002-06-05  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HLM.c (LMTrans): New function for use in HLat and decoders.
+	(ReadNGrams): Add support for reading binary ARPA N-grams.
+
+	* HLM.h (NSIZE): Allow 4-grams.
+
+	* HLat.[hc]: Add new module.
+
 2002-06-05  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
 	* *.[hc]: Bump version to 3.1.1.

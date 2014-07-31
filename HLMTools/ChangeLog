@@ -1,0 +1,11 @@
+2002-12-16  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* Cluster.c (import_classmap): Fix classmap check.
+
+	* LPlex.c (ProcessTextStream): Always enable buffer size check and
+	turn warning into error.
+	From Gareth Moore <glm20@eng.cam.ac.uk>
+	
+2002-12-09  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* Initial import of HLMTools source.

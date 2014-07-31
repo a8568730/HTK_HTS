@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2002  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HFB.c: Forward Backward routines module       */
 /* ----------------------------------------------------------- */
 
-char *hfb_version = "!HVER!HFB:   3.1.1 [CUED 05/06/02]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.9 2002/06/05 14:06:45 ge204 Exp $";
+char *hfb_version = "!HVER!HFB:   3.2 [CUED 09/12/02]";
+char *hfb_vc_id = "$Id: HFB.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -66,7 +79,7 @@ static struct {
    LogDouble pruneLim;       /* pruning threshold limit */
    float minFrwdP;           /* mix prune threshold */
 
-} pruneSetting;
+} pruneSetting = { NOPRUNE, 0.0, NOPRUNE, 10.0 };
 
 /* ------------------------- Min HMM Duration -------------------------- */
 
@@ -194,20 +207,28 @@ static void AttachWtTrAccs(HMMSet *hset, MemHeap *x)
 /* -------------------------- Initialisation ----------------------- */
 void InitFB(void)
 {
+   int m;
    int i;
+   double d;
 
    Register(hfb_version,hfb_vc_id);
 
-   nParm = GetConfig("HFB", TRUE, cParm, MAXGLOBS);
-   if (nParm>0){
-      if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
-      if (GetConfInt(cParm,nParm,"HSKIPSTART",&i)) skipstartInit = i;
-      if (GetConfInt(cParm,nParm,"HSKIPEND",&i)) skipendInit = i;
+   for (m = 0; m < 2; ++m) {
+      nParm = GetConfig(m==0 ? "HFWDBKWD" : "HFB", TRUE, cParm, MAXGLOBS);
+      if (nParm>0){
+         if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
+         if (GetConfInt(cParm,nParm,"HSKIPSTART",&i)) skipstartInit = i;
+         if (GetConfInt(cParm,nParm,"HSKIPEND",&i)) skipendInit = i;
+         if (GetConfFlt(cParm,nParm,"PRUNEINIT", &d)) pruneSetting.pruneInit = d;
+         if (GetConfFlt(cParm,nParm,"PRUNEINC", &d)) pruneSetting.pruneInc = d;
+         if (GetConfFlt(cParm,nParm,"PRUNELIM", &d)) pruneSetting.pruneLim = d;
+         if (GetConfFlt(cParm,nParm,"MINFORPROB", &d)) pruneSetting.minFrwdP = d;
+      }
    }
 }
 
 /* Initialise the forward backward memory stacks and make initialisations  */
-void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *set, 
+void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, 
                        RegTransInfo *rt, UPDSet uset, 
                        LogDouble pruneInit, LogDouble pruneInc, 
                        LogDouble pruneLim, float minFrwdP)
@@ -216,23 +237,77 @@ void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *set,
    AlphaBeta *ab;
   
    fbInfo->uFlags = uset;
-   fbInfo->hset = set;
+   fbInfo->up_hset = fbInfo->al_hset = hset;
+   fbInfo->twoModels = FALSE;
    fbInfo->rt = rt;
-   fbInfo->hsKind = set->hsKind;
-   AttachWtTrAccs(set, x);
-   SetMinDurs(fbInfo->hset);
-   fbInfo->maxM = MaxMixInSet(fbInfo->hset);
+   fbInfo->hsKind = hset->hsKind;
+   AttachWtTrAccs(hset, x);
+   SetMinDurs(hset);
+   fbInfo->maxM = MaxMixInSet(hset);
    fbInfo->skipstart = skipstartInit;
    fbInfo->skipend   = skipendInit;
-   for (s=1;s<=set->swidth[0];s++)
-      fbInfo->maxMixInS[s] = MaxMixInSetS(set, s);
+   for (s=1;s<=hset->swidth[0];s++)
+      fbInfo->maxMixInS[s] = MaxMixInSetS(hset, s);
    fbInfo->ab = (AlphaBeta *) New(x, sizeof(AlphaBeta));
    ab = fbInfo->ab;
    CreateHeap(&ab->abMem,  "AlphaBetaFB",  MSTAK, 1, 1.0, 1000, 100000);
-   pruneSetting.pruneInit = pruneInit;
-   pruneSetting.pruneInc  = pruneInc;
-   pruneSetting.pruneLim  = pruneLim;
-   pruneSetting.minFrwdP  = minFrwdP;
+
+   if (pruneInit < NOPRUNE) {   /* cmd line takes precedence over config file */
+      pruneSetting.pruneInit = pruneInit;
+      pruneSetting.pruneInc  = pruneInc;
+      pruneSetting.pruneLim  = pruneLim;
+   }
+   if (minFrwdP < NOPRUNE)
+      pruneSetting.minFrwdP  = minFrwdP;
+
+   if (pruneSetting.pruneInit < NOPRUNE) 
+      if (pruneSetting.pruneInc != 0.0)
+         printf("Pruning-On[%.1f %.1f %.1f]\n", pruneSetting.pruneInit, 
+                pruneSetting.pruneInc, pruneSetting.pruneLim);
+      else
+         printf("Pruning-On[%.1f]\n", pruneSetting.pruneInit);
+   else
+      printf("Pruning-Off\n");
+}
+
+/* Use a different model set for alignment */
+void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset)
+{
+   int s,S;
+
+   /* First check 2-model mode allowed for current up_hset */
+   if ((fbInfo->hsKind != PLAINHS) && (fbInfo->hsKind != SHAREDHS))
+      HError(7392,"Model kind not supported for fixed alignments");
+   if (al_hset->hsKind != fbInfo->hsKind)
+      HRError(7392,"Different kinds in alignment and update HMM sets!");
+   /* check stream compatibility */
+   S = al_hset->swidth[0];
+   if (S != fbInfo->up_hset->swidth[0])
+      HError(7392,"Different num streams in alignment and update HMM sets!");
+   for (s=1; s<=S; s++) 
+      if (al_hset->swidth[s] != fbInfo->up_hset->swidth[s]) 
+         HError(7392,"Stream %d widths differ in alignment and update HMM sets!",s);
+   /* check update flags */
+   if (fbInfo->uFlags&UPTRANS) {
+      HRError(7392,"Don't update transitions on a 2-model alignment"); 
+      fbInfo->uFlags = fbInfo->uFlags & ~UPTRANS;
+   }
+   /* check input Xforms */
+   if ((al_hset->xf!=NULL) && (al_hset->xf != fbInfo->up_hset->xf))
+      HError(7392,"Inconsistent input transforms for align HMMSet");
+    
+   /* update the global alignment set features */
+   fbInfo->hsKind = al_hset->hsKind;      
+   fbInfo->maxM = MaxMixInSet(al_hset);
+   /* dummy accs to accomodate minDir */
+   AttachWtTrAccs(al_hset, x);
+   SetMinDurs(al_hset);
+   /* precomps */
+   if ( al_hset->hsKind == SHAREDHS)
+      AttachPreComps(al_hset,al_hset->hmem);
+    
+   fbInfo->al_hset = al_hset;  
+   fbInfo->twoModels = TRUE;
 }
 
 /* Initialise the utterance memory requirements */
@@ -271,7 +346,7 @@ static void CreateTraceOcc(AlphaBeta *ab, UttInfo *utt)
    occa = ab->occa;
    --occa;
    for (q=1;q<=utt->Q;q++){
-      occa[q] = CreateVector(&ab->abMem, ab->qList[q]->numStates);
+      occa[q] = CreateVector(&ab->abMem, ab->al_qList[q]->numStates);
       ZeroVector(occa[q]);
    }
 }
@@ -286,7 +361,7 @@ static void TraceOcc(AlphaBeta *ab, UttInfo *utt, int t)
 
    printf("Accumulated Occ Counts at time %d\n",t);
    for (q=1; q<=utt->Q; q++){
-      occaq = ab->occa[q]; hmm = ab->qList[q]; Nq = hmm->numStates;
+      occaq = ab->occa[q]; hmm = ab->al_qList[q]; Nq = hmm->numStates;
       max = 0.0;        /* ignore zero vectors */
       for (i=1;i<=Nq;i++)
          if (occaq[i]>max) max = occaq[i];
@@ -371,7 +446,7 @@ static void CheckPruning(AlphaBeta *ab, int t, int skipstart, int skipend)
    maxL = LZERO;
    p = ab->pInfo;
    for (q=p->qLo[t];q<=p->qHi[t];q++){
-      hmm = ab->qList[q]; Nq = hmm->numStates;   
+      hmm = ab->al_qList[q]; Nq = hmm->numStates;   
       aq = ab->alphat[q]; bq=ab->beta[t][q];
       for (i=2;i<Nq;i++){
          if ((lx=aq[i]+bq[i])>maxL){
@@ -408,18 +483,30 @@ static void SummarisePruning(PruneInfo *p, int Q, int T)
 }
 
 /* CreateInsts: create array of hmm instances for current transcription */
-static int CreateInsts(AlphaBeta *ab, HMMSet *hset, int Q, Transcription *tr)
+static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
 {
    int q,qt;
    LLink lab;
    MLink macroName;
    TrAcc *ta;
-   HLink *qList;
    LabId  *qIds;
    short *qDms;
+   HLink *al_qList, *up_qList;
+   HMMSet *al_hset, *up_hset;
 
-   qList=(HLink *)New(&ab->abMem, Q*sizeof(HLink));
-   --qList;
+   al_hset=fbInfo->al_hset; up_hset=fbInfo->up_hset;
+   /* init logical hmm list */
+   up_qList=(HLink *)New(&ab->abMem, Q*sizeof(HLink)); 
+   --up_qList;
+
+   /* 2-model re-estimation update models */
+   if (fbInfo->twoModels) {
+      al_qList=(HLink *)New(&ab->abMem, Q*sizeof(HLink));
+      --al_qList;
+   }
+   else /* use same list for update and align */
+      al_qList = up_qList;
+
    qIds = (LabId *)New(&ab->abMem, Q*sizeof(LabId));
    --qIds;
    qDms = (short *)New(&ab->abMem, Q*sizeof(short));
@@ -427,21 +514,35 @@ static int CreateInsts(AlphaBeta *ab, HMMSet *hset, int Q, Transcription *tr)
 
    qt=0;
    for (lab=tr->head->head->succ,q=1; lab->succ!= NULL; lab=lab->succ,q++){
-      if((macroName=FindMacroName(hset,'l',lab->labid))==NULL)
+      /* align models */
+      if((macroName=FindMacroName(al_hset,'l',lab->labid))==NULL)
          HError(7321,"CreateInsts: Unknown label %s",lab->labid->name);
-      qList[q] = (HLink)macroName->structure;
+      al_qList[q] = (HLink)macroName->structure;
+      /* 2-model re-estimation update models */
+      if (fbInfo->twoModels){ 
+         if((macroName=FindMacroName(up_hset,'l',lab->labid))==NULL)
+            HError(2321,"CreateInsts: Unknown update label %s",lab->labid->name);
+         up_qList[q] = (HLink)macroName->structure;
+         /* need equal num states */
+         if ((al_qList[q])->numStates != (up_qList[q])->numStates)
+            HError(999,"Num states differ in align and update models (%d %d)",
+                   (al_qList[q])->numStates,(up_qList[q])->numStates);      
+      }
       qIds[q] = macroName->id;
-      ta = (TrAcc *)GetHook(qList[q]->transP);
+      ta = (TrAcc *)GetHook(al_qList[q]->transP);
       qt += (qDms[q] = ta->minDur);
+
       if (q>1 && qDms[q]==0 && qDms[q-1]==0)
          HError(7332,"CreateInsts: Cannot have successive Tee models");
-      if (hset->hsKind==SHAREDHS)
-         ResetHMMPreComps(qList[q],hset->swidth[0]);
+      if (al_hset->hsKind==SHAREDHS)
+         ResetHMMPreComps(al_qList[q],al_hset->swidth[0]);
    }
    if ((qDms[1]==0)||(qDms[Q]==0))
       HError(7332,"CreateInsts: Cannot have Tee models at start or end of transcription");
 
-   ab->qList = qList;
+   /* store in struct*/
+   ab->al_qList = al_qList; 
+   ab->up_qList = up_qList;
    ab->qIds  = qIds;
    ab->qDms  = qDms;
 
@@ -459,11 +560,11 @@ static void CreateAlpha(AlphaBeta *ab, HMMSet *hset, int Q)
    alphat = (DVector *)New(&ab->abMem, Q*sizeof(DVector));
    --alphat;
    for (q=1;q<=Q;q++)
-      alphat[q] = CreateDVector(&ab->abMem, (ab->qList[q])->numStates);
+       alphat[q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
    alphat1=(DVector *)New(&ab->abMem, Q*sizeof(DVector));
    --alphat1;
    for (q=1;q<=Q;q++)
-      alphat1[q] = CreateDVector(&ab->abMem, (ab->qList[q])->numStates);
+       alphat1[q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
 
    ab->occt = CreateVector(&ab->abMem,MaxStatesInSet(hset));
    ab->alphat  = alphat;
@@ -479,7 +580,7 @@ static void ZeroAlpha(AlphaBeta *ab, int qlo, int qhi)
    DVector aq;
    
    for (q=qlo;q<=qhi;q++) {   
-      hmm = ab->qList[q]; 
+      hmm = ab->al_qList[q]; 
       Nq = hmm->numStates; 
       aq = ab->alphat[q];
       for (j=1;j<=Nq;j++)
@@ -501,7 +602,7 @@ static void InitAlpha(AlphaBeta *ab, int *start, int *end,
    p = ab->pInfo;
    eq = p->qHi[1];
    for (q=1; q<=eq; q++){
-      hmm = ab->qList[q]; Nq = hmm->numStates;
+      hmm = ab->al_qList[q]; Nq = hmm->numStates;
       aq = ab->alphat[q];
       aq[1] = (q==1)?0.0:ab->alphat[q-1][1]+a1N;
       if((outprob = ab->otprob[1][q]) == NULL)
@@ -537,16 +638,16 @@ static LogDouble MaxModelProb(AlphaBeta *ab, int q, int t, int minq)
    if (q==1)
       maxP = LZERO;
    else {
-      bq1 = ab->beta[t][q-1]; Nq1 = ab->qList[q-1]->numStates;
+      bq1 = ab->beta[t][q-1]; Nq1 = ab->al_qList[q-1]->numStates;
       maxP = (bq1==NULL)?LZERO:ab->alphat[q-1][Nq1] + bq1[Nq1];
-      for (qx=q-1;qx>minq && ab->qList[qx]->transP[1][Nq1] > LSMALL;qx--){
+      for (qx=q-1;qx>minq && ab->al_qList[qx]->transP[1][Nq1] > LSMALL;qx--){
          qx1 = qx-1;
-         bq1 = ab->beta[t][qx1]; Nq1 = ab->qList[qx1]->numStates;
+         bq1 = ab->beta[t][qx1]; Nq1 = ab->al_qList[qx1]->numStates;
          x=(bq1==NULL)?LZERO:ab->alphat[qx1][Nq1]+bq1[Nq1];
          if (x > maxP) maxP = x;
       }
    }
-   hmm = ab->qList[q]; Nq = hmm->numStates;   
+   hmm = ab->al_qList[q]; Nq = hmm->numStates;   
    bq=ab->beta[t][q];
    if (bq != NULL) {
       aq = ab->alphat[q]; 
@@ -608,10 +709,10 @@ static void StepAlpha(AlphaBeta *ab, int t, int *start, int *end,
 
    if (sq>1) ZeroAlpha(ab,1,sq-1);
 
-   Nq = (sq == 1) ? 0:ab->qList[sq-1]->numStates;
+   Nq = (sq == 1) ? 0:ab->al_qList[sq-1]->numStates;
 
    for (q = sq; q <= eq; q++) {
-      lNq = Nq; hmm = ab->qList[q]; Nq = hmm->numStates; 
+      lNq = Nq; hmm = ab->al_qList[q]; Nq = hmm->numStates; 
       aq = alphat[q]; 
       laq = alphat1[q];
       if (laq == NULL)
@@ -820,7 +921,7 @@ static void Setotprob(AlphaBeta *ab, HMMSet *hset, ParmBuf pbuf,
    for (q=qHi;q>=qLo;q--) {
       if (trace&T_OUT && NonSkipRegion(skipstart,skipend,t)) 
          printf(" Q%2d: ",q);
-      hmm = ab->qList[q]; Nq = hmm->numStates;
+      hmm = ab->al_qList[q]; Nq = hmm->numStates;
       if (otprob[t][q] == NULL)
          {
             outprob = otprob[t][q] = NewOtprobVec(&ab->abMem,Nq,S);
@@ -874,7 +975,7 @@ static void TraceAlphaBeta(AlphaBeta *ab, int t, int startq, int endq, LogDouble
    printf("Alpha/Betas at time %d\n",t);
    summ = sump = sum = LZERO;
    for (q=startq; q<=endq; q++) {
-      hmm = ab->qList[q]; Nq = hmm->numStates;
+      hmm = ab->al_qList[q]; Nq = hmm->numStates;
       printf("  Q%2d: %5s           alpha             beta\n",
              q,ab->qIds[q]->name);
       aqt = ab->alphat[q]; bqt = ab->beta[t][q];
@@ -957,7 +1058,7 @@ static LogDouble SetBeta(AlphaBeta *ab, HMMSet *hset, UttInfo *utt,
    beta[T] = CreateBetaQ(&ab->abMem,endq,Q,Q);
    gMax = LZERO;   q_at_gMax = 0;    /* max value of beta at time T */
    for (q=Q; q>=endq; q--){
-      hmm = ab->qList[q]; Nq = hmm->numStates;
+      hmm = ab->al_qList[q]; Nq = hmm->numStates;
       bqt = beta[T][q] = NewBetaVec(&ab->abMem,Nq);
       bqt[Nq] = (q==Q)?0.0:beta[T][q+1][lNq]+a1N;
       for (i=2;i<Nq;i++) 
@@ -995,7 +1096,7 @@ static LogDouble SetBeta(AlphaBeta *ab, HMMSet *hset, UttInfo *utt,
       beta[t] = CreateBetaQ(&ab->abMem,endq,startq,Q);
       for (q=startq;q>=endq;q--) {
          lMax = LZERO;                 /* max value of beta in model q */
-         hmm = ab->qList[q]; 
+         hmm = ab->al_qList[q]; 
          Nq = hmm->numStates;
          bqt = beta[t][q] = NewBetaVec(&ab->abMem,Nq);
          bqt1 = beta[t+1][q];
@@ -1080,8 +1181,8 @@ static void CheckData(HMMSet *hset, char *fn, BufferInfo *info,
              fn,info->tgtVecSize,hset->vecSize);
    if (!twoDataFiles){
       if (info->tgtPK != hset->pkind)
-         HError(7350,"CheckData: Parameterisation in %s is incompatible with hset ",
-                fn);
+          HError(7350,"CheckData: Parameterisation in %s is incompatible with hset",
+                 fn);
    }
 }
 
@@ -1108,7 +1209,7 @@ static Boolean StepBack(FBInfo *fbInfo, UttInfo *utt, char * datafn)
          InitPruneStats(ab);  
          p = fbInfo->ab->pInfo;
          p->pruneThresh = pruneThresh;
-         qt=CreateInsts(ab,fbInfo->hset,utt->Q,utt->tr);
+         qt=CreateInsts(fbInfo,ab,utt->Q,utt->tr);
          if (qt>utt->T) {
             if (traceHFB || trace&T_TOP)
                printf(" Unable to traverse %d states in %d frames\n",qt,utt->T);
@@ -1118,7 +1219,7 @@ static Boolean StepBack(FBInfo *fbInfo, UttInfo *utt, char * datafn)
          CreateBeta(ab,utt->T);
          SetBeamTaper(p,ab->qDms,utt->Q,utt->T);
          CreateOtprob(ab,utt->T);
-         lbeta=SetBeta(ab,fbInfo->hset,utt,fbInfo->skipstart,fbInfo->skipend);
+         lbeta=SetBeta(ab,fbInfo->al_hset,utt,fbInfo->skipstart,fbInfo->skipend);
          if (lbeta>LSMALL) break;
          pruneThresh+=pruneSetting.pruneInc;
          if (pruneThresh>pruneSetting.pruneLim || pruneSetting.pruneInc==0.0) {
@@ -1222,9 +1323,12 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
    PreComp *pMix;
    Boolean mmix=FALSE;  /* TRUE if multiple mixture */
    float wght;
+   /* variables for 2-model reestimation */
+   Vector comp_prob;             /* array[1..M] of Component probability */
+   float norm;                   /* total mixture prob */
 
    ab     = fbInfo->ab;
-   hset   = fbInfo->hset;
+   hset   = fbInfo->up_hset;
    hsKind = fbInfo->hsKind;
 
    if (trace&T_MIX && fbInfo->uFlags&UPMIXES && 
@@ -1232,6 +1336,10 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
       printf("Mixture Weights at time %d, model Q%d %s\n",
              t,q,ab->qIds[q]->name);
    }
+
+   if (fbInfo->twoModels)
+       comp_prob = CreateVector(&gstack,fbInfo->maxM);
+
    N = hmm->numStates;
    for (j=2;j<N;j++) {
       if (fbInfo->maxM>1){
@@ -1272,9 +1380,19 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
          }
          /* update weight occupation count */
          wa = (WtAcc *) ste->hook; steSumLr = 0.0;
+
+         if (fbInfo->twoModels) { /* component probs of update hmm */
+             norm = LZERO;
+             for (mx=1; mx<=M; mx++) {
+                 me = ste->spdf.cpdf+mx;	mp=me->mpdf;
+                 wght = me->weight;
+                 comp_prob[mx]=log(wght)+MOutP(otvs,mp);
+                 norm = LAdd(norm,comp_prob[mx]);
+             }
+         }
       
-         /* process mixtures */
-         for (mx=1;mx<=M;mx++) {
+         for (mx=1;mx<=M;mx++) { 
+            /* process mixtures */
             switch (hsKind){    /* Get wght and mpdf */
             case TIEDHS:
                m=tmRec->probs[mx].index;
@@ -1299,9 +1417,12 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
                break;
             }
             if (wght>MINMIX){
-               /* compute mixture likelihood */
+               /* compute mixture likelihood  */
                if (!mmix || (hsKind==DISCRETEHS)) /* For DISCRETEHS calcs are*/
                   x = aqt[j]+bqt[j]-pr;           /* same as single mix*/
+               else if (fbInfo->twoModels) {      /* note: only SHAREDHS or PLAINHS */
+                  x = comp_prob[m]+aqt[j]+bqt[j]-pr-norm;
+               }
                else {
                   c_jm=log(wght);
                   x = initx+c_jm;
@@ -1426,6 +1547,9 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
             printf("[%7.2f]\n",wa->occ);
       }
    }
+
+   if (fbInfo->twoModels)
+       FreeVector(&gstack,comp_prob);
 }
 
 /* -------------------- Top Level of F-B Updating ---------------- */
@@ -1438,32 +1562,30 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
 {
    int q,t,start,end,negs;
    DVector aqt,aqt1,bqt,bqt1,bq1t;
-   HLink hmm;
+   HLink al_hmm, up_hmm;
    AlphaBeta *ab;
 
    /* reset the memory heap for alpha for a new utterance */
    /* ResetHeap(&(fbMemInfo.alphaStack)); */
   
    ab = fbInfo->ab;
-   CreateAlpha(ab,fbInfo->hset,utt->Q);
+   CreateAlpha(ab,fbInfo->al_hset,utt->Q); /* al_hset may be idential to up_hset */
    InitAlpha(ab,&start,&end,utt->Q,fbInfo->skipstart,fbInfo->skipend);
-
    ab->occa = NULL;
    if (trace&T_OCC) 
       CreateTraceOcc(ab,utt);
    for (q=1;q<=utt->Q;q++){             /* inc access counters */
-      hmm = ab->qList[q];
-      negs = (int)hmm->hook+1;
-      hmm->hook = (void *)negs;
+      up_hmm = ab->up_qList[q];
+      negs = (int)up_hmm->hook+1;
+      up_hmm->hook = (void *)negs;
    }
-
 
    for (t=1;t<=utt->T;t++) {
 
       GetInputObs(utt, t, fbInfo->hsKind);
 
       if (fbInfo->hsKind == TIEDHS)
-         PrecomputeTMix(fbInfo->hset,&(utt->ot),pruneSetting.minFrwdP,0);
+         PrecomputeTMix(fbInfo->al_hset,&(utt->ot),pruneSetting.minFrwdP,0);
 
       if (t>1)
          StepAlpha(ab,t,&start,&end,utt->Q,utt->T,utt->pr,
@@ -1474,19 +1596,20 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
     
       for (q=start;q<=end;q++) { 
          /* increment accs for each active model */
-         hmm = ab->qList[q];
+         al_hmm = ab->al_qList[q];
+         up_hmm = ab->up_qList[q];
          aqt = ab->alphat[q];
          bqt = ab->beta[t][q];
          bqt1 = (t==utt->T) ? NULL:ab->beta[t+1][q];
          aqt1 = (t==1)      ? NULL:ab->alphat1[q];
          bq1t = (q==utt->Q) ? NULL:ab->beta[t][q+1];
-         SetOcct(hmm,q,ab->occt,ab->occa,aqt,bqt,bq1t,utt->pr);
+         SetOcct(al_hmm,q,ab->occt,ab->occa,aqt,bqt,bq1t,utt->pr);
          /* accumulate the statistics */
          if (fbInfo->uFlags&(UPMEANS|UPVARS|UPMIXES|UPADAPT))
-            UpMixParms(fbInfo,q,hmm,utt->ot,utt->ot2,t,aqt,aqt1,bqt,
+            UpMixParms(fbInfo,q,up_hmm,utt->ot,utt->ot2,t,aqt,aqt1,bqt,
                        utt->S, utt->twoDataFiles, utt->pr);
          if (fbInfo->uFlags&UPTRANS)
-            UpTranParms(fbInfo,hmm,t,q,aqt,bqt,bqt1,bq1t,utt->pr);
+            UpTranParms(fbInfo,up_hmm,t,q,aqt,bqt,bqt1,bq1t,utt->pr);
       }
       if (trace&T_OCC && NonSkipRegion(fbInfo->skipstart,fbInfo->skipend,t)) 
          TraceOcc(ab,utt,t);
@@ -1563,7 +1686,7 @@ void LoadData(HMMSet *hset, UttInfo *utt, FileFormat dff,
 }
 
 /* Initialise the observation structures within UttInfo */
-void InitUttObservations(UttInfo *utt, HMMSet *hset, 
+void InitUttObservations(UttInfo *utt, HMMSet *al_hset, 
                          char * datafn, int * maxMixInS)
 {
 
@@ -1574,6 +1697,7 @@ void InitUttObservations(UttInfo *utt, HMMSet *hset,
    if (utt->twoDataFiles)
       if(SetChannel("HPARM1")<SUCCESS)
          HError(7350,"HFB: Channel parameters invalid");
+
    GetBufferInfo(utt->pbuf,&info);
    if (utt->twoDataFiles){
       if(SetChannel("HPARM2")<SUCCESS)
@@ -1581,20 +1705,20 @@ void InitUttObservations(UttInfo *utt, HMMSet *hset,
       GetBufferInfo(utt->pbuf2,&info2);
    }
   
-   SetStreamWidths(info.tgtPK,info.tgtVecSize,hset->swidth,&eSep);
-   utt->ot = MakeObservation(&gstack,hset->swidth,info.tgtPK,
-                             hset->hsKind==DISCRETEHS,eSep);
+   SetStreamWidths(info.tgtPK,info.tgtVecSize,al_hset->swidth,&eSep);
+   utt->ot = MakeObservation(&gstack,al_hset->swidth,info.tgtPK,
+                             al_hset->hsKind==DISCRETEHS,eSep);
    if (utt->twoDataFiles)
-      utt->ot2 = MakeObservation(&gstack,hset->swidth,info2.tgtPK,
-                                 hset->hsKind==DISCRETEHS,eSep);
-
-
-   if (hset->hsKind==DISCRETEHS){
+       utt->ot2 = MakeObservation(&gstack,al_hset->swidth,info2.tgtPK,
+                                  al_hset->hsKind==DISCRETEHS,eSep);
+   
+   if (al_hset->hsKind==DISCRETEHS){ 
       for (i=0; i<utt->T; i++){
          ReadAsTable(utt->pbuf,i,&utt->ot);
          for (s=1; s<=utt->S; s++){
-            if( (utt->ot.vq[s] < 1) || (utt->ot.vq[s] > maxMixInS[s]))
-               HError(7350,"LoadFile: Discrete data value [ %d ] out of range in seam [ %d ] in file %s",utt->ot.vq[s],s,datafn);
+             if( (utt->ot.vq[s] < 1) || (utt->ot.vq[s] > maxMixInS[s]))
+                 HError(7350,"LoadFile: Discrete data value [ %d ] out of range in seam [ %d ] in file %s",
+                        utt->ot.vq[s],s,datafn);
          }
       }
    }

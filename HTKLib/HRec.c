@@ -19,8 +19,8 @@
 /*         File: HRec.c  Viterbi Recognition Engine Library    */
 /* ----------------------------------------------------------- */
 
-char *hrec_version = "!HVER!HRec:   3.1.1 [CUED 05/06/02]";
-char *hrec_vc_id = "$Id: HRec.c,v 1.9 2002/06/05 14:06:45 ge204 Exp $";
+char *hrec_version = "!HVER!HRec:   3.2 [CUED 09/12/02]";
+char *hrec_vc_id = "$Id: HRec.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

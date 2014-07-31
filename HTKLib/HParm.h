@@ -32,7 +32,7 @@
 /*         File: HParm.h:   Speech Parameter Input/Output      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HParm:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HParm:   3.2 [CUED 09/12/02] */
 
 #ifndef _HPARM_H_
 #define _HPARM_H_
@@ -64,6 +64,7 @@ typedef short ParmKind;          /* BaseParmKind + Qualifiers */
 #define HASCRCC  010000       /* _K has CRC check */
 #define HASZEROC 020000       /* _0 0'th Cepstra included */
 #define HASVQ    040000       /* _V has VQ index attached */
+#define HASTHIRD 0100000       /* _T has Delta-Delta-Delta index attached */
 
 #define BASEMASK  077         /* Mask to remove qualifiers */
 
@@ -149,6 +150,7 @@ typedef struct {
    float curVol;              /* Volume level of last frame (0.0-100.0dB) */
    int spDetSt;               /* Frame number of first frame of buffer */
    int spDetEn;               /* Frame number of last frame of buffer */
+   char *matTranFN;           /* Matrix transformation name */
 }BufferInfo;
 
 /*
@@ -361,6 +363,16 @@ void  SetStreamWidths(ParmKind pk, int size, short *swidth, Boolean *eSep);
    set.
 */
 
+/* EXPORT->SyncBuffers: if matrix transformations are used this syncs the two buffers */
+Boolean SyncBuffers(ParmBuf pbuf,ParmBuf pbuf2);
+
+void SetParmHMMSet(Ptr hset);
+/* 
+   The prototype  for this should really be 
+   void SetParmHMMSet(HMMSet *hset);
+   However the .h files have an issue with this. A 
+   cast is performed in the first line of the function.
+*/
 
 
 /* ------------------- Parameter Kind Conversions --------------- */
@@ -376,6 +388,7 @@ Boolean HasEnergy(ParmKind kind);
 Boolean HasDelta(ParmKind kind);
 Boolean HasNulle(ParmKind kind);
 Boolean HasAccs(ParmKind kind);
+Boolean HasThird(ParmKind kind);
 Boolean HasCompx(ParmKind kind);
 Boolean HasCrcc(ParmKind kind);
 Boolean HasZerom(ParmKind kind);

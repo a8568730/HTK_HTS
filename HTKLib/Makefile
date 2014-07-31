@@ -30,7 +30,7 @@ CFLAGS = $(HTKCF) -D'ARCH="$(CPU)"' -I.
 
 modules = HShell.o HMath.o  HSigP.o  HWave.o HAudio.o HParm.o HVQ.o  HGraf.o\
           HLabel.o HModel.o HUtil.o HTrain.o HDict.o  HLM.o   HRec.o HNet.o \
-          HAdapt.o HFB.o HMem.o \
+          HAdapt.o HFB.o HMem.o HLat.o \
           esignal.o esig_asc.o esig_edr.o esig_nat.o strarr.o
 
 all:    HTKLib.$(CPU).a
@@ -64,6 +64,8 @@ HGraf.null.o: HShell.h HMem.h HMath.h HGraf.h
 HGraf_WIN32.o: HShell.h HMem.h HMath.h HGraf.h
 HLM.o: HShell.h HMem.h HMath.h HWave.h HLabel.h HLM.h
 HLabel.o: HShell.h HMem.h HMath.h HWave.h HLabel.h
+HLat.o: HShell.h HMem.h HMath.h HWave.h HAudio.h HParm.h HLabel.h HModel.h
+HLat.o: HUtil.h HDict.h HNet.h HLM.h HLat.h
 HMath.o: HShell.h HMem.h HMath.h
 HMem.o: HShell.h HMem.h
 HModel.o: HShell.h HMem.h HMath.h HWave.h HAudio.h HParm.h HLabel.h HModel.h

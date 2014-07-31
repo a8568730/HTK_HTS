@@ -19,8 +19,8 @@
 /*         File: HMem.c:   Memory Management Module            */
 /* ----------------------------------------------------------- */
 
-char *hmem_version = "!HVER!HMem:   3.1.1 [CUED 05/06/02]";
-char *hmem_vc_id = "$Id: HMem.c,v 1.9 2002/06/05 14:06:45 ge204 Exp $";
+char *hmem_version = "!HVER!HMem:   3.2 [CUED 09/12/02]";
+char *hmem_vc_id = "$Id: HMem.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -382,6 +382,20 @@ void *New(MemHeap *x,size_t size)
       return q;
    }
    return NULL;  /* just to keep compiler happy */
+}
+
+
+/* EXPORT->CNew: create a new element from heap x and initialise to zero */
+Ptr CNew (MemHeap *x, size_t size)
+{
+   void *ptr;
+
+   ptr = New (x, size);
+   if (x->type == MHEAP && size ==0)
+      size = x->elemSize;
+   memset (ptr, 0, size);
+
+   return ptr;
 }
 
 /* EXPORT->Dispose: Free item p from memory heap x */

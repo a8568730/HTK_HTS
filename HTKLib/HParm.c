@@ -21,7 +21,7 @@
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
 /*                                                             */
-/*              2001  Cambridge University                     */
+/*          2001-2002 Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -32,8 +32,8 @@
 /*       File: HParm.c:  Speech Parameter File Input/Output    */
 /* ----------------------------------------------------------- */
 
-char *hparm_version = "!HVER!HParm:   3.1.1 [CUED 05/06/02]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.11 2002/06/27 10:54:10 ge204 Exp $";
+char *hparm_version = "!HVER!HParm:   3.2 [CUED 09/12/02]";
+char *hparm_vc_id = "$Id: HParm.c,v 1.12 2002/12/19 16:37:11 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -60,6 +60,7 @@ static int trace = 0;
 #define T_QUA  0020     /* Qualifier operations */
 #define T_OBS  0040     /* Observation extraction */
 #define T_DET  0100     /* Silence detector operation */
+#define T_MAT  0200     /* Matrix operations */
 
 /* --------------------- Global Variables ------------------- */
 
@@ -72,6 +73,13 @@ extern Boolean vaxOrder;              /* true if byteswapping needed to
 static float varScale[100];
 static int varScaleDim=0;
 static char varScaleFN[MAXFNAMELEN] = "\0";
+
+static Boolean highDiff = FALSE;   /* compute higher oder differentials, only up to fourth */
+static Boolean BrokenCVN = FALSE;  /* this allows us to go back to the old version with broken CVN */
+static ParmKind ForcePKind = ANON; /* force to output a customized parm kind to make older versions
+                                    happy for all the parm kind types supported here */
+
+static HMMSet *hset = NULL;        /* hmmset to be used for frontend */
 
 /* ------------------------------------------------------------------- */
 /* 
@@ -158,6 +166,11 @@ typedef struct {
    char* varScaleMask;        /* variance estimate file selection mask */
 
    VQTable vqTab;             /* VQ table */
+   Matrix MatTran;            /* Stores transformation matrix */ 
+   char *MatTranFN;           /* points to the file name string */
+   int thirdWin;              /* Accel window halfsize */
+   int fourthWin;             /* Fourth order differential halfsize */
+
    /* ------- Internally derived parameters ------- */
    /*  These values are allocated in the IOConfigRec but are really */
    /*  specific to each pbuf and do not rely on any kind of initialisation */
@@ -198,6 +211,11 @@ typedef struct {
    Vector varScale;   /* var scaling vector  */
    Vector cMeanVector;   /* vector loaded from cmean dir */
    Vector varScaleVector; /* vector loaded from varscale dir */
+   ParmKind matPK;
+   int preFrames;
+   int postFrames;
+   Boolean preQual;
+   InputXForm *xform;
 }IOConfigRec;
 
 typedef IOConfigRec *IOConfig;
@@ -272,6 +290,13 @@ typedef enum {
    VARSCALEDIR,  /* dir to find the variance estimate files */
    VARSCALEMASK, /* label mask to idenitfy the variance estimate files */
 
+   /* MatTran file */
+   MATTRANFN,     /* File name for MatTran file */
+   MATTRAN,
+
+   /* Extended Deltas */
+   THIRDWINDOW,
+   FOURTHWINDOW,
    CFGSIZE
 }IOConfParm;
 
@@ -295,6 +320,7 @@ static char * ioConfName[CFGSIZE] = {
    "VARSCALEFN", 
    "CMEANDIR" , "CMEANMASK",
    "VARSCALEDIR", "VARSCALEMASK" ,
+   "MATTRANFN", "MATTRAN", "THIRDWINDOW", "FOURTHWINDOW"
 };
 
 /* -------------------  Default Configuration Values ---------------------- */
@@ -325,7 +351,8 @@ static const IOConfigRec defConf = {
    NULL,NULL,             /* CMEANDIR CMEANMASK */
    NULL,NULL,             /* VARSCALEDIR VARSCALEMASK */
 
-   NULL                   /* vqTab */
+   NULL,                  /* vqTab */
+   NULL, NULL, 2, 2      /* MATTRANFN, MATTRAN THIRDWIN FOURTHWIN */
 };
 
 /* ------------------------- Buffer Definition  ------------------------*/
@@ -513,13 +540,16 @@ static ChannelInfo *curChan=NULL;
 
 /* ----------------------- IO Configuration Handling ------------------ */
 
-
+/* Load the global variance vector for side based CVN */
 static void LoadVarScale (MemHeap *x, IOConfig cf)
 {
    Source varsrc;
    char buf[MAXSTRLEN];
    Boolean vbinary=FALSE;
    int dim,i;
+
+   Matrix GlobalVar,NewGlobalVar;
+   int NewFDim,FDim;
 
    if (strcmp (cf->varScaleFN, varScaleFN) == 0) { /* already cached */
       cf->varScale = CreateVector (x, varScaleDim);
@@ -538,12 +568,150 @@ static void LoadVarScale (MemHeap *x, IOConfig cf)
       if (!ReadVector (&varsrc, cf->varScale, vbinary))
          HError(6376 ,"LoadVarScale: Couldn't read var scale vector from file");
       CloseSource (&varsrc);
-      for (i=1; i<=dim; i++)        /* store scaling vector in IOConfig */
-         cf->varScale[i] = cf->varScale[i];
-      for (i=1; i<=dim; i++)                    /* cache the vector */
+      
+      /* Apply a linear transform to the global variance */
+      if (cf->MatTran != NULL){
+
+         FDim = NumCols(cf->MatTran);
+         NewFDim = NumRows(cf->MatTran);
+
+         NewGlobalVar = CreateMatrix(x,NewFDim,NewFDim);
+         ZeroMatrix(NewGlobalVar);
+         GlobalVar = CreateMatrix(x,FDim,FDim);
+         ZeroMatrix(GlobalVar);
+
+         for (i=1;i<=NumRows(GlobalVar);i++){
+            GlobalVar[i][i] = cf->varScale[i];
+         }         
+
+         LinTranQuaProd(NewGlobalVar,cf->MatTran,GlobalVar);
+
+         cf->varScale = CreateVector(x,NewFDim);
+         ZeroVector(cf->varScale); 
+
+         for (i=1;i<=NewFDim;i++){
+            cf->varScale[i] = NewGlobalVar[i][i];
+         }
+         
+         dim = NewFDim;             
+      }
+  
+      for (i=1; i<=dim; i++){                    /* cache the vector */
          varScale[i] = cf->varScale[i];
+      }
       varScaleDim = dim;
       strcpy (varScaleFN, cf->varScaleFN);
+   }
+}
+
+
+/*  
+   After the global feature transform is loaded as a macro via HModel, if the 
+   channel feature transform config is empty then this function is invoked in 
+   LoadMat to pass on all the channel config setup from the loaded input 
+   linear transform data structure.
+*/
+static void SetInputXFormConfig(IOConfig cf, InputXForm *xf)
+{
+   LinXForm *xform;
+
+   xform = xf->xform;
+   cf->xform = xf;
+   if (IntVecSize(xform->blockSize) != 1)
+      HError(999,"Only full linear transforms currently supported");
+   cf->matPK = xf->pkind;
+   cf->preQual = xf->preQual;
+   /* Currently hard-wired and ignored */
+   cf->preFrames = 0;
+   cf->postFrames = 0;
+   cf->MatTran = xform->xform[1];
+   if (cf->MatTranFN == NULL) /* set to non-NULL */
+      cf->MatTranFN = xf->xformName;
+   if (((cf->preFrames>0) || (cf->postFrames>0)) && (HasZerom(cf->tgtPK))) 
+      HError(-1,"Mismatch possible for ZeroMean due to end truncations.\n All static parameters floored (including Energy) as using matrix transformation.\n For post transformation dynamic parameters also floored.");
+}
+
+/* EXPORT->SetParmHMMSet: specifies the HMMSet to be used with the frontend */
+void SetParmHMMSet(Ptr aset)
+{
+   char buf[MAXSTRLEN];
+   InputXForm *cfg_xf, *hmm_xf;
+   LabId id;
+
+   hset = (HMMSet *)aset;
+   hmm_xf = hset->xf;
+   if (defChan != NULL) { /* xforms may already be set using config files */
+      cfg_xf = defChan->cf.xform;
+      if (cfg_xf != NULL) { /* is there a transform currently set */
+         if (hmm_xf != NULL) { 
+            /* 
+               need to check that the transforms are the same. This may be achieved
+               by ensuring that the transforms have the same macroname.
+            */
+            if (strcmp(hmm_xf->xformName,cfg_xf->xformName))
+               HError(6396,"Incompatible XForm macros in MMF and config file %s and %s",
+                      hmm_xf->xformName,cfg_xf->xformName);     
+            else if (cfg_xf != hmm_xf)
+               HRError(6396,"Assumed compatible XForm macro %s in files %s and %s",
+                       hmm_xf->xformName,hmm_xf->fname,cfg_xf->fname);  
+         } else {
+            /* 
+               there is a config transform specified, so check that it is compatble 
+               with the model set MMFId
+            */
+            if ((hset->hmmSetId != NULL) && (!MaskMatch(cfg_xf->mmfIdMask,buf,hset->hmmSetId)))
+               HError(6396,"HMM Set %s is not compatible with InputXForm",hset->hmmSetId);       
+            /*
+              also need to ensure that the transform from the cofig option is converted
+              into a macro.
+            */
+            id = GetLabId(cfg_xf->xformName,TRUE);
+            NewMacro(hset,-1,'j',id,(Ptr)cfg_xf);
+            cfg_xf->nUse++;
+            hset->xf = cfg_xf;
+         }
+      } else { 
+         /* 
+            transform needs to be set-up from the model set. 
+            Also need to reload the variance floor.
+         */
+         if (hmm_xf != NULL) {
+            SetInputXFormConfig(&(defChan->cf),hmm_xf);
+            if ((hset->hmmSetId != NULL) && (!MaskMatch(hmm_xf->mmfIdMask,buf,hset->hmmSetId)))
+               HError(6396,"HMM Set %s is not compatible with InputXForm",hset->hmmSetId);       
+         }
+         if (defChan->cf.varScaleFN != NULL){
+            strcpy (varScaleFN,"\0"); 
+            LoadVarScale(&gcheap,&(defChan->cf)); 
+         }    
+      }
+   } else { /* somehow this is happening prior to InitParm ... */
+      HError(6396,"Calling SetParmHMMSet prior to InitParm");
+   }
+}
+
+/* 
+   Load a global feature transform given in the channel config setup via a function
+   defined in HModel since the transform is also treated as a macro. Afterwards check 
+   the consistency between the transform's model id. If the channel global feature 
+   transform setup is empty the pass on all the information from the loaded transform
+*/
+static void LoadMat (MemHeap *x, IOConfig cf)  /*static??*/
+{
+   InputXForm *xf;
+   char macroname[MAXSTRLEN];
+
+   xf = LoadInputXForm(hset,NameOf(cf->MatTranFN,macroname),cf->MatTranFN);
+   if (xf == NULL)
+      HError(999,"Cannot correctly load input transform from file %s",cf->MatTranFN);
+   if (cf->xform == NULL) { /* No transform from model set */
+      SetInputXFormConfig(cf,xf);
+   } else { /* check that transform is the same as the model one */
+      if (strcmp(xf->xformName,cf->xform->xformName)) {
+         HRError(999,"Possibly incompatible XForm macros in MMF and config file %s and %s",
+                 xf->xformName,cf->xform->xformName);   
+         SetInputXFormConfig(cf,xf);
+      }    
    }
 }
 
@@ -618,16 +786,29 @@ static IOConfig ReadIOConfig(IOConfig p)
          case DOUBLEFFT:      p->doubleFFT = GB(s); break;
            /* side based normalisation */
          case VARSCALEFN:     p->varScaleFN= CopyString(&gcheap, GS(s)); 
-                              LoadVarScale(&gcheap,p); 
                               break;
          case VARSCALEDIR:    p->varScaleDN = CopyString(&gcheap,GS(s)); break;
          case VARSCALEMASK:   p->varScaleMask = CopyString(&gcheap,GS(s)); break;
          case CMEANDIR:       p->cMeanDN = CopyString(&gcheap,GS(s)); break;
          case CMEANMASK:      p->cMeanMask = CopyString(&gcheap,GS(s)); break;
+         case MATTRANFN:      p->MatTranFN= CopyString(&gcheap, GS(s)); break;
+
+         case THIRDWINDOW:    p->thirdWin = GI(s); break;
+         case FOURTHWINDOW:   p->fourthWin = GI(s); break;
          }
    }
+   
+   if (p->MatTranFN != NULL){
+      LoadMat (&gcheap,p);
+   }
+   
+   if (p->varScaleFN != NULL){
+      LoadVarScale(&gcheap,p);
+   }    
+
    return p;
 }
+
 
 /* Read channel files once only */
 static ReturnStatus ReadChanFiles(ChannelInfo *chan)
@@ -651,6 +832,7 @@ ReturnStatus InitParm(void)
 {
    Boolean b;
    int i;
+   char buf[MAXSTRLEN];
 
    CreateHeap(&parmHeap, "HPARM C Heap",  MSTAK, 1, 1.0, 20000, 80000 );
 
@@ -659,6 +841,10 @@ ReturnStatus InitParm(void)
    if (nParm>0){
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
       if (GetConfBool(cParm,nParm,"NATURALWRITEORDER",&b)) natWriteOrder = b;
+      if (GetConfBool(cParm,nParm,"HIGHDIFF",&b)) highDiff = b;
+      if (GetConfBool(cParm,nParm,"BROKENCVN",&b)) BrokenCVN = b;
+      if (GetConfStr(cParm,nParm,"FORCEPKIND",buf))
+         ForcePKind = Str2ParmKind(buf);      
    }
 
    defChan=curChan= (ChannelInfo *) New(&gcheap,sizeof(ChannelInfo));
@@ -683,6 +869,8 @@ ReturnStatus InitParm(void)
 ReturnStatus SetChannel(char *confName)
 { 
    char buf[MAXSTRLEN],*in,*out;
+   Boolean b;
+
    if (confName==NULL) curChan=defChan;
    else {
       for (in=confName,out=buf;*in!=0;in++,out++) *out=toupper(*in);
@@ -701,9 +889,15 @@ ReturnStatus SetChannel(char *confName)
       curChan->next=NULL;
       /* Set up configuration parameters */
       nParm = GetConfig(curChan->confName, FALSE, cParm, MAXGLOBS);
+      if (nParm>0){
+         if (GetConfBool(cParm,nParm,"HIGHDIFF",&b)) highDiff = b;
+      }
       /* Default are the standard HPARM parameters */
       curChan->cf=defChan->cf;
       ReadIOConfig(&curChan->cf);
+      /* This should be after setting the model up. Set input xform */
+      hset->xf = (curChan->cf).xform;
+      if (hset->xf != NULL) hset->xf->nUse++;
       if(ReadChanFiles(curChan)<SUCCESS){
          HRError(6350,"SetChannel: ReadChanFiles for new channel failed");
          return(FAIL);
@@ -713,7 +907,7 @@ ReturnStatus SetChannel(char *confName)
       defChan->next=curChan;
       /* Revert to normal config parameters */
       nParm = GetConfig("HPARM", TRUE, cParm, MAXGLOBS);
-   }
+    }
    return(SUCCESS);
 }
 
@@ -817,6 +1011,7 @@ char *ParmKind2Str(ParmKind kind, char *buf)
    if (HasDelta(kind))     strcat(buf,"_D");
    if (HasNulle(kind))     strcat(buf,"_N");
    if (HasAccs(kind))      strcat(buf,"_A");
+   if (HasThird(kind))     strcat(buf,"_T");
    if (HasCompx(kind))     strcat(buf,"_C");
    if (HasCrcc(kind))      strcat(buf,"_K");
    if (HasZerom(kind))     strcat(buf,"_Z");
@@ -830,10 +1025,10 @@ ParmKind Str2ParmKind(char *str)
 {
    ParmKind i = -1;
    char *s,buf[255];
-   Boolean hasE,hasD,hasN,hasA,hasC,hasK,hasZ,has0,hasV,found;
+   Boolean hasE,hasD,hasN,hasA,hasT,hasF,hasC,hasK,hasZ,has0,hasV,found;
    int len;
    
-   hasV=hasE=hasD=hasN=hasA=hasC=hasK=hasZ=has0=FALSE;
+   hasV=hasE=hasD=hasN=hasA=hasT=hasF=hasC=hasK=hasZ=has0=FALSE;
    strcpy(buf,str); len=strlen(buf);
    s=buf+len-2;
    while (len>2 && *s=='_') {
@@ -843,6 +1038,8 @@ ParmKind Str2ParmKind(char *str)
       case 'N': hasN = TRUE; break;
       case 'A': hasA = TRUE; break;
       case 'C': hasC = TRUE; break;
+      case 'T': hasT = TRUE; break;
+      case 'F': hasF = TRUE; break;
       case 'K': hasK = TRUE; break;
       case 'Z': hasZ = TRUE; break;
       case '0': has0 = TRUE; break;
@@ -867,11 +1064,16 @@ ParmKind Str2ParmKind(char *str)
    if (hasD) i |= HASDELTA;
    if (hasN) i |= HASNULLE;
    if (hasA) i |= HASACCS;
+   if (hasT) i |= HASTHIRD;
    if (hasK) i |= HASCRCC;
    if (hasC) i |= HASCOMPX;
    if (hasZ) i |= HASZEROM;
    if (has0) i |= HASZEROC;
    if (hasV) i |= HASVQ;
+   if(trace&T_BUF){
+      fprintf(stdout,"ParmKind is %d\n",i);
+      fflush(stdout);
+   }
    return i;
 }
 
@@ -882,12 +1084,115 @@ ParmKind BaseParmKind(ParmKind kind) { return kind & BASEMASK; }
 Boolean HasEnergy(ParmKind kind){return (kind & HASENERGY) != 0;}
 Boolean HasDelta(ParmKind kind) {return (kind & HASDELTA) != 0;}
 Boolean HasAccs(ParmKind kind)  {return (kind & HASACCS) != 0;}
+Boolean HasThird(ParmKind kind) {return (kind & HASTHIRD) != 0;}
 Boolean HasNulle(ParmKind kind) {return (kind & HASNULLE) != 0;}
 Boolean HasCompx(ParmKind kind) {return (kind & HASCOMPX) != 0;}
 Boolean HasCrcc(ParmKind kind)  {return (kind & HASCRCC) != 0;}
 Boolean HasZerom(ParmKind kind) {return (kind & HASZEROM) != 0;}
 Boolean HasZeroc(ParmKind kind) {return (kind & HASZEROC) != 0;}
 Boolean HasVQ(ParmKind kind)    {return (kind & HASVQ) != 0;}
+
+/* EXPORT->SyncBuffers: if matrix transformations are used this syncs the two buffers */
+Boolean SyncBuffers(ParmBuf pbuf,ParmBuf pbuf2)
+{
+   int pref1=0, pref2=0, postf1=0, postf2=0;
+   int preshift, postshift;
+   float *fptr;
+
+   if ((pbuf->cf->MatTranFN == NULL) && (pbuf2->cf->MatTranFN == NULL))
+      return(TRUE);
+
+   if (pbuf->cf->MatTranFN != NULL) {
+      pref1 = pbuf->cf->preFrames; 
+      postf1 = pbuf->cf->postFrames; 
+   }
+   if (pbuf2->cf->MatTranFN != NULL) {
+      pref2 = pbuf2->cf->preFrames; 
+      postf2 = pbuf2->cf->postFrames; 
+   }
+   preshift = pref1-pref2;
+   postshift = postf1-postf2;
+
+   if ((preshift == 0) && (postshift == 0))
+      return(TRUE);
+
+   if (preshift>0) { /* need to offset the start of buffer2 */
+      fptr = pbuf2->main.data;
+      fptr += (preshift * pbuf2->cf->nCols);
+      pbuf2->main.data = fptr;
+      pbuf2->main.nRows -= preshift;
+      if (trace&T_MAT) 
+         printf("HParm: Removing first %d frames from Buffer2 (%d floats)\n",preshift,(preshift * pbuf2->cf->nCols));
+   } else {
+      fptr = pbuf->main.data;
+      fptr -= (preshift * pbuf->cf->nCols);
+      pbuf->main.data = fptr;
+      pbuf->main.nRows += preshift;
+      if (trace&T_MAT) 
+         printf("HParm: Removing first %d frames from Buffer1 (%d floats)\n",-preshift,-(preshift * pbuf->cf->nCols));
+   }
+
+   if (postshift>0) {
+      pbuf2->main.nRows -= postshift;
+      if (trace&T_MAT) 
+         printf("HParm: Removing last %d frames from Buffer2\n",postshift);
+   } else {
+      pbuf->main.nRows += postshift;
+      if (trace&T_MAT) 
+         printf("HParm: Removing last %d frames from Buffer1\n",-postshift);
+   }
+
+   return(TRUE);
+}
+
+
+/* Apply the global feature transform */
+static void ApplyStaticMat(IOConfig cf, float *data, Matrix trans, int vSize, int n, int step, int offset)
+{
+   float *fp,*fp1;
+   int i,j,k,l,mrows,mcols,nframes,fsize,m;
+   Vector *odata,tmp;
+
+   mrows = NumRows(trans); mcols = NumCols(trans);
+   nframes = 1 + cf->preFrames + cf->postFrames;
+   fsize = cf->nUsed;
+   odata = New(&gstack,nframes*sizeof(Vector));
+   odata--;
+   fp = data-1;
+   for (i=1;i<=nframes;i++)
+      odata[i] = CreateVector(&gstack,fsize);
+   for (i=2;i<=nframes;i++) {
+      for (j=1;j<=fsize;j++)
+         odata[i][j] = fp[j];
+      fp += vSize;
+   }
+   fp1 = data-1;
+
+   if ((fsize*nframes) != mcols)
+      HError(-1,"Incorrect number of elements (%d %d)",cf->nUsed ,mcols);
+   for (i=1;i<=n-nframes+1;i++){
+      tmp = odata[1];
+      for (j=1;j<=nframes-1;j++)
+         odata[j] = odata[j+1];
+      odata[nframes] = tmp;
+      for (j=1;j<=fsize;j++){
+         tmp[j]=fp[j];
+      }
+      for (j=1;j<=mrows;j++) {
+         fp++; fp1++; *fp1=0; m=0;
+         for(l=1;l<=nframes;l++) {
+            for (k=1;k<=fsize;k++) {
+               m++;
+               *fp1 += trans[j][m]*odata[l][k];
+            }
+         }
+      }
+      fp += vSize-mrows;
+      fp1 += vSize-mrows;
+   }
+   Dispose(&gstack,odata+1);
+   cf->nUsed = mrows;
+}
 
 /* ---------------- Data Sizing and Memory allocation --------------- */
 
@@ -958,10 +1263,10 @@ static void ValidCodeParms(IOConfig cf)
          order = cf->lpcOrder;
          if (order < 2 || order > 1000)
             HError(6371,"ValidCodeParms: unlikely lpc order %d",cf->lpcOrder);
-	 if (!cf->usePower)
-	    HError(-6371,"ValidCodeParms: Using linear spectrum with PLP");
-	 if (cf->compressFact >= 1.0 || cf->compressFact <= 0.0)
-	    HError(6371,"ValidCodeParms: Compression factor (%f) should have a value between 0 and 1\n",cf->compressFact);
+         if (!cf->usePower)
+            HError(-6371,"ValidCodeParms: Using linear spectrum with PLP");
+         if (cf->compressFact >= 1.0 || cf->compressFact <= 0.0)
+            HError(6371,"ValidCodeParms: Compression factor (%f) should have a value between 0 and 1\n",cf->compressFact);
       }
       break;
    default: break;
@@ -1035,23 +1340,33 @@ Boolean ValidConversion (ParmKind src, ParmKind tgt)
 /* FindSpans: Finds the positions of the subcomponents of a parameter 
    vector with size components as follows (span values are -ve if 
    subcomponent does not exist):
-   span: [0] .. [1]  [2]  [3]  [4] .. [5]  [6] .. [7]
-          statics   cep0 energy  deltas       accs         */
-static void FindSpans(short span[8], ParmKind k, int size)
+   span: [0] .. [1]  [2]    [3]  [4] .. [5]  [6] .. [7] [8] .. [9]
+           statics   cep0 energy   deltas       accs      third   */
+static void FindSpans(short span[12], ParmKind k, int size)
 {
-   int i,stat,en=0,del=0,acc=0,c0=0;
+   int i,stat,en=0,del=0,acc=0,c0=0,third=0,fourth=0;
    
-   for (i=0; i<8; i++) span[i] = -1;
-   if (k&HASACCS)
+   for (i=0; i<10; i++) span[i] = -1;
+   /* 
+      if having higher order differentials and the precondition 
+      is there is third oder differentials 
+   */
+   if (k&HASTHIRD && highDiff == TRUE)
+      fourth = third = acc = del = size/5;
+   else if (k&HASTHIRD)
+      third = acc = del = size/4;
+   else if (k&HASACCS)
       acc = del = size/3; 
    else if (k&HASDELTA) 
       del = size/2;
    if (k&HASENERGY) ++en;  if (k&HASZEROC) ++c0;
-   stat = size - c0 - en - del - acc;
+   stat = size - c0 - en - del - acc - third - fourth;
    if (stat>0) { span[0] = 0;              span[1] = stat-1;}
    if (c0>0)     span[2] = stat; if (en>0) span[3] = stat+c0;
    if (del>0)  { span[4] = stat+c0+en;     span[5] = stat+c0+en+del-1;}
    if (acc>0)  { span[6] = stat+c0+en+del; span[7] = stat+c0+en+del+acc-1;}
+   if (third>0){ span[8] = stat+c0+en+del+acc; span[9] = stat+c0+en+del+acc+third-1;}
+   if (fourth>0){ span[10] = stat+c0+en+del+acc+third; span[11] = stat+c0+en+del+acc+third+fourth-1;}
 }
 
 /* TotalComps: return the total number of components in a parameter vector
@@ -1066,7 +1381,15 @@ static int TotalComps(int nStatic, ParmKind pk)
    x = n;
    if (pk&HASDELTA){
       n += x;
-      if (pk&HASACCS) n += x;
+      if (pk&HASACCS) {
+        n += x;
+        if (pk&HASTHIRD) {
+           n += x;
+           if (highDiff == TRUE){
+              n += x;
+           }
+        }
+      }
    }
    return n;   
 }
@@ -1075,7 +1398,7 @@ static int TotalComps(int nStatic, ParmKind pk)
    with nTotal components and ParmKind pk */
 static int NumStatic(int nTotal, ParmKind pk)
 {
-   short span[8];
+   short span[12];
    
    FindSpans(span,pk,nTotal);
    return span[1]-span[0]+1;  
@@ -1091,7 +1414,15 @@ static int NumEnergy(ParmKind pk)
    e = 1;
    if (pk&HASDELTA){
       ++e;
-      if (pk&HASACCS) ++e;
+      if (pk&HASACCS) {
+        ++e;
+        if (pk&HASTHIRD){
+           ++e;
+           if (highDiff == TRUE){
+              ++e;
+           }
+        }
+      }
    }
    return e;   
 }
@@ -1202,15 +1533,42 @@ static void DeleteColumn(float *data, int nUsed, int si, int d)
 static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf, 
                           int hdValid, int tlValid)
 {
-   char buf[100];
-   int si,ti,d,ds,de, i, j, step;
-   short span[8];
+   char buf[100],buff1[256],buff2[256];
+   int si,ti,d,ds,de, i, j, step, size;
+   short span[12];
    float *fp, mean, scale;
+   ParmKind tgtBase;
 
-   if (cf->curPK == cf->tgtPK) return;
+   if ((cf->curPK == cf->tgtPK) && (cf->MatTranFN == NULL)) return;
    if (trace&T_QUA)
       printf("HParm:  adding Qualifiers to %s ...",ParmKind2Str(cf->curPK,buf));
-   FindSpans(span,cf->tgtPK,cf->tgtUsed);    
+   if (cf->MatTranFN != NULL) { /* Do the generic checks that the matrix is appropriate */
+      if (((cf->matPK&BASEMASK)&(cf->curPK&BASEMASK)) != (cf->matPK&BASEMASK))
+         HError(999,"Incorrect source parameter type (%s %s)",ParmKind2Str(cf->curPK,buff1),
+                ParmKind2Str(cf->matPK,buff2));
+      if ((HasEnergy(cf->matPK) && !(HasEnergy(cf->curPK))) || (!(HasEnergy(cf->matPK)) && (HasEnergy(cf->curPK))) ||
+          (HasZeroc(cf->matPK) && !(HasZeroc(cf->curPK))) || (HasZeroc(cf->curPK) && !(HasZeroc(cf->matPK))))
+         HError(999,"Incorrect qualifiers in parameter type (%s %s)",ParmKind2Str(cf->curPK,buff1),ParmKind2Str(cf->matPK,buff2));
+   }
+
+   if ((cf->MatTranFN != NULL) && (cf->preQual)) {
+      if ((HasZerom(cf->matPK) && !(HasZerom(cf->curPK))) || (HasZerom(cf->curPK) && !(HasZerom(cf->matPK))))
+         HError(999,"Incorrect qualifiers in parameter type (%s %s)",ParmKind2Str(cf->curPK,buff1),ParmKind2Str(cf->matPK,buff2));
+      ApplyStaticMat(cf,data,cf->MatTran,cf->nCols,nRows,0,0);
+      pbuf->main.nRows -= (cf->postFrames + cf->preFrames);
+      nRows = pbuf->main.nRows;
+      cf->nSamples = pbuf->main.nRows;
+   }
+   if ((cf->MatTranFN != NULL) && (!cf->preQual)) { 
+      tgtBase = cf->tgtPK&BASEMASK;
+      if ((cf->curPK&BASEMASK)!=tgtBase && (tgtBase==LPCEPSTRA || tgtBase==MFCC))
+         size = TotalComps(cf->numCepCoef,cf->tgtPK);
+      else 
+         size = TotalComps(NumStatic(cf->srcUsed,cf->srcPK),cf->tgtPK);
+      FindSpans(span,cf->tgtPK,size);    
+   } else 
+      FindSpans(span,cf->tgtPK,cf->tgtUsed);    
+
    /* Add any required difference coefficients */
    if ((cf->tgtPK&HASDELTA) && !(cf->curPK&HASDELTA)){   
       d = span[5]-span[4]+1; si = span[0]; ti = span[4];
@@ -1232,20 +1590,45 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
       AddDiffs(data,nRows,cf->nCols,si,ti,d,cf->accWin,
                hdValid,tlValid,cf->v1Compat,cf->simpleDiffs);
       cf->curPK |= HASACCS;  cf->nUsed += d;
+      if ((cf->tgtPK&HASTHIRD) && !(cf->curPK&HASTHIRD)) {
+         d = span[9]-span[8]+1; si = span[6]; ti = span[8];
+         if (trace&T_QUA)
+            printf("\nHParm:  adding %d thirds to %d rows",d,nRows);
+         AddDiffs(data,nRows,cf->nCols,si,ti,d,cf->thirdWin,
+                  hdValid,tlValid,cf->v1Compat,cf->simpleDiffs);
+         cf->curPK |= HASTHIRD;  cf->nUsed += d;
+         /* Adding fourth order differentials */
+         if (highDiff == TRUE) {
+            d = span[11]-span[10]+1; si = span[8]; ti = span[10];
+            if (trace&T_QUA)
+               printf("\nHParm:  adding %d fourths to %d rows\n",d,nRows);
+            AddDiffs(data,nRows,cf->nCols,si,ti,d,cf->fourthWin,
+                     hdValid,tlValid,cf->v1Compat,cf->simpleDiffs);
+            cf->nUsed += d;
+         }
+      }
    }
+
    /* Zero Mean the static coefficients if required */
    if ((cf->tgtPK&HASZEROM) && !(cf->curPK&HASZEROM)) {
       /* if a global mean vector is not available  */
       if (cf->cMeanVector ==  0) {
-         d = span[1]-span[0]+1;
-         if (cf->tgtPK&HASZEROC && !(cf->curPK&HASNULLE))  /* zero mean c0 too */
-            ++d;  
+         if (cf->MatTranFN == NULL || (!cf->preQual)) {
+            d = span[1]-span[0]+1;
+            if (cf->tgtPK&HASZEROC && !(cf->curPK&HASNULLE))  /* zero mean c0 too */
+               ++d;  
+         } else { /* No idea where the statics are so do everything .... */
+            d = span[1]-span[0]+1;
+            if (cf->tgtPK&HASZEROC && !(cf->curPK&HASNULLE)) d++;
+            if (cf->tgtPK&HASENERGY && !(cf->curPK&HASNULLE)) d++;
+         }
          if (trace&T_QUA)
             printf("\nHParm:  zero-meaning first %d cols from %d rows",d,nRows);
          FZeroMean(data,d,nRows,cf->nCols);
          
          cf->curPK |= HASZEROM;
       }
+      /* if a global cepstral mean file is available */
       else {
          /* subtract the mean vector from cf */
          d = VectorSize(cf->cMeanVector);
@@ -1262,33 +1645,93 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
       }
    }
 
-   /*  Scale the variances */
-   if (cf->varScaleFN) {
-      if (VectorSize (cf->varScale) != cf->tgtUsed)
-         HError(6376 ,"AddQualifiers: Mismatch beteen varScale (%d) and target size %d",
-                VectorSize (cf->varScale), cf->tgtUsed);
-      if (trace&T_QUA)
-         printf("\nHParm:  variance normalisation for %d cols from %d rows",
-                cf->tgtUsed, nRows);
+   if (BrokenCVN != TRUE){
       
-      if (cf->varScaleVector == 0) {
-         HError (6376, "AddQualifiers: no variance scaling vector found");
-      }
-      else {
-         /* use predefined variance estimate */
-         d = VectorSize(cf->varScaleVector);
-         step = cf->nCols;
-         for (i=0; i<d ; i++){
-            scale = sqrt(cf->varScale[i+1] / cf->varScaleVector[i+1]);
-            fp = data+i;
-            for (j=0; j<nRows; j++) {
-               *fp *= scale;
-               fp += step;
+      if ((cf->MatTranFN != NULL) && (!cf->preQual)) {      
+         if (cf->matPK != cf->curPK) {
+            /* Need to check that the correct qualifiers are used */
+            HError(999,"Incorrect qualifiers in parameter type (%s %s)",
+                   ParmKind2Str(cf->curPK,buff1),ParmKind2Str(cf->matPK,buff2));
+         }
+         ApplyStaticMat(cf,data,cf->MatTran,cf->nCols,nRows,0,0);
+         pbuf->main.nRows -= (cf->postFrames + cf->preFrames);
+         cf->nSamples = pbuf->main.nRows;
+      }  
+      /*  Scale the variances */
+      if (cf->varScaleFN) {
+         if ((VectorSize (cf->varScale) != cf->tgtUsed) && (highDiff != TRUE))
+            HError(6376 ,"AddQualifiers: Mismatch beteen varScale (%d) and target size %d",
+                   VectorSize (cf->varScale), cf->tgtUsed);
+         if (trace&T_QUA)
+            printf("\nHParm:  variance normalisation for %d cols from %d rows",
+                   cf->tgtUsed, nRows);
+         
+         if (cf->varScaleVector == 0) {
+            HError (6376, "AddQualifiers: no variance scaling vector found");
+         }
+         else {
+            /* use predefined variance estimate */
+            /* !!! this hack is to check if the feature transform is only to append zeros,
+               we dont want to do CVN in those appended dimensions with zeros! */
+            if ((cf->MatTranFN != NULL) && (NumRows(cf->MatTran) > NumCols(cf->MatTran))){
+               d = NumCols(cf->MatTran);
+            }
+            else {
+               d = VectorSize(cf->varScaleVector);
+            }
+            step = cf->nCols;
+            for (i=0; i<d ; i++){
+               scale = sqrt(cf->varScale[i+1] / cf->varScaleVector[i+1]);
+               fp = data+i;
+               for (j=0; j<nRows; j++) {
+                  *fp *= scale;
+                  fp += step;
+               }
             }
          }
       }
    }
-
+   
+   else {
+      /*  Scale the variances */
+      if (cf->varScaleFN) {
+         if ((VectorSize (cf->varScale) != cf->tgtUsed) && (highDiff != TRUE))
+            HError(6376 ,"AddQualifiers: Mismatch beteen varScale (%d) and target size %d",
+                   VectorSize (cf->varScale), cf->tgtUsed);
+         if (trace&T_QUA)
+            printf("\nHParm:  variance normalisation for %d cols from %d rows",
+                   cf->tgtUsed, nRows);
+         
+         if (cf->varScaleVector == 0) {
+            HError (6376, "AddQualifiers: no variance scaling vector found");
+         }
+         else {
+            /* use predefined variance estimate */
+            d = VectorSize(cf->varScaleVector);
+            step = cf->nCols;
+            for (i=0; i<d ; i++){
+               scale = sqrt(cf->varScale[i+1] / cf->varScaleVector[i+1]);
+               fp = data+i;
+               for (j=0; j<nRows; j++) {
+                  *fp *= scale;
+                  fp += step;
+               }
+            }
+         }
+      }
+      
+      if ((cf->MatTranFN != NULL) && (!cf->preQual)) {      
+         if (cf->matPK != cf->curPK) {
+            /* Need to check that the correct qualifiers are used */
+            HError(999,"Incorrect qualifiers in parameter type (%s %s)",
+                   ParmKind2Str(cf->curPK,buff1),ParmKind2Str(cf->matPK,buff2));
+         }
+         ApplyStaticMat(cf,data,cf->MatTran,cf->nCols,nRows,0,0);
+         pbuf->main.nRows -= (cf->postFrames + cf->preFrames);
+         cf->nSamples = pbuf->main.nRows;
+      }      
+   }
+   
    if (trace&T_QUA)
       printf("\nHParm:  quals added to give %s\n",
              ParmKind2Str (cf->curPK, buf));
@@ -1300,7 +1743,7 @@ static void DelQualifiers(float *data, IOConfig cf)
 {
    char buf[100];
    int si,d,used=cf->nUsed;
-   short span[8];
+   short span[12];
    Boolean baseX,statX,eX,zX;
    
    statX = (cf->curPK&BASEMASK) != (cf->tgtPK&BASEMASK);
@@ -1473,7 +1916,7 @@ static void XformBase(float *data, IOConfig cf)
    char b1[50],b2[50];
    ParmKind curBase,tgtBase,quals;
    int d, dnew, lifter;
-   short span[8];
+   short span[12];
    
    curBase = cf->curPK&BASEMASK;
    tgtBase = cf->tgtPK&BASEMASK;
@@ -1642,7 +2085,14 @@ static void SetUpForCoding(MemHeap *x, IOConfig cf, int frSize)
    }
    if (!ValidConversion(cf->curPK,cf->tgtPK))
       HError(6322,"SetUpForCoding: cannot convert to %s",ParmKind2Str(cf->tgtPK,buf));
-   cf->tgtUsed = TotalComps(NumStatic(cf->nUsed,cf->curPK),cf->tgtPK);
+   if (cf->MatTranFN == NULL) 
+      cf->tgtUsed = TotalComps(NumStatic(cf->nUsed,cf->curPK),cf->tgtPK);
+   else {
+      if (cf->preQual)
+         cf->tgtUsed = NumRows(cf->MatTran)*(1+HasDelta(cf->tgtPK)+HasAccs(cf->tgtPK));
+      else 
+         cf->tgtUsed = NumRows(cf->MatTran);
+   }
    cf->nCols = (cf->nUsed>cf->tgtUsed)?cf->nUsed:cf->tgtUsed;
    cf->nCvrt = cf->nUsed;
 }
@@ -2379,7 +2829,15 @@ void ExplainObservation(Observation *o, int itemsPerLine)
    if (o->pk&HASNULLE) ++nTotal;
    n=1; 
    if (o->pk&HASDELTA) {
-      ++n; if (o->pk&HASACCS) ++n;
+      ++n; if (o->pk&HASACCS) {
+        ++n;
+        if (o->pk&HASTHIRD){
+           ++n;
+           if (highDiff == TRUE){
+              ++n;
+           }
+        }
+      }
    }
    nStatic = nTotal/n;
    if (o->eSep) --nStatic;
@@ -2522,7 +2980,7 @@ void ZeroStreamWidths(int numS, short *swidth)
 void  SetStreamWidths(ParmKind pk, int size, short *swidth, Boolean *eSep)
 { 
    Boolean isSet,ok;
-   short span[8], sw[SMAX];
+   short span[12], sw[SMAX];
    char buf[50];
    int s,neTab,neObs;
    
@@ -2637,7 +3095,7 @@ static void LoadCMeanVector( MemHeap* x , IOConfig cf , char* fname )
    pk = Str2ParmKind (buf+1);
 
    /* check if ParmKind matches with target ParmKind */
-   tgtMask = ~( cf->tgtPK & ( HASDELTA | HASACCS | HASZEROM ) ); /* mask irrelevant target flags */
+   tgtMask = ~( cf->tgtPK & ( HASDELTA | HASACCS | HASTHIRD | HASZEROM ) ); /* mask irrelevant target flags */
    if ((pk & tgtMask) != (cf->tgtPK & tgtMask))
       HError(6376, "LoadCMeanVector: ParmKind mismatch %s not a subset of %s",
              ParmKind2Str (pk, mfname), ParmKind2Str (cf->tgtPK, buf));
@@ -2667,12 +3125,12 @@ static void LoadVarScaleVector(MemHeap* x, IOConfig cf, char *fname)
 {
    static char mfname_prev[MAXFNAMELEN] = "";
    static Vector varVector = NULL;
-
    char mfname[MAXFNAMELEN]; /* actual mean filename */
    char buf[MAXSTRLEN];    /* temporary working buffer */
    Source src;
    ParmKind pk;
-   int dim;
+   int dim,i,NewFDim,FDim;
+   Matrix CepstrVarNorm,NewCepstrVarNorm;
 
    /* make filename and open it*/
    if (cf->varScaleDN == 0 || cf->varScaleMask == 0)
@@ -2682,14 +3140,15 @@ static void LoadVarScaleVector(MemHeap* x, IOConfig cf, char *fname)
 
    MakeFN (mfname, cf->varScaleDN, 0, buf);
    
-   /* caching of vector */
+   /* caching of vector: if the same side as the previous one, just use the cached one */
    if (strcmp (buf, mfname_prev) == 0 ){ /* names match , old vector must be the same */
       cf->varScaleVector = CreateVector (x, VectorSize (varVector));
       CopyVector(varVector, cf->varScaleVector);
       return;
    }
-   else
+   else {
       strcpy(mfname_prev, buf);
+   }
 
    /* read file header and ParmKind */
    if (InitSource (buf, &src, NoFilter) < SUCCESS)
@@ -2716,15 +3175,44 @@ static void LoadVarScaleVector(MemHeap* x, IOConfig cf, char *fname)
       HError (6376, "LoadVarScaleVector: <VARIANCE> missing, read: %s", buf);
    ReadInt (&src, &dim, 1, FALSE);
 
-   /* caching of vector */
+   /* refresh the cache if a new side */
    if (varVector)
       Dispose (&gcheap, varVector);
    varVector = CreateVector (&gcheap, dim);
    if (!ReadVector (&src, varVector, FALSE))
       HError(6376,"LoadVarScaleVector: Couldn't read var scale vector from file");
+   
+   /* Apply the linear transform to the cepstral variance normalizer if needed */
+   if (cf->MatTranFN != NULL) {
+      
+      FDim = NumCols(cf->MatTran);
+      NewFDim = NumRows(cf->MatTran);
+      NewCepstrVarNorm = CreateMatrix(x,NewFDim,NewFDim);
+      ZeroMatrix(NewCepstrVarNorm);
+      CepstrVarNorm = CreateMatrix(x,FDim,FDim);
+      ZeroMatrix(CepstrVarNorm);
+
+      for (i=1;i<=FDim;i++){
+         CepstrVarNorm[i][i] = varVector[i];
+      }
+      
+      LinTranQuaProd(NewCepstrVarNorm,cf->MatTran,CepstrVarNorm);
+
+      if (varVector)
+         Dispose (&gcheap, varVector);
+      varVector = CreateVector(&gcheap,NewFDim);
+      ZeroVector(varVector);
+      
+      for (i=1;i<=NewFDim;i++){
+         varVector[i] = NewCepstrVarNorm[i][i];
+      }
+      
+      dim = NewFDim;
+   }
 
    cf->varScaleVector = CreateVector (x, dim);
    CopyVector (varVector, cf->varScaleVector);
+
    CloseSource (&src);      
 }
 
@@ -2945,7 +3433,7 @@ static ReturnStatus OpenParmChannel(ParmBuf pbuf,char *fname, int *ret_val)
    Boolean isPipe;
    FILE *f;
    long nSamples,sampPeriod;
-   int initRows,i;
+   int initRows,i, tmp;
    short sampSize,kind;
    char b1[50],b2[50];
    Boolean isEXF;
@@ -3084,13 +3572,20 @@ static ReturnStatus OpenParmChannel(ParmBuf pbuf,char *fname, int *ret_val)
          pbuf->fShort=FALSE;
       }
       tgtBase = cf->tgtPK&BASEMASK;
-      if ((cf->srcPK&BASEMASK)!=tgtBase && 
-          (tgtBase==LPCEPSTRA || tgtBase==MFCC))
-         cf->tgtUsed = TotalComps(cf->numCepCoef,cf->tgtPK);
+      if ((cf->curPK&BASEMASK)!=tgtBase && (tgtBase==LPCEPSTRA || tgtBase==MFCC))
+         tmp = TotalComps(cf->numCepCoef,cf->tgtPK);
       else 
-         cf->tgtUsed = TotalComps(NumStatic(cf->srcUsed,cf->srcPK),
-                                  cf->tgtPK);
-      cf->nCols=cf->tgtUsed;
+         tmp = TotalComps(NumStatic(cf->srcUsed,cf->srcPK),cf->tgtPK);
+
+      if (cf->MatTranFN != NULL) {
+         if (cf->preQual)
+            cf->tgtUsed = NumRows(cf->MatTran)*(1+HasDelta(cf->tgtPK)+HasAccs(cf->tgtPK));
+         else 
+            cf->tgtUsed = NumRows(cf->MatTran);
+      } else 
+         cf->tgtUsed = tmp;
+      if (tmp>cf->tgtUsed) cf->nCols=tmp;
+      else cf->nCols = cf->tgtUsed;
    }
    /* Cannot use energy sil det from parameter files */
    cf->useSilDet=FALSE;
@@ -3896,7 +4391,12 @@ int ObsInBuffer(ParmBuf pbuf)
       CheckAndFillBuffer(pbuf);
    /* if speech detector yet to trigger return 0 */
    if (pbuf->outRow<pbuf->spDetSt) return(0); 
-   return (pbuf->spDetFin - pbuf->outRow + 1);
+   /* This has been altered to allow for the matrix transformation stuff */
+   /*
+     return (pbuf->spDetFin - pbuf->outRow + 1);
+   */
+   pbuf->spDetEn = pbuf->main.nRows;
+   return (pbuf->main.nRows);
 }
 
 /* EXPORT->BufferStatus: Return current status of buffer */
@@ -4014,6 +4514,7 @@ void GetBufferInfo(ParmBuf pbuf, BufferInfo *info)
       info->tgtVecSize -= 1;
    info->saveCompressed = cf->saveCompressed;
    info->saveWithCRC = cf->saveWithCRC;
+   info->matTranFN = cf->MatTranFN;
 
    /* Fake spDetParmsSet to make self calibrating appear always set */
    info->spDetParmsSet=(chan->spDetParmsSet||(cf->selfCalSilDet!=0));
@@ -4109,7 +4610,7 @@ void WriteESIGPHeader(FILE *f, IOConfig cf, HTime sampPeriod, short sampSize, sh
    FieldList inList, outList=NULL;
    int len, i;
    char buf[30];
-   short elSize, span[8];
+   short elSize, span[12];
 
    /* Create header items first */
    field = NewFieldSpec( CHAR, 1 );
@@ -4326,6 +4827,17 @@ ReturnStatus SaveBuffer(ParmBuf pbuf, char *fname, FileFormat ff)
    short sampSize,kind,*sp;
    long nSamples,sampPeriod;
    char buf[50];
+   
+   /*
+     if one needs to fake a target parm kind for the buffer to be saved, 
+      then the channel config setup is switched here. This is a hack but 
+      unfortunately various old versions, mainly decoders, are not happy 
+      with all the parm kind types supported in this module, unless they 
+      are cheated in such a way.
+   */
+   if (ForcePKind != ANON) {
+      cf->tgtPK = ForcePKind;
+   }
    
    if (ff != UNDEFF) cf->tgtFF = ff;
    if (pbuf->spDetEn>=0 && pbuf->main.nRows+pbuf->main.stRow>pbuf->spDetEn)

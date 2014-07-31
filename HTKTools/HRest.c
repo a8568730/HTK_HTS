@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2002  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HRest.c: HMM initialisation program           */
 /* ----------------------------------------------------------- */
 
-char *hrest_version = "!HVER!HRest:   3.1.1 [CUED 05/06/02]";
-char *hrest_vc_id = "$Id: HRest.c,v 1.8 2002/06/05 14:07:14 ge204 Exp $";
+char *hrest_version = "!HVER!HRest:   3.2 [CUED 09/12/02]";
+char *hrest_vc_id = "$Id: HRest.c,v 1.9 2002/12/19 16:37:40 ge204 Exp $";
 
 /*
    This program is used to estimate the transition parameters,
@@ -341,6 +354,7 @@ void Initialise1(void)
       HError(2128,"Initialise1: MakeOneHMM failed");
    if(LoadHMMSet( &hset,PathOf(hmmfn,path),ExtnOf(hmmfn,ext))<SUCCESS)
       HError(2128,"Initialise1: LoadHMMSet failed");
+   SetParmHMMSet(&hset);
    if (hset.hsKind!=PLAINHS)
       uFlags = (UPDSet) (uFlags & (~(UPMEANS|UPVARS)));
 

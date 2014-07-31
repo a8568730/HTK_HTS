@@ -19,8 +19,8 @@
 /* File: HSmooth.c: Perform Parameter Smoothing on a HMM Set   */
 /* ----------------------------------------------------------- */
 
-char *hsmooth_version = "!HVER!HSmooth:   3.1.1 [CUED 05/06/02]";
-char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.8 2002/06/05 14:07:14 ge204 Exp $";
+char *hsmooth_version = "!HVER!HSmooth:   3.2 [CUED 09/12/02]";
+char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.9 2002/12/19 16:37:40 ge204 Exp $";
 
 
 #include "HShell.h"     /* HMM ToolKit Modules */

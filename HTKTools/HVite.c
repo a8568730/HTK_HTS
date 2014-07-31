@@ -32,8 +32,8 @@
 /*      File: HVite.c: recognise or align file or audio        */
 /* ----------------------------------------------------------- */
 
-char *hvite_version = "!HVER!HVite:   3.1.1 [CUED 05/06/02]";
-char *hvite_vc_id = "$Id: HVite.c,v 1.11 2002/06/05 14:07:14 ge204 Exp $";
+char *hvite_version = "!HVER!HVite:   3.2 [CUED 09/12/02]";
+char *hvite_vc_id = "$Id: HVite.c,v 1.12 2002/12/19 16:37:40 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -488,6 +488,7 @@ void Initialise(void)
    /* Load hmms, convert to inverse DiagC */
    if(MakeHMMSet(&hset,hmmListFn)<SUCCESS) 
       HError(3228,"Initialise: MakeHMMSet failed");
+   SetParmHMMSet(&hset);
    if(LoadHMMSet(&hset,hmmDir,hmmExt)<SUCCESS) 
       HError(3228,"Initialise: LoadHMMSet failed");
    ConvDiagC(&hset,TRUE);
@@ -720,7 +721,10 @@ Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam,
    
    if (lat==NULL) {
       if ((trace & T_TOP) && fn != NULL){
-         printf("No tokens survived to final node of network\n");
+         if (restartable)
+            printf("No tokens survived to final node of network at beam %.1f\n", currGenBeam);
+         else
+            printf("No tokens survived to final node of network\n");
          fflush(stdout);
       } else if (fn==NULL){
          printf("Sorry [%d frames]?\n",nFrames);fflush(stdout);

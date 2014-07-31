@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*          2001-2002 Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HLM.c  language model handling                */
 /* ----------------------------------------------------------- */
 
-char *hlm_version = "!HVER!HLM:   3.1.1 [CUED 05/06/02]";
-char *hlm_vc_id = "$Id: HLM.c,v 1.7 2002/06/05 14:06:45 ge204 Exp $";
+char *hlm_version = "!HVER!HLM:   3.2 [CUED 09/12/02]";
+char *hlm_vc_id = "$Id: HLM.c,v 1.9 2002/12/19 16:37:11 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -101,12 +114,12 @@ static int GetInt(void)
 }
 
 /* GetFLoat: read float from input stream */
-static float GetFloat(void)
+static float GetFloat(Boolean bin)
 {
    float x;
    char buf[100];
 
-   if (!ReadFloat(&source,&x,1,FALSE))
+   if (!ReadFloat(&source,&x,1,bin))
       HError(8150,"GetFloat: Float Expected at %s",SrcPosition(source,buf));
    return x;
 }
@@ -350,8 +363,11 @@ NGramLM *CreateBoNGram(LModel *lm,int vocSize, int counts[NSIZE])
    return(nglm);
 }   
 
+#define BIN_ARPA_HAS_BOWT 1
+#define BIN_ARPA_INT_LMID 2
+
 /* ReadNGrams: read n grams list from file */
-static int ReadNGrams(NGramLM *nglm,int n,int count)
+static int ReadNGrams(NGramLM *nglm,int n,int count, Boolean bin)
 {
    float prob;
    LabId wdid;
@@ -360,6 +376,7 @@ static int ReadNGrams(NGramLM *nglm,int n,int count)
    lmId ndx[NSIZE+1];
    NEntry *ne,*le=NULL;
    int i, g, idx, total;
+   unsigned char size, flags;
 
    cse = (SEntry *) New(nglm->heap,count*sizeof(SEntry));
    for (i=1;i<=NSIZE;i++) ndx[i]=0;
@@ -370,7 +387,13 @@ static int ReadNGrams(NGramLM *nglm,int n,int count)
    total=0;
    for (g=1; g<=count; g++){
       PROGRESS(g);
-      prob = GetFloat()*LN10;
+
+      if (bin) {
+         size = GetCh (&source);
+         flags = GetCh (&source);
+      }
+      
+      prob = GetFloat(bin)*LN10;
 
       if (n==1) { /* unigram treated as special */
          ReadLMWord(wd);
@@ -384,9 +407,25 @@ static int ReadNGrams(NGramLM *nglm,int n,int count)
          ndx[0]=g;
       } else {    /* bigram, trigram, etc. */
          for (i=0;i<n;i++) {
-            ReadLMWord(wd);
-            wdid = GetLabId(wd, FALSE);
-            idx = (wdid==NULL?0:(int)wdid->aux);
+            if (bin) {
+               if (flags & BIN_ARPA_INT_LMID) {
+                  unsigned int ui;
+                  if (!ReadInt (&source, &ui, 1, bin))
+                     HError (9999, "ReadNGrams: failed reading int lm word id");
+                  idx = ui;
+               }
+               else {
+                  unsigned short us;
+                  if (!ReadShort (&source, &us, 1, bin))
+                     HError (9999, "ReadNGrams: failed reading short lm word id at");
+                  idx = us;
+               }
+            }
+            else {
+               ReadLMWord(wd);
+               wdid = GetLabId(wd, FALSE);
+               idx = (wdid==NULL?0:(int)wdid->aux);
+            }
             if (idx<1 || idx>nglm->vocSize)
                HError(8150,"ReadNGrams: Unseen word (%s) in %dGram",wd,n);
             ndx[n-1-i]=idx;
@@ -416,10 +455,18 @@ static int ReadNGrams(NGramLM *nglm,int n,int count)
       ne->nse++; cse++;
 
       /* read back-off weight */
-      SkipWhiteSpace(&source);
-      if (!source.wasNewline) {
-         ne=GetNEntry(nglm,ndx,TRUE);
-         ne->bowt = GetFloat()*LN10;
+      if (bin) {
+         if (flags & BIN_ARPA_HAS_BOWT) {
+            ne = GetNEntry(nglm,ndx,TRUE);
+            ne->bowt = GetFloat (TRUE)*LN10;
+         }
+      }
+      else {
+         SkipWhiteSpace(&source);
+         if (!source.wasNewline) {
+            ne=GetNEntry(nglm,ndx,TRUE);
+            ne->bowt = GetFloat(FALSE)*LN10;
+         }
       }
    }
 
@@ -443,7 +490,9 @@ static void ReadBoNGram(LModel *lm,char *fn)
 {
    NGramLM *nglm;
    int i,j,k,counts[NSIZE+1];
+   Boolean ngBin[NSIZE+1];
    char buf[MAXSTRLEN+1],syc[64];
+   char ngFmtCh;
 
    if (trace&T_TIO)
       printf("\nBOffB "),fflush(stdout);
@@ -455,18 +504,32 @@ static void ReadBoNGram(LModel *lm,char *fn)
    for (i=1;i<=NSIZE;i++) counts[i]=0;
    for (i=1;i<=NSIZE;i++) {
       GetInLine(buf);
-      if (sscanf(buf, "ngram %d=%d", &j, &k)!=2 && i>1)
+      if (sscanf(buf, "ngram %d%c%d", &j, &ngFmtCh, &k)!=3 && i>1)
          break;
       if (i!=j || k==0) 
          HError(8150,"ReadBoNGram: %dGram count missing (%s)",i,buf);
+
+      switch (ngFmtCh) {
+      case '=':
+         ngBin[j] = FALSE;
+         break;
+      case '~':
+         ngBin[j] = TRUE;
+         break;
+      default:
+         HError (9999, "ReadARPALM: unknown ngram format type '%c'", ngFmtCh);
+      }
       counts[j]=k;
    }
+
+   if (ngBin[1])
+      HError (8113, "ReadARPALM: unigram must be stored as text");
 
    nglm=CreateBoNGram(lm,counts[1],counts);
    for (i=1;i<=nglm->nsize;i++) {
       sprintf(syc,"\\%d-grams:",i);
       SyncStr(buf,syc);
-      ReadNGrams(nglm,i,nglm->counts[i]);
+      ReadNGrams(nglm,i,nglm->counts[i], ngBin[i]);
    }
    SyncStr(buf,"\\end\\");
    CloseSource(&source);
@@ -539,7 +602,7 @@ int ReadRow(Vector v)
    N = VectorSize(v);
    i=0; 
    while(!source.wasNewline) {
-      x = GetFloat();
+      x = GetFloat(FALSE);
       c=GetCh(&source);
       if (c == '*')
          cnt=GetInt();
@@ -807,5 +870,143 @@ void ClearLModel(LModel *lm)
       break;
    }
 }
+
+/*----------------------------------------------------------------------*/
+
+#ifndef NO_LAT_LM
+/* FindSEntry
+
+     find SEntry for wordId in array using binary search
+*/
+static SEntry *FindSEntry (SEntry *se, lmId pronId, int l, int h)
+{
+   /*#### here l,h,c must be signed */
+   int c;
+
+   while (l <= h) {
+      c = (l + h) / 2;
+      if (se[c].word == pronId) 
+         return &se[c];
+      else if (se[c].word < pronId)
+         l = c + 1;
+      else
+         h = c - 1;
+   }
+
+   return NULL;
+}
+
+/* LMTransProb_ngram
+
+     return logprob of transition from src labelled word. Also return dest state.
+     ngram case
+*/
+LogFloat LMTrans (LModel *lm, LMState src, LabId wdid, LMState *dest)
+{
+   NGramLM *nglm;
+   LogFloat lmprob;
+   lmId hist[NSIZE] = {0};      /* initialise whole array to zero! */
+   int i, l;
+   NEntry *ne;
+   SEntry *se;
+   lmId word;
+
+   assert (lm->type == boNGram);
+   nglm = lm->data.ngram;
+
+   word = (int) wdid->aux;
+
+   if (word==0 || word>lm->data.ngram->vocSize) {
+      HError (-9999, "word %d not in LM wordlist", word);
+      *dest = NULL;
+      return (LZERO);
+   }
+
+   ne = src;
+   
+   if (!src) {          /* unigram case */
+      lmprob = nglm->unigrams[word];
+   }
+   else {
+      /* lookup prob p(word | src) */
+      /* try to find pronid in SEntry array */
+      se = FindSEntry (ne->se, word, 0, ne->nse - 1);
+
+      assert (!se || (se->word == word));
+
+      if (se)        /* found */
+         lmprob = se->prob;
+      else {             /* not found */
+         lmprob = 0.0;
+         l = 0;
+         hist[NSIZE-1] = 0;
+         for (i = 0; i < NSIZE-1; ++i) {
+            hist[i] = ne->word[i];
+            if (hist[i] != 0)
+               l = i;
+         } /* l is now the index of the last (oldest) non zero element */
+         
+         for ( ; l > 0; --l) {
+            if (ne)
+               lmprob += ne->bowt;
+            hist[l] = 0;   /* back-off: discard oldest word */
+            ne = GetNEntry (nglm, hist, FALSE);
+            if (ne) {   /* skip over non existing hists. fix for weird LMs */
+               /* try to find pronid in SEntry array */
+               se = FindSEntry (ne->se, word, 0, ne->nse - 1);
+               assert (!se || (se->word == word));
+               if (se) { /* found it */
+                  lmprob += se->prob;
+                  l = -1;
+                  break;
+               }
+            }
+         }
+         if (l == 0) {          /* backed-off all the way to unigram */
+            assert (!se);
+            lmprob += ne->bowt;
+            lmprob += nglm->unigrams[word];
+         }
+      }
+   }
+
+
+   /* now determine dest state */
+   if (src) {
+      ne = (NEntry *) src;
+      
+      l = 0;
+      hist[NSIZE-1] = 0;
+      for (i = 1; i < NSIZE-1; ++i) {
+         hist[i] = ne->word[i-1];
+         if (hist[i] != 0)
+            l = i;
+      } /* l is now the index of the last (oldest) non zero element */
+   }
+   else {
+      for (i = 1; i < NSIZE-1; ++i)
+         hist[i] = 0;
+      l = 1;
+   }
+
+   hist[0] = word;
+
+   ne = (LMState) GetNEntry (nglm, hist, FALSE);
+   for ( ; !ne && (l > 0); --l) {
+      hist[l] = 0;              /* back off */
+      ne = (LMState) GetNEntry (nglm, hist, FALSE);
+   }
+   /* if we left the loop because l=0, then ne is still NULL, which is what we want */
+
+   *dest = ne;
+
+#if 0
+   printf ("lmprob = %f  dest %p\n", lmprob, *dest);
+#endif
+
+   return (lmprob);
+}
+#endif
+
 
 /* ------------------------- End of HLM.c ------------------------- */

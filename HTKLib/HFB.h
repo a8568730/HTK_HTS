@@ -19,7 +19,7 @@
 /*         File: HFB.h: Forward Backward routines module       */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HFB:   3.1.1 [CUED 05/06/02] */
+/* !HVER!HFB:   3.2 [CUED 09/12/02] */
 
 #ifndef _HFB_H_
 #define _HFB_H_
@@ -75,7 +75,8 @@ typedef struct {
   
   MemHeap abMem;      /* alpha beta memory heap */
   PruneInfo *pInfo;   /* pruning information */
-  HLink *qList;       /* array[1..Q] of active HMM defs */
+  HLink *up_qList;    /* array[1..Q] of active HMM defs */
+  HLink *al_qList;    /* array[1..Q] of active align HMM defs */
   LabId  *qIds;       /* array[1..Q] of logical HMM names (in qList) */
   short *qDms;        /* array[1..Q] of minimum model duration */
   DVector *alphat;    /* array[1..Q][1..Nq] of prob */
@@ -90,9 +91,11 @@ typedef struct {
 
 /* structure storing the model set and a pointer to it's alpha-beta pass structure */
 typedef struct {
-
-  HMMSet *hset;       /* set of HMMs to be re-estimated */
-  HSetKind hsKind;    /* kind of the HMM system */
+  Boolean twoModels;  /* Enable two model reestimation */
+  HMMSet *up_hset;    /* set of HMMs to be re-estimated */
+  HMMSet *al_hset;    /* HMMs to use for alignment */
+                      /* these are equal unless 2 model reest */
+  HSetKind hsKind;    /* kind of the alignment HMM system */
   UPDSet uFlags;      /* parameter update flags */
   int skipstart;      /* Skipover region - debugging only */
   int skipend;
@@ -110,10 +113,13 @@ typedef struct {
 void InitFB(void) ;
 
 /* Initialise the forward backward memory stacks etc */
-void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *set,
-		       RegTransInfo *rt, UPDSet uset,
-		       LogDouble pruneInit, LogDouble pruneInc, 
-		       LogDouble pruneLim, float minFrwdP);
+void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *set, 
+                       RegTransInfo *rt, UPDSet uset, 
+                       LogDouble pruneInit, LogDouble pruneInc, 
+                       LogDouble pruneLim, float minFrwdP);
+
+/* Use a different model set for alignment */
+void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset);
 
 /* Initialise the utterance Information */
 void InitUttInfo(UttInfo *utt, Boolean twoFiles );
