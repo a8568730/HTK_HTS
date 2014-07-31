@@ -33,7 +33,7 @@
 /* ----------------------------------------------------------- */
 
 char *hparm_version = "!HVER!HParm:   3.4 [CUED 25/04/06]";
-char *hparm_vc_id = "$Id: HParm.c,v 3.5 2006/05/02 16:15:37 jal58 Exp $";
+char *hparm_vc_id = "$Id: HParm.c,v 1.1.1.1 2006/10/11 09:54:58 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -75,7 +75,7 @@ static int varScaleDim=0;
 static char varScaleFN[MAXFNAMELEN] = "\0";
 
 static Boolean highDiff = FALSE;   /* compute higher oder differentials, only up to fourth */
-static Boolean UseOldXFormCVN = TRUE;  /* this allows us to go back to the old version with broken CVN */
+static Boolean UseOldXFormCVN = FALSE;  /* this allows us to go back to the old version with broken CVN */
 static ParmKind ForcePKind = ANON; /* force to output a customized parm kind to make older versions
                                     happy for all the parm kind types supported here */
 

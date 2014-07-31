@@ -37,6 +37,15 @@ Can I use this version in commercial product Research & Development?
         Yes. You can for example use HTK3 to train models that are
         then used in your products.
 
+Can I use HDecode in commercial product Research & Development?
+
+        The licence agreement for HDecode is more restrictive that 
+        the standard HTK licence. HDecode is primarily distributed for 
+        research purposes only, BUT may be used as part of the training
+        process for producing models for products. This is to 
+        enable users to make use of the discriminative training
+        code. If in doubt you should contact the licensor.
+
 
 General
 =======
@@ -75,22 +84,15 @@ What is the difference between this version and the Entropic one?
         V2.2_ref.
 
 
-Can I build the CU-HTK Hub4/5 evaluation system with HTK3?
+Can I build the CU-HTK evaluation system with HTK3?
 
 	No. The HTK version used internally at the Cambridge
 	University Engineering Department has some extra
-	functionality not available in HTK3; such as PLP
-	coefficients; vocal tract length normalisation; extended 
-        types of adaptation; lattice operations; support for
+	functionality not available in HTK3; support for
         context dependency beyond triphones; long-span language model
-        support etc. Some of the most generally useful of these
-        features will be made available in HTK3 over the next few months.
-        In addition to this HTK3 does not include a large vocabulary
-        decoder that is usable with cross-word triphones and 
-        long-span language models at the moment (HVite can rescore
-        but not generated lattices for such configurations). 
-        We hope to be able to provide a capable large vocabulary decoder
-        in the medium term.
+        support, confusion network generation and combination
+        etc. Some of the most generally useful of these
+        features may be made available in future releases of HTK.
 
 What kind of computer/OS do I need to run HTK3?
 

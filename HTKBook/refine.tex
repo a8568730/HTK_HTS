@@ -666,14 +666,22 @@ The \texttt{MU} command\index{mu@\texttt{MU} command} has the form
 \begin{verbatim}
      MU n itemList
 \end{verbatim}
-where \texttt{n} gives the new number of mixture components required and
-\texttt{itemList} defines the actual mixture distributions to modify.  This
-command works by repeatedly splitting the mixture with the largest mixture
-weight until the required number of components is obtained.  The actual
-split is performed by copying the mixture, dividing the weights of both
-copies by 2, and finally perturbing the means by plus or minus 0.2 standard
-deviations.
-For example, the command
+where \texttt{n} gives the new number of mixture components required
+and \texttt{itemList} defines the actual mixture distributions to
+modify.  This command works by repeatedly splitting the 'heaviest'
+mixture component until the required number of components is obtained.
+The 'heaviness' score of a mixture component is defined as the mixture
+weight minus the number of splits involving that component that have
+already been carried out by the current MU command. Subtracting the
+number of splits discourages repeated splitting of the same mixture
+component. If the GCONST value~\ref{s:hmmdef} of a component is more
+than four standard deviations smaller than the average gConst, a
+further adjustment is made to the 'heaviness' score of the component
+in order to make it very unlikely that the component will be selected
+for splitting. The actual split is performed by copying the mixture
+component, dividing the weights of both copies by 2, and finally
+perturbing the means by plus or minus 0.2 standard deviations.  For
+example, the command
 \begin{verbatim}
      MU 3 {aa.state[2].mix}
 \end{verbatim}

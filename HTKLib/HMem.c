@@ -20,7 +20,7 @@
 /* ----------------------------------------------------------- */
 
 char *hmem_version = "!HVER!HMem:   3.4 [CUED 25/04/06]";
-char *hmem_vc_id = "$Id: HMem.c,v 3.4 2006/05/01 16:56:03 jal58 Exp $";
+char *hmem_vc_id = "$Id: HMem.c,v 1.1.1.1 2006/10/11 09:54:58 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

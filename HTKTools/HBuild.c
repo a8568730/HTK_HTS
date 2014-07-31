@@ -20,7 +20,7 @@
 /* ----------------------------------------------------------- */
 
 char *hbuild_version = "!HVER!HBuild:   3.4 [CUED 25/04/06]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 3.4 2006/05/01 16:56:32 jal58 Exp $";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.1.1.1 2006/10/11 09:54:59 jal58 Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.

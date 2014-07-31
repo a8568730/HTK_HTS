@@ -39,7 +39,7 @@
 */
 
 char *hmap_version = "!HVER!HMap: 3.4 [CUED 25/04/06]";
-char *hmap_vc_id = "$Id: HMap.c,v 3.4 2006/05/01 16:56:03 jal58 Exp $";
+char *hmap_vc_id = "$Id: HMap.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>

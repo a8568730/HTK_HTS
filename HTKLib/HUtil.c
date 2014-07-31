@@ -33,7 +33,7 @@
 /* ----------------------------------------------------------- */
 
 char *hutil_version = "!HVER!HUtil:   3.4 [CUED 25/04/06]";
-char *hutil_vc_id = "$Id: HUtil.c,v 3.4 2006/05/01 16:56:04 jal58 Exp $";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.1.1.1 2006/10/11 09:54:59 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1191,6 +1191,7 @@ void SetMacroHook(MLink ml,Ptr hook)
    case 'r': /* fake */
    case 'b':
    case 'j':
+   case 'a':
       break;
    case '*': /* deleted */
    case 'o': /* fake */

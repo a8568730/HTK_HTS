@@ -20,7 +20,7 @@
 /* ----------------------------------------------------------- */
 
 char *hsgen_version = "!HVER!HSGen:   3.4 [CUED 25/04/06]";
-char *hsgen_vc_id = "$Id: HSGen.c,v 3.4 2006/05/01 16:56:35 jal58 Exp $";
+char *hsgen_vc_id = "$Id: HSGen.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

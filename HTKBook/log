@@ -1,0 +1,3722 @@
+latex htkbook
+This is pdfeTeX, Version 3.141592-1.21a-2.2 (Web2C 7.5.4)
+entering extended mode
+(./htkbook.tex
+LaTeX2e <2003/12/01>
+Babel <v3.8d> and hyphenation patterns for american, french, german, ngerman, b
+ahasa, basque, bulgarian, catalan, croatian, czech, danish, dutch, esperanto, e
+stonian, finnish, greek, icelandic, irish, italian, latin, magyar, norsk, polis
+h, portuges, romanian, russian, serbian, slovak, slovene, spanish, swedish, tur
+kish, ukrainian, nohyphenation, loaded.
+(/usr/share/texmf/tex/latex/base/book.cls
+Document Class: book 2004/02/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/bk10.clo)) (./HTK.tex
+(/usr/share/texmf/tex/latex/graphics/epsfig.sty
+(/usr/share/texmf/tex/latex/graphics/graphicx.sty
+(/usr/share/texmf/tex/latex/graphics/keyval.sty)
+(/usr/share/texmf/tex/latex/graphics/graphics.sty
+(/usr/share/texmf/tex/latex/graphics/trig.sty)
+(/usr/share/texmf/tex/latex/graphics/graphics.cfg)
+(/usr/share/texmf/tex/latex/graphics/dvips.def))))
+(/usr/share/texmf/tex/latex/html/html.sty
+(/usr/share/texmf/tex/latex/hyperref/hyperref.sty
+(/usr/share/texmf/tex/latex/hyperref/pd1enc.def)
+(/usr/share/texmf/tex/latex/hyperref/hyperref.cfg)
+Implicit mode ON; LaTeX internals redefined
+(/usr/share/texmf/tex/latex/html/url.sty))
+*hyperref using driver hdvips*
+(/usr/share/texmf/tex/latex/hyperref/hdvips.def
+(/usr/share/texmf/tex/latex/hyperref/pdfmark.def)))
+(/usr/share/texmf/tex/latex/graphics/color.sty
+(/usr/share/texmf/tex/latex/graphics/color.cfg)
+(/usr/share/texmf/tex/latex/graphics/dvipsnam.def))
+(/usr/share/texmf/tex/latex/supertabular/supertabular.sty)
+(/usr/share/texmf/tex/latex/tools/calc.sty)
+(/usr/share/texmf/tex/latex/base/ifthen.sty))
+(/usr/share/texmf/tex/latex/base/makeidx.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+Writing index file htkbook.idx
+No file htkbook.aux.
+(/usr/share/texmf/tex/latex/hyperref/nameref.sty) (./htkbook.out)
+(./htkbook.out)
+Underfull \hbox (badness 10000) in paragraph at lines 63--64
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 71--82
+
+(/usr/share/texmf/tex/latex/base/omscmr.fd)
+Overfull \hbox (0.13022pt too wide) in paragraph at lines 91--92
+[]\OT1/cmr/m/n/14.4 COPYRIGHT 2001-2004 Cam-bridge Uni-ver-sity En-gi-neer-ing 
+De-part-
+[1] [2] [3] [1] (./fundaments.tex
+Chapter 1.
+<HTKFigs//overview.eps> (/usr/share/texmf/tex/latex/amsfonts/umsa.fd)
+(/usr/share/texmf/tex/latex/amsfonts/umsb.fd) <HTKFigs//messencode.eps>
+[2]
+
+LaTeX Warning: Reference `f:messencode' on page 3 undefined on input line 72.
+
+
+LaTeX Warning: Reference `f:isoprob' on page 3 undefined on input line 97.
+
+[3] <HTKFigs//isoprob.eps>
+
+LaTeX Warning: Reference `f:markovgen' on page 4 undefined on input line 142.
+
+
+LaTeX Warning: Reference `f:markovgen' on page 4 undefined on input line 148.
+
+
+LaTeX Warning: Reference `f:markovgen' on page 4 undefined on input line 160.
+
+<HTKFigs//markovgen.eps>
+
+LaTeX Warning: Reference `e:5' on page 4 undefined on input line 182.
+
+[4]
+
+LaTeX Warning: Reference `e:5' on page 5 undefined on input line 191.
+
+
+LaTeX Warning: Reference `e:6' on page 5 undefined on input line 191.
+
+
+LaTeX Warning: Reference `e:2' on page 5 undefined on input line 194.
+
+
+LaTeX Warning: Reference `e:2' on page 5 undefined on input line 196.
+
+
+LaTeX Warning: Reference `e:3' on page 5 undefined on input line 197.
+
+
+LaTeX Warning: Reference `f:useforiso' on page 5 undefined on input line 210.
+
+<HTKFigs//useforiso.eps>
+
+LaTeX Warning: Reference `c:HMMDefs' on page 5 undefined on input line 232.
+
+
+LaTeX Warning: Reference `c:discmods' on page 5 undefined on input line 233.
+
+[5]
+
+LaTeX Warning: Reference `c:speechio' on page 6 undefined on input line 270.
+
+<HTKFigs//subsmixrep.eps>
+
+LaTeX Warning: Reference `c:Training' on page 6 undefined on input line 296.
+
+
+LaTeX Warning: Reference `f:subsmixrep' on page 6 undefined on input line 296.
+
+[6]
+
+LaTeX Warning: Reference `e:11' on page 7 undefined on input line 321.
+
+
+LaTeX Warning: Reference `e:12' on page 7 undefined on input line 321.
+
+
+LaTeX Warning: Reference `e:11' on page 7 undefined on input line 326.
+
+
+LaTeX Warning: Reference `e:12' on page 7 undefined on input line 326.
+
+
+LaTeX Warning: Reference `e:11' on page 7 undefined on input line 331.
+
+
+LaTeX Warning: Reference `e:12' on page 7 undefined on input line 331.
+
+
+LaTeX Warning: Reference `e:11' on page 7 undefined on input line 345.
+
+
+LaTeX Warning: Reference `e:12' on page 7 undefined on input line 345.
+
+
+LaTeX Warning: Reference `e:13' on page 7 undefined on input line 360.
+
+
+LaTeX Warning: Reference `e:14' on page 7 undefined on input line 360.
+
+
+LaTeX Warning: Reference `c:Training' on page 7 undefined on input line 364.
+
+
+LaTeX Warning: Reference `e:13' on page 7 undefined on input line 366.
+
+
+LaTeX Warning: Reference `e:14' on page 7 undefined on input line 366.
+
+[7]
+
+LaTeX Warning: Reference `e:13' on page 8 undefined on input line 460.
+
+
+LaTeX Warning: Reference `e:14' on page 8 undefined on input line 460.
+
+[8]
+
+LaTeX Warning: Reference `e:16' on page 9 undefined on input line 531.
+
+
+LaTeX Warning: Reference `e:27' on page 9 undefined on input line 550.
+
+
+LaTeX Warning: Reference `f:vtrellis' on page 9 undefined on input line 556.
+
+
+LaTeX Warning: Reference `e:30' on page 9 undefined on input line 567.
+
+<HTKFigs//vtrellis.eps> [9]
+
+LaTeX Warning: Reference `f:messencode' on page 10 undefined on input line 589.
+
+
+
+LaTeX Warning: Reference `s:flatstart' on page 10 undefined on input line 617.
+
+
+LaTeX Warning: Reference `c:Training' on page 10 undefined on input line 639.
+
+[10]
+
+LaTeX Warning: Reference `e:30' on page 11 undefined on input line 677.
+
+
+LaTeX Warning: Reference `f:netforcsr' on page 11 undefined on input line 697.
+
+<HTKFigs//netforcsr.eps> [11]
+
+LaTeX Warning: Reference `f:wlroper' on page 12 undefined on input line 724.
+
+<HTKFigs//wlroper.eps> [12]
+
+LaTeX Warning: Reference `c:Adapt' on page 13 undefined on input line 779.
+
+) [13] (./htkoview.tex
+Chapter 2.
+<HTKFigs//toolkit.eps>
+
+LaTeX Warning: Reference `f:softarch' on page 14 undefined on input line 56.
+
+<HTKFigs//softarch.eps> [14]
+
+LaTeX Warning: Reference `c:confvars' on page 15 undefined on input line 108.
+
+[15]
+
+LaTeX Warning: Reference `f:sysoview' on page 16 undefined on input line 172.
+
+<HTKFigs//sysoview.eps> [16]
+
+LaTeX Warning: Reference `f:tsubword' on page 17 undefined on input line 238.
+
+<HTKFigs//tsubword.eps> [17] [18] [19]
+Overfull \hbox (5.33685pt too wide) in paragraph at lines 495--501
+[]\OT1/cmr/m/n/10 The speech in-put han-dling has been par-tially re-designed a
+nd a new energy-based speech/silence
+[20]) [21] (./exampsys.tex
+Chapter 3.
+<HTKFigs//recipe.eps>
+
+LaTeX Warning: Reference `c:toolref' on page 22 undefined on input line 77.
+
+[22]
+
+LaTeX Warning: Reference `f:dialnet' on page 23 undefined on input line 134.
+
+<HTKFigs//dialnet.eps> [23] <HTKFigs//step1.eps>
+
+LaTeX Warning: Reference `f:step1' on page 24 undefined on input line 156.
+
+[24] <HTKFigs//step2.eps>
+
+LaTeX Warning: Reference `f:step2' on page 25 undefined on input line 224.
+
+[25]
+Overfull \hbox (5.40805pt too wide) in paragraph at lines 261--265
+\OT1/cmr/m/n/10 Notice that func-tion words such as \OT1/cmtt/m/n/10 A \OT1/cmr
+/m/n/10 and \OT1/cmtt/m/n/10 TO \OT1/cmr/m/n/10 have mul-ti-ple pro-nun-ci-a-ti
+ons. The en-tries for \OT1/cmtt/m/n/10 SENT-START
+
+LaTeX Warning: Reference `f:step3' on page 26 undefined on input line 288.
+
+<HTKFigs//step3.eps> [26] [27]
+
+LaTeX Warning: Reference `f:step4' on page 28 undefined on input line 399.
+
+<HTKFigs//step4.eps> [28] [29] <HTKFigs//step5.eps>
+
+LaTeX Warning: Reference `f:step5' on page 30 undefined on input line 498.
+
+
+Overfull \hbox (51.0197pt too wide) in paragraph at lines 498--502
+\OT1/cmr/m/n/10 This is il-lus-trated in Fig. []. A sim-i-lar pro-ce-dure is us
+ed to code the test data (us-ing []\OT1/cmtt/m/n/10 TARGETKIND = MFCC_0_D_A
+[30]
+
+LaTeX Warning: Reference `f:MMFeg' on page 31 undefined on input line 599.
+
+<HTKFigs//MMFeg.eps> [31]
+
+LaTeX Warning: Reference `f:MMFeg' on page 32 undefined on input line 625.
+
+<HTKFigs//step6.eps>
+
+LaTeX Warning: Reference `f:step6' on page 32 undefined on input line 646.
+
+[32] <HTKFigs//egsils.eps>
+
+LaTeX Warning: Reference `f:egsils' on page 33 undefined on input line 672.
+
+[33] <HTKFigs//step7.eps>
+
+LaTeX Warning: Reference `f:step7' on page 34 undefined on input line 717.
+
+
+LaTeX Warning: Reference `f:step8' on page 34 undefined on input line 734.
+
+<HTKFigs//step8.eps> [34] [35] <HTKFigs//egtranstie.eps>
+
+LaTeX Warning: Reference `c:HMMDefs' on page 36 undefined on input line 846.
+
+
+LaTeX Warning: Reference `f:egtranstie' on page 36 undefined on input line 848.
+
+
+[36] <HTKFigs//step9.eps>
+
+LaTeX Warning: Reference `f:step9' on page 37 undefined on input line 886.
+
+[37] <HTKFigs//step10.eps> [38] [39]
+
+LaTeX Warning: Reference `f:step10' on page 40 undefined on input line 1077.
+
+
+LaTeX Warning: Reference `c:netdict' on page 40 undefined on input line 1121.
+
+[40] <HTKFigs//step11.eps> [41]) [42] [43] (./openviron.tex
+Chapter 4.
+<HTKFigs//Tool.shell.eps>
+
+LaTeX Warning: Reference `c:htkoview' on page 44 undefined on input line 65.
+
+[44]
+
+LaTeX Warning: Reference `s:stdopts' on page 45 undefined on input line 106.
+
+[45] <HTKFigs//Config.eps> [46]
+
+LaTeX Warning: Reference `f:Config' on page 47 undefined on input line 253.
+
+[47]
+
+LaTeX Warning: Reference `s:cmdline' on page 48 undefined on input line 342.
+
+[48] [49] [50]
+
+LaTeX Warning: Reference `t:openvcparms' on page 51 undefined on input line 670
+.
+
+
+LaTeX Warning: Reference `t:openvars' on page 51 undefined on input line 672.
+
+
+LaTeX Warning: Reference `t:stdopts' on page 51 undefined on input line 674.
+
+
+Overfull \hbox (3.89096pt too wide) in paragraph at lines 706--706
+[]\OT1/cmtt/m/n/10 NATURALWRITEORDER| 
+[51] [52]) [53] (./speechio.tex
+Chapter 5.
+<HTKFigs//Tool.spio.eps>
+
+LaTeX Warning: Reference `f:Spmods' on page 54 undefined on input line 73.
+
+<HTKFigs//Spmods.eps> [54] [55]
+
+LaTeX Warning: Reference `s:UseHList' on page 56 undefined on input line 188.
+
+
+LaTeX Warning: Reference `s:waveform' on page 56 undefined on input line 210.
+
+
+LaTeX Warning: Reference `s:audioio' on page 56 undefined on input line 215.
+
+
+LaTeX Warning: Reference `f:Blocking' on page 56 undefined on input line 219.
+
+
+LaTeX Warning: Reference `f:Blocking' on page 56 undefined on input line 238.
+
+[56] <HTKFigs//Blocking.eps> [57]
+
+LaTeX Warning: Reference `s:byteswap' on page 58 undefined on input line 354.
+
+
+LaTeX Warning: Reference `e:allpole' on page 58 undefined on input line 368.
+
+[58] [59]
+
+LaTeX Warning: Reference `f:melfbank' on page 60 undefined on input line 492.
+
+<HTKFigs//melfbank.eps>
+
+LaTeX Warning: Reference `f:vtlnpiecewise' on page 60 undefined on input line 5
+59.
+
+[60] <HTKFigs//vtlnpiecewise.eps>
+
+LaTeX Warning: Reference `e:ceplifter' on page 61 undefined on input line 592.
+
+[61] [62]
+
+LaTeX Warning: Reference `e:deltas' on page 63 undefined on input line 787.
+
+[63]
+
+LaTeX Warning: Reference `s:vquant' on page 64 undefined on input line 841.
+
+
+LaTeX Warning: Reference `s:waveform' on page 64 undefined on input line 842.
+
+[64] <HTKFigs//HTKFormat.eps>
+
+LaTeX Warning: Reference `f:HTKFormat' on page 65 undefined on input line 901.
+
+
+LaTeX Warning: Reference `s:UseHCopy' on page 65 undefined on input line 946.
+
+[65] [66]
+
+LaTeX Warning: Reference `s:parmstore' on page 67 undefined on input line 1041.
+
+
+
+LaTeX Warning: Reference `s:parmstore' on page 67 undefined on input line 1052.
+
+
+
+LaTeX Warning: Reference `s:iopipes' on page 67 undefined on input line 1101.
+
+[67] [68]
+
+LaTeX Warning: Reference `s:sigproc' on page 69 undefined on input line 1236.
+
+
+LaTeX Warning: Reference `s:singlepass' on page 69 undefined on input line 1257
+.
+
+[69]
+Overfull \hbox (11.7258pt too wide) in paragraph at lines 1293--1298
+[]\OT1/cmr/m/n/10 The first method of au-dio in-put con-trol in-volves the use 
+of an au-to-matic energy-based speech/silence
+<HTKFigs//endpointer.eps>
+
+LaTeX Warning: Reference `f:endpointer' on page 70 undefined on input line 1337
+.
+
+[70]
+
+LaTeX Warning: Reference `s:genio' on page 71 undefined on input line 1376.
+
+<HTKFigs//streams.eps> [71]
+
+LaTeX Warning: Reference `f:streams' on page 72 undefined on input line 1438.
+
+<HTKFigs//VQUse.eps> [72]
+
+LaTeX Warning: Reference `f:VQUse' on page 73 undefined on input line 1494.
+
+
+LaTeX Warning: Reference `f:VQUse' on page 73 undefined on input line 1494.
+
+[73]
+
+LaTeX Font Warning: Font shape `OT1/cmr/bx/sc' undefined
+(Font)              using `OT1/cmr/bx/n' instead on input line 1546.
+
+
+LaTeX Warning: Reference `s:genio' on page 74 undefined on input line 1549.
+
+[74]
+
+LaTeX Warning: Reference `s:parmstore' on page 75 undefined on input line 1663.
+
+
+[75] [76]
+
+LaTeX Warning: Reference `s:parmstore' on page 77 undefined on input line 1767.
+
+
+
+LaTeX Warning: Reference `s:vquant' on page 77 undefined on input line 1773.
+
+<HTKFigs//coercions.eps>
+
+LaTeX Warning: Reference `t:fileform' on page 77 undefined on input line 1803.
+
+
+LaTeX Warning: Reference `t:parmkinds' on page 77 undefined on input line 1805.
+
+
+
+LaTeX Warning: Reference `f:coercions' on page 77 undefined on input line 1806.
+
+
+
+LaTeX Warning: Reference `t:qualifiers' on page 77 undefined on input line 1808
+.
+
+
+LaTeX Warning: Reference `t:qualifiers' on page 77 undefined on input line 1812
+.
+
+
+LaTeX Warning: Reference `t:spiocparms1' on page 77 undefined on input line 181
+9.
+
+
+LaTeX Warning: Reference `t:spiocparms2' on page 77 undefined on input line 182
+0.
+
+[77] [78]
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1883--1883
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1884--1884
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1885--1885
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1886--1886
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1887--1887
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1892--1892
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1893--1893
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1894--1894
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1895--1895
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (3.89096pt too wide) in paragraph at lines 1897--1897
+[]\OT1/cmtt/m/n/10 NATURALWRITEORDER| 
+
+Overfull \hbox (5.01097pt too wide) in paragraph at lines 1905--1905
+[]\OT1/cmtt/m/n/10 256000.0| 
+
+Overfull \hbox (1.47966pt too wide) in paragraph at lines 1929--1929
+[]\OT1/cmr/m/n/10 Module| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1930--1930
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1931--1931
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1932--1932
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1934--1934
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1935--1935
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1936--1936
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1937--1937
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1939--1939
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Underfull \hbox (badness 1472) in paragraph at lines 1939--1941
+[]\OT1/cmr/m/n/10 Number of frames clas-si-fied as si-lence
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1941--1941
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1943--1943
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1945--1945
+[]\OT1/cmr/m/sc/10 HParm| 
+[79]) [80] (./labels.tex
+Chapter 6.
+<HTKFigs//Tool.labs.eps> [81]
+
+LaTeX Warning: Reference `f:labegs' on page 82 undefined on input line 70.
+
+
+LaTeX Warning: Reference `f:labegs' on page 82 undefined on input line 137.
+
+
+LaTeX Warning: Reference `f:labegs' on page 82 undefined on input line 146.
+
+
+LaTeX Warning: Reference `f:labegs' on page 82 undefined on input line 158.
+
+[82] [83] <HTKFigs//labegs.eps> [84]
+
+LaTeX Font Warning: Font shape `OMS/cmss/m/n' undefined
+(Font)              using `OMS/cmsy/m/n' instead
+(Font)              for symbol `textbraceleft' on input line 315.
+
+[85]
+Overfull \hbox (26.2777pt too wide) in paragraph at lines 441--448
+[]\OT1/cmr/m/n/10 A digit data base con-tains train-ing to-kens \OT1/cmtt/m/n/1
+0 one.1.wav, one.2.wav, one.3.wav, ..., two.1.wav,
+[86]
+
+LaTeX Warning: Reference `f:dbhier' on page 87 undefined on input line 498.
+
+<HTKFigs//dbhier.eps> [87] [88] [89]
+
+LaTeX Warning: Reference `s:labstruct' on page 90 undefined on input line 775.
+
+
+LaTeX Warning: Reference `t:labelcparms' on page 90 undefined on input line 796
+.
+
+[90]) [91] (./models.tex
+Chapter 7.
+<HTKFigs//Tool.model.eps> [92] <HTKFigs//hmm1.eps>
+
+LaTeX Warning: Reference `f:hmm1' on page 93 undefined on input line 102.
+
+[93]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 207--207
+[] 
+
+LaTeX Warning: Reference `s:hmmdef' on page 94 undefined on input line 213.
+
+
+LaTeX Warning: Reference `f:hmm1def' on page 94 undefined on input line 217.
+
+
+LaTeX Warning: Reference `f:hmm1' on page 94 undefined on input line 218.
+
+[94]
+
+LaTeX Warning: Reference `f:hmm2def' on page 95 undefined on input line 272.
+
+
+LaTeX Warning: Reference `f:hmm3def' on page 95 undefined on input line 295.
+
+
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 339--339
+[] 
+[95]
+
+LaTeX Warning: Reference `s:streams' on page 96 undefined on input line 370.
+
+
+LaTeX Warning: Reference `f:hmm4def' on page 96 undefined on input line 384.
+
+[96]
+
+LaTeX Warning: Reference `f:hmm4def' on page 97 undefined on input line 390.
+
+
+LaTeX Warning: Reference `e:cdpdf' on page 97 undefined on input line 441.
+
+
+LaTeX Warning: Reference `e:ddpdf' on page 97 undefined on input line 441.
+
+
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 494--494
+[] 
+[97] [98]
+
+LaTeX Warning: Reference `f:hmm2def' on page 99 undefined on input line 504.
+
+
+LaTeX Warning: Reference `f:mac5def' on page 99 undefined on input line 506.
+
+
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 547--547
+[] 
+
+LaTeX Warning: Reference `f:hmm5def' on page 99 undefined on input line 551.
+
+[99]
+
+LaTeX Warning: Reference `f:hierarch' on page 100 undefined on input line 598.
+
+<HTKFigs//hierarch.eps>
+
+LaTeX Warning: Reference `s:tmix' on page 100 undefined on input line 620.
+
+[100]
+
+LaTeX Warning: Reference `f:mac6def' on page 101 undefined on input line 650.
+
+
+LaTeX Warning: Reference `f:hmm6def' on page 101 undefined on input line 650.
+
+
+LaTeX Warning: Reference `f:hsetdef' on page 101 undefined on input line 672.
+
+
+LaTeX Warning: Reference `s:dischmm' on page 101 undefined on input line 701.
+
+
+LaTeX Warning: Reference `s:tmix' on page 101 undefined on input line 703.
+
+
+LaTeX Warning: Reference `f:hierarch' on page 101 undefined on input line 713.
+
+[101] <HTKFigs//hsetdef.eps> [102] [103]
+
+LaTeX Warning: Reference `f:hlisteg' on page 104 undefined on input line 794.
+
+
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 812--812
+[] 
+
+LaTeX Warning: Reference `f:tmixeg' on page 104 undefined on input line 840.
+
+[104] <HTKFigs//tmixeg.eps>
+
+LaTeX Warning: Reference `s:streams' on page 105 undefined on input line 851.
+
+
+LaTeX Warning: Reference `e:cdpdf' on page 105 undefined on input line 865.
+
+
+LaTeX Warning: Reference `e:cdpdf' on page 105 undefined on input line 866.
+
+
+LaTeX Warning: Reference `f:tmixpool' on page 105 undefined on input line 887.
+
+
+LaTeX Warning: Reference `f:tmixhmm' on page 105 undefined on input line 891.
+
+
+LaTeX Warning: Reference `f:tmixhmm2' on page 105 undefined on input line 902.
+
+
+LaTeX Warning: Reference `e:ddpdf' on page 105 undefined on input line 935.
+
+[105]
+
+LaTeX Warning: Reference `f:dischmm' on page 106 undefined on input line 985.
+
+[106]
+
+LaTeX Warning: Reference `f:lintran' on page 107 undefined on input line 1013.
+
+
+LaTeX Warning: Reference `c:Adapt' on page 107 undefined on input line 1084.
+
+
+LaTeX Warning: Reference `s:hhedregtree' on page 107 undefined on input line 10
+86.
+
+
+LaTeX Warning: Reference `s:reg_classes' on page 107 undefined on input line 10
+92.
+
+[107]
+
+LaTeX Warning: Reference `f:macregtreedef' on page 108 undefined on input line 
+1097.
+
+
+LaTeX Warning: Reference `f:regtree1' on page 108 undefined on input line 1098.
+
+
+
+LaTeX Warning: Reference `s:hhedregtree' on page 108 undefined on input line 11
+18.
+
+[108] [109] [110]
+
+LaTeX Warning: Reference `s:genio' on page 111 undefined on input line 1343.
+
+
+LaTeX Warning: Reference `c:speechio' on page 111 undefined on input line 1355.
+
+
+
+LaTeX Warning: Reference `s:HMMparm' on page 111 undefined on input line 1412.
+
+
+Overfull \hbox (10.0452pt too wide) in paragraph at lines 1409--1413
+\OT1/cmr/m/n/10 where the \OT1/cmss/m/n/10 short \OT1/cmr/m/n/10 gives the num-
+ber $\OML/cmm/m/it/10 S$ \OT1/cmr/m/n/10 of weights (which should match the val
+ue given in the []
+[111]
+
+LaTeX Warning: Reference `s:dischmm' on page 112 undefined on input line 1474.
+
+
+LaTeX Warning: Reference `e:gnorm' on page 112 undefined on input line 1502.
+
+[112]
+
+LaTeX Warning: Reference `c:Adapt' on page 113 undefined on input line 1528.
+
+) [113] (./train.tex
+Chapter 8.
+<HTKFigs//Tool.train.eps>
+
+LaTeX Warning: Reference `c:HMMDefs' on page 114 undefined on input line 44.
+
+[114] <HTKFigs//isoword.eps>
+
+LaTeX Warning: Reference `c:speechio' on page 115 undefined on input line 100.
+
+
+LaTeX Warning: Reference `f:isoword' on page 115 undefined on input line 104.
+
+<HTKFigs//subword.eps> [115]
+
+LaTeX Warning: Reference `f:subword' on page 116 undefined on input line 138.
+
+
+LaTeX Warning: Reference `f:subword' on page 116 undefined on input line 158.
+
+[116]
+
+LaTeX Warning: Reference `c:HMMDefs' on page 117 undefined on input line 194.
+
+
+LaTeX Warning: Reference `f:hmm1def' on page 117 undefined on input line 197.
+
+
+LaTeX Warning: Reference `f:hmm2def' on page 117 undefined on input line 197.
+
+
+LaTeX Warning: Reference `s:bwformulae' on page 117 undefined on input line 217
+.
+
+<HTKFigs//vitloop.eps> [117]
+
+LaTeX Warning: Reference `f:vitloop' on page 118 undefined on input line 245.
+
+[118] <HTKFigs//hinitdp.eps>
+
+LaTeX Warning: Reference `f:hinitdp' on page 119 undefined on input line 319.
+
+[119] <HTKFigs//flatst.eps> [120]
+
+LaTeX Warning: Reference `f:flatst' on page 121 undefined on input line 393.
+
+<HTKFigs//restloop.eps> [121]
+
+LaTeX Warning: Reference `f:restloop' on page 122 undefined on input line 441.
+
+
+LaTeX Warning: Reference `s:bwformulae' on page 122 undefined on input line 441
+.
+
+
+LaTeX Warning: Reference `s:inithmm' on page 122 undefined on input line 441.
+
+[122]
+
+LaTeX Warning: Reference `s:bwformulae' on page 123 undefined on input line 512
+.
+
+<HTKFigs//herestdp.eps> [123]
+
+LaTeX Warning: Reference `f:herestdp' on page 124 undefined on input line 544.
+
+[124] <HTKFigs//parher.eps>
+
+LaTeX Warning: Reference `f:parher' on page 125 undefined on input line 624.
+
+[125] [126]
+Overfull \hbox (31.63771pt too wide) in paragraph at lines 753--753
+[]   \OT1/cmtt/m/n/10 HERest -C config -C config.2model -S trainlist -I labs -H
+ dir1/hmacs -M dir3 hmmlist1[] 
+
+LaTeX Warning: Reference `e:cdpdf' on page 127 undefined on input line 827.
+
+
+LaTeX Warning: Reference `e:gnorm' on page 127 undefined on input line 827.
+
+
+LaTeX Warning: Reference `s:HMMparm' on page 127 undefined on input line 827.
+
+[127] [128] [129] [130]
+
+LaTeX Warning: Reference `e:urjt' on page 131 undefined on input line 1167.
+
+) [131] (./adapt.tex
+Chapter 9.
+<HTKFigs//headapt.eps>
+
+LaTeX Warning: Reference `c:Training' on page 132 undefined on input line 37.
+
+
+LaTeX Warning: Reference `f:subword' on page 132 undefined on input line 37.
+
+[132]
+
+LaTeX Warning: Reference `s:unsup_adapt' on page 133 undefined on input line 79
+.
+
+
+LaTeX Warning: Reference `s:mllrformulae' on page 133 undefined on input line 1
+26.
+
+
+Overfull \hbox (12.51427pt too wide) in paragraph at lines 121--127
+[]\OT1/cmr/m/n/10 The trans-for-ma-tion ma-trix $[]$ is ob-tained by solv-ing a
+ max-imi-sa-tion prob-lem us-ing the \OT1/cmr/m/it/10 Expectation-
+[133]
+
+LaTeX Warning: Reference `s:mllrformulae' on page 134 undefined on input line 1
+77.
+
+
+Overfull \hbox (12.51427pt too wide) in paragraph at lines 172--178
+[]\OT1/cmr/m/n/10 The trans-for-ma-tion ma-trix $[]$ is ob-tained by solv-ing a
+ max-imi-sa-tion prob-lem us-ing the \OT1/cmr/m/it/10 Expectation-
+
+LaTeX Warning: Reference `fig:globbase' on page 134 undefined on input line 198
+.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 237--248
+
+[134]
+
+LaTeX Warning: Reference `s:hhedregtree' on page 135 undefined on input line 25
+7.
+
+
+LaTeX Warning: Reference `s:regtreemods' on page 135 undefined on input line 26
+6.
+
+
+LaTeX Warning: Reference `s:hhedregtree' on page 135 undefined on input line 26
+6.
+
+<HTKFigs//regtree1.eps>
+
+LaTeX Warning: Reference `f:regtree1' on page 135 undefined on input line 270.
+
+
+LaTeX Warning: Reference `s:HERest' on page 135 undefined on input line 281.
+
+
+LaTeX Warning: Reference `f:regtree1' on page 135 undefined on input line 292.
+
+
+LaTeX Warning: Reference `fig:regtree' on page 135 undefined on input line 329.
+
+
+[135]
+
+LaTeX Warning: Reference `fig:hiermllr' on page 136 undefined on input line 373
+.
+
+
+LaTeX Warning: Reference `fig:hiermllr' on page 136 undefined on input line 433
+.
+
+[136] [137]
+
+LaTeX Warning: Reference `e:meanmap' on page 138 undefined on input line 533.
+
+
+LaTeX Warning: Reference `e:mtrans' on page 138 undefined on input line 534.
+
+[138]
+
+LaTeX Warning: Reference `s:bwformulae' on page 139 undefined on input line 544
+.
+
+
+LaTeX Warning: Reference `s:mllrformulae' on page 139 undefined on input line 5
+46.
+
+
+LaTeX Warning: Reference `f:headaptrdp' on page 139 undefined on input line 578
+.
+
+
+LaTeX Warning: Reference `s:tmfs' on page 139 undefined on input line 579.
+
+[139]
+
+LaTeX Warning: Reference `s:reg_classes' on page 140 undefined on input line 66
+5.
+
+
+LaTeX Warning: Reference `s:bwformulae' on page 140 undefined on input line 684
+.
+
+
+LaTeX Warning: Reference `e:meantrans1' on page 140 undefined on input line 689
+.
+
+[140]) [141] (./refine.tex
+Chapter 10.
+<HTKFigs//Tool.hedit.eps>
+
+LaTeX Warning: Reference `c:Training' on page 142 undefined on input line 26.
+
+[142]
+
+LaTeX Warning: Reference `s:ddclust' on page 143 undefined on input line 114.
+
+
+LaTeX Warning: Reference `s:tbclust' on page 143 undefined on input line 114.
+
+
+LaTeX Warning: Reference `s:ddclust' on page 143 undefined on input line 123.
+
+
+LaTeX Warning: Reference `s:edlab' on page 143 undefined on input line 139.
+
+[143]
+
+LaTeX Warning: Reference `s:edlab' on page 144 undefined on input line 172.
+
+
+LaTeX Warning: Reference `c:HMMDefs' on page 144 undefined on input line 187.
+
+
+LaTeX Warning: Reference `f:hierarch' on page 144 undefined on input line 189.
+
+
+LaTeX Warning: Reference `s:bwformulae' on page 144 undefined on input line 195
+.
+
+<HTKFigs//itemtree.eps> [144]
+
+LaTeX Warning: Reference `f:hierarch' on page 145 undefined on input line 237.
+
+
+LaTeX Warning: Reference `f:itemtree' on page 145 undefined on input line 237.
+
+
+LaTeX Warning: Reference `c:discmods' on page 145 undefined on input line 295.
+
+[145]
+
+LaTeX Warning: Reference `s:mkCDHMMs' on page 146 undefined on input line 367.
+
+[146] <HTKFigs//tiedstate.eps>
+
+LaTeX Warning: Reference `f:tiedstate' on page 147 undefined on input line 432.
+
+
+[147]
+
+LaTeX Warning: Reference `s:hmmsets' on page 148 undefined on input line 493.
+
+<HTKFigs//qstree.eps> [148]
+
+LaTeX Warning: Reference `f:qstree' on page 149 undefined on input line 549.
+
+[149]
+
+LaTeX Warning: Reference `f:qstree' on page 150 undefined on input line 613.
+
+[150]
+
+LaTeX Warning: Reference `c:Adapt' on page 151 undefined on input line 710.
+
+
+LaTeX Warning: Reference `s:reg_classes' on page 151 undefined on input line 71
+5.
+
+[151]
+
+LaTeX Warning: Reference `c:discmods' on page 152 undefined on input line 771.
+
+) [152] (./discmods.tex
+Chapter 11.
+<HTKFigs//Tool.disc.eps>
+
+LaTeX Warning: Reference `s:vquant' on page 153 undefined on input line 37.
+
+[153]
+
+LaTeX Warning: Reference `c:HMMDefs' on page 154 undefined on input line 83.
+
+
+LaTeX Warning: Reference `s:vquant' on page 154 undefined on input line 142.
+
+[154]
+
+LaTeX Warning: Reference `s:streams' on page 155 undefined on input line 190.
+
+<HTKFigs//vqtohmm.eps> [155]
+
+LaTeX Warning: Reference `s:vquant' on page 156 undefined on input line 231.
+
+
+LaTeX Warning: Reference `f:vqtohmm' on page 156 undefined on input line 231.
+
+
+LaTeX Warning: Reference `s:psmooth' on page 156 undefined on input line 241.
+
+[156]
+
+LaTeX Warning: Reference `s:tmix' on page 157 undefined on input line 290.
+
+[157]) [158] (./netdict.tex
+Chapter 12.
+<HTKFigs//Tool.netdict.eps>
+
+LaTeX Warning: Reference `c:htkslf' on page 159 undefined on input line 59.
+
+[159]
+
+LaTeX Warning: Reference `f:recsys' on page 160 undefined on input line 128.
+
+<HTKFigs//recsys.eps> [160]
+
+LaTeX Warning: Reference `c:htkslf' on page 161 undefined on input line 192.
+
+<HTKFigs//wdnet.eps> [161]
+
+LaTeX Warning: Reference `f:wdnet' on page 162 undefined on input line 214.
+
+<HTKFigs//wdnet1.eps> [162]
+
+LaTeX Font Warning: Font shape `OMS/cmtt/bx/n' undefined
+(Font)              using `OMS/cmsy/m/n' instead
+(Font)              for symbol `textbraceleft' on input line 313.
+
+
+LaTeX Warning: Reference `f:digitnets' on page 163 undefined on input line 333.
+
+
+[163]
+
+LaTeX Warning: Reference `f:digitnets' on page 164 undefined on input line 352.
+
+
+
+LaTeX Warning: Reference `f:digitnets' on page 164 undefined on input line 363.
+
+
+<HTKFigs//digitnets.eps>
+
+LaTeX Warning: Reference `f:digitnets' on page 164 undefined on input line 398.
+
+
+[164] [165]
+
+LaTeX Warning: Reference `s:tmix' on page 166 undefined on input line 554.
+
+<HTKFigs//decinet.eps> [166]
+
+LaTeX Warning: Reference `f:decinet' on page 167 undefined on input line 570.
+
+[167] <HTKFigs//bobig.eps>
+
+LaTeX Warning: Reference `f:bobig' on page 168 undefined on input line 647.
+
+[168]
+
+LaTeX Warning: Reference `s:netuse' on page 169 undefined on input line 703.
+
+<HTKFigs//dmaker.eps> [169]
+
+LaTeX Warning: Reference `f:dmaker' on page 170 undefined on input line 769.
+
+
+LaTeX Warning: Reference `s:htkstrings' on page 170 undefined on input line 773
+.
+
+
+LaTeX Warning: Reference `f:dmaker' on page 170 undefined on input line 785.
+
+[170]
+
+LaTeX Warning: Reference `f:recsys' on page 171 undefined on input line 886.
+
+[171] [172]
+Overfull \hbox (1.66956pt too wide) in paragraph at lines 1003--1009
+\OT1/cmr/m/n/10 the con-text ex-pan-sion can be fur-ther con-trolled via the co
+n-fig-u-ra-tion vari-able \OT1/cmtt/m/n/10 CFWORDBOUNDARY\OT1/cmr/m/n/10 .
+<HTKFigs//mononet.eps>
+
+LaTeX Warning: Reference `f:wdnet' on page 173 undefined on input line 1030.
+
+
+LaTeX Warning: Reference `f:mononet' on page 173 undefined on input line 1045.
+
+
+LaTeX Warning: Reference `f:wintnet' on page 173 undefined on input line 1061.
+
+<HTKFigs//wintnet.eps> [173]
+
+LaTeX Warning: Reference `f:xwrdnet' on page 174 undefined on input line 1073.
+
+<HTKFigs//xwrdnet.eps>
+
+LaTeX Warning: Reference `f:mononet' on page 174 undefined on input line 1080.
+
+
+LaTeX Warning: Reference `f:wintnet' on page 174 undefined on input line 1083.
+
+
+LaTeX Warning: Reference `f:xwrdnet' on page 174 undefined on input line 1087.
+
+[174]) [175] (./decode.tex
+Chapter 13.
+<HTKFigs//Tool.decode.eps>
+
+LaTeX Warning: Reference `c:netdict' on page 176 undefined on input line 54.
+
+
+LaTeX Warning: Reference `f:recsys' on page 176 undefined on input line 55.
+
+
+LaTeX Warning: Reference `f:recnetlev' on page 176 undefined on input line 64.
+
+<HTKFigs//recnetlev.eps> [176] [177]
+
+LaTeX Warning: Reference `f:decflow' on page 178 undefined on input line 154.
+
+<HTKFigs//decflow.eps> [178] [179]
+
+LaTeX Warning: Reference `c:speechio' on page 180 undefined on input line 254.
+
+
+LaTeX Warning: Reference `s:recaudio' on page 180 undefined on input line 258.
+
+[180] [181] [182] [183] <HTKFigs//hvalign.eps>
+
+LaTeX Warning: Reference `f:hvalign' on page 184 undefined on input line 608.
+
+[184]
+
+LaTeX Warning: Reference `c:Adapt' on page 185 undefined on input line 657.
+
+
+LaTeX Warning: Reference `s:tmfs' on page 185 undefined on input line 668.
+
+[185]
+
+LaTeX Warning: Reference `s:audioio' on page 186 undefined on input line 728.
+
+
+LaTeX Warning: Reference `c:speechio' on page 186 undefined on input line 784.
+
+[186]
+
+LaTeX Warning: Reference `s:decop' on page 187 undefined on input line 843.
+
+[187]) [188] [189] (./hlmfund.tex
+Chapter 14.
+<HTKFigs//HLMoperation.eps> [190]
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@encoding' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<let>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@family' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@series' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@shape' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\font@name' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\OT1/cmr/m/it/14.4' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\ignorespaces' on input line 61.
+
+
+LaTeX Warning: Reference `e:3' on page 191 undefined on input line 64.
+
+
+LaTeX Warning: Reference `c:fundaments' on page 191 undefined on input line 64.
+
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@encoding' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<let>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@family' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@series' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@shape' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\font@name' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\OT1/cmr/m/it/12' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\ignorespaces' on input line 77.
+
+
+LaTeX Warning: Reference `cond_prob_model' on page 191 undefined on input line 
+78.
+
+
+LaTeX Warning: Reference `ngram_model' on page 191 undefined on input line 89.
+
+
+LaTeX Warning: Reference `ngram_model' on page 191 undefined on input line 95.
+
+
+LaTeX Warning: Reference `robust_estimation' on page 191 undefined on input lin
+e 126.
+
+[191]
+
+LaTeX Warning: Reference `ngram_model' on page 192 undefined on input line 152.
+
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@encoding' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<let>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@family' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@series' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@shape' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\font@name' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\OT1/cmr/m/it/12' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\ignorespaces' on input line 177.
+
+
+LaTeX Warning: Reference `equiv_classes' on page 192 undefined on input line 21
+0.
+
+[192]
+
+LaTeX Warning: Reference `cond_prob_model' on page 193 undefined on input line 
+278.
+
+
+LaTeX Warning: Reference `classnorm_totprob' on page 193 undefined on input lin
+e 287.
+
+
+LaTeX Warning: Reference `normclass' on page 193 undefined on input line 295.
+
+
+LaTeX Warning: Reference `classnorm_breakdown' on page 193 undefined on input l
+ine 311.
+
+
+LaTeX Warning: Reference `classnorm_logprob' on page 193 undefined on input lin
+e 311.
+
+[193]
+
+LaTeX Warning: Reference `classnorm_ml' on page 194 undefined on input line 340
+.
+
+
+LaTeX Warning: Reference `Cstepone' on page 194 undefined on input line 381.
+
+[194]
+
+LaTeX Warning: Reference `cond_prob_model' on page 195 undefined on input line 
+407.
+
+
+LaTeX Warning: Reference `cond_prob_model' on page 195 undefined on input line 
+434.
+
+
+LaTeX Warning: Reference `ngramcountdiv' on page 195 undefined on input line 44
+7.
+
+[195] [196]
+
+LaTeX Warning: Reference `2-3' on page 197 undefined on input line 690.
+
+
+LaTeX Warning: Reference `2-4' on page 197 undefined on input line 690.
+
+[197]
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `math shift' on input line 717.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `math shift' on input line 717.
+
+
+LaTeX Warning: Reference `f:WordLM' on page 198 undefined on input line 731.
+
+<HTKFigs//WordLM.eps> [198]
+
+LaTeX Warning: Reference `f:WordLM' on page 199 undefined on input line 799.
+
+<HTKFigs//ClassLM.eps> [199]
+
+LaTeX Warning: Reference `s:HLMclassngram' on page 200 undefined on input line 
+811.
+
+
+LaTeX Warning: Reference `f:ClassLM' on page 200 undefined on input line 845.
+
+) [200] (./hlmtutorial.tex
+Chapter 15.
+[201] [202] [203] [204]
+
+LaTeX Warning: Reference `c:hlmfiles' on page 205 undefined on input line 358.
+
+[205] [206] [207] [208]
+
+LaTeX Warning: Reference `s:LAdapt' on page 209 undefined on input line 670.
+
+[209] [210]
+Overfull \hbox (14.91667pt too wide) in paragraph at lines 827--832
+\OT1/cmr/m/n/10 detecting whether a count or prob-a-bil-i-ties file has been su
+p-plied. The re-sult-ing file, \OT1/cmtt/m/n/10 lm[]5k/cl150-tg[]1[]1
+[211]
+
+LaTeX Warning: Reference `c:toolref' on page 212 undefined on input line 910.
+
+[212]) [213] (./hlmfiles.tex
+Chapter 16.
+<HTKFigs//LTool.eps> [214]
+
+LaTeX Warning: Reference `s:HLMclasslmfileformats' on page 215 undefined on inp
+ut line 107.
+
+[215]
+
+LaTeX Warning: Reference `s:htkstrings' on page 216 undefined on input line 205
+.
+
+
+LaTeX Warning: Reference `s:htkstrings' on page 216 undefined on input line 207
+.
+
+[216]
+
+LaTeX Warning: Reference `s:wmaps' on page 217 undefined on input line 294.
+
+[217] [218] [219]
+
+LaTeX Warning: Reference `fg_stats' on page 220 undefined on input line 555.
+
+[220]
+
+LaTeX Warning: Reference `s:HLMlmfileformats' on page 221 undefined on input li
+ne 619.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 631--643
+
+[221]
+Underfull \hbox (badness 10000) in paragraph at lines 667--680
+
+[222]
+
+LaTeX Warning: Reference `s:HLMclasslmformat' on page 223 undefined on input li
+ne 721.
+
+
+LaTeX Warning: Reference `s:HLMlmfileformats' on page 223 undefined on input li
+ne 750.
+
+
+LaTeX Warning: Reference `s:HLMclasscountslmformat' on page 223 undefined on in
+put line 756.
+
+
+LaTeX Warning: Reference `s:HLMclassprobslmformat' on page 223 undefined on inp
+ut line 757.
+
+
+LaTeX Warning: Reference `c:toolref' on page 223 undefined on input line 783.
+
+[223]
+
+LaTeX Warning: Reference `s:openvsum' on page 224 undefined on input line 842.
+
+
+LaTeX Warning: Reference `c:openviron' on page 224 undefined on input line 843.
+
+
+
+LaTeX Warning: Reference `c:confvars' on page 224 undefined on input line 845.
+
+
+LaTeX Warning: Reference `t:openvcparmsLM' on page 224 undefined on input line 
+848.
+
+
+Overfull \hbox (3.89096pt too wide) in paragraph at lines 869--869
+[]\OT1/cmtt/m/n/10 NATURALWRITEORDER| 
+
+LaTeX Warning: Reference `s:HLMuseintid' on page 224 undefined on input line 88
+2.
+
+[224]
+
+LaTeX Warning: Reference `s:HLMlmidshort' on page 225 undefined on input line 9
+10.
+
+[225]
+
+LaTeX Warning: Reference `s:HLMuseintid' on page 226 undefined on input line 93
+8.
+
+) [226] [227] [228]
+Chapter 17.
+[229] (./HTKRef/tools.tex) (./HTKRef/Cluster.tex [230]
+
+LaTeX Warning: Reference `s:stdopts' on page 231 undefined on input line 181.
+
+[231]) [232] (./HTKRef/HBuild.tex
+
+LaTeX Warning: Reference `c:netdict' on page 233 undefined on input line 46.
+
+
+LaTeX Warning: Reference `c:htkslf' on page 233 undefined on input line 47.
+
+
+LaTeX Warning: Reference `s:stdopts' on page 233 undefined on input line 112.
+
+[233]) [234] (./HTKRef/HCompV.tex [235]
+
+LaTeX Warning: Reference `s:stdopts' on page 236 undefined on input line 168.
+
+) [236] (./HTKRef/HCopy.tex
+
+LaTeX Warning: Reference `t:validcons' on page 237 undefined on input line 54.
+
+
+LaTeX Warning: Reference `c:speechio' on page 237 undefined on input line 54.
+
+[237]
+
+LaTeX Warning: Reference `s:stdopts' on page 238 undefined on input line 131.
+
+
+LaTeX Warning: Reference `c:speechio' on page 238 undefined on input line 134.
+
+[238]) [239] (./HTKRef/HDMan.tex
+
+LaTeX Warning: Reference `s:htkstrings' on page 240 undefined on input line 43.
+
+
+
+LaTeX Warning: Reference `s:htkstrings' on page 240 undefined on input line 105
+.
+
+[240]
+
+LaTeX Warning: Reference `s:stdopts' on page 241 undefined on input line 183.
+
+[241]) [242] (./HTKRef/HERest.tex
+
+LaTeX Warning: Reference `s:teemods' on page 243 undefined on input line 46.
+
+
+Overfull \hbox (6.15317pt too wide) in paragraph at lines 41--50
+[]\OT1/cmr/m/sc/10 HERest \OT1/cmr/m/n/10 is in-tended to op-er-ate on HMMs wit
+h ini-tial pa-ram-e-ter val-ues es-ti-mated by HInit/HRest.
+
+LaTeX Warning: Reference `c:Training' on page 243 undefined on input line 56.
+
+
+LaTeX Warning: Reference `s:twomodel' on page 243 undefined on input line 91.
+
+[243] [244] [245]
+
+LaTeX Warning: Reference `s:stdopts' on page 246 undefined on input line 328.
+
+) [246] (./HTKRef/HHEd.tex
+
+LaTeX Warning: Reference `f:hierarch' on page 247 undefined on input line 52.
+
+[247] [248] [249] [250] [251]
+
+LaTeX Warning: Reference `e:cdpdf' on page 252 undefined on input line 482.
+
+
+LaTeX Warning: Reference `e:ddpdf' on page 252 undefined on input line 483.
+
+[252]
+
+LaTeX Warning: Reference `s:streams' on page 253 undefined on input line 597.
+
+[253] [254]
+
+LaTeX Warning: Reference `s:stdopts' on page 255 undefined on input line 766.
+
+[255]) [256] (./HTKRef/HInit.tex
+
+LaTeX Warning: Reference `c:Training' on page 257 undefined on input line 78.
+
+[257]
+
+LaTeX Warning: Reference `s:stdopts' on page 258 undefined on input line 156.
+
+) [258] (./HTKRef/HLEd.tex [259]
+
+LaTeX Warning: Reference `s:stdopts' on page 260 undefined on input line 177.
+
+[260]) [261] (./HTKRef/HList.tex
+
+LaTeX Warning: Reference `c:speechio' on page 262 undefined on input line 31.
+
+
+LaTeX Warning: Reference `s:stdopts' on page 262 undefined on input line 97.
+
+) [262] (./HTKRef/HLMCopy.tex
+
+LaTeX Warning: Reference `s:stdopts' on page 263 undefined on input line 86.
+
+) [263] (./HTKRef/HLRescore.tex [264]
+
+LaTeX Warning: Reference `s:stdopts' on page 265 undefined on input line 161.
+
+) [265] (./HTKRef/HLStats.tex
+
+LaTeX Warning: Reference `c:netdict' on page 266 undefined on input line 109.
+
+[266]
+
+LaTeX Warning: Reference `s:stdopts' on page 267 undefined on input line 176.
+
+) [267]
+No file HTKRef/HMMIRest.tex.
+(./HTKRef/HParse.tex
+
+LaTeX Font Warning: Font shape `OMS/cmtt/m/n' undefined
+(Font)              using `OMS/cmsy/m/n' instead
+(Font)              for symbol `textbraceleft' on input line 70.
+
+[268] [269]
+Overfull \hbox (5.42278pt too wide) in paragraph at lines 265--275
+[]\OT1/cmr/m/n/10 It should be noted that in HTK V1.5 any ENBF net-work could a
+p-pear be-tween a \OT1/cmtt/m/n/10 WD[]BEGIN/WD[]END
+[270]
+
+LaTeX Warning: Reference `s:stdopts' on page 271 undefined on input line 311.
+
+) [271] (./HTKRef/HQuant.tex
+
+LaTeX Warning: Reference `s:vquant' on page 272 undefined on input line 42.
+
+
+LaTeX Warning: Reference `c:discmods' on page 272 undefined on input line 117.
+
+[272]
+
+LaTeX Warning: Reference `s:stdopts' on page 273 undefined on input line 183.
+
+) [273] (./HTKRef/HRest.tex
+
+LaTeX Warning: Reference `c:Training' on page 274 undefined on input line 52.
+
+[274]
+
+LaTeX Warning: Reference `s:stdopts' on page 275 undefined on input line 140.
+
+) [275] (./HTKRef/HResults.tex [276] [277]
+
+LaTeX Warning: Reference `s:stdopts' on page 278 undefined on input line 270.
+
+[278]) [279] (./HTKRef/HSGen.tex
+
+LaTeX Warning: Reference `s:stdopts' on page 280 undefined on input line 78.
+
+) [280] (./HTKRef/HSLab.tex
+
+LaTeX Warning: Reference `f:hslab' on page 281 undefined on input line 41.
+
+<HTKFigs//hslab.eps> [281]
+
+LaTeX Warning: Reference `s:stdopts' on page 282 undefined on input line 118.
+
+[282] [283]) [284] (./HTKRef/HSmooth.tex [285]
+
+LaTeX Warning: Reference `s:stdopts' on page 286 undefined on input line 116.
+
+) [286] (./HTKRef/HVite.tex [287] [288]
+
+LaTeX Warning: Reference `s:stdopts' on page 289 undefined on input line 244.
+
+) [289] (./HTKRef/LAdapt.tex
+
+LaTeX Warning: Reference `s:stdopts' on page 290 undefined on input line 84.
+
+[290]) [291] (./HTKRef/LBuild.tex
+
+LaTeX Warning: Reference `s:mkngoview' on page 292 undefined on input line 17.
+
+
+LaTeX Warning: Reference `s:HLMdiscounts' on page 292 undefined on input line 3
+3.
+
+
+LaTeX Warning: Reference `s:coninlib' on page 292 undefined on input line 53.
+
+
+LaTeX Warning: Reference `s:stdopts' on page 292 undefined on input line 82.
+
+) [292] (./HTKRef/LFoF.tex
+
+LaTeX Warning: Reference `s:FoFs' on page 293 undefined on input line 17.
+
+
+LaTeX Warning: Reference `s:FoFs' on page 293 undefined on input line 46.
+
+
+LaTeX Warning: Reference `s:stdopts' on page 293 undefined on input line 54.
+
+) [293] (./HTKRef/LGCopy.tex [294]
+
+LaTeX Warning: Reference `s:stdopts' on page 295 undefined on input line 107.
+
+) [295] (./HTKRef/LGList.tex
+
+LaTeX Warning: Reference `s:stdopts' on page 296 undefined on input line 44.
+
+) [296] (./HTKRef/LGPrep.tex
+
+LaTeX Warning: Reference `s:gramfs' on page 297 undefined on input line 23.
+
+[297] [298]
+
+LaTeX Warning: Reference `s:stdopts' on page 299 undefined on input line 202.
+
+) [299] (./HTKRef/LLink.tex
+
+LaTeX Warning: Reference `s:stdopts' on page 300 undefined on input line 57.
+
+) [300] (./HTKRef/LMerge.tex
+
+LaTeX Warning: Reference `s:stdopts' on page 301 undefined on input line 44.
+
+) [301] (./HTKRef/LNewMap.tex
+
+LaTeX Warning: Reference `s:stdopts' on page 302 undefined on input line 36.
+
+) [302] (./HTKRef/LNorm.tex
+
+LaTeX Warning: Reference `s:stdopts' on page 303 undefined on input line 52.
+
+) [303] (./HTKRef/LPlex.tex
+
+LaTeX Warning: Reference `s:stdopts' on page 304 undefined on input line 81.
+
+[304]) [305] (./HTKRef/LSubset.tex
+
+LaTeX Warning: Reference `s:stdopts' on page 306 undefined on input line 45.
+
+) [306] (./config.tex
+Chapter 18.
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+[]\OT1/cmr/m/sc/10 HLabel
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+\OT1/cmr/m/sc/10 HAu-dio
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+\OT1/cmr/m/sc/10 HWave
+
+Underfull \hbox (badness 10000) in paragraph at lines 65--66
+[]\OT1/cmr/m/sc/10 HParm
+[307]
+Underfull \hbox (badness 10000) in paragraph at lines 111--112
+[]\OT1/cmr/m/sc/10 HLabel
+
+Underfull \hbox (badness 2173) in paragraph at lines 155--156
+[]\OT1/cmr/m/n/10 Number of frames clas-si-fied as si-lence
+[308]
+Overfull \hbox (1.50491pt too wide) in paragraph at lines 189--190
+[]\OT1/cmr/m/sc/10 HModel| 
+
+Underfull \hbox (badness 10000) in paragraph at lines 202--203
+[]\OT1/cmr/m/n/10 Force tri-phone con-text ex-pan-sion to
+
+Underfull \hbox (badness 10000) in paragraph at lines 202--203
+\OT1/cmr/m/n/10 get model names (is over-rid-den by
+
+Underfull \hbox (badness 1881) in paragraph at lines 209--209
+[]\OT1/cmr/m/n/10 Allow con-text ex-pan-sion to get model
+[309]
+Underfull \hbox (badness 1033) in paragraph at lines 252--252
+[]\OT1/cmr/m/n/10 Maximum it-er-a-tions for it-er-a-tively es-ti-
+
+Underfull \hbox (badness 1087) in paragraph at lines 253--253
+[]\OT1/cmr/m/n/10 Generate a di-ag-o-nal vari-ance trans-form
+[310] [311]
+Overfull \hbox (3.8507pt too wide) in paragraph at lines 330--330
+[]\OT1/cmr/m/sc/10 HCompV| 
+
+Underfull \hbox (badness 2503) in paragraph at lines 349--349
+[]\OT1/cmr/m/n/10 Input trans-form ext to be used with
+
+Underfull \hbox (badness 3354) in paragraph at lines 351--351
+[]\OT1/cmr/m/n/10 Input trans-form mask (de-fault out-put
+
+Overfull \hbox (7.54932pt too wide) in paragraph at lines 373--373
+[]\OT1/cmr/m/sc/10 HResults| 
+
+Overfull \hbox (2.44928pt too wide) in paragraph at lines 388--388
+[]\OT1/cmr/m/sc/10 HLStats| 
+[312]) (./errors.tex
+Chapter 19.
+[313] [314]
+Overfull \hbox (6.29768pt too wide) in paragraph at lines 183--187
+[]\OT1/cmr/m/sc/10 HCopy \OT1/cmr/m/n/10 is only able to prop-erly copy la-bel 
+files with the same num-ber of lev-els/alternatives.
+
+LaTeX Warning: Reference `s:HLEd' on page 315 undefined on input line 206.
+
+
+LaTeX Warning: Reference `s:HDMan' on page 315 undefined on input line 256.
+
+
+LaTeX Warning: Reference `s:usehdman' on page 315 undefined on input line 260.
+
+[315] [316] [317] [318]
+Overfull \hbox (1.19797pt too wide) in paragraph at lines 563--565
+[]\OT1/cmr/m/n/10 The spec-i-fied num-ber/width of the streams does not agree w
+ith the pa-ram-e-ter kind/vector
+
+LaTeX Warning: Reference `s:HHEd' on page 319 undefined on input line 569.
+
+[319]
+
+LaTeX Warning: Reference `s:HParse' on page 320 undefined on input line 663.
+
+[320]
+
+LaTeX Warning: Reference `s:config' on page 321 undefined on input line 754.
+
+
+LaTeX Warning: Reference `c:confvars' on page 321 undefined on input line 773.
+
+[321] [322] [323]
+
+LaTeX Warning: Reference `s:spiosum' on page 324 undefined on input line 992.
+
+[324]
+
+LaTeX Warning: Reference `c:labels' on page 325 undefined on input line 1040.
+
+
+LaTeX Warning: Reference `s:HMMmac' on page 325 undefined on input line 1100.
+
+[325]
+
+LaTeX Warning: Reference `s:HHEd' on page 326 undefined on input line 1156.
+
+[326]
+
+LaTeX Warning: Reference `s:usehdman' on page 327 undefined on input line 1264.
+
+
+[327]
+
+LaTeX Warning: Reference `s:netexpand' on page 328 undefined on input line 1299
+.
+
+
+Overfull \hbox (21.0736pt too wide) in paragraph at lines 1293--1300
+[]\OT1/cmr/m/sc/10 HNet \OT1/cmr/m/n/10 can only deal with the stan-dard HTK me
+thod for spec-i-fy-ing con-text \OT1/cmtt/m/n/10 left-phone+right
+
+LaTeX Warning: Reference `c:htkslf' on page 328 undefined on input line 1315.
+
+[328] [329] [330] [331]) [332] (./htkslf.tex
+Chapter 20.
+
+LaTeX Warning: Reference `s:byteswap' on page 333 undefined on input line 115.
+
+[333]
+
+LaTeX Warning: Reference `s:hmmdef' on page 334 undefined on input line 147.
+
+
+Overfull \hbox (21.1378pt too wide) in paragraph at lines 182--182
+[]                \OT1/cmtt/m/n/10 "acscale=" floatnumber | "base=" floatnumber
+ | "tscale=" floatnumber }[] 
+
+Overfull \hbox (26.38776pt too wide) in paragraph at lines 182--182
+[]      \OT1/cmtt/m/n/10 { "a=" floatnumber  | "l=" floatnumber  | "a=" floatnu
+mber  | "r=" floatnumber  |[] 
+[334] [335] [336]) [337]
+No file htkbook.ind.
+(./htkbook.aux (./fundaments.aux) (./htkoview.aux) (./exampsys.aux)
+(./openviron.aux) (./speechio.aux) (./labels.aux) (./models.aux) (./train.aux)
+(./adapt.aux) (./refine.aux) (./discmods.aux) (./netdict.aux) (./decode.aux)
+(./hlmfund.aux) (./hlmtutorial.aux) (./hlmfiles.aux) (./HTKRef/tools.aux)
+(./HTKRef/Cluster.aux) (./HTKRef/HBuild.aux) (./HTKRef/HCompV.aux)
+(./HTKRef/HCopy.aux) (./HTKRef/HDMan.aux) (./HTKRef/HERest.aux)
+(./HTKRef/HHEd.aux) (./HTKRef/HInit.aux) (./HTKRef/HLEd.aux)
+(./HTKRef/HList.aux) (./HTKRef/HLMCopy.aux) (./HTKRef/HLRescore.aux)
+(./HTKRef/HLStats.aux) (./HTKRef/HMMIRest.aux) (./HTKRef/HParse.aux)
+(./HTKRef/HQuant.aux) (./HTKRef/HRest.aux) (./HTKRef/HResults.aux)
+(./HTKRef/HSGen.aux) (./HTKRef/HSLab.aux) (./HTKRef/HSmooth.aux)
+(./HTKRef/HVite.aux) (./HTKRef/LAdapt.aux) (./HTKRef/LBuild.aux)
+(./HTKRef/LFoF.aux) (./HTKRef/LGCopy.aux) (./HTKRef/LGList.aux)
+(./HTKRef/LGPrep.aux) (./HTKRef/LLink.aux) (./HTKRef/LMerge.aux)
+(./HTKRef/LNewMap.aux) (./HTKRef/LNorm.aux) (./HTKRef/LPlex.aux)
+(./HTKRef/LSubset.aux) (./config.aux) (./errors.aux) (./htkslf.aux))
+
+LaTeX Font Warning: Some font shapes were not available, defaults substituted.
+
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ )
+(see the transcript file for additional information)
+Output written on htkbook.dvi (340 pages, 1705720 bytes).
+Transcript written on htkbook.log.
+latex htkbook
+This is pdfeTeX, Version 3.141592-1.21a-2.2 (Web2C 7.5.4)
+entering extended mode
+(./htkbook.tex
+LaTeX2e <2003/12/01>
+Babel <v3.8d> and hyphenation patterns for american, french, german, ngerman, b
+ahasa, basque, bulgarian, catalan, croatian, czech, danish, dutch, esperanto, e
+stonian, finnish, greek, icelandic, irish, italian, latin, magyar, norsk, polis
+h, portuges, romanian, russian, serbian, slovak, slovene, spanish, swedish, tur
+kish, ukrainian, nohyphenation, loaded.
+(/usr/share/texmf/tex/latex/base/book.cls
+Document Class: book 2004/02/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/bk10.clo)) (./HTK.tex
+(/usr/share/texmf/tex/latex/graphics/epsfig.sty
+(/usr/share/texmf/tex/latex/graphics/graphicx.sty
+(/usr/share/texmf/tex/latex/graphics/keyval.sty)
+(/usr/share/texmf/tex/latex/graphics/graphics.sty
+(/usr/share/texmf/tex/latex/graphics/trig.sty)
+(/usr/share/texmf/tex/latex/graphics/graphics.cfg)
+(/usr/share/texmf/tex/latex/graphics/dvips.def))))
+(/usr/share/texmf/tex/latex/html/html.sty
+(/usr/share/texmf/tex/latex/hyperref/hyperref.sty
+(/usr/share/texmf/tex/latex/hyperref/pd1enc.def)
+(/usr/share/texmf/tex/latex/hyperref/hyperref.cfg)
+Implicit mode ON; LaTeX internals redefined
+(/usr/share/texmf/tex/latex/html/url.sty))
+*hyperref using driver hdvips*
+(/usr/share/texmf/tex/latex/hyperref/hdvips.def
+(/usr/share/texmf/tex/latex/hyperref/pdfmark.def)))
+(/usr/share/texmf/tex/latex/graphics/color.sty
+(/usr/share/texmf/tex/latex/graphics/color.cfg)
+(/usr/share/texmf/tex/latex/graphics/dvipsnam.def))
+(/usr/share/texmf/tex/latex/supertabular/supertabular.sty)
+(/usr/share/texmf/tex/latex/tools/calc.sty)
+(/usr/share/texmf/tex/latex/base/ifthen.sty))
+(/usr/share/texmf/tex/latex/base/makeidx.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+Writing index file htkbook.idx
+(./htkbook.aux (./fundaments.aux) (./htkoview.aux) (./exampsys.aux)
+(./openviron.aux) (./speechio.aux) (./labels.aux) (./models.aux) (./train.aux)
+(./adapt.aux
+
+LaTeX Warning: Label `e:mtrans' multiply defined.
+
+
+LaTeX Warning: Label `e:decompmtrans' multiply defined.
+
+
+LaTeX Warning: Label `s:reg_classes' multiply defined.
+
+) (./refine.aux) (./discmods.aux) (./netdict.aux) (./decode.aux) (./hlmfund.aux
+) (./hlmtutorial.aux) (./hlmfiles.aux
+
+LaTeX Warning: Label `s:HLMinterpmax' multiply defined.
+
+) (./HTKRef/tools.aux) (./HTKRef/Cluster.aux) (./HTKRef/HBuild.aux)
+(./HTKRef/HCompV.aux) (./HTKRef/HCopy.aux) (./HTKRef/HDMan.aux)
+(./HTKRef/HERest.aux) (./HTKRef/HHEd.aux) (./HTKRef/HInit.aux)
+(./HTKRef/HLEd.aux) (./HTKRef/HList.aux) (./HTKRef/HLMCopy.aux)
+(./HTKRef/HLRescore.aux) (./HTKRef/HLStats.aux) (./HTKRef/HMMIRest.aux)
+(./HTKRef/HParse.aux) (./HTKRef/HQuant.aux) (./HTKRef/HRest.aux)
+(./HTKRef/HResults.aux) (./HTKRef/HSGen.aux) (./HTKRef/HSLab.aux)
+(./HTKRef/HSmooth.aux) (./HTKRef/HVite.aux) (./HTKRef/LAdapt.aux)
+(./HTKRef/LBuild.aux) (./HTKRef/LFoF.aux) (./HTKRef/LGCopy.aux)
+(./HTKRef/LGList.aux) (./HTKRef/LGPrep.aux) (./HTKRef/LLink.aux
+
+LaTeX Warning: Label `s:Function' multiply defined.
+
+) (./HTKRef/LMerge.aux) (./HTKRef/LNewMap.aux
+
+LaTeX Warning: Label `s:Function' multiply defined.
+
+) (./HTKRef/LNorm.aux) (./HTKRef/LPlex.aux) (./HTKRef/LSubset.aux)
+(./config.aux) (./errors.aux) (./htkslf.aux))
+(/usr/share/texmf/tex/latex/hyperref/nameref.sty) (./htkbook.out)
+(./htkbook.out)
+Underfull \hbox (badness 10000) in paragraph at lines 63--64
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 71--82
+
+(/usr/share/texmf/tex/latex/base/omscmr.fd)
+Overfull \hbox (0.13022pt too wide) in paragraph at lines 91--92
+[]\OT1/cmr/m/n/14.4 COPYRIGHT 2001-2004 Cam-bridge Uni-ver-sity En-gi-neer-ing 
+De-part-
+[1] [2] (./htkbook.toc (/usr/share/texmf/tex/latex/amsfonts/umsa.fd)
+(/usr/share/texmf/tex/latex/amsfonts/umsb.fd) [3] [4] [5] [6] [7] [8] [9])
+[10] [1] (./fundaments.tex
+Chapter 1.
+<HTKFigs//overview.eps> <HTKFigs//messencode.eps> [2] [3]
+<HTKFigs//isoprob.eps> <HTKFigs//markovgen.eps> [4] <HTKFigs//useforiso.eps>
+[5] <HTKFigs//subsmixrep.eps> [6] [7] [8] <HTKFigs//vtrellis.eps> [9] [10]
+<HTKFigs//netforcsr.eps> [11] <HTKFigs//wlroper.eps> [12]) [13] (./htkoview.tex
+
+Chapter 2.
+<HTKFigs//toolkit.eps> <HTKFigs//softarch.eps> [14] [15]
+<HTKFigs//sysoview.eps> [16] <HTKFigs//tsubword.eps> [17] [18] [19]
+Overfull \hbox (5.33685pt too wide) in paragraph at lines 495--501
+[]\OT1/cmr/m/n/10 The speech in-put han-dling has been par-tially re-designed a
+nd a new energy-based speech/silence
+[20]) [21] (./exampsys.tex
+Chapter 3.
+<HTKFigs//recipe.eps> [22] <HTKFigs//dialnet.eps> [23] <HTKFigs//step1.eps>
+[24] <HTKFigs//step2.eps> [25]
+Overfull \hbox (5.40805pt too wide) in paragraph at lines 261--265
+\OT1/cmr/m/n/10 Notice that func-tion words such as \OT1/cmtt/m/n/10 A \OT1/cmr
+/m/n/10 and \OT1/cmtt/m/n/10 TO \OT1/cmr/m/n/10 have mul-ti-ple pro-nun-ci-a-ti
+ons. The en-tries for \OT1/cmtt/m/n/10 SENT-START
+<HTKFigs//step3.eps> [26] [27] <HTKFigs//step4.eps> [28] [29]
+<HTKFigs//step5.eps>
+Overfull \hbox (52.93646pt too wide) in paragraph at lines 498--502
+\OT1/cmr/m/n/10 This is il-lus-trated in Fig. [][][][]. A sim-i-lar pro-ce-dure
+ is used to code the test data (us-ing []\OT1/cmtt/m/n/10 TARGETKIND = MFCC_0_D
+_A
+[30] <HTKFigs//MMFeg.eps> [31] <HTKFigs//step6.eps> [32] <HTKFigs//egsils.eps>
+[33] <HTKFigs//step7.eps> <HTKFigs//step8.eps> [34] [35]
+<HTKFigs//egtranstie.eps> [36] <HTKFigs//step9.eps> [37] <HTKFigs//step10.eps>
+[38] [39] [40] <HTKFigs//step11.eps> [41]) [42] [43] (./openviron.tex
+Chapter 4.
+<HTKFigs//Tool.shell.eps> [44] [45] <HTKFigs//Config.eps> [46] [47] [48]
+[49] [50]
+Overfull \hbox (3.89096pt too wide) in paragraph at lines 706--706
+[]\OT1/cmtt/m/n/10 NATURALWRITEORDER| 
+[51] [52]) [53] (./speechio.tex
+Chapter 5.
+<HTKFigs//Tool.spio.eps> <HTKFigs//Spmods.eps> [54] [55] [56]
+<HTKFigs//Blocking.eps> [57] [58] [59] <HTKFigs//melfbank.eps> [60]
+<HTKFigs//vtlnpiecewise.eps> [61] [62] [63] [64] <HTKFigs//HTKFormat.eps>
+[65] [66] [67] [68] [69]
+Overfull \hbox (11.7258pt too wide) in paragraph at lines 1293--1298
+[]\OT1/cmr/m/n/10 The first method of au-dio in-put con-trol in-volves the use 
+of an au-to-matic energy-based speech/silence
+<HTKFigs//endpointer.eps> [70] <HTKFigs//streams.eps> [71]
+<HTKFigs//VQUse.eps> [72] [73]
+
+LaTeX Font Warning: Font shape `OT1/cmr/bx/sc' undefined
+(Font)              using `OT1/cmr/bx/n' instead on input line 1546.
+
+[74] [75] [76] <HTKFigs//coercions.eps> [77] [78]
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1883--1883
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1884--1884
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1885--1885
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1886--1886
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1887--1887
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1892--1892
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1893--1893
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1894--1894
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1895--1895
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (3.89096pt too wide) in paragraph at lines 1897--1897
+[]\OT1/cmtt/m/n/10 NATURALWRITEORDER| 
+
+Overfull \hbox (5.01097pt too wide) in paragraph at lines 1905--1905
+[]\OT1/cmtt/m/n/10 256000.0| 
+
+Overfull \hbox (1.47966pt too wide) in paragraph at lines 1929--1929
+[]\OT1/cmr/m/n/10 Module| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1930--1930
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1931--1931
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1932--1932
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1934--1934
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1935--1935
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1936--1936
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1937--1937
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1939--1939
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Underfull \hbox (badness 1472) in paragraph at lines 1939--1941
+[]\OT1/cmr/m/n/10 Number of frames clas-si-fied as si-lence
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1941--1941
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1943--1943
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1945--1945
+[]\OT1/cmr/m/sc/10 HParm| 
+[79]) [80] (./labels.tex
+Chapter 6.
+<HTKFigs//Tool.labs.eps> [81] [82] [83] <HTKFigs//labegs.eps> [84]
+
+LaTeX Font Warning: Font shape `OMS/cmss/m/n' undefined
+(Font)              using `OMS/cmsy/m/n' instead
+(Font)              for symbol `textbraceleft' on input line 315.
+
+[85]
+Overfull \hbox (26.2777pt too wide) in paragraph at lines 441--448
+[]\OT1/cmr/m/n/10 A digit data base con-tains train-ing to-kens \OT1/cmtt/m/n/1
+0 one.1.wav, one.2.wav, one.3.wav, ..., two.1.wav,
+[86] <HTKFigs//dbhier.eps> [87] [88] [89] [90]) [91] (./models.tex
+Chapter 7.
+<HTKFigs//Tool.model.eps> [92] <HTKFigs//hmm1.eps> [93]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 207--207
+[] 
+[94]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 339--339
+[] 
+[95] [96]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 494--494
+[] 
+[97] [98]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 547--547
+[] 
+[99] <HTKFigs//hierarch.eps> [100] [101] <HTKFigs//hsetdef.eps> [102] [103]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 812--812
+[] 
+[104] <HTKFigs//tmixeg.eps> [105] [106] [107] [108] [109] [110]
+Overfull \hbox (10.0452pt too wide) in paragraph at lines 1409--1413
+\OT1/cmr/m/n/10 where the \OT1/cmss/m/n/10 short \OT1/cmr/m/n/10 gives the num-
+ber $\OML/cmm/m/it/10 S$ \OT1/cmr/m/n/10 of weights (which should match the val
+ue given in the []
+[111] [112]) [113] (./train.tex
+Chapter 8.
+<HTKFigs//Tool.train.eps> [114] <HTKFigs//isoword.eps> <HTKFigs//subword.eps>
+[115] [116] <HTKFigs//vitloop.eps> [117] [118] <HTKFigs//hinitdp.eps> [119]
+<HTKFigs//flatst.eps> [120] <HTKFigs//restloop.eps> [121] [122]
+<HTKFigs//herestdp.eps> [123] [124] <HTKFigs//parher.eps> [125] [126]
+Overfull \hbox (31.63771pt too wide) in paragraph at lines 753--753
+[]   \OT1/cmtt/m/n/10 HERest -C config -C config.2model -S trainlist -I labs -H
+ dir1/hmacs -M dir3 hmmlist1[] 
+[127] [128] [129] [130]) [131] (./adapt.tex
+Chapter 9.
+<HTKFigs//headapt.eps> [132]
+Overfull \hbox (12.51427pt too wide) in paragraph at lines 121--127
+[]\OT1/cmr/m/n/10 The trans-for-ma-tion ma-trix $[]$ is ob-tained by solv-ing a
+ max-imi-sa-tion prob-lem us-ing the \OT1/cmr/m/it/10 Expectation-
+[133]
+Overfull \hbox (12.51427pt too wide) in paragraph at lines 172--178
+[]\OT1/cmr/m/n/10 The trans-for-ma-tion ma-trix $[]$ is ob-tained by solv-ing a
+ max-imi-sa-tion prob-lem us-ing the \OT1/cmr/m/it/10 Expectation-
+
+Underfull \hbox (badness 10000) in paragraph at lines 237--248
+
+[134] <HTKFigs//regtree1.eps> [135] [136] [137] [138]
+
+LaTeX Warning: Reference `f:headaptrdp' on page 139 undefined on input line 578
+.
+
+[139] [140]) [141] (./refine.tex
+Chapter 10.
+<HTKFigs//Tool.hedit.eps> [142] [143] <HTKFigs//itemtree.eps> [144] [145]
+[146] <HTKFigs//tiedstate.eps> [147] <HTKFigs//qstree.eps> [148] [149] [150]
+[151]) [152] (./discmods.tex
+Chapter 11.
+<HTKFigs//Tool.disc.eps> [153] [154] <HTKFigs//vqtohmm.eps> [155] [156]
+[157]) [158] (./netdict.tex
+Chapter 12.
+<HTKFigs//Tool.netdict.eps> [159] <HTKFigs//recsys.eps> [160]
+<HTKFigs//wdnet.eps> [161] <HTKFigs//wdnet1.eps> [162]
+
+LaTeX Font Warning: Font shape `OMS/cmtt/bx/n' undefined
+(Font)              using `OMS/cmsy/m/n' instead
+(Font)              for symbol `textbraceleft' on input line 313.
+
+[163] <HTKFigs//digitnets.eps> [164] [165] <HTKFigs//decinet.eps> [166]
+[167] <HTKFigs//bobig.eps> [168] <HTKFigs//dmaker.eps> [169] [170] [171]
+[172]
+Overfull \hbox (1.66956pt too wide) in paragraph at lines 1003--1009
+\OT1/cmr/m/n/10 the con-text ex-pan-sion can be fur-ther con-trolled via the co
+n-fig-u-ra-tion vari-able \OT1/cmtt/m/n/10 CFWORDBOUNDARY\OT1/cmr/m/n/10 .
+<HTKFigs//mononet.eps> <HTKFigs//wintnet.eps> [173] <HTKFigs//xwrdnet.eps>
+[174]) [175] (./decode.tex
+Chapter 13.
+<HTKFigs//Tool.decode.eps> <HTKFigs//recnetlev.eps> [176] [177]
+<HTKFigs//decflow.eps> [178] [179] [180] [181] [182] [183]
+<HTKFigs//hvalign.eps> [184] [185] [186] [187]) [188] [189] (./hlmfund.tex
+Chapter 14.
+<HTKFigs//HLMoperation.eps> [190]
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@encoding' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<let>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@family' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@series' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@shape' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\font@name' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\OT1/cmr/m/it/14.4' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\ignorespaces' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@encoding' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<let>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@family' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@series' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@shape' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\font@name' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\OT1/cmr/m/it/12' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\ignorespaces' on input line 77.
+
+[191]
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@encoding' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<let>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@family' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@series' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@shape' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\font@name' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\OT1/cmr/m/it/12' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\ignorespaces' on input line 177.
+
+[192] [193] [194] [195] [196] [197]
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `math shift' on input line 717.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `math shift' on input line 717.
+
+<HTKFigs//WordLM.eps> [198] <HTKFigs//ClassLM.eps> [199]) [200]
+(./hlmtutorial.tex
+Chapter 15.
+[201] [202] [203] [204] [205] [206] [207] [208] [209] [210]
+Overfull \hbox (14.91667pt too wide) in paragraph at lines 827--832
+\OT1/cmr/m/n/10 detecting whether a count or prob-a-bil-i-ties file has been su
+p-plied. The re-sult-ing file, \OT1/cmtt/m/n/10 lm[]5k/cl150-tg[]1[]1
+[211] [212]) [213] (./hlmfiles.tex
+Chapter 16.
+<HTKFigs//LTool.eps> [214] [215] [216] [217] [218] [219] [220]
+Underfull \hbox (badness 10000) in paragraph at lines 631--643
+
+[221]
+Underfull \hbox (badness 10000) in paragraph at lines 667--680
+
+[222] [223]
+Overfull \hbox (3.89096pt too wide) in paragraph at lines 869--869
+[]\OT1/cmtt/m/n/10 NATURALWRITEORDER| 
+[224] [225]) [226] [227] [228]
+Chapter 17.
+[229] (./HTKRef/tools.tex) (./HTKRef/Cluster.tex [230] [231]) [232]
+(./HTKRef/HBuild.tex [233]) [234] (./HTKRef/HCompV.tex [235]) [236]
+(./HTKRef/HCopy.tex [237] [238]) [239] (./HTKRef/HDMan.tex [240] [241])
+[242] (./HTKRef/HERest.tex
+Overfull \hbox (6.15317pt too wide) in paragraph at lines 41--50
+[]\OT1/cmr/m/sc/10 HERest \OT1/cmr/m/n/10 is in-tended to op-er-ate on HMMs wit
+h ini-tial pa-ram-e-ter val-ues es-ti-mated by HInit/HRest.
+[243] [244] [245]) [246] (./HTKRef/HHEd.tex [247] [248] [249] [250] [251]
+[252] [253] [254] [255]) [256] (./HTKRef/HInit.tex [257]) [258]
+(./HTKRef/HLEd.tex [259] [260]) [261] (./HTKRef/HList.tex) [262]
+(./HTKRef/HLMCopy.tex) [263] (./HTKRef/HLRescore.tex [264]) [265]
+(./HTKRef/HLStats.tex [266]) [267]
+No file HTKRef/HMMIRest.tex.
+(./HTKRef/HParse.tex
+
+LaTeX Font Warning: Font shape `OMS/cmtt/m/n' undefined
+(Font)              using `OMS/cmsy/m/n' instead
+(Font)              for symbol `textbraceleft' on input line 70.
+
+[268] [269]
+Overfull \hbox (5.42278pt too wide) in paragraph at lines 265--275
+[]\OT1/cmr/m/n/10 It should be noted that in HTK V1.5 any ENBF net-work could a
+p-pear be-tween a \OT1/cmtt/m/n/10 WD[]BEGIN/WD[]END
+[270]) [271] (./HTKRef/HQuant.tex [272]) [273] (./HTKRef/HRest.tex [274])
+[275] (./HTKRef/HResults.tex [276] [277] [278]) [279] (./HTKRef/HSGen.tex)
+[280] (./HTKRef/HSLab.tex <HTKFigs//hslab.eps> [281] [282] [283]) [284]
+(./HTKRef/HSmooth.tex [285]) [286] (./HTKRef/HVite.tex [287] [288]) [289]
+(./HTKRef/LAdapt.tex [290]) [291] (./HTKRef/LBuild.tex) [292]
+(./HTKRef/LFoF.tex) [293] (./HTKRef/LGCopy.tex [294]) [295]
+(./HTKRef/LGList.tex) [296] (./HTKRef/LGPrep.tex [297] [298]) [299]
+(./HTKRef/LLink.tex) [300] (./HTKRef/LMerge.tex) [301] (./HTKRef/LNewMap.tex)
+[302] (./HTKRef/LNorm.tex) [303] (./HTKRef/LPlex.tex [304]) [305]
+(./HTKRef/LSubset.tex) [306] (./config.tex
+Chapter 18.
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+[]\OT1/cmr/m/sc/10 HLabel
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+\OT1/cmr/m/sc/10 HAu-dio
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+\OT1/cmr/m/sc/10 HWave
+
+Underfull \hbox (badness 10000) in paragraph at lines 65--66
+[]\OT1/cmr/m/sc/10 HParm
+[307]
+Underfull \hbox (badness 10000) in paragraph at lines 111--112
+[]\OT1/cmr/m/sc/10 HLabel
+
+Underfull \hbox (badness 2173) in paragraph at lines 155--156
+[]\OT1/cmr/m/n/10 Number of frames clas-si-fied as si-lence
+[308]
+Overfull \hbox (1.50491pt too wide) in paragraph at lines 189--190
+[]\OT1/cmr/m/sc/10 HModel| 
+
+Underfull \hbox (badness 10000) in paragraph at lines 202--203
+[]\OT1/cmr/m/n/10 Force tri-phone con-text ex-pan-sion to
+
+Underfull \hbox (badness 10000) in paragraph at lines 202--203
+\OT1/cmr/m/n/10 get model names (is over-rid-den by
+
+Underfull \hbox (badness 1881) in paragraph at lines 209--209
+[]\OT1/cmr/m/n/10 Allow con-text ex-pan-sion to get model
+[309]
+Underfull \hbox (badness 1033) in paragraph at lines 252--252
+[]\OT1/cmr/m/n/10 Maximum it-er-a-tions for it-er-a-tively es-ti-
+
+Underfull \hbox (badness 1087) in paragraph at lines 253--253
+[]\OT1/cmr/m/n/10 Generate a di-ag-o-nal vari-ance trans-form
+[310] [311]
+Overfull \hbox (3.8507pt too wide) in paragraph at lines 330--330
+[]\OT1/cmr/m/sc/10 HCompV| 
+
+Underfull \hbox (badness 2503) in paragraph at lines 349--349
+[]\OT1/cmr/m/n/10 Input trans-form ext to be used with
+
+Underfull \hbox (badness 3354) in paragraph at lines 351--351
+[]\OT1/cmr/m/n/10 Input trans-form mask (de-fault out-put
+
+Overfull \hbox (7.54932pt too wide) in paragraph at lines 373--373
+[]\OT1/cmr/m/sc/10 HResults| 
+
+Overfull \hbox (2.44928pt too wide) in paragraph at lines 388--388
+[]\OT1/cmr/m/sc/10 HLStats| 
+[312]) (./errors.tex
+Chapter 19.
+[313] [314]
+Overfull \hbox (6.29768pt too wide) in paragraph at lines 183--187
+[]\OT1/cmr/m/sc/10 HCopy \OT1/cmr/m/n/10 is only able to prop-erly copy la-bel 
+files with the same num-ber of lev-els/alternatives.
+[315] [316] [317] [318]
+Overfull \hbox (1.19797pt too wide) in paragraph at lines 563--565
+[]\OT1/cmr/m/n/10 The spec-i-fied num-ber/width of the streams does not agree w
+ith the pa-ram-e-ter kind/vector
+[319] [320] [321] [322] [323] [324] [325] [326] [327]
+Overfull \hbox (21.0736pt too wide) in paragraph at lines 1293--1300
+[]\OT1/cmr/m/sc/10 HNet \OT1/cmr/m/n/10 can only deal with the stan-dard HTK me
+thod for spec-i-fy-ing con-text \OT1/cmtt/m/n/10 left-phone+right
+[328] [329] [330] [331]) [332] (./htkslf.tex
+Chapter 20.
+[333]
+Overfull \hbox (21.1378pt too wide) in paragraph at lines 182--182
+[]                \OT1/cmtt/m/n/10 "acscale=" floatnumber | "base=" floatnumber
+ | "tscale=" floatnumber }[] 
+
+Overfull \hbox (26.38776pt too wide) in paragraph at lines 182--182
+[]      \OT1/cmtt/m/n/10 { "a=" floatnumber  | "l=" floatnumber  | "a=" floatnu
+mber  | "r=" floatnumber  |[] 
+[334] [335] [336]) [337]
+No file htkbook.ind.
+(./htkbook.aux (./fundaments.aux) (./htkoview.aux) (./exampsys.aux)
+(./openviron.aux) (./speechio.aux) (./labels.aux) (./models.aux) (./train.aux)
+(./adapt.aux) (./refine.aux) (./discmods.aux) (./netdict.aux) (./decode.aux)
+(./hlmfund.aux) (./hlmtutorial.aux) (./hlmfiles.aux) (./HTKRef/tools.aux)
+(./HTKRef/Cluster.aux) (./HTKRef/HBuild.aux) (./HTKRef/HCompV.aux)
+(./HTKRef/HCopy.aux) (./HTKRef/HDMan.aux) (./HTKRef/HERest.aux)
+(./HTKRef/HHEd.aux) (./HTKRef/HInit.aux) (./HTKRef/HLEd.aux)
+(./HTKRef/HList.aux) (./HTKRef/HLMCopy.aux) (./HTKRef/HLRescore.aux)
+(./HTKRef/HLStats.aux) (./HTKRef/HMMIRest.aux) (./HTKRef/HParse.aux)
+(./HTKRef/HQuant.aux) (./HTKRef/HRest.aux) (./HTKRef/HResults.aux)
+(./HTKRef/HSGen.aux) (./HTKRef/HSLab.aux) (./HTKRef/HSmooth.aux)
+(./HTKRef/HVite.aux) (./HTKRef/LAdapt.aux) (./HTKRef/LBuild.aux)
+(./HTKRef/LFoF.aux) (./HTKRef/LGCopy.aux) (./HTKRef/LGList.aux)
+(./HTKRef/LGPrep.aux) (./HTKRef/LLink.aux) (./HTKRef/LMerge.aux)
+(./HTKRef/LNewMap.aux) (./HTKRef/LNorm.aux) (./HTKRef/LPlex.aux)
+(./HTKRef/LSubset.aux) (./config.aux) (./errors.aux) (./htkslf.aux))
+
+LaTeX Font Warning: Some font shapes were not available, defaults substituted.
+
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: There were multiply-defined labels.
+
+ )
+(see the transcript file for additional information)
+Output written on htkbook.dvi (347 pages, 2013664 bytes).
+Transcript written on htkbook.log.
+makeindex htkbook.idx
+This is makeindex, version 2.14 [02-Oct-2002] (kpathsea + Thai support).
+Scanning input file htkbook.idx.....done (1054 entries accepted, 0 rejected).
+Sorting entries...........done (11817 comparisons).
+Generating output file htkbook.ind.....done (953 lines written, 0 warnings).
+Output written in htkbook.ind.
+Transcript written in htkbook.ilg.
+latex htkbook
+This is pdfeTeX, Version 3.141592-1.21a-2.2 (Web2C 7.5.4)
+entering extended mode
+(./htkbook.tex
+LaTeX2e <2003/12/01>
+Babel <v3.8d> and hyphenation patterns for american, french, german, ngerman, b
+ahasa, basque, bulgarian, catalan, croatian, czech, danish, dutch, esperanto, e
+stonian, finnish, greek, icelandic, irish, italian, latin, magyar, norsk, polis
+h, portuges, romanian, russian, serbian, slovak, slovene, spanish, swedish, tur
+kish, ukrainian, nohyphenation, loaded.
+(/usr/share/texmf/tex/latex/base/book.cls
+Document Class: book 2004/02/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/bk10.clo)) (./HTK.tex
+(/usr/share/texmf/tex/latex/graphics/epsfig.sty
+(/usr/share/texmf/tex/latex/graphics/graphicx.sty
+(/usr/share/texmf/tex/latex/graphics/keyval.sty)
+(/usr/share/texmf/tex/latex/graphics/graphics.sty
+(/usr/share/texmf/tex/latex/graphics/trig.sty)
+(/usr/share/texmf/tex/latex/graphics/graphics.cfg)
+(/usr/share/texmf/tex/latex/graphics/dvips.def))))
+(/usr/share/texmf/tex/latex/html/html.sty
+(/usr/share/texmf/tex/latex/hyperref/hyperref.sty
+(/usr/share/texmf/tex/latex/hyperref/pd1enc.def)
+(/usr/share/texmf/tex/latex/hyperref/hyperref.cfg)
+Implicit mode ON; LaTeX internals redefined
+(/usr/share/texmf/tex/latex/html/url.sty))
+*hyperref using driver hdvips*
+(/usr/share/texmf/tex/latex/hyperref/hdvips.def
+(/usr/share/texmf/tex/latex/hyperref/pdfmark.def)))
+(/usr/share/texmf/tex/latex/graphics/color.sty
+(/usr/share/texmf/tex/latex/graphics/color.cfg)
+(/usr/share/texmf/tex/latex/graphics/dvipsnam.def))
+(/usr/share/texmf/tex/latex/supertabular/supertabular.sty)
+(/usr/share/texmf/tex/latex/tools/calc.sty)
+(/usr/share/texmf/tex/latex/base/ifthen.sty))
+(/usr/share/texmf/tex/latex/base/makeidx.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+Writing index file htkbook.idx
+(./htkbook.aux (./fundaments.aux) (./htkoview.aux) (./exampsys.aux)
+(./openviron.aux) (./speechio.aux) (./labels.aux) (./models.aux) (./train.aux)
+(./adapt.aux
+
+LaTeX Warning: Label `e:mtrans' multiply defined.
+
+
+LaTeX Warning: Label `e:decompmtrans' multiply defined.
+
+
+LaTeX Warning: Label `s:reg_classes' multiply defined.
+
+) (./refine.aux) (./discmods.aux) (./netdict.aux) (./decode.aux) (./hlmfund.aux
+) (./hlmtutorial.aux) (./hlmfiles.aux
+
+LaTeX Warning: Label `s:HLMinterpmax' multiply defined.
+
+) (./HTKRef/tools.aux) (./HTKRef/Cluster.aux) (./HTKRef/HBuild.aux)
+(./HTKRef/HCompV.aux) (./HTKRef/HCopy.aux) (./HTKRef/HDMan.aux)
+(./HTKRef/HERest.aux) (./HTKRef/HHEd.aux) (./HTKRef/HInit.aux)
+(./HTKRef/HLEd.aux) (./HTKRef/HList.aux) (./HTKRef/HLMCopy.aux)
+(./HTKRef/HLRescore.aux) (./HTKRef/HLStats.aux) (./HTKRef/HMMIRest.aux)
+(./HTKRef/HParse.aux) (./HTKRef/HQuant.aux) (./HTKRef/HRest.aux)
+(./HTKRef/HResults.aux) (./HTKRef/HSGen.aux) (./HTKRef/HSLab.aux)
+(./HTKRef/HSmooth.aux) (./HTKRef/HVite.aux) (./HTKRef/LAdapt.aux)
+(./HTKRef/LBuild.aux) (./HTKRef/LFoF.aux) (./HTKRef/LGCopy.aux)
+(./HTKRef/LGList.aux) (./HTKRef/LGPrep.aux) (./HTKRef/LLink.aux
+
+LaTeX Warning: Label `s:Function' multiply defined.
+
+) (./HTKRef/LMerge.aux) (./HTKRef/LNewMap.aux
+
+LaTeX Warning: Label `s:Function' multiply defined.
+
+) (./HTKRef/LNorm.aux) (./HTKRef/LPlex.aux) (./HTKRef/LSubset.aux)
+(./config.aux) (./errors.aux) (./htkslf.aux))
+(/usr/share/texmf/tex/latex/hyperref/nameref.sty) (./htkbook.out)
+(./htkbook.out)
+Underfull \hbox (badness 10000) in paragraph at lines 63--64
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 71--82
+
+(/usr/share/texmf/tex/latex/base/omscmr.fd)
+Overfull \hbox (0.13022pt too wide) in paragraph at lines 91--92
+[]\OT1/cmr/m/n/14.4 COPYRIGHT 2001-2004 Cam-bridge Uni-ver-sity En-gi-neer-ing 
+De-part-
+[1] [2] (./htkbook.toc (/usr/share/texmf/tex/latex/amsfonts/umsa.fd)
+(/usr/share/texmf/tex/latex/amsfonts/umsb.fd) [3] [4] [5] [6] [7] [8] [9])
+[10] [1] (./fundaments.tex
+Chapter 1.
+<HTKFigs//overview.eps> <HTKFigs//messencode.eps> [2] [3]
+<HTKFigs//isoprob.eps> <HTKFigs//markovgen.eps> [4] <HTKFigs//useforiso.eps>
+[5] <HTKFigs//subsmixrep.eps> [6] [7] [8] <HTKFigs//vtrellis.eps> [9] [10]
+<HTKFigs//netforcsr.eps> [11] <HTKFigs//wlroper.eps> [12]) [13] (./htkoview.tex
+
+Chapter 2.
+<HTKFigs//toolkit.eps> <HTKFigs//softarch.eps> [14] [15]
+<HTKFigs//sysoview.eps> [16] <HTKFigs//tsubword.eps> [17] [18] [19]
+Overfull \hbox (5.33685pt too wide) in paragraph at lines 495--501
+[]\OT1/cmr/m/n/10 The speech in-put han-dling has been par-tially re-designed a
+nd a new energy-based speech/silence
+[20]) [21] (./exampsys.tex
+Chapter 3.
+<HTKFigs//recipe.eps> [22] <HTKFigs//dialnet.eps> [23] <HTKFigs//step1.eps>
+[24] <HTKFigs//step2.eps> [25]
+Overfull \hbox (5.40805pt too wide) in paragraph at lines 261--265
+\OT1/cmr/m/n/10 Notice that func-tion words such as \OT1/cmtt/m/n/10 A \OT1/cmr
+/m/n/10 and \OT1/cmtt/m/n/10 TO \OT1/cmr/m/n/10 have mul-ti-ple pro-nun-ci-a-ti
+ons. The en-tries for \OT1/cmtt/m/n/10 SENT-START
+<HTKFigs//step3.eps> [26] [27] <HTKFigs//step4.eps> [28] [29]
+<HTKFigs//step5.eps>
+Overfull \hbox (52.93646pt too wide) in paragraph at lines 498--502
+\OT1/cmr/m/n/10 This is il-lus-trated in Fig. [][][][]. A sim-i-lar pro-ce-dure
+ is used to code the test data (us-ing []\OT1/cmtt/m/n/10 TARGETKIND = MFCC_0_D
+_A
+[30] <HTKFigs//MMFeg.eps> [31] <HTKFigs//step6.eps> [32] <HTKFigs//egsils.eps>
+[33] <HTKFigs//step7.eps> <HTKFigs//step8.eps> [34] [35]
+<HTKFigs//egtranstie.eps> [36] <HTKFigs//step9.eps> [37] <HTKFigs//step10.eps>
+[38] [39] [40] <HTKFigs//step11.eps> [41]) [42] [43] (./openviron.tex
+Chapter 4.
+<HTKFigs//Tool.shell.eps> [44] [45] <HTKFigs//Config.eps> [46] [47] [48]
+[49] [50]
+Overfull \hbox (3.89096pt too wide) in paragraph at lines 706--706
+[]\OT1/cmtt/m/n/10 NATURALWRITEORDER| 
+[51] [52]) [53] (./speechio.tex
+Chapter 5.
+<HTKFigs//Tool.spio.eps> <HTKFigs//Spmods.eps> [54] [55] [56]
+<HTKFigs//Blocking.eps> [57] [58] [59] <HTKFigs//melfbank.eps> [60]
+<HTKFigs//vtlnpiecewise.eps> [61] [62] [63] [64] <HTKFigs//HTKFormat.eps>
+[65] [66] [67] [68] [69]
+Overfull \hbox (11.7258pt too wide) in paragraph at lines 1293--1298
+[]\OT1/cmr/m/n/10 The first method of au-dio in-put con-trol in-volves the use 
+of an au-to-matic energy-based speech/silence
+<HTKFigs//endpointer.eps> [70] <HTKFigs//streams.eps> [71]
+<HTKFigs//VQUse.eps> [72] [73]
+
+LaTeX Font Warning: Font shape `OT1/cmr/bx/sc' undefined
+(Font)              using `OT1/cmr/bx/n' instead on input line 1546.
+
+[74] [75] [76] <HTKFigs//coercions.eps> [77] [78]
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1883--1883
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1884--1884
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1885--1885
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1886--1886
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (3.5982pt too wide) in paragraph at lines 1887--1887
+[]\OT1/cmr/m/sc/10 HAudio| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1892--1892
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1893--1893
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1894--1894
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (0.83986pt too wide) in paragraph at lines 1895--1895
+[]\OT1/cmr/m/sc/10 HWave| 
+
+Overfull \hbox (3.89096pt too wide) in paragraph at lines 1897--1897
+[]\OT1/cmtt/m/n/10 NATURALWRITEORDER| 
+
+Overfull \hbox (5.01097pt too wide) in paragraph at lines 1905--1905
+[]\OT1/cmtt/m/n/10 256000.0| 
+
+Overfull \hbox (1.47966pt too wide) in paragraph at lines 1929--1929
+[]\OT1/cmr/m/n/10 Module| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1930--1930
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1931--1931
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1932--1932
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1934--1934
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1935--1935
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1936--1936
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1937--1937
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1939--1939
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Underfull \hbox (badness 1472) in paragraph at lines 1939--1941
+[]\OT1/cmr/m/n/10 Number of frames clas-si-fied as si-lence
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1941--1941
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1943--1943
+[]\OT1/cmr/m/sc/10 HParm| 
+
+Overfull \hbox (3.00433pt too wide) in paragraph at lines 1945--1945
+[]\OT1/cmr/m/sc/10 HParm| 
+[79]) [80] (./labels.tex
+Chapter 6.
+<HTKFigs//Tool.labs.eps> [81] [82] [83] <HTKFigs//labegs.eps> [84]
+
+LaTeX Font Warning: Font shape `OMS/cmss/m/n' undefined
+(Font)              using `OMS/cmsy/m/n' instead
+(Font)              for symbol `textbraceleft' on input line 315.
+
+[85]
+Overfull \hbox (26.2777pt too wide) in paragraph at lines 441--448
+[]\OT1/cmr/m/n/10 A digit data base con-tains train-ing to-kens \OT1/cmtt/m/n/1
+0 one.1.wav, one.2.wav, one.3.wav, ..., two.1.wav,
+[86] <HTKFigs//dbhier.eps> [87] [88] [89] [90]) [91] (./models.tex
+Chapter 7.
+<HTKFigs//Tool.model.eps> [92] <HTKFigs//hmm1.eps> [93]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 207--207
+[] 
+[94]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 339--339
+[] 
+[95] [96]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 494--494
+[] 
+[97] [98]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 547--547
+[] 
+[99] <HTKFigs//hierarch.eps> [100] [101] <HTKFigs//hsetdef.eps> [102] [103]
+Overfull \hbox (13.46664pt too wide) in paragraph at lines 812--812
+[] 
+[104] <HTKFigs//tmixeg.eps> [105] [106] [107] [108] [109] [110]
+Overfull \hbox (10.0452pt too wide) in paragraph at lines 1409--1413
+\OT1/cmr/m/n/10 where the \OT1/cmss/m/n/10 short \OT1/cmr/m/n/10 gives the num-
+ber $\OML/cmm/m/it/10 S$ \OT1/cmr/m/n/10 of weights (which should match the val
+ue given in the []
+[111] [112]) [113] (./train.tex
+Chapter 8.
+<HTKFigs//Tool.train.eps> [114] <HTKFigs//isoword.eps> <HTKFigs//subword.eps>
+[115] [116] <HTKFigs//vitloop.eps> [117] [118] <HTKFigs//hinitdp.eps> [119]
+<HTKFigs//flatst.eps> [120] <HTKFigs//restloop.eps> [121] [122]
+<HTKFigs//herestdp.eps> [123] [124] <HTKFigs//parher.eps> [125] [126]
+Overfull \hbox (31.63771pt too wide) in paragraph at lines 753--753
+[]   \OT1/cmtt/m/n/10 HERest -C config -C config.2model -S trainlist -I labs -H
+ dir1/hmacs -M dir3 hmmlist1[] 
+[127] [128] [129] [130]) [131] (./adapt.tex
+Chapter 9.
+<HTKFigs//headapt.eps> [132]
+Overfull \hbox (12.51427pt too wide) in paragraph at lines 121--127
+[]\OT1/cmr/m/n/10 The trans-for-ma-tion ma-trix $[]$ is ob-tained by solv-ing a
+ max-imi-sa-tion prob-lem us-ing the \OT1/cmr/m/it/10 Expectation-
+[133]
+Overfull \hbox (12.51427pt too wide) in paragraph at lines 172--178
+[]\OT1/cmr/m/n/10 The trans-for-ma-tion ma-trix $[]$ is ob-tained by solv-ing a
+ max-imi-sa-tion prob-lem us-ing the \OT1/cmr/m/it/10 Expectation-
+
+Underfull \hbox (badness 10000) in paragraph at lines 237--248
+
+[134] <HTKFigs//regtree1.eps> [135] [136] [137] [138]
+
+LaTeX Warning: Reference `f:headaptrdp' on page 139 undefined on input line 578
+.
+
+[139] [140]) [141] (./refine.tex
+Chapter 10.
+<HTKFigs//Tool.hedit.eps> [142] [143] <HTKFigs//itemtree.eps> [144] [145]
+[146] <HTKFigs//tiedstate.eps> [147] <HTKFigs//qstree.eps> [148] [149] [150]
+[151]) [152] (./discmods.tex
+Chapter 11.
+<HTKFigs//Tool.disc.eps> [153] [154] <HTKFigs//vqtohmm.eps> [155] [156]
+[157]) [158] (./netdict.tex
+Chapter 12.
+<HTKFigs//Tool.netdict.eps> [159] <HTKFigs//recsys.eps> [160]
+<HTKFigs//wdnet.eps> [161] <HTKFigs//wdnet1.eps> [162]
+
+LaTeX Font Warning: Font shape `OMS/cmtt/bx/n' undefined
+(Font)              using `OMS/cmsy/m/n' instead
+(Font)              for symbol `textbraceleft' on input line 313.
+
+[163] <HTKFigs//digitnets.eps> [164] [165] <HTKFigs//decinet.eps> [166]
+[167] <HTKFigs//bobig.eps> [168] <HTKFigs//dmaker.eps> [169] [170] [171]
+[172]
+Overfull \hbox (1.66956pt too wide) in paragraph at lines 1003--1009
+\OT1/cmr/m/n/10 the con-text ex-pan-sion can be fur-ther con-trolled via the co
+n-fig-u-ra-tion vari-able \OT1/cmtt/m/n/10 CFWORDBOUNDARY\OT1/cmr/m/n/10 .
+<HTKFigs//mononet.eps> <HTKFigs//wintnet.eps> [173] <HTKFigs//xwrdnet.eps>
+[174]) [175] (./decode.tex
+Chapter 13.
+<HTKFigs//Tool.decode.eps> <HTKFigs//recnetlev.eps> [176] [177]
+<HTKFigs//decflow.eps> [178] [179] [180] [181] [182] [183]
+<HTKFigs//hvalign.eps> [184] [185] [186] [187]) [188] [189] (./hlmfund.tex
+Chapter 14.
+<HTKFigs//HLMoperation.eps> [190]
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@encoding' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<let>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@family' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@series' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@shape' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\font@name' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\OT1/cmr/m/it/14.4' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\ignorespaces' on input line 61.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@encoding' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<let>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@family' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@series' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@shape' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\font@name' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\OT1/cmr/m/it/12' on input line 77.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\ignorespaces' on input line 77.
+
+[191]
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@encoding' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<let>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@family' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@series' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\f@shape' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\<def>-command' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\font@name' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\OT1/cmr/m/it/12' on input line 177.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `\ignorespaces' on input line 177.
+
+[192] [193] [194] [195] [196] [197]
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `math shift' on input line 717.
+
+
+Package hyperref Warning: Token not allowed in a PDFDocEncoded string,
+(hyperref)                removing `math shift' on input line 717.
+
+<HTKFigs//WordLM.eps> [198] <HTKFigs//ClassLM.eps> [199]) [200]
+(./hlmtutorial.tex
+Chapter 15.
+[201] [202] [203] [204] [205] [206] [207] [208] [209] [210]
+Overfull \hbox (14.91667pt too wide) in paragraph at lines 827--832
+\OT1/cmr/m/n/10 detecting whether a count or prob-a-bil-i-ties file has been su
+p-plied. The re-sult-ing file, \OT1/cmtt/m/n/10 lm[]5k/cl150-tg[]1[]1
+[211] [212]) [213] (./hlmfiles.tex
+Chapter 16.
+<HTKFigs//LTool.eps> [214] [215] [216] [217] [218] [219] [220]
+Underfull \hbox (badness 10000) in paragraph at lines 631--643
+
+[221]
+Underfull \hbox (badness 10000) in paragraph at lines 667--680
+
+[222] [223]
+Overfull \hbox (3.89096pt too wide) in paragraph at lines 869--869
+[]\OT1/cmtt/m/n/10 NATURALWRITEORDER| 
+[224] [225]) [226] [227] [228]
+Chapter 17.
+[229] (./HTKRef/tools.tex) (./HTKRef/Cluster.tex [230] [231]) [232]
+(./HTKRef/HBuild.tex [233]) [234] (./HTKRef/HCompV.tex [235]) [236]
+(./HTKRef/HCopy.tex [237] [238]) [239] (./HTKRef/HDMan.tex [240] [241])
+[242] (./HTKRef/HERest.tex
+Overfull \hbox (6.15317pt too wide) in paragraph at lines 41--50
+[]\OT1/cmr/m/sc/10 HERest \OT1/cmr/m/n/10 is in-tended to op-er-ate on HMMs wit
+h ini-tial pa-ram-e-ter val-ues es-ti-mated by HInit/HRest.
+[243] [244] [245]) [246] (./HTKRef/HHEd.tex [247] [248] [249] [250] [251]
+[252] [253] [254] [255]) [256] (./HTKRef/HInit.tex [257]) [258]
+(./HTKRef/HLEd.tex [259] [260]) [261] (./HTKRef/HList.tex) [262]
+(./HTKRef/HLMCopy.tex) [263] (./HTKRef/HLRescore.tex [264]) [265]
+(./HTKRef/HLStats.tex [266]) [267]
+No file HTKRef/HMMIRest.tex.
+(./HTKRef/HParse.tex
+
+LaTeX Font Warning: Font shape `OMS/cmtt/m/n' undefined
+(Font)              using `OMS/cmsy/m/n' instead
+(Font)              for symbol `textbraceleft' on input line 70.
+
+[268] [269]
+Overfull \hbox (5.42278pt too wide) in paragraph at lines 265--275
+[]\OT1/cmr/m/n/10 It should be noted that in HTK V1.5 any ENBF net-work could a
+p-pear be-tween a \OT1/cmtt/m/n/10 WD[]BEGIN/WD[]END
+[270]) [271] (./HTKRef/HQuant.tex [272]) [273] (./HTKRef/HRest.tex [274])
+[275] (./HTKRef/HResults.tex [276] [277] [278]) [279] (./HTKRef/HSGen.tex)
+[280] (./HTKRef/HSLab.tex <HTKFigs//hslab.eps> [281] [282] [283]) [284]
+(./HTKRef/HSmooth.tex [285]) [286] (./HTKRef/HVite.tex [287] [288]) [289]
+(./HTKRef/LAdapt.tex [290]) [291] (./HTKRef/LBuild.tex) [292]
+(./HTKRef/LFoF.tex) [293] (./HTKRef/LGCopy.tex [294]) [295]
+(./HTKRef/LGList.tex) [296] (./HTKRef/LGPrep.tex [297] [298]) [299]
+(./HTKRef/LLink.tex) [300] (./HTKRef/LMerge.tex) [301] (./HTKRef/LNewMap.tex)
+[302] (./HTKRef/LNorm.tex) [303] (./HTKRef/LPlex.tex [304]) [305]
+(./HTKRef/LSubset.tex) [306] (./config.tex
+Chapter 18.
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+[]\OT1/cmr/m/sc/10 HLabel
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+\OT1/cmr/m/sc/10 HAu-dio
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+\OT1/cmr/m/sc/10 HWave
+
+Underfull \hbox (badness 10000) in paragraph at lines 65--66
+[]\OT1/cmr/m/sc/10 HParm
+[307]
+Underfull \hbox (badness 10000) in paragraph at lines 111--112
+[]\OT1/cmr/m/sc/10 HLabel
+
+Underfull \hbox (badness 2173) in paragraph at lines 155--156
+[]\OT1/cmr/m/n/10 Number of frames clas-si-fied as si-lence
+[308]
+Overfull \hbox (1.50491pt too wide) in paragraph at lines 189--190
+[]\OT1/cmr/m/sc/10 HModel| 
+
+Underfull \hbox (badness 10000) in paragraph at lines 202--203
+[]\OT1/cmr/m/n/10 Force tri-phone con-text ex-pan-sion to
+
+Underfull \hbox (badness 10000) in paragraph at lines 202--203
+\OT1/cmr/m/n/10 get model names (is over-rid-den by
+
+Underfull \hbox (badness 1881) in paragraph at lines 209--209
+[]\OT1/cmr/m/n/10 Allow con-text ex-pan-sion to get model
+[309]
+Underfull \hbox (badness 1033) in paragraph at lines 252--252
+[]\OT1/cmr/m/n/10 Maximum it-er-a-tions for it-er-a-tively es-ti-
+
+Underfull \hbox (badness 1087) in paragraph at lines 253--253
+[]\OT1/cmr/m/n/10 Generate a di-ag-o-nal vari-ance trans-form
+[310] [311]
+Overfull \hbox (3.8507pt too wide) in paragraph at lines 330--330
+[]\OT1/cmr/m/sc/10 HCompV| 
+
+Underfull \hbox (badness 2503) in paragraph at lines 349--349
+[]\OT1/cmr/m/n/10 Input trans-form ext to be used with
+
+Underfull \hbox (badness 3354) in paragraph at lines 351--351
+[]\OT1/cmr/m/n/10 Input trans-form mask (de-fault out-put
+
+Overfull \hbox (7.54932pt too wide) in paragraph at lines 373--373
+[]\OT1/cmr/m/sc/10 HResults| 
+
+Overfull \hbox (2.44928pt too wide) in paragraph at lines 388--388
+[]\OT1/cmr/m/sc/10 HLStats| 
+[312]) (./errors.tex
+Chapter 19.
+[313] [314]
+Overfull \hbox (6.29768pt too wide) in paragraph at lines 183--187
+[]\OT1/cmr/m/sc/10 HCopy \OT1/cmr/m/n/10 is only able to prop-erly copy la-bel 
+files with the same num-ber of lev-els/alternatives.
+[315] [316] [317] [318]
+Overfull \hbox (1.19797pt too wide) in paragraph at lines 563--565
+[]\OT1/cmr/m/n/10 The spec-i-fied num-ber/width of the streams does not agree w
+ith the pa-ram-e-ter kind/vector
+[319] [320] [321] [322] [323] [324] [325] [326] [327]
+Overfull \hbox (21.0736pt too wide) in paragraph at lines 1293--1300
+[]\OT1/cmr/m/sc/10 HNet \OT1/cmr/m/n/10 can only deal with the stan-dard HTK me
+thod for spec-i-fy-ing con-text \OT1/cmtt/m/n/10 left-phone+right
+[328] [329] [330] [331]) [332] (./htkslf.tex
+Chapter 20.
+[333]
+Overfull \hbox (21.1378pt too wide) in paragraph at lines 182--182
+[]                \OT1/cmtt/m/n/10 "acscale=" floatnumber | "base=" floatnumber
+ | "tscale=" floatnumber }[] 
+
+Overfull \hbox (26.38776pt too wide) in paragraph at lines 182--182
+[]      \OT1/cmtt/m/n/10 { "a=" floatnumber  | "l=" floatnumber  | "a=" floatnu
+mber  | "r=" floatnumber  |[] 
+[334] [335] [336]) [337] (./htkbook.ind [338] [339] [340] [341] [342] [343]
+[344] [345]) (./htkbook.aux (./fundaments.aux) (./htkoview.aux) (./exampsys.aux
+) (./openviron.aux) (./speechio.aux) (./labels.aux) (./models.aux) (./train.aux
+) (./adapt.aux) (./refine.aux) (./discmods.aux) (./netdict.aux) (./decode.aux)
+(./hlmfund.aux) (./hlmtutorial.aux) (./hlmfiles.aux) (./HTKRef/tools.aux)
+(./HTKRef/Cluster.aux) (./HTKRef/HBuild.aux) (./HTKRef/HCompV.aux)
+(./HTKRef/HCopy.aux) (./HTKRef/HDMan.aux) (./HTKRef/HERest.aux)
+(./HTKRef/HHEd.aux) (./HTKRef/HInit.aux) (./HTKRef/HLEd.aux)
+(./HTKRef/HList.aux) (./HTKRef/HLMCopy.aux) (./HTKRef/HLRescore.aux)
+(./HTKRef/HLStats.aux) (./HTKRef/HMMIRest.aux) (./HTKRef/HParse.aux)
+(./HTKRef/HQuant.aux) (./HTKRef/HRest.aux) (./HTKRef/HResults.aux)
+(./HTKRef/HSGen.aux) (./HTKRef/HSLab.aux) (./HTKRef/HSmooth.aux)
+(./HTKRef/HVite.aux) (./HTKRef/LAdapt.aux) (./HTKRef/LBuild.aux)
+(./HTKRef/LFoF.aux) (./HTKRef/LGCopy.aux) (./HTKRef/LGList.aux)
+(./HTKRef/LGPrep.aux) (./HTKRef/LLink.aux) (./HTKRef/LMerge.aux)
+(./HTKRef/LNewMap.aux) (./HTKRef/LNorm.aux) (./HTKRef/LPlex.aux)
+(./HTKRef/LSubset.aux) (./config.aux) (./errors.aux) (./htkslf.aux))
+
+LaTeX Font Warning: Some font shapes were not available, defaults substituted.
+
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: There were multiply-defined labels.
+
+ )
+(see the transcript file for additional information)
+Output written on htkbook.dvi (355 pages, 2256808 bytes).
+Transcript written on htkbook.log.
+dvips -t a4 -K -o htkbook.ps htkbook.dvi
+This is dvips(k) 5.95a Copyright 2005 Radical Eye Software (www.radicaleye.com)
+' TeX output 2005.07.05:1417' -> htkbook.ps
+<tex.pro><8r.enc><texnansi.enc><texps.pro><special.pro><color.pro>. 
+<cmitt10.pfb><cmmi12.pfb><msbm7.pfb><cmti7.pfb><msbm10.pfb><msam10.pfb>
+<cmti12.pfb><cmmib7.pfb><cmbx8.pfb><cmss8.pfb><cmss10.pfb><cmsy6.pfb>
+<cmmi6.pfb><fmex8.pfb><cmtt10.pfb><cmtt8.pfb><cmcsc10.pfb><cmti8.pfb>
+<cmsy8.pfb><cmmi8.pfb><cmr8.pfb><cmr6.pfb><cmsy5.pfb><cmr5.pfb><cmsy7.pfb>
+<cmmi5.pfb><cmex10.pfb><cmsy10.pfb><cmmi7.pfb><cmr7.pfb><cmmib10.pfb>
+<cmbx12.pfb><cmbxsl10.pfb><cmmi10.pfb><cmti10.pfb><cmr10.pfb><cmbx10.pfb>
+<cmr12.pfb>[1] [2] [3] [4] [5] [6] [7] [8] [9] [10] [1] [2
+<HTKFigs//overview.eps>] [3<HTKFigs//messencode.eps>] [4
+<HTKFigs//isoprob.eps><HTKFigs//markovgen.eps>] [5<HTKFigs//useforiso.eps>] 
+[6<HTKFigs//subsmixrep.eps>] [7] [8] [9] [10<HTKFigs//vtrellis.eps>] [11] 
+[12<HTKFigs//netforcsr.eps><HTKFigs//wlroper.eps>] [13] [14
+<HTKFigs//toolkit.eps>] [15<HTKFigs//softarch.eps>] [16] [17
+<HTKFigs//sysoview.eps>] [18<HTKFigs//tsubword.eps>] [19] [20] [21] [22
+<HTKFigs//recipe.eps>] [23] [24<HTKFigs//dialnet.eps><HTKFigs//step1.eps>] 
+[25<HTKFigs//step2.eps>] [26] [27<HTKFigs//step3.eps>] [28] [29
+<HTKFigs//step4.eps>] [30<HTKFigs//step5.eps>] [31] [32<HTKFigs//MMFeg.eps>
+<HTKFigs//step6.eps>] [33<HTKFigs//egsils.eps>] [34<HTKFigs//step7.eps>] [35
+<HTKFigs//step8.eps>] [36<HTKFigs//egtranstie.eps>] [37<HTKFigs//step9.eps>] 
+[38] [39<HTKFigs//step10.eps>] [40] [41<HTKFigs//step11.eps>] [42] [43] [44
+<HTKFigs//Tool.shell.eps>] [45] [46] [47<HTKFigs//Config.eps>] [48] [49] [50] 
+[51] [52] [53] [54<HTKFigs//Tool.spio.eps>] [55<HTKFigs//Spmods.eps>] [56] 
+[57<HTKFigs//Blocking.eps>] [58] [59] [60<HTKFigs//melfbank.eps>] [61
+<HTKFigs//vtlnpiecewise.eps>] [62] [63] [64] [65<HTKFigs//HTKFormat.eps>] 
+[66] [67] [68] [69] [70<HTKFigs//endpointer.eps>] [71] [72
+<HTKFigs//streams.eps>] [73<HTKFigs//VQUse.eps>] [74] [75] [76] [77
+<HTKFigs//coercions.eps>] [78] [79] [80] [81<HTKFigs//Tool.labs.eps>] [82] 
+[83] [84<HTKFigs//labegs.eps>] [85] [86] [87<HTKFigs//dbhier.eps>] [88] [89] 
+[90] [91] [92<HTKFigs//Tool.model.eps>] [93<HTKFigs//hmm1.eps>] [94] [95] 
+[96] [97] [98] [99] [100<HTKFigs//hierarch.eps>] [101] [102] [103] [104
+<HTKFigs//hsetdef.eps>] [105<HTKFigs//tmixeg.eps>] [106] [107] [108] [109] 
+[110] [111] [112] [113] [114<HTKFigs//Tool.train.eps>] [115
+<HTKFigs//isoword.eps>] [116<HTKFigs//subword.eps>] [117] [118
+<HTKFigs//vitloop.eps>] [119<HTKFigs//hinitdp.eps>] [120] [121
+<HTKFigs//flatst.eps>] [122<HTKFigs//restloop.eps>] [123] [124
+<HTKFigs//herestdp.eps>] [125<HTKFigs//parher.eps>] [126] [127] [128] [129] 
+[130] [131] [132<HTKFigs//headapt.eps>] [133] [134] [135
+<HTKFigs//regtree1.eps>] [136] [137] [138] [139] [140] [141] [142
+<HTKFigs//Tool.hedit.eps>] [143] [144] [145<HTKFigs//itemtree.eps>] [146] 
+[147<HTKFigs//tiedstate.eps>] [148] [149<HTKFigs//qstree.eps>] [150] [151] 
+[152] [153<HTKFigs//Tool.disc.eps>] [154] [155] [156<HTKFigs//vqtohmm.eps>] 
+[157] [158] [159<HTKFigs//Tool.netdict.eps>] [160] [161<HTKFigs//recsys.eps>] 
+[162<HTKFigs//wdnet.eps><HTKFigs//wdnet1.eps>] [163] [164
+<HTKFigs//digitnets.eps>] [165] [166] [167<HTKFigs//decinet.eps>] [168
+<HTKFigs//bobig.eps>] [169] [170<HTKFigs//dmaker.eps>] [171] [172] [173
+<HTKFigs//mononet.eps>] [174<HTKFigs//wintnet.eps><HTKFigs//xwrdnet.eps>] 
+[175] [176<HTKFigs//Tool.decode.eps>] [177<HTKFigs//recnetlev.eps>] [178] 
+[179<HTKFigs//decflow.eps>] [180] [181] [182] [183] [184
+<HTKFigs//hvalign.eps>] [185] [186] [187] [188] [189] [190
+<HTKFigs//HLMoperation.eps>] [191] [192] [193] [194] [195] [196] [197] [198] 
+[199<HTKFigs//WordLM.eps>] [200<HTKFigs//ClassLM.eps>] [201] [202] [203] 
+[204] [205] [206] [207] [208] [209] [210] [211] [212] [213] [214
+<HTKFigs//LTool.eps>] [215] [216] [217] [218] [219] [220] [221] [222] [223] 
+[224] [225] [226] [227] [228] [229] [230] [231] [232] [233] [234] [235] [236] 
+[237] [238] [239] [240] [241] [242] [243] [244] [245] [246] [247] [248] [249] 
+[250] [251] [252] [253] [254] [255] [256] [257] [258] [259] [260] [261] [262] 
+[263] [264] [265] [266] [267] [268] [269] [270] [271] [272] [273] [274] [275] 
+[276] [277] [278] [279] [280] [281] [282<HTKFigs//hslab.eps>] [283] [284] 
+[285] [286] [287] [288] [289] [290] [291] [292] [293] [294] [295] [296] [297] 
+[298] [299] [300] [301] [302] [303] [304] [305] [306] [307] [308] [309] [310] 
+[311] [312] [313] [314] [315] [316] [317] [318] [319] [320] [321] [322] [323] 
+[324] [325] [326] [327] [328] [329] [330] [331] [332] [333] [334] [335] [336] 
+[337] [338] [339] [340] [341] [342] [343] [344] [345] 
+mkdir -p htkbook
+latex2html -t "HTKBook for HTK3" -address "<A HREF="http://htk.eng.cam.ac.uk/docs/docs.shtml" TARGET="_top">Back to HTK site</A><BR>See front page for HTK Authors" -white -transparent -html_version 4.0,frame  -dir htkbook htkbook.tex
+This is LaTeX2HTML Version 2002-2-1 (1.70)
+by Nikos Drakos, Computer Based Learning Unit, University of Leeds.
+
+Revised and extended by:
+ Marcus Hennecke, Ross Moore, Herb Swan and others
+...producing markup for HTML version 4.0  with frame extensions
+
+
+
+Extension: loading /usr/share/latex2html/versions/latin1.pl
+HTML version: loading /usr/share/latex2html/versions/html4_0.pl
+
+Extension: loading /usr/share/latex2html/versions/frame.pl
+Package: loading /usr/share/latex2html/styles/color.perl
+ *** initialising colors ***
+
+ *** processing declarations ***
+
+OPENING /home/cabinet1/jal58/HTK/htk/htk3/htk-3.3/HTKBook/htkbook.tex 
+
+Cannot create directory htkbook/: File exists, reusing it.
+
+Note: Working directory is /home/cabinet1/jal58/HTK/htk/htk3/htk-3.3/HTKBook/htkbook
+Note: Images will be generated in /tmp/l2h10720
+
+texexpand V2002-2-1 (Revision 1.11)
+
+texexpand: include HTKRef/HMMIRest failed. Reinserting  command
+
+
+
+Loading /usr/share/latex2html/styles/texdefs.perl...
+Package: loading /usr/share/latex2html/styles/book.perl
+Package: loading /usr/share/latex2html/styles/epsfig.perl
+Package: loading /usr/share/latex2html/styles/html.perl
+Package: loading /usr/share/latex2html/styles/supertabular.perl
+Package: loading /usr/share/latex2html/styles/makeidx.perl
+Package: loading /usr/share/latex2html/styles/amsmath.perl
+Package: loading /usr/share/latex2html/styles/more_amsmath.perl
+Reading ...
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%++
+@
+
+Doing ./HTK.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Processing macros ...,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,+,{},{}
+ 2 new environments replaced
++.........................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./fundaments.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%
+Processing macros ...++....................................................................................................................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./htkoview.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'''
+Processing macros ...++.............................................................................................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./exampsys.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%''''''''''''''''''''''''''''''''''''''''''
+Processing macros ...++..................................................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./openviron.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%''''''''''''''''''''
+Processing macros ...++..................................................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./speechio.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'''''''''''''''''''''''''''''
+Processing macros ...+,{}
+ 1 new environments replaced
++....................................................................................................................................................................................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./labels.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%''''''''''''''''''''''''
+Processing macros ...++....................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./models.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%''''''
+Processing macros ...++..............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+@@@@@@@@@@@@
+
+Doing ./train.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%''''''''''''''''''
+Processing macros ...,,,,++..........................................................................................................................................................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./adapt.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%''''''''''
+Processing macros ...,++.........................................................................................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./refine.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%''''''''''''''''''''''''''''''
+Processing macros ...++..............................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./discmods.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'''''''''''
+Processing macros ...++...................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./netdict.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%''''''''''''''''''''''''''''''''''''''''''
+Processing macros ...++.....................................................................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./decode.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%''''''''''''''''''''''''''
+Processing macros ...++.................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./hlmfund.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Processing macros ...++.........................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./hlmtutorial.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%''''''''''''''''''''''''''''''''''''''
+Processing macros ...++.......................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./hlmfiles.tex 
+%%%%%%'''''''''''''''''''''
+Processing macros ...++.......................................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/tools.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Processing macros ...,,,,,,,,,,,,,,,++...............
+@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/Cluster.tex 
+%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++.........................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HBuild.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++..............................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HCompV.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++.....................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HCopy.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%''
+Processing macros ...+,{},{}
+ 2 new environments replaced
++......................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HDMan.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{},{}
+ 3 new environments replaced
++...................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HERest.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++..............................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HHEd.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%''''''''''''''''''''
+Processing macros ...+,{},{}
+ 2 new environments replaced
++.........................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HInit.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++.................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HLEd.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{},{},{}
+ 4 new environments replaced
++....................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HList.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++..........................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HLMCopy.tex 
+%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++.....................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HLRescore.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++...........................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HLStats.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++...............................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HParse.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%''''
+Processing macros ...+,{},{}
+ 2 new environments replaced
++....................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HQuant.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++....................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HRest.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++......................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HResults.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'''''
+Processing macros ...+,{},{}
+ 2 new environments replaced
++..............................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HSGen.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++................
+@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HSLab.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...,,+,{},{}
+ 2 new environments replaced
++......................................................................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HSmooth.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++.................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/HVite.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++.........................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LAdapt.tex 
+%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++...........................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LBuild.tex 
+%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++.......................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LFoF.tex 
+%%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++...............
+@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LGCopy.tex 
+%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++..........................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LGList.tex 
+%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++..............
+@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LGPrep.tex 
+%%%%%%%%%%''''''
+Processing macros ...+,{},{}
+ 2 new environments replaced
++............................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LLink.tex 
+%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++......................
+@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LMerge.tex 
+%%%%%%''
+Processing macros ...+,{}
+ 1 new environments replaced
++...............
+@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LNewMap.tex 
+%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++..............
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LNorm.tex 
+%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++.................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LPlex.tex 
+%%%%%'
+Processing macros ...+,{},{}
+ 2 new environments replaced
++.........................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Doing ./HTKRef/LSubset.tex 
+%%%%%%''
+Processing macros ...+,{}
+ 1 new environments replaced
++...............
+@@@@@@@@@@@@@@@
+
+Doing ./config.tex 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Processing macros ...++.......................................................
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

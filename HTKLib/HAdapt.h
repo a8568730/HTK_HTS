@@ -177,6 +177,18 @@ Boolean HardAssign(AdaptXForm *xform);
    for HModel to determine how to read/write transform
 */
 
+void UpdateSemiTiedModels(HMMSet *hset, XFInfo *xfinfo);
+/*
+   Tidies the model parameters and creates the semi-tied macro
+   and stores it.
+*/
+
+void UpdateProjectModels(HMMSet *hset, char *dir);
+/*
+  Applies the projection to the HMMSet and stores transforms etc.
+*/
+
+
 #ifdef __cplusplus
 }
 #endif

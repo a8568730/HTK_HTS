@@ -93,9 +93,13 @@ GZIP_ENV = --best
 # build rules
 all: @make_all@
 $(HTKLIB)/HTKLib.a:
-	(cd $(HTKLIB) && $(MAKE) all) \
+	(cd $(HTKLIB) && $(MAKE) HTKLib.a) \
 	  || case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
 htklib: $(HTKLIB)/HTKLib.a
+$(HTKLIB)/HTKLiblv.a:
+	(cd $(HTKLIB) && $(MAKE) HTKLiblv.a) \
+	  || case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
+htkliblv: $(HTKLIB)/HTKLiblv.a
 $(HLMLIB)/HLMLib.a:
 	(cd $(HLMLIB) && $(MAKE) all) \
 	  || case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
@@ -103,11 +107,10 @@ hlmlib: $(HLMLIB)/HLMLib.a
 htktools: $(HTKLIB)/HTKLib.a
 	(cd $(HTKTOOLS) && $(MAKE) all) \
 	  || case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
-hlmtools:  hlmlib 
+hlmtools: $(HLMLIB)/HLMLib.a
 	(cd $(HLMTOOLS) && $(MAKE) all) \
 	  || case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
-hdecode: 
-	(cd $(HTKLIB) && CFLAGS=-DNO_LAT_LM $(MAKE) clean all)  
+hdecode: $(HTKLIB)/HTKLiblv.a
 	(cd $(LVREC) && $(MAKE) all) \
 	  || case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
 book: 

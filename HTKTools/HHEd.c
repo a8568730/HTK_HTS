@@ -33,7 +33,7 @@
 /* ----------------------------------------------------------- */
 
 char *hhed_version = "!HVER!HHEd:   3.4 [CUED 25/04/06]";
-char *hhed_vc_id = "$Id: HHEd.c,v 3.4 2006/05/01 16:56:33 jal58 Exp $";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -183,6 +183,7 @@ void Summary(void)
    printf("NC n macro itemlist  - N-Cluster specified components and tie\n");
    printf("QS name itemlist     - define a question as a list of model names\n");
    printf("RC n id [itemList]   - Build n regression classes (for adaptation purposes)\n");
+   printf("PR                   - Convert model-set with PROJSIZE to compact form\n");
    printf("                       also supplying a regression tree identifier/label name\n");
    printf("                       Optional itemList to specify non-speech sounds\n");
    printf("RM hmmfile           - rem mean in state 2, mix 1 of hmmfile from all \n");
@@ -273,6 +274,11 @@ int main(int argc, char *argv[])
          noAlias = TRUE; break;
       case 'B':
          inBinary=TRUE; break;
+      case 'J':
+         if (NextArg()!=STRINGARG)
+            HError(2319,"HERest: input transform directory expected");
+         AddInXFormDir(hset,GetStrArg());
+         break;              
       case 'H':
          if (NextArg()!=STRINGARG)
             HError(2619,"HHEd: Input MMF file name expected");
@@ -702,7 +708,7 @@ void PurgeMacros(HMMSet *hset)
    SetVFloor(hset,NULL,0.0);
    for (h=0; h<MACHASHSIZE; h++)
       for (q=hset->mtab[h]; q!=NULL; q=q->next) {
-         if (q->type=='*') continue;
+         if ((q->type=='*') || (q->type=='a')|| (q->type=='a'))  continue;
          n=GetMacroUse(q);
          if (n>0 && !IsSeen(n)) {
             Touch(&n);
@@ -712,7 +718,7 @@ void PurgeMacros(HMMSet *hset)
    /* Delete unused macros in next pass */
    for (h=0; h<MACHASHSIZE; h++)
       for (q=hset->mtab[h]; q!=NULL; q=q->next) {
-         if (q->type=='*') continue;
+         if ((q->type=='*') || (q->type=='a')|| (q->type=='a')) continue;
          n=GetMacroUse(q);
          if (!IsSeen(n)) {
             SetMacroUse(q,0);
@@ -722,7 +728,7 @@ void PurgeMacros(HMMSet *hset)
    /* Finally unmark all macros */
    for (h=0; h<MACHASHSIZE; h++)
       for (q=hset->mtab[h]; q!=NULL; q=q->next) {
-         if (q->type=='*') continue;
+         if ((q->type=='*') || (q->type=='a')|| (q->type=='a')) continue;
          n=GetMacroUse(q);
          if (IsSeen(n)) {
             Untouch(&n);
@@ -5141,7 +5147,7 @@ void FloorAverageCommand(void)
    S= hset->swidth[0];
 
    /* allocate accumulators */
-   varAcc = (DVector*)New(&gstack,S*sizeof(DVector));
+   varAcc = (DVector*)New(&gstack,(S+1)*sizeof(DVector));
    for (s=1;s<=S;s++) {
       varAcc[s] = CreateDVector(&gstack,hset->swidth[s]);
       ZeroDVector(varAcc[s]);
@@ -5157,11 +5163,11 @@ void FloorAverageCommand(void)
          l=hset->swidth[hss.s];
          ste = hss.ste;
          s++;
-         if ( ste->nMix > 1 ) { 
+         if ( hss.M > 1 ) { 
             for (k=1;k<=l;k++) { /* loop over k-th dimension */
                double    rvar  = 0.0;
                double    rmean = 0.0;
-               for (i=1; i<= ste->nMix; i++) {
+               for (i=1; i<= hss.M; i++) {
                   weight = ste->spdf.cpdf[i].weight;
                   var  = ste->spdf.cpdf[i].mpdf->cov.var;
                   mean = ste->spdf.cpdf[i].mpdf->mean;
@@ -5183,7 +5189,7 @@ void FloorAverageCommand(void)
    EndHMMScan(&hss);
    /* normalisation */
    for (s=1;s<=S;s++)
-      for (k=1;k<=l;k++)
+      for (k=1;k<=hset->swidth[s];k++)
          varAcc[s][k] /= occAcc;
    /* set the varFloorN macros */
    for (s=1; s<=S; s++){
@@ -5535,7 +5541,26 @@ void FullCovarCommand(void)
    hset->ckind = FULLC;
 }
 
-/* -----Regression Class Clustering Tree Building Routines -------------- */
+/* ------------- PR - ProjectCommand   ----------------- */
+
+void ProjectCommand(void)
+{
+   AdaptXForm *xform;
+
+   xform = hset->semiTied;
+   if ((xform == NULL) || (hset->projSize == 0))
+      HError(999,"Can not only project with semitied XForm and PROJSIZE>0");
+
+   /* check that this is a reasonable command to run */
+   if (xform->bclass->numClasses != 1)
+      HError(999,"Can only store as input XForm with global transform");
+   if (hset->swidth[0] != 1) 
+      HError(999,"Can only store as input XForm with single stream");
+   if (hset->xf != NULL)
+      HError(999,"Can not store as input XForm if HMMSet already has an input XForm");
+
+   UpdateProjectModels(hset,newDir);
+}
 
 /* -----Regression Class Clustering Tree Building Routines -------------- */
 
@@ -6321,21 +6346,21 @@ void Initialise(char *hmmListFn)
 /* -------------------- Top Level of Editing ---------------- */
 
 
-static int  nCmds = 39;
+static int  nCmds = 40;
 
 static char *cmdmap[] = {"AT","RT","SS","CL","CO","JO","MU","TI","UF","NC",
                          "TC","UT","MT","SH","SU","SW","SK",
                          "RC",
                          "RO","RM","RN","RP",
                          "LS","QS","TB","TR","AU","GQ","MD","ST","LT",
-                         "MM","DP","HK","FC","FA","FV","XF","PS","" };
+                         "MM","DP","HK","FC","FA","FV","XF","PS","PR","" };
 
 typedef enum           { AT=1, RT , SS , CL , CO , JO , MU , TI , UF , NC ,
                          TC , UT , MT , SH , SU , SW , SK ,
                          RC ,
                          RO , RM , RN , RP ,
                          LS , QS , TB , TR , AU , GQ , MD , ST , LT ,
-                         MM , DP , HK , FC , FA , FV, XF, PS }
+                         MM , DP , HK , FC , FA , FV, XF, PS, PR }
 cmdNum;
 
 /* CmdIndex: return index 1..N of given command */
@@ -6409,6 +6434,7 @@ void DoEdit(char * editFn)
       case FC: FullCovarCommand(); break;
       case FV: FloorVectorCommand(); break;
       case PS: PowerSizeCommand(); break;
+      case PR: ProjectCommand(); break;
       default: 
          HError(2650,"DoEdit: Command %s not recognised",cmds);
       }

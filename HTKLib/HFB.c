@@ -33,7 +33,7 @@
 /* ----------------------------------------------------------- */
 
 char *hfb_version = "!HVER!HFB:   3.4 [CUED 25/04/06]";
-char *hfb_vc_id = "$Id: HFB.c,v 3.4 2006/05/01 16:56:02 jal58 Exp $";
+char *hfb_vc_id = "$Id: HFB.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -558,6 +558,8 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
          HError(7332,"CreateInsts: Cannot have successive Tee models");
       if (al_hset->hsKind==SHAREDHS)
          ResetHMMPreComps(al_qList[q],al_hset->swidth[0]);
+      else if (al_hset->hsKind==PLAINHS)
+         ResetHMMWtAccs(al_qList[q],al_hset->swidth[0]);         
    }
    if ((qDms[1]==0)||(qDms[Q]==0))
       HError(7332,"CreateInsts: Cannot have Tee models at start or end of transcription");
@@ -1282,7 +1284,12 @@ static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
    }
 
    if (trace&T_TOP) {
-      printf(" Utterance prob per frame = %e\n",utt->pr/T);
+     if (fbInfo->al_hset->xf != NULL) {
+        /* take into account the determinant */
+         printf(" Utterance prob per frame = %e\n",utt->pr/T + 0.5*fbInfo->al_hset->xf->xform->det);
+     } else {
+        printf(" Utterance prob per frame = %e\n",utt->pr/T);
+     }
       fflush(stdout);
    }
    return utt->pr;
@@ -1446,6 +1453,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
    float norm=0.0;               /* total mixture prob */
    LogFloat det;
    AdaptXForm *inxform;
+   Vector ovec=NULL;
 
    ab     = fbInfo->ab;
    hset   = fbInfo->up_hset;
@@ -1456,9 +1464,16 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
       printf("Mixture Weights at time %d, model Q%d %s\n",
              t,q,ab->qIds[q]->name);
    }
+   
+   /* allows a clean tidy of the space */
+   comp_prob = CreateVector(&gstack,fbInfo->maxM);
 
-   if (fbInfo->twoModels)
-       comp_prob = CreateVector(&gstack,fbInfo->maxM);
+   if (strmProj) { /* recreate full vector */
+      ovec = CreateVector(&gstack,hset->vecSize);
+      for (i=1,s=1;s<=S;s++)
+         for (k=1;k<=hset->swidth[s];k++,i++)
+            ovec[i] = ot.fv[s][k];
+   }
 
    N = hmm->numStates;
    for (j=2;j<N;j++) {
@@ -1606,67 +1621,105 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                   /* update the adaptation statistic counts */
                   if (fbInfo->uFlags&UPXFORM)
                      AccAdaptFrame(Lr, otvs, mp, t);
-                  /* update mean counts */
-                  if ((fbInfo->uFlags&UPMEANS) || (fbInfo->uFlags&UPVARS))
-                     mean = mp->mean; 
-                  if ((fbInfo->uFlags&UPMEANS) && (fbInfo->uFlags&UPVARS)) {
-                     ma = (MuAcc *) GetHook(mean);
+                  /* 
+                     update the semi-tied statistic counts
+                     this accumulates "true" outer products to allow multiple streams
+                  */ 
+                  if (fbInfo->uFlags&UPSEMIT) {
+                     ma = (MuAcc *) GetHook(mp->mean);
                      va = (VaAcc *) GetHook(mp->cov.var);
                      ma->occ += Lr;
                      va->occ += Lr;
                      mu_jm = ma->mu;
-                     if ((mp->ckind==DIAGC)||(mp->ckind==INVDIAGC)){
-                        var = va->cov.var;
-                        for (k=1;k<=vSize;k++) {
-                           zmean=otvs[k]-mean[k];
-                           zmeanlr=zmean*Lr;
-                           mu_jm[k] += zmeanlr;
-                           var[k] += zmean*zmeanlr;
-                        }
-                     } else {
-                        inv = va->cov.inv;
-                        for (k=1;k<=vSize;k++) {
+                     inv = va->cov.inv;
+                     if (strmProj) {
+                        /* 
+                           accumulate over complete space for multiple stream support 
+                           will only operate with no parent/input transform. Can 
+                           therefore just look at original space.
+                        */
+                        for (k=1;k<=hset->vecSize;k++) {
                            invk = inv[k];
-                           zmean=otvs[k]-mean[k];
+                           zmean=ovec[k];
                            zmeanlr=zmean*Lr;
                            mu_jm[k] += zmeanlr;
                            for (kk=1;kk<=k;kk++) {
-                              zmean2 = otvs[kk]-mean[kk];
-                              invk[kk] += zmean2*zmeanlr;
+                              invk[kk] += ovec[kk]*zmeanlr;
+                           }
+                        }
+                     } else {
+                        for (k=1;k<=vSize;k++) {
+                           invk = inv[k];
+                           zmean=otvs[k];
+                           zmeanlr=zmean*Lr;
+                           mu_jm[k] += zmeanlr;
+                           for (kk=1;kk<=k;kk++) {
+                              invk[kk] += otvs[kk]*zmeanlr;
+                           }
+                        }
+                     }
+                  } else {
+                     /* update mean counts */
+                     if ((fbInfo->uFlags&UPMEANS) || (fbInfo->uFlags&UPVARS))
+                        mean = mp->mean; 
+                     if ((fbInfo->uFlags&UPMEANS) && (fbInfo->uFlags&UPVARS)) {
+                        ma = (MuAcc *) GetHook(mean);
+                        va = (VaAcc *) GetHook(mp->cov.var);
+                        ma->occ += Lr;
+                        va->occ += Lr;
+                        mu_jm = ma->mu;
+                        if ((mp->ckind==DIAGC)||(mp->ckind==INVDIAGC)){
+                           var = va->cov.var;
+                           for (k=1;k<=vSize;k++) {
+                              zmean=otvs[k]-mean[k];
+                              zmeanlr=zmean*Lr;
+                              mu_jm[k] += zmeanlr;
+                              var[k] += zmean*zmeanlr;
+                           }
+                        } else {
+                           inv = va->cov.inv;
+                           for (k=1;k<=vSize;k++) {
+                              invk = inv[k];
+                              zmean=otvs[k]-mean[k];
+                              zmeanlr=zmean*Lr;
+                              mu_jm[k] += zmeanlr;
+                              for (kk=1;kk<=k;kk++) {
+                                 zmean2 = otvs[kk]-mean[kk];
+                                 invk[kk] += zmean2*zmeanlr;
+                              }
+                           }
+                        }
+                     }
+                     else if (fbInfo->uFlags&UPMEANS){
+                        ma = (MuAcc *) GetHook(mean);
+                        mu_jm = ma->mu;
+                        ma->occ += Lr;
+                        for (k=1;k<=vSize;k++)     /* sum zero mean */
+                           mu_jm[k] += (otvs[k]-mean[k])*Lr;
+                     }
+                     else if (fbInfo->uFlags&UPVARS){
+                        /* update covariance counts */
+                        va = (VaAcc *) GetHook(mp->cov.var);
+                        va->occ += Lr;
+                        if ((mp->ckind==DIAGC)||(mp->ckind==INVDIAGC)){
+                           var = va->cov.var;
+                           for (k=1;k<=vSize;k++) {
+                              zmean=otvs[k]-mean[k];
+                              var[k] += zmean*zmean*Lr;
+                           }
+                        } else {
+                           inv = va->cov.inv;
+                           for (k=1;k<=vSize;k++) {
+                              invk = inv[k];
+                              zmean=otvs[k]-mean[k];               
+                              for (kk=1;kk<=k;kk++) {
+                                 zmean2 = otvs[kk]-mean[kk];
+                                 invk[kk] += zmean*zmean2*Lr;
+                              }
                            }
                         }
                      }
                   }
-                  else if (fbInfo->uFlags&UPMEANS){
-                     ma = (MuAcc *) GetHook(mean);
-                     mu_jm = ma->mu;
-                     ma->occ += Lr;
-                     for (k=1;k<=vSize;k++)     /* sum zero mean */
-                        mu_jm[k] += (otvs[k]-mean[k])*Lr;
-                  }
-                  else if (fbInfo->uFlags&UPVARS){
-                     /* update covariance counts */
-                     va = (VaAcc *) GetHook(mp->cov.var);
-                     va->occ += Lr;
-                     if ((mp->ckind==DIAGC)||(mp->ckind==INVDIAGC)){
-                        var = va->cov.var;
-                        for (k=1;k<=vSize;k++) {
-                           zmean=otvs[k]-mean[k];
-                           var[k] += zmean*zmean*Lr;
-                        }
-                     } else {
-                        inv = va->cov.inv;
-                        for (k=1;k<=vSize;k++) {
-                           invk = inv[k];
-                           zmean=otvs[k]-mean[k];               
-                           for (kk=1;kk<=k;kk++) {
-                              zmean2 = otvs[kk]-mean[kk];
-                              invk[kk] += zmean*zmean2*Lr;
-                           }
-                        }
-                     }
-                  }
-            
                   /* update mixture weight counts */
                   if (fbInfo->uFlags&UPMIXES) {
                      wa->c[m] +=Lr;
@@ -1687,8 +1740,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
       }
    }
 
-   if (fbInfo->twoModels)
-       FreeVector(&gstack,comp_prob);
+   FreeVector(&gstack,comp_prob);
 }
 
 /* -------------------- Top Level of F-B Updating ---------------- */

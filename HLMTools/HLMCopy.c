@@ -30,7 +30,7 @@
 /* ----------------------------------------------------------- */
 
 char *prog_version = "!HVER!HLMCopy:   3.4 [CUED 25/04/06]";
-char *prog_vc_id = "$Id: HLMCopy.c,v 3.4 2006/05/01 16:56:51 jal58 Exp $";
+char *prog_vc_id = "$Id: HLMCopy.c,v 1.1.1.1 2006/10/11 09:54:44 jal58 Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>

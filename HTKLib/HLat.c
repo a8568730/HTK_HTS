@@ -35,7 +35,7 @@
 
 
 char *hlat_version = "!HVER!HLat:   3.4 [CUED 25/04/06]";
-char *hlat_vc_id = "$Id: HLat.c,v 3.4 2006/05/01 16:56:03 jal58 Exp $";
+char *hlat_vc_id = "$Id: HLat.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 
 #include "HShell.h"
@@ -75,6 +75,7 @@ static LabId startLMWord;       /* word at start in LM (<s>) */
 static LabId endLMWord;         /* word at end in LM (</s>) */
 static LabId nullWord;          /* null word in Lattices (!NULL) */
 static Boolean beamPruneArcs = TRUE; /* apply beam pruning to arcs (rather than just nodes) */
+static Boolean compressMerge = TRUE; /* compressing lattice scores when merging duplicates */
 
 static char *llfExt = "LLF";    /* extension for LLF lattice files */
 
@@ -176,7 +177,7 @@ LLFInfo *OpenLLF (char *fn)
    return llf;
 }
 
-void ScanLLF (LLFInfo *llf, char *fn, char *ext)
+Boolean ScanLLF (LLFInfo *llf, char *fn, char *ext)
 {
    char buf[MAXFNAMELEN];
    char latfn[MAXFNAMELEN];
@@ -186,13 +187,14 @@ void ScanLLF (LLFInfo *llf, char *fn, char *ext)
 
    while (ReadStringWithLen (&llf->source, buf, MAXFNAMELEN)) {
       if (!strcmp(buf, latfn)) {   /* found name */
-         return;
+         return TRUE;
       }
       if (trace&T_LLF)
          printf ("ScanLLF: skipping '%s'\n", buf);
       ReadUntilLine (&llf->source, ".");   /* skip this lattice */
    }
-   HError (8631, "ScanLLF: lattice '%s' not found in LLF '%s'\n", latfn, llf->name);
+   HError (-1, "ScanLLF: lattice '%s' not found in LLF '%s'\n", latfn, llf->name);
+   return FALSE;
 }
 
 
@@ -204,6 +206,7 @@ Lattice *GetLattice (char *fn, char *path, char *ext,
    Lattice *lat;
    LLFInfo *llf;
    char llfName[MAXFNAMELEN];
+   char buf[MAXFNAMELEN];
 
    MakeFN (path, NULL, llfExt, llfName);
 
@@ -232,7 +235,23 @@ Lattice *GetLattice (char *fn, char *path, char *ext,
 
    /* scan for lattice with requested name in LLF */
    ++numLatsLoaded;
-   ScanLLF (llf, fn, ext);
+   if (!ScanLLF (llf, fn, ext)) {
+      /* this may be because it's missing, or there's an error in the order */
+      CloseSource (&llf->source);
+      /* LLF must exist open and try again */
+      if (InitSource (llfName, &llf->source, NetFilter) < SUCCESS) {   
+         HError(8630,"OpenLLF: Cannot open LLF %s", llfName);
+      }
+      if (!ReadStringWithLen (&llf->source, buf, MAXFNAMELEN) ||
+          strcmp (buf, "#!LLF!#")) {   /* no LLF header or read from pipe failed */
+         HError(-8630,"OpenLLF: Cannot read from LLF %s", fn);
+         return NULL;
+      }
+      if (!ScanLLF (llf, fn, ext)) {
+         /* is not definitely missing */ 
+         HError (8632, "ScanLLF: lattice not found in LLF\n");
+      }
+   }
 
    /* note we do not support sub lattices here, thus call ReadOneLattice()  directly */
    lat = ReadOneLattice (&llf->source, heap, voc, shortArc, add2Dict);
@@ -256,6 +275,8 @@ void InitLat(void)
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
       if (GetConfBool(cParm,nParm,"BEAMPRUNEARCS",&b)) 
          beamPruneArcs = b;
+      if (GetConfBool(cParm,nParm,"COMPRESSMERGE",&b)) 
+         compressMerge = b;
       if (GetConfStr(cParm,nParm,"LLFEXT",buf))
          llfExt = CopyString(&gstack,buf);
       if (GetConfInt(cParm,nParm,"MAXLLFS",&i)) maxLLFs = i;
@@ -1585,23 +1606,25 @@ Lattice *MergeLatNodesArcs(Lattice *lat, MemHeap *heap, Boolean mergeFwd)
       for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
          MergeLatNodesForw(lat, ln);      
       }
-      /* have to merge the remaining active nodes backward */
+      /* have to merge the remaining active nodes backward 
       for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
          if (ln->score >= 0) {
             MergeLatNodesBackw(lat, ln);
          }
       }
+      */
    }
    else {
       for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
          MergeLatNodesBackw(lat, ln);
       }
-      /* have to merge the remaining active nodes forward */
+      /* have to merge the remaining active nodes forward 
       for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
          if (ln->score >= 0) {
             MergeLatNodesForw(lat, ln);
          }
       }
+      */
    }
       
    /* getting the number of remaining nodes and acrs */
@@ -1655,9 +1678,10 @@ Lattice *MergeLatNodesArcs(Lattice *lat, MemHeap *heap, Boolean mergeFwd)
          newla->parc = newla->end->pred;
          newla->end->pred = newla;
 
-         newla->aclike = 0;
-         newla->prlike = 0;
-         
+         if (compressMerge) {
+            newla->aclike = 0;
+            newla->prlike = 0;
+         }
          ++newla;
       }
    }

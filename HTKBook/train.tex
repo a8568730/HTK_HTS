@@ -1175,6 +1175,69 @@ entry states by changing $U^r_j(t)$ in equation~\ref{e:urjt} to
         \right.
 \]
 
+\subsection{Semi-Tied Transform Estimation(\htool{HERest})}
+In addition to estimating the standard parameters above \htool{HERest}
+can be used to estimated semi-tied transforms and HLDA projections.
+This section describes semi-tied transforms,  the updates for HLDA
+are very similar. 
+
+Semi-tied covariance matrices have the form
+\begin{eqnarray}
+{\bm{\mu}}_{m_r} = \bm{\mu}_{m_r}, \:\:\:\: 
+{\bm{\Sigma}}_{m_r} = {\bm H}_r{\bm{\Sigma}}^{\tt diag}_{m_r}{\bm H}_r^T
+\end{eqnarray}
+For efficiency reasons the transforms are stored and likelihoods
+calculated using
+\hequation{ 
+       {\cal N}(\bm{o};\bm{\mu}_{m_r},\bm{H}_r\bm{\Sigma}_{m_r}^{\tt diag}\bm{H}_r^T) = 
+       \frac{1}{|\bm{H}_r|}{\cal N}(\bm{H}_r^{-1}\bm{o};\bm{H}_r^{-1}\bm{\mu}_{m_r},\bm{\Sigma}^{\tt diag}_{m_r}) = 
+       {|\bm{A}_r|}{\cal N}(\bm{A}_r\bm{o};\bm{A}_r\bm{\mu}_{m_r},\bm{\Sigma}^{\tt diag}_{m_r})
+} {covlike}
+where $\bm{A}_r=\bm{H}_r^{-1}$. The transformed mean, $\bm{A}_{r}\bm{\mu}_{m_r}$, is stored
+in the model files rather than the original mean for efficiency.
+
+The estimation of semi-tied transforms is a doubly iterative process. 
+Given a current set of covariance matrix estimates the semi-tied 
+transforms are estimated in a similar fashion to the full variance
+{\tt MLLRCOV} transforms.
+\begin{eqnarray}
+{\bf a}_{ri} ={\bf c}_{ri}{\bf G}^{(i)-1}_r
+\sqrt{\left(\frac{\beta_r}{{\bf
+c}_{ri}{\bf G}_r^{(i)-1}{\bf c}^T_{ri}}\right)}
+\end{eqnarray}
+where ${\bf a}_{ri}$ is $i^{th}$ row of ${\bm
+A}_r$, the $1\times n$ row vector ${\bf c}_{ri}$ is the vector of
+cofactors of ${\bm A}_r$, $c_{rij}={\mbox{cof}}({\bm A}_{rij})$,
+and  ${\bf G}^{(i)}_r$ is defined as
+\begin{eqnarray}
+{\bf G}^{(i)}_r=\sum_{m_r=1}^{M_r}
+\frac{1}{\sigma_{m_ri}^{{\tt diag}2}}
+\sum_{t=1}^TL_{m_r}(t)(\bm{o}(t)-{\bm{\mu}}_{m_r})
+(\bm{o}(t)-{\bm{\mu}}_{m_r})^T
+{\bm\Sigma}_{m_r}
+\label{eq:gi_st}
+\end{eqnarray}
+This iteratively estimates one row of the transform at a time.  The number of 
+iterations is controlled by the \htool{HAdapt} configuration 
+variable {\tt MAXXFORMITER}.
+
+Having estimated the transform the diagonal covariance matrix is updated
+as
+\begin{eqnarray}
+\bm{\Sigma}^{\tt diag}_{m_r} = {\mbox{diag}}\left(\frac{
+{\bm A}_r\sum_{t=1}^TL_{m_r}(t)(\bm{o}(t)-{\bm{\mu}}_{m_r})
+(\bm{o}(t)-{\bm{\mu}}_{m_r})^T{\bm A}_r^T}
+{\sum_{t=1}^TL_{m_r}(t)}
+\right)
+\end{eqnarray}
+This is the second look as given a new estimate of the diagonal
+variance a new transform can be estimated. The number of iterations
+of transform and covarinace matrix update is controlled by the 
+\htool{HAdapt} configuration variable {\tt MAXSEMITIEDITER}
+
+
+
+
 
 %%% Local Variables: 
 %%% mode: plain-tex

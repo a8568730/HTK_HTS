@@ -20,7 +20,7 @@
 /* ----------------------------------------------------------- */
 
 char *hmath_version = "!HVER!HMath:   3.4 [CUED 25/04/06]";
-char *hmath_vc_id = "$Id: HMath.c,v 3.4 2006/05/01 16:56:03 jal58 Exp $";
+char *hmath_vc_id = "$Id: HMath.c,v 1.1.1.1 2006/10/11 09:54:58 jal58 Exp $";
 
 /*
    This library provides math support in the following three areas
@@ -642,10 +642,10 @@ void LinTranQuaProd(Matrix Prod, Matrix A, Matrix C)
       }
       
       for (i=1;i<=NumRows(Prod);i++){
-         for (j=1;j>i;j++){
-            Prod[i][j] = Prod[j][i];
+         for (j=1;j<i;j++){
+            Prod[j][i] = Prod[i][j];
          }
-      }
+      }    
       
       FreeMatrix(&gstack,tempMatrix_A_mult_C);
    }

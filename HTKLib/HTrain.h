@@ -41,7 +41,7 @@
 extern "C" {
 #endif
 
-enum _UPDSet{UPMEANS=1,UPVARS=2,UPTRANS=4,UPMIXES=8,UPXFORM=16,UPMAP=32};
+enum _UPDSet{UPMEANS=1,UPVARS=2,UPTRANS=4,UPMIXES=8,UPXFORM=16,UPMAP=32,UPSEMIT=64};
 typedef enum _UPDSet UPDSet;
 
 /* Win32 modification */
@@ -279,6 +279,12 @@ void ResetHMMPreComps(HLink hmm, int nStreams);
    given HMM.
 */
 
+void ResetHMMWtAccs(HLink hmm, int nStreams);
+/*
+   Reset all the wt accs associated with a
+   given HMM.
+*/
+
 FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, UPDSet uFlags, int index);
 FILE * DumpAccs(HMMSet *hset, char *fname, UPDSet uFlags, int n);
 /* 
@@ -307,6 +313,12 @@ double ScaleAccsParallel(HMMSet *hset, float weight, int index);
 double ScaleAccs(HMMSet *hset, float weight);
 /*
    Scales all the accumulators.  Returns summed occupancy.
+*/
+
+extern Boolean strmProj;
+/* 
+   Controls whether an  stream projection transform is generated.
+   Not elegant, but saves multiple config specifications etc.
 */
 
 #ifdef __cplusplus

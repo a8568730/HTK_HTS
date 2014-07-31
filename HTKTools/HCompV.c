@@ -33,7 +33,7 @@
 /* ----------------------------------------------------------- */
 
 char *hcompv_version = "!HVER!HCompV:   3.4 [CUED 25/04/06]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 3.4 2006/05/01 16:56:33 jal58 Exp $";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.1.1.1 2006/10/11 09:54:59 jal58 Exp $";
 
 
 /* 

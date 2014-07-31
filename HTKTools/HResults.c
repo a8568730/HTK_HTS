@@ -20,7 +20,7 @@
 /* ----------------------------------------------------------- */
 
 char *hresults_version = "!HVER!HResults:   3.4 [CUED 25/04/06]";
-char *hresults_vc_id = "$Id: HResults.c,v 3.4 2006/05/01 16:56:35 jal58 Exp $";
+char *hresults_vc_id = "$Id: HResults.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

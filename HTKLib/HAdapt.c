@@ -29,7 +29,7 @@
 /* ----------------------------------------------------------- */
 
 char *hadapt_version = "!HVER!HAdapt:   3.4  [CUED 25/04/06]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 3.4 2006/05/01 16:56:01 jal58 Exp $";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.2 2006/12/07 11:09:07 mjfg Exp $";
 
 
 #include <stdio.h>      /* Standard C Libraries */
@@ -61,6 +61,7 @@ char *hadapt_vc_id =  "$Id: HAdapt.c,v 3.4 2006/05/01 16:56:01 jal58 Exp $";
 #define T_SXF   00040    /* Speaker xform updates */
 #define T_OBC   00100    /* Trace observation cache */
 #define T_SWP   00200    /* Trace transform manipulation */
+#define T_FRS   00400    /* Trace fisher ratio selection */
 
 /* -------------- Structures to store adaptation info -------------------- */
 
@@ -189,6 +190,18 @@ static double maxXFormIter = 10; /* something big, for CMLLR */
 static ObsCache *headoc = NULL; 
 static AccCache *headac = NULL;
 
+/* new variables to support semi-tied transforms */
+static float semiTiedFloorScale = 0.1;
+static int maxSemiTiedIter = 10;
+static char *semiTiedMacro = NULL;
+static Boolean semiTied2InputXForm = FALSE;
+static Boolean semiTiedVFloor = TRUE;
+static int numNuisanceDim = 0;
+static TriMat *avCov = NULL;
+static Boolean staticSemiTied = FALSE;
+static Boolean initNuisanceFR = TRUE;
+static Boolean saveSemiTiedBinary = FALSE;
+
 /*------------------------------------------------------------------------*/
 /*    Support Routines for determining internal structures required       */
 /*    Note: these only act on the transform NOT any parents.              */
@@ -197,7 +210,10 @@ static AccCache *headac = NULL;
 static Boolean AccAdaptMean(AdaptXForm *xform)
 {
    /* Currently always true */
-   return (TRUE);
+   if (xform->xformSet->xkind == SEMIT) 
+      return (FALSE);
+   else
+      return (TRUE);
 }
 
 static Boolean AccAdaptVar(AdaptXForm *xform)
@@ -227,7 +243,7 @@ Boolean HardAssign(AdaptXForm *xform)
 static Boolean StoreObsCache(AdaptXForm *xform)
 {
    XFormKind xkind = xform->xformSet->xkind;
-   return ((xkind == CMLLR)  || (xkind == MLLRCOV));
+   return ((xkind == CMLLR)  || (xkind == MLLRCOV) || (xkind == SEMIT));
 }
 
 static Boolean StoreAdaptMean(AdaptXForm *xform)
@@ -250,12 +266,22 @@ static void CheckAdaptOptions()
 {
    if ((!keepXFormDistinct) && (swapXForms))
       HError(999,"Cannot save swapped XForms in a TMF");
-   if ((xKind == MLLRCOV) && (useBias))
+   if (((xKind == MLLRCOV)||(xKind == SEMIT)) && (useBias))
       HError(999,"Cannot have a Bias with a Full variance transform");
    if ((mllrDiagCov) && (xKind != MLLRMEAN))
       HError(999,"Cannot have mllrDiagCov and not have MLLRMEAN");
    if ((!swapXForms) && (mllrCov2CMLLR))
       HError(999,"Cannot save mllrCov as CMLLR");
+   if (strmProj && ((xKind != SEMIT) || (numNuisanceDim>0)))
+      HError(999,"Can only have strmProj with SEMIT");
+   if (numNuisanceDim > 0) {
+      if (xKind != SEMIT) 
+         HError(999,"Can only use HLDA with global SEMIT transforms");
+   }
+   if (staticSemiTied) {
+      if (xKind != SEMIT) 
+         HError(999,"Can only use ststic semiTied  with SEMIT transforms");
+   }
 }
 
 /* ParseConfIntVec: interpret config string as integer array */
@@ -325,6 +351,17 @@ void InitAdapt (XFInfo *xfinfo)
       if (GetConfBool(cParm,nParm,"MLLRDIAGCOV",&b)) mllrDiagCov = b;      
       if (GetConfBool(cParm,nParm,"SWAPXFORMS",&b)) swapXForms = b;      
       if (GetConfBool(cParm,nParm,"MLLRCOV2CMLLR",&b)) mllrCov2CMLLR = b; 
+
+      if (GetConfFlt(cParm,nParm,"SEMITIEDFLOOR",&d)) semiTiedFloorScale = (float) d;
+      if (GetConfInt(cParm,nParm,"MAXSEMITIEDITER",&i)) maxSemiTiedIter = i;
+      if (GetConfStr (cParm,nParm,"SEMITIEDMACRO",buf)) 
+         semiTiedMacro = CopyString(&infoStack,buf);
+      if (GetConfBool(cParm,nParm,"SEMITIED2INPUTXFORM",&b)) semiTied2InputXForm = b; 
+      if (GetConfBool(cParm,nParm,"SEMITIEDVFLOOR",&b)) semiTiedVFloor = b; 
+      if (GetConfInt(cParm,nParm,"NUMNUISANCEDIM",&i)) numNuisanceDim = i;
+      if (GetConfBool(cParm,nParm,"STATICSEMITIED",&b)) staticSemiTied = b; 
+      if (GetConfBool(cParm,nParm,"INITNUISANCEFR",&b)) initNuisanceFR = b; 
+      if (GetConfBool(cParm,nParm,"SAVESEMITIEDBINARY",&b)) saveSemiTiedBinary = b; 
 
       /* Backward compatibility with old configuration options */
       /* MLLRMEAN specification */
@@ -448,7 +485,8 @@ static RegTree* GetRegTree(HMMSet *hset, AdaptXForm *xform)
      }
    }
    if (basename == NULL) {
-     return NULL;
+      /* must have specified a regression class tree with TREE adapt kind */
+      HError(999, "GetRegTree: No regression tree macro name specified\n");
    } 
    return LoadRegTree(hset,NameOf(basename,macroname),basename);  
 }
@@ -486,7 +524,7 @@ static int GetVecSizeClass(BaseClass *bclass, int class)
    ILink i;
    MixtureElem *me;
 
-   /* currently does not check consistency of vecor sizes */
+   /* currently does not check consistency of vector sizes */
    i=bclass->ilist[class];
    me = (MixtureElem *)i->item;
    return VectorSize(me->mpdf->mean);
@@ -511,7 +549,12 @@ static IntVec GetBlockSize(AdaptXForm *xform, int class)
        break;
      }
    }
-   if (blockSize == NULL) {    
+   if (strmProj) {
+      if (blockSize != NULL)
+         HError(-1,"For stream projection only full transform used");
+      blockSize = CreateIntVec(xform->mem,1);
+      blockSize[1] = xform->hset->vecSize;
+   } else if (blockSize == NULL) {    
       blockSize = CreateIntVec(xform->mem,1);
       blockSize[1] = GetVecSizeClass(xform->bclass,class);
    }
@@ -658,8 +701,14 @@ static Boolean CompareMInfo(HMMSet *hset, AdaptXForm *xform)
    NewHMMScan(hset,&hss);
    mp = hss.mp;
    mi = GetMInfo(mp);
-   if ((adaptMean) && (mi->mean == NULL)) return FALSE;
-   if ((adaptCov) && (mi->cov.var == NULL)) return FALSE;
+   if ((adaptMean) && (mi->mean == NULL)) {
+      EndHMMScan(&hss);
+      return FALSE;
+   }
+   if ((adaptCov) && (mi->cov.var == NULL)) {
+      EndHMMScan(&hss);
+      return FALSE;
+   }
    EndHMMScan(&hss);
    return TRUE;
 }
@@ -1193,6 +1242,29 @@ static AccStruct *CreateAccStruct(MemHeap *x, AdaptXForm *xform,
       }
     }
     break;
+  case SEMIT:
+    accs->G = (DMatrix *)New(x,(vsize+1)*sizeof(DMatrix));
+    /* For stream projections CANNOT have multiple blocks */
+    if (strmProj) {
+       for (i=1;i<=vsize;i++) {
+          accs->G[i] = CreateDMatrix(x,vsize,vsize);
+          ZeroDMatrix(accs->G[i]);
+       }
+    } else {
+       for (b=1,cnti=1;b<=IntVecSize(blockSize);b++) {
+          bsize = blockSize[b];
+          for (i=1;i<=bsize;i++,cnti++) {
+             if ((staticSemiTied) && (b>1)){ 
+                /* link all accumulates into one */
+                accs->G[cnti] = accs->G[i];
+             } else {
+                accs->G[cnti] = CreateDMatrix(x,bsize,bsize);
+                ZeroDMatrix(accs->G[cnti]);
+             }
+          }
+       }
+    }
+    break;
   case CMLLR:
     accs->K = (DVector *)New(x,(vsize+1)*sizeof(DVector));
     accs->G = (DMatrix *)New(x,(vsize+1)*sizeof(DMatrix));
@@ -1207,12 +1279,146 @@ static AccStruct *CreateAccStruct(MemHeap *x, AdaptXForm *xform,
         ZeroDMatrix(accs->G[cnti]);
       }
     }
-    break;  
+    break;
   default :
     HError(999,"Transform kind not currently supported");
     break;
   }
   return accs;
+}
+
+
+/* 
+   A separate global floor is set for each of the streams.
+   For systems with mixed streams for a baseclass no 
+   variance floors is applied.
+*/
+static void SetSemiTiedAvCov(HMMSet *hset)
+{
+   HMMScanState hss;
+   StateInfo *si   ;
+   StreamElem *ste;
+   MixPDF *mp;
+   STriMat inv;
+   DVector mean;
+   DMatrix *mat, *smat, cov;
+   DVector *svec;
+   double occAcc, occ, tmp; 
+   int k,kk,s,S;
+   MuAcc *ma;
+   VaAcc *va;
+   int vsize,m;
+
+   /* allocate accumulators */
+   S= hset->swidth[0];
+   mat = (DMatrix *)New(&gstack,(S+1)*sizeof(DMatrix));
+   smat = (DMatrix *)New(&gstack,(S+1)*sizeof(DMatrix));
+   svec = (DVector *)New(&gstack,(S+1)*sizeof(DVector));
+   avCov = (TriMat *)New(hset->hmem,(S+1)*sizeof(TriMat));
+   for (s=1;s<=S;s++) {
+      if (strmProj) vsize = hset->vecSize;
+      else vsize = hset->swidth[s];
+      mat[s] = CreateDMatrix(&gstack,vsize,vsize);
+      smat[s] = CreateDMatrix(&gstack,vsize,vsize);
+      svec[s] = CreateDVector(&gstack,vsize);
+      /* create on HMMSet memory heap */
+      avCov[s] = CreateTriMat(hset->hmem,vsize);
+      ZeroDMatrix(mat[s]);
+   }
+   NewHMMScan(hset,&hss);
+   occAcc = 0.0;
+   while(GoNextState(&hss,FALSE)) {
+      si = hss.si;
+      while (GoNextStream(&hss,TRUE)) {
+         s = hss.s;
+         if (strmProj) vsize = hset->vecSize;
+         else vsize = hset->swidth[s];
+         cov = smat[s]; ZeroDMatrix(cov);
+         mean = svec[s]; ZeroDVector(mean);
+         ste = hss.ste; 
+         occ = 0;
+         for (m=1; m<= hss.M; m++) {
+            mp = ste->spdf.cpdf[m].mpdf;
+            ma = (MuAcc *)GetHook(mp->mean);
+            va = (VaAcc *)GetHook(mp->cov.var);
+            if (fabs(ma->occ-va->occ) > 0.1)
+               HError(999,"State-clustered systems only for semitied updates");
+            if (va->occ > 0) {
+               inv = va->cov.inv;
+               occ += va->occ;
+               for (k=1;k<=vsize;k++) { 
+                  mean[k] += ma->mu[k];
+                  for (kk=1;kk<=k;kk++) 
+                     cov[k][kk] += inv[k][kk];
+               }
+            }
+         }
+         /* accumulate in */
+         if (occ > 0) {
+            for (k=1;k<=vsize;k++) { 
+               tmp = mean[k]/occ;
+               for (kk=1;kk<=k;kk++) 
+                  mat[s][k][kk] += cov[k][kk] - tmp*mean[kk];
+            }
+         }
+         occAcc += occ;
+      }
+   }
+   EndHMMScan(&hss);
+   
+   /* normalisation and put in avCov */
+   for (s=1;s<=S;s++) {
+      if (strmProj) vsize = hset->vecSize;
+      else vsize = hset->swidth[s];
+      for (k=1;k<=vsize;k++)
+         for (kk=1;kk<=k;kk++)
+            avCov[s][k][kk] = mat[s][k][kk]/occAcc;
+   }
+   Dispose(&gstack,mat);
+}
+
+static void FixSemiTiedStats(HMMSet *hset)
+{
+   /* 
+      This uses the standard HMM stats and sets the stream number for each 
+      component (future support for multiple stream systems).
+   */
+   HMMScanState hss;
+   MixPDF *mp;
+   int k,kk;
+   float tmp;
+   VaAcc *va;
+   MuAcc *ma;
+   Vector mu;
+   STriMat inv;
+
+   NewHMMScan(hset,&hss);
+   do {
+      while (GoNextState(&hss,TRUE)) {
+         while (GoNextStream(&hss,TRUE)) {            
+            if (hss.isCont)                     /* PLAINHS or SHAREDHS */
+               while (GoNextMix(&hss,TRUE)) {
+                  mp = hss.mp; 
+                  mp->stream = hss.s;
+                  /* 
+                     fix the statistics to be zero-mean out-product 
+                  */
+                  va = (VaAcc *) GetHook(mp->cov.var);
+                  if (va->occ>0) {
+                     ma = (MuAcc *) GetHook(mp->mean);
+                     inv = va->cov.inv;
+                     mu = ma->mu;
+                     for (k=1;k<=VectorSize(mu);k++) {
+                        tmp = mu[k]/va->occ;
+                        for (kk=1;kk<=k;kk++)
+                           inv[k][kk] -= tmp*mu[kk];
+                     }
+                  }
+               }
+         }
+      }
+   } while (GoNextHMM(&hss));
+   EndHMMScan(&hss);
 }
 
 /*------------------------------------------------------------------------*/
@@ -1312,6 +1518,8 @@ static Boolean ParseTree(RegTree *rtree, AdaptXForm *xform)
       return FALSE;
    /* reset the number of transforms */
    xform->xformSet->numXForms = 0;
+   if (xform->xformSet->xkind == SEMIT) 
+      HError(999,"No support for semi-tied transforms with regression class trees");
    classes = CreateIntVec(&gstack,rtree->bclass->numClasses);
    if (rtree->valid) { /* dimensionality of all transforms the same */
       ZeroIntVec(classes);
@@ -1548,6 +1756,9 @@ static void AccMixPDFStats(HMMSet *hset, MixPDF *mp, AccStruct *accs)
     case CMLLR:
       AccCMLLRPDFStats(mp,accs);
       break;
+    case SEMIT:
+     /* The accstructure is not used for semi-tied estimation */
+       break;
     default :
       HError(999,"Transform kind not currently supported");
       break;
@@ -1680,7 +1891,7 @@ static void SetAccCache(AdaptXForm *xform)
       }
  
       if (nxflevel>0) {
-	ac = (AccCache **)New(&gstack,sizeof(AccCache *)*(nxfcomb));
+	ac = (AccCache **)New(&gstack,sizeof(AccCache *)*(nxfcomb+1));
          for ( ind = 0; ind <= nxfcomb; ind++)
             ac[ind] = NULL;
       }
@@ -1773,7 +1984,7 @@ static void SetObsCache(AdaptXForm *xform, Boolean parent)
       }
 
       if (nxflevel>0) {
-         oc = (ObsCache **)New(&gstack,sizeof(ObsCache *)*(nxfcomb));
+         oc = (ObsCache **)New(&gstack,sizeof(ObsCache *)*(nxfcomb+1));
          for ( ind = 0; ind <= nxfcomb; ind++) {
             oc[ind] = NULL;
          }
@@ -1796,7 +2007,7 @@ static void SetObsCache(AdaptXForm *xform, Boolean parent)
                ind = 0;  
                while ( xf != NULL ){
                   xformSet = xf->xformSet;
-                  if ((xformSet->xkind == CMLLR)||(xformSet->xkind == MLLRCOV)) {
+                  if (StoreObsCache(xf)) {
                      if (HardAssign(xform)) 
                         numXf = xf->xformWgts.assign[ai->baseClass];
                      else
@@ -1895,6 +2106,67 @@ static void ApplyXForm2Vector(LinXForm *linXForm, Vector mean)
    FreeVector(&gstack,vec);
 }
 
+static void ApplyXForm2TriMat(LinXForm *linXForm, TriMat t, Matrix m)
+{  
+   int size,b,bsize;
+   Matrix A,mat;
+   float tmp;
+   int i,j,k;
+   int cnt,cnti,cntj,cntk;
+
+   /* Check dimensions */
+   size = linXForm->vecSize;
+   if (size != TriMatSize(t))
+      HError(999,"Transform dimension (%d) does not match matrix dimension (%d)",
+             size,TriMatSize(t));
+   mat = CreateMatrix(&gstack,size,size);
+   Tri2Mat(t,mat); 
+   /* Transform mean */
+   for (b=1,cnti=1,cnt=1;b<=IntVecSize(linXForm->blockSize);b++) {
+      bsize = linXForm->blockSize[b];
+      A = linXForm->xform[b];
+      for (i=1;i<=bsize;i++,cnti++) {
+         for (j=1,cntj=cnt;j<=bsize;j++,cntj++) {
+            tmp=0;
+            for (k=1,cntk=cnt;k<=bsize;k++,cntk++)
+               tmp += A[i][k] * mat[cntk][cntj];
+            m[cnti][cntj] = tmp;
+         }
+      }
+      cnt += bsize;
+   }
+   if (linXForm->bias != NULL) HError(999,"Assumes there is no bias in transform");  
+   FreeMatrix(&gstack,mat);
+}
+
+static void DiagApplyMat2TXForm(LinXForm *linXForm, Matrix m, Vector v)
+{  
+   int size,b,bsize;
+   Matrix A;
+   float tmp;
+   int i,j;
+   int cnt,cnti,cntj;
+
+   /* Check dimensions */
+   size = linXForm->vecSize;
+   if (size != NumRows(m))
+      HError(999,"Transform dimension (%d) does not match matrix dimension (%d)",
+             size,NumRows(m));
+   for (b=1,cnti=1,cnt=1;b<=IntVecSize(linXForm->blockSize);b++) {
+      bsize = linXForm->blockSize[b];
+      A = linXForm->xform[b];
+      for (i=1;i<=bsize;i++,cnti++) {
+         tmp=0;
+         for (j=1,cntj=cnt;j<=bsize;j++,cntj++) {
+            tmp +=  m[cnti][cntj] * A[i][j];
+         }
+         v[cnti] = tmp;
+      }
+      cnt += bsize;
+   }
+   if (linXForm->bias != NULL) HError(999,"Assumes there is no bias in transform");  
+}
+
 /* Feature-Space adaptation */
 static Vector CompFXForm(MixPDF *mp, Vector svec, AdaptXForm *xform, AInfo *ai, LogFloat *det)
 {
@@ -1905,8 +2177,8 @@ static Vector CompFXForm(MixPDF *mp, Vector svec, AdaptXForm *xform, AInfo *ai, 
   if (ai->next != NULL) { /* There's a parent transform */
     vec = CompFXForm(mp,svec,xform->parentXForm,ai->next,det);
   } else {
-    *det = 0;
-    vec = svec;
+     *det = 0;
+     vec = svec;
   }
   /* Check the kind of the adaptation */
   if ((xform->akind != BASE) && (xform->akind != TREE))
@@ -1920,10 +2192,8 @@ static Vector CompFXForm(MixPDF *mp, Vector svec, AdaptXForm *xform, AInfo *ai, 
     xformSet = xform->xformSet;
     switch (xformSet->xkind) {
     case CMLLR: 
-       ApplyXForm2Vector(xformSet->xforms[numXf],svec);
-       *det += 0.5* (xformSet->xforms[numXf]->det);
-       break;
     case MLLRCOV:
+    case SEMIT:
        ApplyXForm2Vector(xformSet->xforms[numXf],svec);
        *det += 0.5* (xformSet->xforms[numXf]->det);
        break;
@@ -1980,7 +2250,7 @@ static void CompXForm(MixPDF *mp, AdaptXForm *xform, AInfo *ai)
         FixInvDiagGConst(mp);
         break;
       default:
-        HError(999,"AccMixPDFStats: bad ckind %d",mp->ckind);
+        HError(999,"CompXForm: bad ckind %d",mp->ckind);
       }
       break;
     default:
@@ -2005,6 +2275,7 @@ static LinXForm *CreateLinXForm(MemHeap *x,int vsize,IntVec blockSize)
    xf->nUse = 0;
    xf->vecSize = vsize;
    xf->blockSize = blockSize;    
+   xf->vFloor = NULL;
    xf->xform = (SMatrix *)New(x,(IntVecSize(blockSize)+1)*sizeof(Matrix));
    size = 0;
    for (b=1;b<=IntVecSize(blockSize);b++) {
@@ -2194,6 +2465,47 @@ static double GetRowLike(DMatrix gmat,DVector kmat, DVector cofact, double occ, 
   return rowLike;
 }
 
+static double GetSemiTiedLike(AccStruct *accs, LinXForm *xf)
+{
+   double loglike,tmp;
+   int bsize,b,k,kk,cnt,nblocks;
+   DMatrix G;
+   Matrix A;
+   Vector w;
+
+   /* this is the complete dimensionality of the xform */
+   loglike = 0;
+   if (staticSemiTied) nblocks=1;
+   else nblocks = IntVecSize(accs->blockSize);
+   if (xf == NULL) {
+      /* implies an identity XForm */
+      for (b=1,cnt=1;b<=nblocks;b++) {
+         bsize = accs->blockSize[b];
+         for (k=1;k<=bsize;k++,cnt++)
+            loglike += accs->G[cnt][k][k];
+      }      
+      loglike = -loglike/2;
+   } else {
+      for (b=1,cnt=1;b<=nblocks;b++) {
+         bsize = accs->blockSize[b];
+         A = xf->xform[b];
+         for (k=1;k<=bsize;k++,cnt++) {
+            w = A[k]; 
+            G = accs->G[cnt];
+            tmp = 0;
+            for (kk=1;kk<=bsize;kk++)
+               tmp += w[kk]*G[k][kk];
+            loglike += tmp*w[k];
+         }
+      }
+      if (staticSemiTied) 
+         loglike = (xf->det*accs->occ/IntVecSize(accs->blockSize) - loglike)/2;
+      else 
+         loglike = (xf->det*accs->occ - loglike)/2;
+   }
+   return loglike;
+}
+
 static void InitCMLLRXForm(AccStruct *accs, DVector W, DVector bias)
 {
   DMatrix invG,u,v,lG;
@@ -2373,6 +2685,716 @@ static void EstCMLLRXForm(AccStruct *accs, LinXForm *xf)
   FreeDVector(&gstack, iniA);
 }
 
+static void AccMixPDFSemiTiedStats(HMMSet *hset,MixPDF *mp, AccStruct *accs)
+{
+   VaAcc *va;
+   int b,k,kk,bsize,s,strm;
+   int i,cnti,bstart;
+   DMatrix G;
+   float ivar;
+   STriMat inv;
+
+   va = (VaAcc *) GetHook(mp->cov.var);
+   if (va->occ>0) {
+      strm = mp->stream;
+      inv = va->cov.inv;
+      if (strmProj) {
+         /* 
+            Only accumulate observations for the first stream.
+            Otherwise the occupancy will be too large - the 
+            sum for each stream of the state must be the same
+         */
+         if (strm == 1) accs->occ += va->occ;
+         /* First extract the correct accumulate to add */
+         for (s=1,cnti=1;s<strm;s++) cnti += hset->swidth[s];
+         for (i=1;i<=hset->swidth[strm];i++,cnti++) {
+            if (mp->ckind == INVDIAGC) ivar=mp->cov.var[i];
+            else ivar = 1/mp->cov.var[i];
+            G = accs->G[cnti]; 
+            for (k=1;k<=hset->vecSize;k++) 
+               for (kk=1;kk<=k;kk++) 
+                  G[k][kk] += ivar*inv[k][kk];
+         }
+      } else {
+         /* the G accumulates may have been tied ... */
+         if (staticSemiTied) accs->occ += va->occ * IntVecSize(accs->blockSize);
+         else accs->occ += va->occ;
+         for (b=1,cnti=1,bstart=0;b<=IntVecSize(accs->blockSize);b++) {
+            bsize = accs->blockSize[b]; 
+            /* 
+               numNuisanceDim can ONLY be non-zero for single block
+               systems.
+            */
+            for (i=1;i<=bsize-numNuisanceDim;i++,cnti++) {
+               if (mp->ckind == INVDIAGC) ivar=mp->cov.var[cnti];
+               else ivar = 1/mp->cov.var[cnti];
+               G = accs->G[cnti]; 
+               for (k=1;k<=bsize;k++) 
+                  for (kk=1;kk<=k;kk++) 
+                     G[k][kk] += ivar*inv[bstart+k][bstart+kk];
+            }
+            bstart += bsize;
+         }
+      }
+   }
+}
+
+/* 
+   returns -1 if the stream associated with the transform is not consistent
+   and the list of all streams used. Wasteful ...
+*/
+static int GetXFormStream(AdaptXForm *xform, IntVec classes, IntVec streams)
+{
+   BaseClass *bclass;
+   int b,stream=0;
+   ILink il;
+   MixPDF *mp = NULL;
+
+   bclass = xform->bclass;
+   ZeroIntVec(streams);
+   for (b=1;b<=bclass->numClasses;b++) {
+      if (classes[b] == 1) {
+         for (il=bclass->ilist[b]; il!=NULL; il=il->next) {
+            mp = ((MixtureElem *)il->item)->mpdf;
+            streams[mp->stream] = 1;
+            if (stream == 0) stream = mp->stream;
+            else if (stream != mp->stream) stream = -1;
+         }
+      }
+   }
+   return stream;
+}
+
+/* extract the dimensions with the greatest between to within ratio (same as greatest total 
+   to within given occupancy weighted counts. modify the transform so that this change is reflected
+   in ixf
+*/
+static void InitSemiTiedFR(AdaptXForm *xform, LinXForm *xf, IntVec classes, TriMat totCov)
+{
+   BaseClass *bclass;
+   DVector withinCov, fisherRatio;
+   double occ;
+   int size,i,j,b,max;
+   double vmax;
+   Matrix A,inv;
+   ILink il;
+   MixPDF *mp = NULL;
+   VaAcc *va;
+
+   size = xf->vecSize;
+   withinCov = CreateDVector(&gstack,size);
+   fisherRatio = CreateDVector(&gstack,size);
+   ZeroDVector(withinCov); occ = 0;
+   bclass = xform->bclass;
+   for (b=1;b<=bclass->numClasses;b++) {
+      if (classes[b] == 1) {
+         for (il=bclass->ilist[b]; il!=NULL; il=il->next) {
+            mp = ((MixtureElem *)il->item)->mpdf;
+            va = (VaAcc *)GetHook(mp->cov.var);
+            if (va->occ > 0.0) {
+               occ += va->occ;
+               inv = va->cov.inv;
+               for (i=1;i<=size;i++)
+                  withinCov[i] += inv[i][i];
+            }
+         }
+      }
+   }
+   /* map withinCov to hold the ratio */
+   for (i=1;i<=size;i++) fisherRatio[i] = totCov[i][i]*(occ/withinCov[i]) -1;
+   /* perform simple select process - only single block for HLDA */
+   A = xf->xform[1];
+   ZeroMatrix(A);
+   /* naive search, swap initialise as bottom dimensions projected out */
+   if (trace & T_FRS) ShowDVector("Initial",fisherRatio,size);
+   for (i=1;i<=size;i++) {
+      max = 0; vmax = -1;
+      for (j=1;j<=size;j++) {
+         if (fisherRatio[j]>vmax) {
+            max=j;
+            vmax=fisherRatio[j];
+         }
+      }
+      A[i][max] = 1;
+      fisherRatio[max] = -i;
+   }
+   if (trace & T_FRS) {
+      for (i=1;i<=size;i++) fisherRatio[i] = -fisherRatio[i];
+      ShowDVector("Selection Order",fisherRatio,size);
+   }
+   xf->det=0;
+   FreeDVector(&gstack,withinCov);
+}
+
+
+static void UpdateSemiTiedAccs(AdaptXForm *xform, AccStruct *accs, IntVec classes, TriMat totCov)
+{
+   BaseClass *bclass;
+   int b,i,k,kk,bsize,vsize;
+   int cnti;
+   ILink il;
+   MixPDF *mp = NULL;
+   DMatrix G;
+   float ivar;
+
+   /* zero the accumulates */
+   accs->occ = 0;
+   if (strmProj) vsize = xform->hset->vecSize;
+   else vsize = accs->dim;
+   for (i=1;i<=vsize;i++) ZeroDMatrix(accs->G[i]);
+   bclass = xform->bclass;
+   for (b=1;b<=bclass->numClasses;b++) {
+      if (classes[b] == 1) {
+         for (il=bclass->ilist[b]; il!=NULL; il=il->next) {
+            mp = ((MixtureElem *)il->item)->mpdf;
+            AccMixPDFSemiTiedStats(xform->hset,mp,accs);
+         }
+      }
+   }
+   /* make the accumulates symmetric (saves thinking later) */
+   if (strmProj) {
+      for (i=1;i<=vsize;i++) {
+         G = accs->G[i]; 
+         for (k=1;k<=vsize;k++) 
+            for (kk=1;kk<k;kk++) 
+               G[kk][k] = G[k][kk];
+      }
+   } else {
+      /* handle the nuisance dimension attributes */
+      for (i=vsize-numNuisanceDim+1;i<=vsize;i++) {
+         /* mp is the last component of this baseclass */
+         if (mp->ckind == INVDIAGC) ivar=mp->cov.var[i];
+         else ivar = 1/mp->cov.var[i];
+         /* scale the inverse to reflect counts */
+         ivar *= accs->occ;
+         G = accs->G[i];
+         for (k=1;k<=vsize;k++) 
+            for (kk=1;kk<=k;kk++) 
+               G[k][kk] += ivar*totCov[k][kk];
+      }
+      for (b=1,cnti=1;b<=IntVecSize(accs->blockSize);b++) {
+         bsize = accs->blockSize[b]; 
+         for (i=1;i<=bsize;i++,cnti++) {
+            G = accs->G[cnti]; 
+            for (k=1;k<=bsize;k++) 
+               for (kk=1;kk<k;kk++) 
+                  G[kk][k] = G[k][kk];
+         }
+      }
+   }
+}
+
+static void InitSemiTiedVars(AdaptXForm *xform, IntVec classes, TriMat totCov)
+{
+   int b,j,size;
+   ILink i;
+   MixPDF *mp = NULL;
+   Vector tcov;
+   HMMSet *hset;
+   BaseClass *bclass;
+
+   hset = xform->hset;
+   bclass = xform->bclass;
+   size = hset->vecSize; 
+   tcov = CreateVector(&gstack,size);
+   for (j=1;j<=size;j++)
+      tcov[j] = totCov[j][j];
+   for (b=1;b<=bclass->numClasses;b++) {
+      if (classes[b] == 1) {
+         for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
+            mp = ((MixtureElem *)i->item)->mpdf;
+            for (j=size-numNuisanceDim+1;j<=size;j++) {
+               /* no flooring necessary ... */
+               mp->cov.var[j] = tcov[j];
+            }
+            if (mp->ckind == INVDIAGC) 
+               for (j=size-numNuisanceDim+1;j<=size;j++)
+                  mp->cov.var[j] = 1/mp->cov.var[j];
+         }
+      }
+   }
+   FreeVector(&gstack,tcov);
+}
+
+/*
+  Updates the variance and returns the occupancy weighted summed log determinant
+  for use in the likelihood calculation.
+*/
+static double UpdateSemiTiedVars(HMMSet *hset, LinXForm *xf, BaseClass *bclass, IntVec classes, Vector vFloor, TriMat totCov)
+{
+   int b,j,size,strm,s,cnt;
+   int nFloor;
+   ILink i;
+   MixPDF *mp = NULL;
+   Matrix mat;
+   VaAcc *va;
+   STriMat inv;
+   Vector vec,tcov=NULL;
+   double logdet;
+
+   size = xf->vecSize; nFloor = 0; logdet=0;
+   mat = CreateMatrix(&gstack,size,size);
+   if (strmProj) vec = CreateVector(&gstack,size);
+   else vec = NULL;
+   if (numNuisanceDim > 0) {
+      tcov = CreateVector(&gstack,size);
+      ApplyXForm2TriMat(xf,totCov,mat);
+      DiagApplyMat2TXForm(xf,mat,tcov);
+   }
+   for (b=1;b<=bclass->numClasses;b++) {
+      if (classes[b] == 1) {
+         for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
+            mp = ((MixtureElem *)i->item)->mpdf;
+            va = (VaAcc *) GetHook(mp->cov.var);
+            if (va->occ>0) {
+               inv = va->cov.inv;
+               ApplyXForm2TriMat(xf,inv,mat);
+               if (strmProj) {
+                  strm = mp->stream;
+                  /* This is very wasteful - possibly fix later */
+                  DiagApplyMat2TXForm(xf,mat,vec);
+                  for (s=1,cnt=1;s<strm;s++)  cnt += hset->swidth[s];
+                  for (j=1;j<=hset->swidth[strm];j++,cnt++) {
+                     mp->cov.var[j] = vec[cnt]/va->occ;
+                     if (mp->cov.var[j]<vFloor[cnt])
+                        mp->cov.var[j] = vFloor[cnt];
+                  }
+                  if (mp->ckind == INVDIAGC) 
+                     for (j=1;j<=hset->swidth[strm];j++)
+                        mp->cov.var[j] = 1/mp->cov.var[j];
+                  if (mp->ckind == INVDIAGC) {
+                     for (j=1;j<=hset->swidth[strm];j++)
+                        logdet += va->occ * log(mp->cov.var[j]);
+                  } else {
+                     for (j=1;j<=hset->swidth[strm];j++)
+                        logdet -= va->occ * log(mp->cov.var[j]);
+               }
+               } else { 
+                  DiagApplyMat2TXForm(xf,mat,mp->cov.var);
+                  /* apply variance floor and normalise */
+                  for (j=1;j<=size-numNuisanceDim;j++) {
+                     mp->cov.var[j] /= va->occ;
+                     if (mp->cov.var[j]<vFloor[j]) {
+                        mp->cov.var[j] = vFloor[j];
+                        nFloor++;
+                     }
+                  }
+                  if (numNuisanceDim > 0) {
+                     for (j=size-numNuisanceDim+1;j<=size;j++) {
+                        /* no flooring necessary ... */
+                        mp->cov.var[j] = tcov[j];
+                     }
+                  }
+                  if (mp->ckind == INVDIAGC) 
+                     for (j=1;j<=size;j++)
+                        mp->cov.var[j] = 1/mp->cov.var[j];
+                  /* get the information for the likelihood calculation */
+                  if (mp->ckind == INVDIAGC) {
+                     for (j=1;j<=size;j++)
+                        logdet += va->occ * log(mp->cov.var[j]);
+                  } else {
+                     for (j=1;j<=size;j++)
+                        logdet -= va->occ * log(mp->cov.var[j]);
+                        }
+
+               }
+            }
+         }
+      }
+   }
+   if (nFloor>0)
+      printf("  Floored %d component elements\n",nFloor);
+   FreeMatrix(&gstack,mat);
+   return logdet/2;
+}
+
+static double InitSemiTiedDet(BaseClass *bclass, IntVec classes)
+{
+   int b,j,size;
+   ILink i;
+   MixPDF *mp = NULL;
+   VaAcc *va;
+   double logdet;
+
+   logdet = 0;
+   for (b=1;b<=bclass->numClasses;b++) {
+      if (classes[b] == 1) {
+         for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
+            mp = ((MixtureElem *)i->item)->mpdf;
+            va = (VaAcc *)GetHook(mp->cov.var);
+            if (va->occ > 0) {
+               size = VectorSize(mp->mean);
+               if (mp->ckind == INVDIAGC) {
+                  for (j=1;j<=size;j++)
+                     logdet += va->occ * log(mp->cov.var[j]);
+               } else {
+                  for (j=1;j<=size;j++)
+                     logdet -= va->occ * log(mp->cov.var[j]);
+               }
+            }
+         }
+      }
+   }
+   return logdet/2;
+}
+
+
+static void UpdateSemiTiedMeans(HMMSet *hset, LinXForm *xf, BaseClass *bclass, IntVec classes, Vector totMean)
+{
+   int b,j,size,s,strm,cnt;
+   ILink i;
+   MixPDF *mp = NULL;
+   Vector vec,tvec;
+   MuAcc *ma;
+
+   size = xf->vecSize; 
+   vec = CreateVector(&gstack,size);
+   if (numNuisanceDim > 0) {
+      tvec = CreateVector(&gstack,size);
+      CopyVector(totMean,tvec);
+      ApplyXForm2Vector(xf,tvec);
+   } else {
+      tvec = NULL;
+   }
+   for (b=1;b<=bclass->numClasses;b++) {
+      if (classes[b] == 1) {
+         for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
+            mp = ((MixtureElem *)i->item)->mpdf;
+            ma = (MuAcc *) GetHook(mp->mean);
+            if (ma->occ>0) {
+               CopyVector(ma->mu,vec);
+               ApplyXForm2Vector(xf,vec);
+               if (strmProj) {
+                  strm = mp->stream;
+                  for (s=1,cnt=1;s<strm;s++)  cnt += hset->swidth[s];
+                  for (j=1;j<=hset->swidth[strm];j++,cnt++) 
+                     mp->mean[j] = vec[cnt]/ma->occ;
+               } else {
+                  for (j=1;j<=size-numNuisanceDim;j++)
+                     mp->mean[j] = vec[j]/ma->occ;
+               }
+               /* update the global "tied" means */
+               if (numNuisanceDim > 0) {
+                  for (j=size-numNuisanceDim+1;j<=size;j++)
+                     mp->mean[j] = tvec[j];
+               }
+            }
+         }
+      }
+   }
+   FreeVector(&gstack,vec);
+}
+
+static void GetSemiTiedTotCov(AdaptXForm *xform, IntVec classes, TriMat totCov, Vector totMean)
+{
+   int b,k,kk;
+   int size,cnt;
+   ILink i;
+   MixPDF *mp=NULL;
+   DMatrix mat=NULL, tmat=NULL;
+   DVector tvec=NULL;
+   VaAcc *va;
+   MuAcc *ma;
+   double totOcc;
+   STriMat inv;
+   Vector mu;
+   BaseClass *bclass;
+   float tmp;
+
+   cnt = 0;
+   bclass = xform->bclass;
+   size = 0; mat = NULL; totOcc = 0;
+   for (b=1;b<=bclass->numClasses;b++) {
+      if (classes[b] == 1) {
+         for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
+            cnt++;
+            mp = ((MixtureElem *)i->item)->mpdf;
+            if (mat == NULL) { /* need to get size for this transform */
+               if (strmProj) size = xform->hset->vecSize; 
+               else size = VectorSize(mp->mean);
+               mat = CreateDMatrix(&gstack,size,size);
+               tmat = CreateDMatrix(&gstack,size,size);
+               tvec = CreateDVector(&gstack,size);
+               totOcc = 0; ZeroDMatrix(mat);
+               ZeroDMatrix(tmat); ZeroDVector(tvec);
+            }
+            va = (VaAcc *) GetHook(mp->cov.var);
+            totOcc += va->occ;
+            inv = va->cov.inv;
+            if (va->occ>0) {
+               ma = (MuAcc *) GetHook(mp->mean);
+               mu = ma->mu;
+               for (k=1;k<=size;k++) {
+                  tmp = mu[k];
+                  tvec[k] += tmp;
+                  for (kk=1;kk<=k;kk++) 
+                     tmat[k][kk] += inv[k][kk] + tmp*mu[kk]/va->occ;
+               }
+            }
+         }
+      }
+   }
+   for (k=1;k<=size;k++) {
+      totMean[k] = tvec[k]/totOcc;
+      for (kk=1;kk<=k;kk++) 
+         totCov[k][kk] = tmat[k][kk]/totOcc - totMean[k]*totMean[kk];   
+   }
+   FreeDMatrix(&gstack,mat);
+}
+
+static void UpdateSemiTiedVFloor(HMMSet *hset, LinXForm *xf, TriMat avCov, SVector vFloor)
+{
+   Matrix mat;
+   int size,i;
+
+   if (semiTiedVFloor) {
+      size = xf->vecSize;
+      mat = CreateMatrix(&gstack,size,size);
+      ApplyXForm2TriMat(xf,avCov,mat);
+      DiagApplyMat2TXForm(xf,mat,vFloor);
+      for (i=1;i<=size;i++) vFloor[i] *= semiTiedFloorScale;
+   } else
+      ZeroVector(vFloor);
+}
+
+void UpdateHLDAModel(HMMSet *hset)
+{
+   HMMScanState hss;
+   MixPDF *mp;
+   SVector mu;
+   SVector var;
+   int size, hldasize, i;
+
+   size = hset->vecSize;
+   /* support HHEd projection work */
+   if (hset->projSize > 0) hldasize = size-hset->projSize;
+   else hldasize = size-numNuisanceDim;
+   NewHMMScan(hset,&hss);
+   do {
+      while (GoNextState(&hss,TRUE)) {
+         while (GoNextStream(&hss,TRUE)) {            
+            if (hss.isCont)                     /* PLAINHS or SHAREDHS */
+               while (GoNextMix(&hss,TRUE)) {
+                  mp = hss.mp;
+                  mu = CreateSVector(hset->hmem,hldasize);
+                  var = CreateSVector(hset->hmem,hldasize);
+                  for (i=1;i<=hldasize;i++) {
+                     mu[i] = mp->mean[i];
+                     var[i] = mp->cov.var[i];
+                  }
+                  /* set the hooks correctly so no by-products */
+                  SetHook(mu,GetHook(mp->mean));
+                  SetHook(var,GetHook(mp->cov.var));
+                  mp->mean = mu;
+                  mp->cov.var = var;
+               }
+         }
+      }
+   } while (GoNextHMM(&hss));
+   EndHMMScan(&hss);
+   /* now tidy the global attributes */
+   hset->vecSize = hldasize;
+   hset->swidth[1] = hldasize;
+   hset->projSize = 0;
+}
+
+
+static void UpdateSemiTiedXForm(AccStruct *accs, LinXForm *xf, LinXForm *ixf)
+{
+   DMatrix invG,u,v;
+   DMatrix *InvG;
+   DVector w;
+   DMatrix A;
+   int i,j,k,dim;
+   int iter;
+   int cnt, cnti,b,bsize;
+   double det=0.0,tdet=0.0;
+   double beta, likeNew, likeOld;
+   DVector W, iniW;
+   DVector cofact;
+  
+   /* Reset xform  to identity matrix */
+  
+   InvG = (DMatrix *)New(&gstack,sizeof(DMatrix)*(accs->dim+1)); 
+   for (b=1,cnt=1;b<=IntVecSize(accs->blockSize);b++) {
+     bsize = accs->blockSize[b];
+     dim = bsize;
+     cofact = CreateDVector(&gstack,bsize);
+     ZeroDVector(cofact); 
+     /* set up the matrices for the inversion */
+     u = CreateDMatrix(&gstack, dim, dim);
+     v = CreateDMatrix(&gstack, dim, dim);
+     w = CreateDVector(&gstack, dim);
+     /* and the transforms to be estimated */
+     A = CreateDMatrix(&gstack,bsize,bsize);
+     ZeroDMatrix(A); 
+     if (ixf == NULL) {
+        /* initialise with the diagonal transform */
+        for (i=1,cnti=cnt;i<=bsize;i++, cnti++) {
+           A[i][i] = sqrt(accs->G[cnti][i][i]/accs->occ); 
+           A[i][i] = 1/A[i][i];
+           InvG[cnti] = CreateDMatrix(&gstack,dim,dim);
+           Tri2DMat(accs->G[cnti],InvG[cnti]);
+           InvSVD(InvG[cnti], u, w, v, InvG[cnti]);
+        }
+     } else {
+        for (i=1,cnti=cnt;i<=bsize;i++, cnti++) {
+           InvG[cnti] = CreateDMatrix(&gstack,dim,dim);
+           Tri2DMat(accs->G[cnti],InvG[cnti]);
+           InvSVD(InvG[cnti], u, w, v, InvG[cnti]);
+           for (j=1;j<=bsize;j++)
+              A[i][j] = ixf->xform[b][i][j];
+        }
+     }
+     W = CreateDVector(&gstack,dim);
+     iniW = CreateDVector(&gstack,dim);
+     for (iter=1;iter<=maxXFormIter;iter++) {
+       ZeroDVector(iniW);
+       for (i=1,cnti=cnt;i<=bsize;i++,cnti++) {
+         for (j=1;j<=bsize;j++)      iniW[j] = A[i][j];
+         invG = InvG[cnti];    
+         det = DMatCofact(A,i,cofact);     
+         beta = 0;
+         for(j=1;j<=bsize;j++){
+            for(k=1;k<=bsize;k++)
+               beta += cofact[j]*invG[j][k]*cofact[k];
+         }
+         beta = sqrt(accs->occ/beta);
+         ZeroDVector(W);
+         for(j=1;j<=bsize;j++){
+            for(k=1;k<=bsize;k++)
+               W[j] += cofact[k]*invG[j][k];
+            W[j] *= beta;          
+         }
+         ZeroDVector(w);
+         likeNew = GetRowLike(accs->G[cnti],w,cofact,accs->occ,W);
+         likeOld = GetRowLike(accs->G[cnti],w,cofact,accs->occ,iniW);
+         /* printf("Iteration %d (row %d): ",iter,cnt); */
+         if (likeNew>likeOld) {
+           for(j=1;j<=bsize;j++)  A[i][j] = W[j];
+         } else {
+            if (likeOld/likeNew>1.00001) /* put a threshold on this! */
+               printf("  Not updating transform (Block: %d Row: %d Iter: %d (%f %f))\n",
+		      b,i,iter,likeNew/accs->occ,likeOld/accs->occ);
+	 }
+       }
+     }
+     cnt += bsize;
+     tdet += log(fabs(det));
+     /* Copy the transform into single precision for storage */
+     for (i=1;i<=bsize;i++)
+        for (j=1;j<=bsize;j++)
+           xf->xform[b][i][j] = A[i][j];
+     FreeDVector(&gstack, cofact);
+   }
+   xf->det = tdet*2;
+   Dispose(&gstack,InvG);
+}
+
+static void CheckSemiTiedOptions(AdaptXForm *xform, AccStruct *accs)
+{
+   int b,bsize;
+
+   if (strmProj) { /* confirm that strmProj valid */
+      if (xform->bclass->numClasses != 1)
+         HError(999,"Can only have strmProj with global transform");
+      if (xform->hset->swidth[0] == 1) 
+         HError(999,"strmProj with a single stream is not valid");
+   } else if (numNuisanceDim>0) { /* check the nuisance dimension options */
+      if (xform->hset->swidth[0] != 1)
+         HError(999,"Can only have Nuisance Dimensions with single streams");
+   }
+
+   if (semiTied2InputXForm) {
+      if (xform->bclass->numClasses != 1)
+         HError(999,"Can only store as input XForm with global transform");
+      if (xform->hset->swidth[0] != 1) 
+         HError(999,"Can only store as input XForm with single stream");
+      if (xform->hset->xf != NULL)
+         HError(999,"Can not store as input XForm if HMMSet already has an input XForm");
+      if (xform->hset->semiTied != NULL)
+         HError(999,"Can not store as input XForm if HMMSet already has an semitied XForm");
+      if (IntVecSize(accs->blockSize) > 1)
+         HError(999,"Can not store as input XForm if full XForm used");
+   }   
+   if (numNuisanceDim > 0) {
+      if (IntVecSize(accs->blockSize) != 1)
+         HError(999,"Can only use HLDA projections with a single block");
+   }
+   if (staticSemiTied) {
+      bsize = accs->blockSize[1];
+      for (b=2;b<=IntVecSize(accs->blockSize);b++)
+         if (accs->blockSize[b] != bsize)
+            HError(999,"Inconsistent block size [1 %d] and [%d %d]",bsize,b,accs->blockSize[b]);
+   }
+}
+
+static void EstSemiTXForm(AdaptXForm *xform, AccStruct *accs, LinXForm *xf, IntVec classes)
+{
+   int iter,size=0,stream;
+   TriMat totCov;
+   Vector totMean;
+   SVector vFloor;
+   HMMSet *hset;
+   IntVec streams;
+   double logdet,tocc;
+   LinXForm *ixf;
+
+   hset = xform->hset; 
+   CheckSemiTiedOptions(xform,accs);
+   if (strmProj) { 
+      size =  hset->vecSize;
+   } else 
+      size = accs->dim;
+   
+   ixf = NULL;
+   vFloor = CreateSVector(xform->mem,size);
+   streams = CreateIntVec(&gstack,hset->swidth[0]);
+   totCov = CreateTriMat(&gstack,size);
+   totMean = CreateVector(&gstack,size);
+   if (strmProj) stream = 1;
+   else stream = GetXFormStream(xform,classes,streams);
+   /* handle initialisation for HLDA */
+   if (numNuisanceDim > 0) {
+      /* get the global covariance matrix */
+      GetSemiTiedTotCov(xform,classes,totCov,totMean);
+      if (initNuisanceFR) {
+         /* compute Fisher ratios to initialise nuisance dimensions */
+         InitSemiTiedFR(xform,xf,classes,totCov);
+         ixf = xf;
+         if (stream>0) UpdateSemiTiedVFloor(hset,xf,avCov[stream],vFloor);
+         else ZeroVector(vFloor);
+         logdet = UpdateSemiTiedVars(hset,xf,xform->bclass,classes,vFloor,totCov);         
+      } else {
+         InitSemiTiedVars(xform,classes,totCov);
+         logdet = InitSemiTiedDet(xform->bclass,classes);
+      }
+   } else 
+      logdet = InitSemiTiedDet(xform->bclass,classes);
+   for (iter=1;iter<=maxSemiTiedIter;iter++) {
+      UpdateSemiTiedAccs(xform,accs,classes,totCov);
+      if (staticSemiTied) tocc = accs->occ/(IntVecSize(accs->blockSize));
+      else tocc = accs->occ;
+      if (iter == 1) {
+         logdet += GetSemiTiedLike(accs,ixf);
+         printf("Initial LogLikelihood = %f\n",logdet/tocc);
+         UpdateSemiTiedXForm(accs, xf, ixf);
+      }
+      else UpdateSemiTiedXForm(accs, xf, xf);
+      printf("Iteration %d\n",iter); fflush(stdout);
+      if (stream>0) UpdateSemiTiedVFloor(hset,xf,avCov[stream],vFloor);
+      else ZeroVector(vFloor);
+      logdet = UpdateSemiTiedVars(hset,xf,xform->bclass,classes,vFloor,totCov);
+      logdet += GetSemiTiedLike(accs,xf);
+      printf("  LogLikelihood = %f\n",logdet/tocc);
+   }
+   /* Tidy Stats */
+   if (semiTiedVFloor) xf->vFloor = vFloor;
+   else xf->vFloor = NULL;
+   UpdateSemiTiedMeans(hset,xf,xform->bclass,classes,totMean);
+   FreeIntVec(&gstack,streams);
+}
+
 
 static void EstMLLRCovXForm(AccStruct *accs, LinXForm *xf)
 {
@@ -2456,7 +3478,7 @@ static void EstMLLRCovXForm(AccStruct *accs, LinXForm *xf)
    Dispose(&gstack,InvG);
 }
 
-static void EstXForm(AccStruct *accs, AdaptXForm *xform)
+static void EstXForm(AccStruct *accs, AdaptXForm *xform, IntVec classes)
 {
   XFormSet *xformSet;
   LinXForm *xf, *dxf;
@@ -2488,6 +3510,9 @@ static void EstXForm(AccStruct *accs, AdaptXForm *xform)
   case CMLLR: 
     EstCMLLRXForm(accs, xf);
     break;
+  case SEMIT:
+     EstSemiTXForm(xform,accs,xf,classes);
+     break;
   default :
     HError(999,"Transform kind not currently supported");
     break;
@@ -2509,9 +3534,12 @@ void GenXForm(RegNode *node, AdaptXForm *xform, IntVec classes)
       printf("\n");
    }
    while (classes[class] == 0) class++;
-   accs = CreateAccStruct(&gstack,xform,node->vsize,GetBlockSize(xform,class));
+   if (strmProj)
+      accs = CreateAccStruct(&gstack,xform,xform->hset->vecSize,GetBlockSize(xform,class));
+   else 
+      accs = CreateAccStruct(&gstack,xform,node->vsize,GetBlockSize(xform,class));
    AccNodeStats(node,accs,xform,classes);
-   EstXForm(accs,xform);
+   EstXForm(accs,xform,classes);
    for (b=1;b<=IntVecSize(classes);b++)
       if (classes[b] == 1) {
 	if (HardAssign(xform)) {
@@ -2531,22 +3559,38 @@ static Boolean GenClassXForm(BaseClass *bclass, AdaptXForm *xform)
   int b;
   ILink i;
   MixPDF *mp = NULL;
+  IntVec classes;
 
   /* reset the number of transforms */
   xform->xformSet->numXForms = 0;
+   /* 
+      SEMIT is NOT possible in incremental mode and the stats are stored
+      in a non-zero-mean form. Fix statistics once to be of appropriate form.
+      Prior to fixing stats sort out the covariance matrix for variance
+      flooring.
+      
+   */
+  if (xform->xformSet->xkind == SEMIT) {
+     SetSemiTiedAvCov(xform->hset);
+     FixSemiTiedStats(xform->hset);
+  }
+  classes = CreateIntVec(&gstack,bclass->numClasses);
   for (b=1;b<=bclass->numClasses;b++) {
+     ZeroIntVec(classes); classes[b] = 1;
     /* Accumulate structure regenerated each time as this will handle
        streams of different sizes simply */
-    accs = CreateAccStruct(&gstack,xform,GetVecSizeClass(bclass,b),
-			   GetBlockSize(xform,b));
+     if (strmProj)
+        accs = CreateAccStruct(&gstack,xform,xform->hset->vecSize,GetBlockSize(xform,b));
+     else     
+        accs = CreateAccStruct(&gstack,xform,GetVecSizeClass(bclass,b), GetBlockSize(xform,b));
     for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
       mp = ((MixtureElem *)i->item)->mpdf;
       AccMixPDFStats(xform->hset,mp,accs);
     }
     /* Use last component of the baseclass to access baseclass stats */
     if (AccAdaptBaseTriMat(xform))  AccBaseClassStats(mp,accs);
-    if (accs->occ > GetSplitThresh(xform)) {
-      EstXForm(accs,xform);
+    if ((xform->xformSet->xkind == SEMIT) || (accs->occ > GetSplitThresh(xform))) {
+      EstXForm(accs,xform,classes);
       xform->xformWgts.assign[b] = xform->xformSet->numXForms;
       if (mllrDiagCov) 
 	diagCovXForm->xformWgts.assign[b] = diagCovXForm->xformSet->numXForms;
@@ -2895,8 +3939,8 @@ Vector ApplyCompFXForm(MixPDF *mp, Vector svec, AdaptXForm *xform, LogFloat *det
   HMMSet *hset;
 
   if (xform == NULL) {
-    *det=0;
-    return svec;
+     *det = 0;
+     return svec;
   }  else {
     hset = xform->hset;
     if (mp->info == NULL)
@@ -2925,8 +3969,8 @@ Vector ApplyCompFXForm(MixPDF *mp, Vector svec, AdaptXForm *xform, LogFloat *det
       *det = oc->det;
       return vec;
     } else {
-      *det = 0;
-      return svec;
+       *det = 0;
+       return svec;
     }
   }
 }
@@ -2972,6 +4016,7 @@ void ResetXFormHMMSet(HMMSet *hset)
    } while (GoNextHMM(&hss));
    EndHMMScan(&hss);
 }
+
 
 /* ---------------  Transform Copying Functions  ----------------------- */
 
@@ -3069,6 +4114,69 @@ AdaptXForm *CreateAdaptXForm(HMMSet *hset, char *xformName)
    if (!hset->attRegAccs) AttachRegAccs(hset,xform);
    outXForm = xform;
    return xform;
+}
+
+InputXForm *AdaptXForm2InputXForm(HMMSet *hset, AdaptXForm *xform)
+{
+   InputXForm *ixform;
+   int s,i,j,cnt,hldasize;
+   char mac[256], num[10];
+   LabId id;
+   MLink m;
+   SVector v;
+   SMatrix mat;
+
+   if (xform->bclass->numClasses != 1)
+      HError(999,"Can only use Stream Projections with single base classes");
+   ixform = (InputXForm *)New(hset->hmem,sizeof(InputXForm));
+   ixform->xformName = xform->xformName;
+   ixform->mmfIdMask = xform->bclass->mmfIdMask;
+   ixform->fname = NULL;
+   ixform->pkind = xform->hset->pkind;
+   ixform->preQual = FALSE;
+   ixform->xform = xform->xformSet->xforms[1];
+   if ((numNuisanceDim > 0) || (hset->projSize>0)) { /* adjust size to remove HLDA */
+      if (numNuisanceDim>0) hldasize = hset->vecSize-numNuisanceDim;
+      else hldasize = hset->vecSize-hset->projSize;
+      mat = CreateSMatrix(hset->hmem,hldasize,hset->vecSize);
+      for (i=1;i<=hldasize;i++)
+         for (j=1;j<=hset->vecSize;j++)
+            mat[i][j] = ixform->xform->xform[1][i][j];
+      ixform->xform->xform[1] = mat;
+   } 
+   /* 
+      Update the HMMSet vFloor and then zero xf vFloor. For input
+      xforms the HMMSet vFloor always  used.
+   */
+   if ((numNuisanceDim > 0) || (hset->projSize>0)) {
+      strcpy(mac,"varFloor1");
+      id = GetLabId(mac,FALSE);
+      if (id != NULL  && (m=FindMacroName(hset,'v',id)) != NULL){
+         /* found the varFloor to update */
+         if (numNuisanceDim>0) hldasize = hset->vecSize-numNuisanceDim;
+         else hldasize = hset->vecSize-hset->projSize;
+         v = CreateSVector(hset->hmem,hldasize);
+         for (i=1;i<=hldasize;i++) 
+            v[i] = ixform->xform->vFloor[i];
+         m->structure = v;
+      }
+   } else {
+      for (s=1,cnt=1;s<=hset->swidth[0];s++) {
+         strcpy(mac,"varFloor");
+         sprintf(num,"%d",s); strcat(mac,num);
+         id = GetLabId(mac,FALSE);
+         if (id != NULL  && (m=FindMacroName(hset,'v',id)) != NULL){
+            /* found the varFloor to update */
+            v = (SVector)m->structure;
+            for (i=1;i<=hset->swidth[s];i++,cnt++) 
+               v[i] = ixform->xform->vFloor[cnt];
+         }
+      }
+   }
+   ixform->xform->vFloor = NULL;
+   ixform->nUse = 0;
+
+   return ixform;
 }
 
 Boolean GenAdaptXForm(HMMSet *hset, AdaptXForm* xform)
@@ -3194,6 +4302,11 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                   xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
                   SetParentXForm(hset,xfinfo->paXForm);
                }
+            } else if (hset->semiTied != NULL) { /* model set uses a semitied transform */
+               if (xfinfo->paXForm == NULL) { /* semi-tied transform is for all files */
+                  xfinfo->paXForm = hset->semiTied;
+                  SetParentXForm(hset,xfinfo->paXForm);
+               }
             }
          } else if (xfinfo->usePaXForm) { /* set-up the initial parent transform information */
             maskMatch = MaskMatch(xfinfo->paSpkrPat,paspkr,datafn);
@@ -3204,6 +4317,11 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
             MakeFN(cpaspkr,NULL,xfinfo->paXFormExt,newMn);
             xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
             SetParentXForm(hset,xfinfo->paXForm);
+         } else if (hset->semiTied != NULL) { /* model set uses a semitied transform */
+            if (xfinfo->paXForm == NULL) { /* semi-tied transform is for all files */
+               xfinfo->paXForm = hset->semiTied;
+               SetParentXForm(hset,xfinfo->paXForm);
+            }
          }
          nspkr++;
          strcpy(coutspkr,spkr);      
@@ -3226,6 +4344,12 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
          MakeFN(cpaspkr,xfinfo->paXFormDir,xfinfo->paXFormExt,newFn);
          MakeFN(cpaspkr,NULL,xfinfo->paXFormExt,newMn);
          xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
+         SetParentXForm(hset,xfinfo->paXForm);
+      }
+      spkrChange=TRUE;
+   } else if (hset->semiTied != NULL) { /* model set uses a semitied transform */
+      if (xfinfo->paXForm == NULL) { /* semi-tied transform is for all files */
+         xfinfo->paXForm = hset->semiTied;
          SetParentXForm(hset,xfinfo->paXForm);
       }
       spkrChange=TRUE;
@@ -3264,6 +4388,21 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
          if the nature of the transform is also considered 
       */
       ResetXFormHMMSet(hset);
+   } else { /* handle the fact that alignment and update HMMSet may use semi-tied transforms */
+      if ((xfinfo->inXForm == NULL) && (xfinfo->al_inXForm == NULL)) { /* semi-tied transform is for all files */
+         if (hset->semiTied != NULL) { /* model set uses a semitied transform */
+            xfinfo->inXForm = hset->semiTied;
+            SetXForm(hset,xfinfo->inXForm);
+         }
+         if (xfinfo->al_hset != NULL) {
+            if (xfinfo->al_hset->semiTied != NULL) { /* alignment model set uses a semitied transform */
+               xfinfo->al_inXForm = xfinfo->al_hset->semiTied;
+               SetXForm(xfinfo->al_hset,xfinfo->al_inXForm);
+            }
+         } else {
+            xfinfo->al_inXForm = xfinfo->inXForm;
+         }
+      }
    }
 
    /* All the files have been handled - store xforms */
@@ -3280,6 +4419,51 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
    return spkrChange;
 }
 
+void UpdateSemiTiedModels(HMMSet *hset, XFInfo *xfinfo)
+{
+   char newFn[MAXSTRLEN];
+   char *newMn;
+   InputXForm *ixform;
 
+   if (semiTiedMacro == NULL) {
+      if (numNuisanceDim > 0) newMn = "HLDA";
+      else newMn = "SEMITIED";
+   } else newMn = semiTiedMacro;
+   xfinfo->outXForm = CreateAdaptXForm(hset, newMn);
+   GenAdaptXForm(hset,xfinfo->outXForm);
+   CreateXFormMacro(hset,xfinfo->outXForm,newMn);
+   MakeFN(newMn,xfinfo->outXFormDir,xfinfo->outXFormExt,newFn);
+   if ((strmProj) || (semiTied2InputXForm)) {
+      hset->semiTied = NULL;
+      ixform = AdaptXForm2InputXForm(hset,xfinfo->outXForm);
+      hset->xf = ixform;
+      if (numNuisanceDim>0) UpdateHLDAModel(hset);
+      SaveInputXForm(hset,ixform,newFn,saveSemiTiedBinary);
+   } else {
+      hset->projSize = numNuisanceDim;
+      hset->semiTied = xfinfo->outXForm;
+      SaveOneXForm(hset,xfinfo->outXForm,newFn,saveSemiTiedBinary);
+   }
+   /* All parameters updated - now do GConst */
+   FixAllGConsts(hset);
+}
+
+void UpdateProjectModels(HMMSet *hset, char *dir)
+{
+   char newFn[MAXSTRLEN];
+   char *newMn;
+   InputXForm *ixform;
+   AdaptXForm* xform;
+
+   if (semiTiedMacro == NULL) newMn = hset->semiTiedMacro;
+   else newMn = semiTiedMacro;
+   xform = hset->semiTied;
+   ixform = AdaptXForm2InputXForm(hset,xform);
+   hset->xf = ixform; hset->semiTied = NULL;
+   UpdateHLDAModel(hset);
+   MakeFN(newMn,dir,NULL,newFn);
+   SaveInputXForm(hset,ixform,newFn,saveSemiTiedBinary);
+   /* gconsts fixed in main script */
+}
 
 

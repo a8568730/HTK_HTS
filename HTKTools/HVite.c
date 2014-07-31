@@ -33,7 +33,7 @@
 /* ----------------------------------------------------------- */
 
 char *hvite_version = "!HVER!HVite:   3.4 [CUED 25/04/06]";
-char *hvite_vc_id = "$Id: HVite.c,v 3.5 2006/05/03 16:05:28 jal58 Exp $";
+char *hvite_vc_id = "$Id: HVite.c,v 1.1.1.1 2006/10/11 09:55:02 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -882,7 +882,7 @@ void DoAlignment(void)
       currGenBeam = genBeam;
       /* This handles the initial input transform, parent transform setting
 	 and output transform creation */
-      if (UpdateSpkrStats(&hset, &xfInfo, datFN) && (!(xfInfo.useInXForm))) {
+      if (UpdateSpkrStats(&hset, &xfInfo, datFN) && (!(xfInfo.useInXForm)) && (hset.semiTied == NULL)) {
          xfInfo.inXForm = NULL;
       }
       if (genBeamInc == 0.0)
@@ -988,7 +988,7 @@ void DoRecognition(void)
          }
 	 /* This handles the initial input transform, parent transform setting
 	    and output transform creation */
-         if (UpdateSpkrStats(&hset, &xfInfo, datFN) && (!(xfInfo.useInXForm))) {
+         if (UpdateSpkrStats(&hset, &xfInfo, datFN) && (!(xfInfo.useInXForm)) && (hset.semiTied == NULL)) {
             xfInfo.inXForm = NULL;
          }
          ProcessFile(datFN,net,n++,genBeam,FALSE);

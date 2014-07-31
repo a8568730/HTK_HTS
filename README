@@ -52,10 +52,10 @@ The "new" method installs by default into /usr/local/bin (equivalent
 to a configure option of "--prefix=/usr/local").
 
 1. decide which of the above methods you wish to use
-2. cd to htk-3.4, then run ./configure (with appropriate options, run
+2. cd to htk, then run ./configure (with appropriate options, run
    "./configure --help" if unsure).
-   If you want to build the programs in HLMTools add the 
-   --enable-hlmtools option.
+   If you don't want to build the programs in HLMTools add the 
+   --disable-hlmtools option.
 3. make all
 4. make install
 
@@ -81,7 +81,6 @@ these steps to the build process:
 
 5. make hdecode
 6. make install-hdecode
-7. make clean
 
 
 Compiling & Installing HTK under Windows
@@ -108,7 +107,7 @@ Compilation:
    3. cd into the directory in which you unpacked the sources.
    4. cd into the htk directory. Type:
 
-      cd htk-3.4
+      cd htk
 
    5. Create a directory for the library and tools. Type:
 

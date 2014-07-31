@@ -1,3 +1,7 @@
+2006-12-13  Anna Langley <jal58@cam.ac.uk>
+
+	* updated Makefile for Latex2HTML and added latex2html-init
+
 2004-07-13  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
 	* errors.tex: Add error codes for LLF processing.

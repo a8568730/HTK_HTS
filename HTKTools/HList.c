@@ -33,7 +33,7 @@
 /* ----------------------------------------------------------- */
 
 char *hlist_version = "!HVER!HList:   3.4 [CUED 25/04/06]";
-char *hlist_vc_id = "$Id: HList.c,v 3.4 2006/05/01 16:56:34 jal58 Exp $";
+char *hlist_vc_id = "$Id: HList.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

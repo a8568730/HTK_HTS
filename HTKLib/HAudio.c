@@ -20,7 +20,7 @@
 /* ----------------------------------------------------------- */
 
 char *haudio_version = "!HVER!HAudio:   3.4 [CUED 25/04/06]";
-char *haudio_vc_id = "$Id: HAudio.c,v 3.4 2006/05/01 16:56:01 jal58 Exp $";
+char *haudio_vc_id = "$Id: HAudio.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"

@@ -485,6 +485,13 @@ tying of the states in each cluster is performed exactly as for
 the Tie (\texttt{TI}) command below.  The macro for the \texttt{i}'th
 tied cluster is called \texttt{macroi}.
 
+\subsubsection*{\tt PR }
+
+This command takes a model set that has been estimated with an HLDA transform,
+but storead as a semi-tied transform rather than an input transform and 
+transforms it into a model-set with the projected number of dimensions and
+an input transform.
+
 \subsubsection*{\tt PS nstates power [numiters]   }
 
 This command sets the number of Gaussians in each HMM state
@@ -724,6 +731,10 @@ If the usage count is already 1, the associated macro is simply
 deleted and the usage count set to 0 to indicate an unshared item.
 Note that it is not possible to untie a pdf since these are not
 actually shared [see the Tie (\texttt{TI}) command above].
+
+\subsubsection*{\tt XF filename}
+
+Sets the input transform of the model-set to be filename.
 
 \subsection{Use}
 

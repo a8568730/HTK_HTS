@@ -135,23 +135,23 @@ form of transform is referred to in the code as {\tt MLLRMEAN}.
 There are two standard forms of linear adaptation of the variances. The first
 is of the form
 \[
-        \hat{\bm{\Sigma}}_{m} = \bm{B}_m^T\bm{H}_m\bm{B}_m
+        \hat{\bm{\Sigma}} = \bm{B}^T\bm{H}\bm{B}
 \]
-where $\bm{H}_m$ is the linear transformation to be estimated and
-$\bm{B}_m$ is the inverse of the Choleski factor of $\bm{\Sigma}_{m}^{-1}$,
+where $\bm{H}$ is the linear transformation to be estimated and
+$\bm{B}$ is the inverse of the Choleski factor of $\bm{\Sigma}^{-1}$,
 so
 \[ 
-        \bm{\Sigma}_{m}^{-1} = \bm{C}_m\bm{C}_m^T
+        \bm{\Sigma}^{-1} = \bm{C}\bm{C}^T
 \]
 and
 \[
-        \bm{B}_m = \bm{C}_m^{-1}
+        \bm{B}= \bm{C}^{-1}
 \]
 This form of transform results in an effective full covariance matrix if
-the transform matrix $\bm{H}_m$ is full. This makes likelihood calculations
+the transform matrix $\bm{H}$ is full. This makes likelihood calculations
 highly inefficient. This form of transform is only available with a 
 diagonal transform and in conjunction with estimating an MLLR transform. The
-MLLR transform is used as a parent transform for estimating $\bm{H}_m$.
+MLLR transform is used as a parent transform for estimating $\bm{H}$.
 This form of transform is referred to in the code as {\tt MLLRVAR}.
 
 An alternative more efficient form of variance transformation is also available.
@@ -165,8 +165,8 @@ can be efficiently implemented as a transformation of the means and
 the features.
 \hequation{ 
        {\cal N}(\bm{o};\bm{\mu},\bm{H}\bm{\Sigma}\bm{H}) = 
-       \frac{1}{|\bm{H}|^2}{\cal N}(\bm{H}^{-1}\bm{o};\bm{H}^{-1}\bm{\mu},\bm{\Sigma}) = 
-       {|\bm{A}|^2}{\cal N}(\bm{A}\bm{o};\bm{A}\bm{\mu},\bm{\Sigma})
+       \frac{1}{|\bm{H}|}{\cal N}(\bm{H}^{-1}\bm{o};\bm{H}^{-1}\bm{\mu},\bm{\Sigma}) = 
+       {|\bm{A}|}{\cal N}(\bm{A}\bm{o};\bm{A}\bm{\mu},\bm{\Sigma})
 } {covlike}
 where $\bm{A}=\bm{H}^{-1}$.
 Using this form it is possible to estimate and efficiently apply full transformations.
@@ -210,6 +210,15 @@ where $\bm{A}$ represents an $n \times n$
 transformation matrix and $\bm{b}$ represents a bias vector.
 This form of transform is referred to in the code as {\tt CMLLR}.
 
+Since multiple \texttt{CMLLR} transforms may be used it is important to 
+include the Jacobian in the likelihood calculation. 
+\hequation{ 
+       {\cal L}(\bm{o};\bm{\mu},\bm{\Sigma}, \bm{A}, \bm{b}) = 
+       {|\bm{A}|}{\cal N}(\bm{A}\bm{o}+\bm{b};\bm{\mu},\bm{\Sigma})
+} {cmllrlike}
+This is the implementation used in the code.
+
+
 \mysubsect{Input/Output/Parent Transformations}{whattransform}
 There are three types of linear transform that may be used with 
 the HTKTools.
@@ -234,8 +243,7 @@ only supports adaptive training with CMLLR. Any parent transform can be
 used when generating transforms.
 \end{itemize}
 
-There is no difference in the storage of the transform parameters depending
-on whether it is to be a parent transform or an input transform. There is
+There is no difference in the storage of the transform parameters, whether it is to be a parent transform or an input transform. There is
 also no restrictions on the base classes, or regression classes, that 
 are used for each transform.
 
@@ -307,7 +315,7 @@ available. The tying of each transformation across a number of mixture
 components makes it possible to adapt distributions for which there
 were no observations at all. With this process all models can be
 adapted and the adaptation process is dynamically refined when more
-adaptation data becomes available.\\
+adaptation data becomes available.
 
 The regression class tree is constructed so as to cluster together
 components that are close in acoustic space, so that similar
@@ -396,15 +404,16 @@ either output a set of transformation models, or a single transform
 model file (TMF)\index{adaptation!transform model file}. The advantage
 in storing the transforms as opposed to an adapted MMF is that the
 TMFs are considerably smaller than MMFs (especially triphone
-MMFs). This section describes the format that the transforms are 
-stored in.
+MMFs). This section dgives examples of the format that the transforms
+are stored in. For a description of the transform definition see
+section~\ref{s:hmmdef}.
 
 \noindent
 
 \begin{figure}[htbp]
 \begin{verbatim}
     ~a ``cued''
-    <ADAPTKIND> CLASS
+    <ADAPTKIND> BASE
     <BASECLASSES> ~b ``global''
     <XFORMSET>  
       <XFORMKIND> CMLLR
@@ -413,7 +422,7 @@ stored in.
         <OFFSET> 
         <BIAS> 5
             -0.357 0.001 -0.002 0.132 0.072
-        <LOGDET> ????
+        <LOGDET> -0.3419
         <BLOCKINFO> 2 3 2
         <BLOCK> 1
           <XFORM> 3 3
@@ -439,6 +448,11 @@ currently supports constrained MLLR (illustrated), MLLR mean
 adaptation, MLLR full variance adaptation and diagonal variance
 adaptation.  Arbitrary block structures are allowable.  The assignment
 of base class to transform number is specified at the end of the file.
+
+The {\tt LOGDET} value stored with the transform is {\em twice} the 
+log-determinant of the transform\footnote{There is no advantge in storing 
+twoce the log determininat, however this is maintained for backward
+compatibility with internal HTK releases.}.
 
 \mysubsect{Hierarchy of Transform}{hieradapt}
 It is possible to specify a hierarchy of transformations. This results
@@ -759,14 +773,10 @@ and
 After rewriting the auxiliary function, the transform matrix $\bm{H}_m$
 is estimated from,
 \[
-        \bm{H}_r = \frac{ \sum_{m_r=1}^{M_r}\bm{C}_{m_r}^T 
-                          \left[
-                            \like(\bm{o}(t) - \hat{\bm{\mu}}_{m_r})
-                                   (\bm{o}(t) - \hat{\bm{\mu}}_{m_r})^T
-                          \right]
-                          \bm{C}_{m_r}
-                        }
-                        { \like }
+        \bm{H}_r = \frac{ \sum_{m_r=1}^{M_r}\bm{C}_{m_r}^T \left[
+                          \like(\bm{o}(t) - \hat{\bm{\mu}}_{m_r})
+                          (\bm{o}(t) - \hat{\bm{\mu}}_{m_r})^T \right]
+                          \bm{C}_{m_r} } { \like }
 \]
 Here, $\bm{H}_r$ is forced to be a diagonal transformation by setting
 the off-diagonal terms to zero, which ensures that
@@ -783,9 +793,9 @@ into the auxiliary function, and using the fact that the covariance
 matrices are diagonal yields
 \begin{eqnarray}
 {\cal Q}({\cal M},{\hat{\cal M}}) = K + 
-\frac{1}{2}
 \sum_{r=1}^R
 \beta_r\log({\bf c}_{ri}{\bf a}_{ri}^T)-
+\frac{1}{2}
 \sum_{j=1}^d{
 \left({\bf a}_{rj}{\bf G}^{(j)}_r{\bf a}^T_{rj}
 \right)} \nonumber
@@ -793,11 +803,11 @@ matrices are diagonal yields
 where 
 \begin{eqnarray}
 \beta_r &=& \sum_{m_r=1}^{M_r}\sum_{t=1}^T\like\\
-{\bf A}_r &=& {\bf H}_r^{-1}
+{\bm A}_r &=& {\bm H}_r^{-1}
 \end{eqnarray}
-${\bf a}_{ri}$ is $i^{th}$ row of ${\bf
+${\bf a}_{ri}$ is $i^{th}$ row of ${\bm
 A}_r$, the $1\times n$ row vector ${\bf c}_{ri}$ is the vector of
-cofactors of ${\bf A}_r$, $c_{rij}={\mbox{cof}}({\bf A}_{rij})$,
+cofactors of ${\bm A}_r$, $c_{rij}={\mbox{cof}}({\bf A}_{rij})$,
 and  ${\bf G}^{(i)}_r$ is defined as
 \begin{eqnarray}
 {\bf G}^{(i)}_r=\sum_{m_r=1}^{M_r}
@@ -835,9 +845,9 @@ into the auxiliary function, and using the fact that the covariance
 matrices are diagonal yields
 \begin{eqnarray}
 {\cal Q}({\cal M},{\hat{\cal M}}) = K + 
-\frac{1}{2}
 \sum_{r=1}^R\left[
 \beta\log({\bf p}_{ri}\bm{w}_{ri}^T)-
+\frac{1}{2}
 \sum_{j=1}^d{
 \left(\bm{w}_{rj}{\bf G}^{(j)}_r\bm{w}^T_{rj} - 2\bm{w}_{rj}{\bf k}^{(j)}_r
 \right)}\right] \nonumber

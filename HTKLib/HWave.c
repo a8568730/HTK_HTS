@@ -33,7 +33,7 @@
 /* ----------------------------------------------------------- */
 
 char *hwave_version = "!HVER!HWave:   3.4 [CUED 25/04/06]";
-char *hwave_vc_id = "$Id: HWave.c,v 3.4 2006/05/01 16:56:05 jal58 Exp $";
+char *hwave_vc_id = "$Id: HWave.c,v 1.1.1.1 2006/10/11 09:54:59 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

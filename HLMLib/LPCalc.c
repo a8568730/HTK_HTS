@@ -30,7 +30,7 @@
 /* ----------------------------------------------------------- */
 
 char *lpcalc_version = "!HVER!LPCalc:   3.4 [CUED 25/04/06]";
-char *lpcalc_vc_id = "$Id: LPCalc.c,v 3.4 2006/05/01 16:56:50 jal58 Exp $";
+char *lpcalc_vc_id = "$Id: LPCalc.c,v 1.1.1.1 2006/10/11 09:54:43 jal58 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"

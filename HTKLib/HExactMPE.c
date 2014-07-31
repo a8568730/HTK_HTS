@@ -28,7 +28,7 @@
 /* ----------------------------------------------------------- */
 
 char *hexactmpe_version = "!HVER!HExactMPE:   3.4 [CUED 25/04/06]";
-char *hexactmpe_vc_id = "$Id: HExactMPE.c,v 3.3 2006/05/09 13:17:45 jal58 Exp $";
+char *hexactmpe_vc_id = "$Id: HExactMPE.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 /*
     Performs forward/backward alignment

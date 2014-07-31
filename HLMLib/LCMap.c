@@ -30,7 +30,7 @@
 /* ----------------------------------------------------------- */
 
 char *lcmap_version = "!HVER!LCMap:   3.4 [CUED 25/04/06]";
-char *lcmap_vc_id = "$Id: LCMap.c,v 3.4 2006/05/01 16:56:49 jal58 Exp $";
+char *lcmap_vc_id = "$Id: LCMap.c,v 1.1.1.1 2006/10/11 09:54:43 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

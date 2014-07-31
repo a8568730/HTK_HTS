@@ -856,7 +856,7 @@ Optional Features:
   --enable-trad-htk       HTK installed into $prefix/bin.$cpu and installed
                           when compiled
   --enable-hdecode        build large vocabulary recognition system (HDecode)
-  --enable-hlmtools       build Language Modelling tools
+  --disable-hlmtools      don't build Language Modelling tools
   --disable-hslab         don't build HSLab
   --enable-htkbook        build HTK book
 
@@ -4999,13 +4999,13 @@ case "$enable_trad_htk" in
 	;;
 esac
 case "$enable_hlmtools" in
-     yes)
+     no)
+	build_notes="$build_notes The Language Modelling tools will not be built. You can build them manually later by running 'make hlmtools install-hlmtools'"
+	;;
+     *)
 	make_all="$make_all hlmtools"
 	make_install="$make_install install-hlmtools"
 	build_notes="$build_notes Language Modelling tools will be built."
-	;;
-     *)
-	build_notes="$build_notes The Language Modelling tools will not be built. You can build them manually later by running 'make hlmtools install-hlmtools'"
 	;;
 esac
 case "$enable_hdecode" in

@@ -33,7 +33,7 @@
 /* ----------------------------------------------------------- */
 
 char *hmodel_version = "!HVER!HModel:   3.4 [CUED 25/04/06]";
-char *hmodel_vc_id = "$Id: HModel.c,v 3.5 2006/05/01 17:17:43 jal58 Exp $";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -82,9 +82,9 @@ static int nParm = 0;
 static Boolean checking   = TRUE;       /* check HMM defs */
 static Boolean saveBinary = FALSE;      /* save HMM defs in binary */
 static Boolean saveGlobOpts = TRUE;     /* save ~o with HMM defs */
-static Boolean saveRegTree = FALSE;    /* save regression classes and tree */ 
+static Boolean saveRegTree = FALSE;     /* save regression classes and tree */ 
 static Boolean saveBaseClass = FALSE;   /* save base classes */ 
-static Boolean saveInputXForm = FALSE;  /* save input xforms with models set */
+static Boolean saveInputXForm = TRUE;   /* save input xforms with models set */
 static Boolean forceHSKind= FALSE;      /* force HMM Set Kind */
 static Boolean keepDistinct=FALSE;      /* keep orphan HMMs distinct */
 static Boolean discreteLZero=FALSE;     /* map DLOGZERO to LZERO */
@@ -399,6 +399,7 @@ typedef enum {   /* Only a character big !! */
    STATE, TMIX, MIXTURE, STREAM, SWEIGHTS,
    MEAN, VARIANCE, INVCOVAR, XFORM, GCONST,
    DURATION, INVDIAGCOV, TRANSP, DPROB, LLTCOV, LLTCOVAR,
+   PROJSIZE,
    XFORMKIND=90, PARENTXFORM, NUMXFORMS, XFORMSET,
    LINXFORM, OFFSET, BIAS, LOGDET, BLOCKINFO, BLOCK, BASECLASS, 
    CLASS, XFORMWGTSET, CLASSXFORM, MMFIDMASK, PARAMETERS,
@@ -429,7 +430,7 @@ static struct {
      { "GCONST" , GCONST }, { "DURATION", DURATION }, 
      { "INVDIAGC", INVDIAGCOV }, { "TRANSP", TRANSP }, 
      { "DPROB", DPROB }, { "LLTC", LLTCOV }, 
-     { "LLTCOVAR", LLTCOVAR }, 
+     { "LLTCOVAR", LLTCOVAR }, {"PROJSIZE", PROJSIZE},
      { "RCLASS", RCLASS }, { "REGTREE", REGTREE }, 
      { "NODE", NODE }, { "TNODE", TNODE }, 
      { "HMMSETID", HMMSETID }, 
@@ -650,6 +651,22 @@ static ReturnStatus GetOption(HMMSet *hset, Source *src, Token *tok, int *nState
          ntok = FALSE;
       }     
       break;
+   case PARENTXFORM:
+      /* 
+         Loading of semi-tied transform delated until AFTER model loaded.
+         This allows standard baseclass checking to be applied.
+      */
+      if(GetToken(src,tok)<SUCCESS){
+         HMError(src,"GetOption: GetToken failed");
+         return(FAIL);     
+      }
+      if (tok->sym==MACRO && tok->macroType=='a') {
+         if (!ReadString(src,buf)) 
+            HError(7013,"GetOption: semi-tied macro name expected");
+         hset->semiTiedMacro = CopyString(hset->hmem,buf);
+      } else
+         HError(7013,"GetOption: semi-tied macro expected");
+      break;
    case VECSIZE:
       if (!ReadShort(src,&vs,1,tok->binForm)){
          HMError(src,"Vector Size Expected");
@@ -657,6 +674,14 @@ static ReturnStatus GetOption(HMMSet *hset, Source *src, Token *tok, int *nState
       }
       OWarn(hset,hset->vecSize==vs,"vecSize");
       hset->vecSize = vs;
+      break;
+   case PROJSIZE:
+      if (!ReadShort(src,&vs,1,tok->binForm)){
+         HMError(src,"Projection vector Size Expected");
+         return(FAIL);
+      }
+      OWarn(hset,hset->projSize==vs,"projSize");
+      hset->projSize = vs;
       break;
    case STREAMINFO:
       if (!ReadShort(src,sw,1,tok->binForm)){
@@ -694,7 +719,6 @@ static ReturnStatus GetOption(HMMSet *hset, Source *src, Token *tok, int *nState
       OWarn(hset,hset->ckind==LLTC,"covKind");
       hset->ckind = LLTC; 
       break;
-
    default: 
       HMError(src,"GetOption: Ilegal Option Symbol");
       return(FAIL);
@@ -721,6 +745,11 @@ static ReturnStatus FreezeOptions(HMMSet *hset)
          HRError(7032,"FreezeOptions: vecSize not set");
          return(FAIL);
       }
+   }
+   if ((hset->projSize>hset->vecSize) || (hset->projSize < 0) ||
+       ((hset->projSize > 0) && (hset->swidth[0] != 1))) {
+      HRError(7032,"FreezeOptions: vecSize not set");
+      return(FAIL);
    }
    if (hset->swidth[0] == 0) {
       hset->swidth[0] = 1; hset->swidth[1] = hset->vecSize;
@@ -763,6 +792,7 @@ XFormKind Str2XFormKind(char *str)
   else if (!(strcmp(str,"MLLRCOV"))) xkind = MLLRCOV;
   else if (!(strcmp(str,"MLLRVAR"))) xkind = MLLRVAR;   
   else if (!(strcmp(str,"CMLLR"))) xkind = CMLLR;
+  else if (!(strcmp(str,"SEMIT"))) xkind = SEMIT;
   else HError(999,"Unknown XForm Class kind");
   return xkind;
 }
@@ -1023,7 +1053,8 @@ static ReturnStatus GetOptions(HMMSet *hset, Source *src, Token *tok, int *nStat
       return(FAIL);
    }
    while (tok->sym == PARMKIND || tok->sym == INVDIAGCOV || 
-          tok->sym == HMMSETID  || tok->sym == INPUTXFORM ||
+          tok->sym == HMMSETID  || tok->sym == INPUTXFORM || 
+          tok->sym == PARENTXFORM || tok->sym == PROJSIZE ||
           (tok->sym >= NUMSTATES && tok->sym <= XFORMCOV)){
       if(GetOption(hset,src,tok,&p)<SUCCESS){
          HMError(src,"GetOptions: GetOption failed");
@@ -1633,7 +1664,7 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
    } else {
       mp = (MixPDF *)New(hset->hmem,sizeof(MixPDF));
       mp->nUse = 0; mp->hook = NULL; mp->gConst = LZERO;
-      mp->mIdx = 0;
+      mp->mIdx = 0; mp->stream = 0; mp->vFloor = NULL;
       if((mp->mean = GetMean(hset,src,tok))==NULL){      
          HMError(src,"GetMean Failed");
          return(NULL);
@@ -2239,6 +2270,14 @@ static LinXForm* GetLinXForm(HMMSet *hset, Source *src, Token *tok)
 	return(NULL);
       }
       xf->xform[i] = GetTransform(hset,src,tok);
+    }
+    if (tok->sym==VARIANCE) { /* this should be a semi-tied transform */
+       if(( xf->vFloor = GetVariance(hset,src,tok))==NULL){
+          HMError(src,"Get VFloor in transform Failed");
+          return(NULL);
+       }
+    } else { /* no variance floor specified - use global */
+       xf->vFloor = NULL;
     }
     xf->nUse = 0;
   }
@@ -3107,6 +3146,8 @@ static void PutLinXForm(HMMSet *hset, FILE *f, MLink q, LinXForm *xf,
       if (!binary) fprintf(f,"\n");
       PutTransform(hset,f,NULL,xf->xform[i],FALSE,binary);
     }
+    if (xf->vFloor != NULL)
+       PutVariance(hset,f,NULL,xf->vFloor,FALSE,binary);  
   }
 }
 
@@ -3204,6 +3245,10 @@ static void PutOptions(HMMSet *hset, FILE *f, Boolean binary)
    if (!binary) fprintf(f,"\n");
    PutSymbol(f,VECSIZE,binary);
    WriteShort(f,&hset->vecSize,1,binary);
+   if (hset->projSize > 0) {
+      PutSymbol(f,PROJSIZE,binary);
+      WriteShort(f,&hset->projSize,1,binary);
+   }
    PutSymbol(f, (Symbol) (NDUR+hset->dkind), binary);
    fprintf(f,"<%s>", ParmKind2Str(hset->pkind,buf));
    if (hset->ckind != NULLC)
@@ -3212,6 +3257,12 @@ static void PutOptions(HMMSet *hset, FILE *f, Boolean binary)
    if ((saveInputXForm) && (hset->xf != NULL)) {
      PutSymbol(f,INPUTXFORM, binary);
      PutInputXForm(hset,f,NULL,hset->xf,FALSE,binary);          
+   }
+   if (hset->semiTied != NULL) {
+     PutSymbol(f,PARENTXFORM, binary);
+     /* can only store macro-name to enable baseclass checking */
+     fprintf(f,"~a %s",ReWriteString(hset->semiTied->xformName,NULL,DBL_QUOTE));
+     if (!binary) fprintf(f,"\n");
    }
 }
 
@@ -3434,6 +3485,29 @@ Boolean HasMacros(HMMSet *hset, char * types)
    return TRUE;
 }
 
+void SetSemiTiedVFloor(HMMSet *hset)
+{
+   AdaptXForm *xform;
+   int numXf,b;
+   SVector vFloor;
+   ILink il;
+   MixPDF *mp;
+   BaseClass *bclass;
+
+   xform = hset->semiTied;
+   bclass = xform->bclass;
+   for (b=1;b<=bclass->numClasses;b++) {
+      numXf = xform->xformWgts.assign[b];
+      vFloor = xform->xformSet->xforms[numXf]->vFloor;
+      if (vFloor != NULL) {
+         for (il=bclass->ilist[b]; il!=NULL; il=il->next) {
+            mp = ((MixtureElem *)il->item)->mpdf;
+            mp->vFloor = vFloor;
+         }
+      }
+   } 
+}
+
 /* EXPORT->SetVFloor: set vFloor[1..S] from macros "varFloorN" */
 void SetVFloor(HMMSet *hset, Vector *vFloor, float minVar)
 {
@@ -3536,7 +3610,7 @@ void ApplyVFloor(HMMSet *hset)
                mixFloored = TRUE;
             }
          }
-         FixFullGConst(hss.mp, -CovInvert(cov.inv,cov.inv) ); 
+         FixFullGConst(hss.mp, CovInvert(cov.inv,cov.inv) ); 
          break;
       case LLTC:
       case XFORMC:   
@@ -4085,15 +4159,22 @@ ReturnStatus LoadHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt)
       if (hset->hsKind == PLAINHS && IsShared(hset))
          hset->hsKind = SHAREDHS;
    }
-   if (checking) 
+   if (checking) {
       if (CheckHSet(hset)<SUCCESS){
          ResetHMMSet(hset);
          HRError(7031,"LoadHMMSet: Invalid HMM data");
          return(FAIL);
       }
+   } 
    SetIndexes(hset);
    SetCovKindUsage(hset);
    SetParmHMMSet(hset);
+   /* HMMSet loading has been completed - now load the semi-tied transform */
+   if (hset->semiTiedMacro != NULL) {
+      hset->semiTied = LoadOneXForm(hset, hset->semiTiedMacro, NULL);
+      /* set the component variance floors */
+      SetSemiTiedVFloor(hset);
+   }
    return(SUCCESS);
 }
 
@@ -4126,6 +4207,9 @@ void CreateHMMSet(HMMSet *hset, MemHeap *heap, Boolean allowTMods)
    hset->attMInfo = FALSE;
    hset->curXForm = NULL;
    hset->parentXForm = NULL;
+   hset->semiTiedMacro = NULL;
+   hset->semiTied = NULL;
+   hset->projSize = 0;
 }
 
 /* CreateHMM: create logical macro. If pId is unknown, create macro for
@@ -4753,7 +4837,6 @@ void SaveInputXForm(HMMSet *hset, InputXForm *xf, char *fname, Boolean binary)
   FILE *f;
   Boolean isPipe;
 
-  binary = binary||saveBinary;
   if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
     HError(7011,"SaveInputXForm: Cannot create output file %s",fname);
   }
@@ -4761,7 +4844,7 @@ void SaveInputXForm(HMMSet *hset, InputXForm *xf, char *fname, Boolean binary)
     printf("HModel: saving XForm to %s\n",fname);
   /* store the macro header information without explicitly generating
      the macro */
-  fprintf(f,"~a %s",ReWriteString(xf->xformName,NULL,DBL_QUOTE));
+  fprintf(f,"~j %s",ReWriteString(xf->xformName,NULL,DBL_QUOTE));
   if (!binary) fprintf(f,"\n");
   PutInputXForm(hset,f,NULL,xf,FALSE,binary);
   FClose(f,isPipe);  
@@ -5686,7 +5769,7 @@ char *CovKind2Str(CovKind ckind, char *buf)
 /* EXPORT-> XFormKind2Str: Return string representation of enum XFormKind */
 char *XFormKind2Str(XFormKind xkind, char *buf)
 {
-   static char *xformmap[] = {"MLLRMEAN","MLLRCOV", "MLLRVAR", "CMLLR"};
+   static char *xformmap[] = {"MLLRMEAN","MLLRCOV", "MLLRVAR", "CMLLR", "SEMIT"};
    return strcpy(buf,xformmap[xkind]);
 }
 

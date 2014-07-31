@@ -187,6 +187,18 @@ in the command line.
 \end{enumerate}
 Baseclasses and regression classes may also be loaded using the 
 {\tt -H} option.
+
+\htool{HERest} can also estimate semi-tied transformations by
+specifying the {\tt s} update option with the {\tt -u} flag. This uses the same baseclass
+speicification as the linear transformation adaptation code to allow
+multiple transformations to be estimated. The specification of the
+baseclasses is identical to that used for linear adaptation. Updating
+semi-tied transforms always updates the means and diagonal covariance
+matrices as well.  Full covariance matrices are not supported. When
+using this form of estimation, full covariance statistics are
+accumulated. This makes the memory requirements large compared to
+estimating diagonal covariance matrices.
+
 \mysubsect{Use}{HERest-Use}
 
 \htool{HERest} is invoked via the command line
@@ -291,7 +303,7 @@ command line options
       argument to be updated, this argument is a string containing one
       or more of the letters {\tt m} (mean), {\tt v} (variance) ,
       {\tt t} (transition), {\tt a} (linear transform), {\tt p} (use 
-	MAP adaptation), and {\tt w} (mixture weight).  The 
+	MAP adaptation), {\tt s} (semi-tied transform), and {\tt w} (mixture weight).  The 
       presence of a letter enables
       the updating of the corresponding parameter set.
 

@@ -47,7 +47,7 @@ This chapter tabulates all configuration variables used in \HTK.
 \tablehead{\hline
 Module & Name & Default & Description  \\ \hline\hline}
 \tabletail{\hline}
-\begin{supertabular}{|p{1.4cm}|l|l|p{6.6cm}|}
+\begin{supertabular}{|p{1.8cm}|l|l|p{6.6cm}|}
 
 % all
   & \texttt{TRACE} & \texttt{0} & Trace setting\\ \hline
@@ -186,10 +186,10 @@ normally be measured rather than supplied in configuration \\ \cline{2-4}
   & \texttt{CHKHMMDEFS} & \texttt{T} & Check consistency of HMM defs \\ \cline{2-4}
   & \texttt{SAVEBINARY} & \texttt{F} & Save HMM defs in binary format \\ \cline{2-4}
   & \texttt{KEEPDISTINCT} & \texttt{F} & Keep orphan HMMs in distinct files \\ \cline{2-4}
-\htool{HModel} 
   & \texttt{SAVEGLOBOPTS} & \texttt{T} & Save \hmmt{o} with HMM defs \\ \cline{2-4}
   & \texttt{SAVEREGTREE} & \texttt{F} & Save \hmmt{r} macros with HMM defs \\ \cline{2-4}
-  & \texttt{SAVEBASECLASS} & \texttt{F} & Save \hmmt{b} macros with HMM defs \\ \cline{2-4}
+\htool{HModel} 
+    & \texttt{SAVEBASECLASS} & \texttt{F} & Save \hmmt{b} macros with HMM defs \\ \cline{2-4}
   & \texttt{SAVEINPUTXFORM} & \texttt{T} & Save \hmmt{i} macros with HMM defs \\ \cline{2-4}
   & \texttt{ORPHANMACFILE} & \texttt{NULL} & Last resort file for new macros \\ \cline{2-4}
   & \texttt{HMMSETKIND} & \texttt{NULL} & Kind of HMM Set \\ \cline{2-4}
@@ -242,13 +242,13 @@ normally be measured rather than supplied in configuration \\ \cline{2-4}
   & \texttt{HSKIPEND} & \texttt{-1} & End of skip over region (debugging only) \\ \hline
 
 % HFBLat
-\htool{HFBLat} 
+
   & \texttt{MINFORPROB} & \texttt{10.0} & Mixture prunning threshold \\ \cline{2-4}
   & \texttt{PROBSCALE} & \texttt{1.0} & Scaling factor for the state acoustic and language model probabilities \\ \cline{2-4}
   & \texttt{LANGPROBSCALE} & \texttt{1.0} & Additional scaling factor for language model probabilities \\ \cline{2-4}
   & \texttt{LATPROBSCALE} & \texttt{1.0} & Scaling factor for the lattice-arc and language model probabilities \\ \cline{2-4}
   & \texttt{PHNINSPEN} & \texttt{0.0} & Insertion penalty for each phone \\ \cline{2-4}
-  & \texttt{NOSILENCE} & \texttt{F} & Ignore silence from reference transcription when using \emph{non-exact} MPE \\ \cline{2-4}
+\htool{HFBLat}   & \texttt{NOSILENCE} & \texttt{F} & Ignore silence from reference transcription when using \emph{non-exact} MPE \\ \cline{2-4}
   & \texttt{QUINPHONE} & \texttt{F} & Support quinphone model. Only available if compiled with the \texttt{SUPPORT\_QUINPHONE} directive \\ \cline{2-4}
   & \texttt{EXACTCORRECTNESS} & \texttt{F} & Do \emph{exact} version of MPE/MWE \\ \cline{2-4}
   & \texttt{PHONEMEE} & \texttt{T} & Set to \texttt{TRUE} for MPE or MWE \\ \cline{2-4}
@@ -262,15 +262,21 @@ normally be measured rather than supplied in configuration \\ \cline{2-4}
 % HAdapt
   & \texttt{USEBIAS} & \texttt{F} & Specify a bias with linear transforms \\ \cline{2-4}
   & \texttt{SPLITTHRESH} & \texttt{1000.0} & Minimum occupancy to generate a transform \\ \cline{2-4}
- \htool{HAdapt}   & \texttt{TRANSKIND} & \texttt{{\tt MLLRMEAN}} & Transformation kind \\ \cline{2-4}
+  & \texttt{TRANSKIND} & \texttt{{\tt MLLRMEAN}} & Transformation kind \\ \cline{2-4}
   & \texttt{ADAPTKIND} & \texttt{{\tt BASE}} & Use regression tree or base classes \\ \cline{2-4}
   & \texttt{BLOCKSIZE} & \texttt{full} & Block structure of transform\\ \cline{2-4}
   & \texttt{BASECLASS} & \texttt{global} & Macroname of baseclass\\ \cline{2-4}
   & \texttt{REGTREE} & \texttt{} & Macroname of regression tree\\ \cline{2-4}
-  & \texttt{MAXXFORMITER} & \texttt{10} & Maximum iterations for iteratively estimated transforms \\ \cline{2-4}
+ \htool{HAdapt}  & \texttt{MAXXFORMITER} & \texttt{10} & Maximum iterations for iteratively estimated transforms \\ \cline{2-4}
   & \texttt{MLLRDIAGCOV} & \texttt{F} & Generate a diagonal variance transform with MLLR mean transform \\ \cline{2-4}
   & \texttt{SAVESPKRMODELS} & \texttt{F} & Store the adapted model set in addition to the transforms \\ \cline{2-4}
-  & \texttt{KEEPXFORMDISTINCT} & \texttt{T} & Save transforms separate files rather than a TMF \\ \hline
+  & \texttt{KEEPXFORMDISTINCT} & \texttt{T} & Save transforms separate files rather than a TMF \\ \cline{2-4}
+  & \texttt{MAXSEMITIEDITER} & \texttt{10} & Maximum iterations of model/transform updates for semitied systems \\ \cline{2-4}
+  & \texttt{SEMITIEDMACRO} & \texttt{SEMITIED} & Macroname for the semitied transform\\ \cline{2-4}
+  & \texttt{INITNUISANCEFR} & \texttt{T} & Initiliase nuisance dimensions using Fisher ratios\\ \cline{2-4}
+  & \texttt{NUMNUISANCEDIM} & 0 & Number of dimensions to remove using HLDA\\ \hline
+
+
 
 % HMap
   & \texttt{MAPTAU} & \texttt{10} & $\tau$ for use with MAP estimation \\ \cline{2-4}
@@ -349,7 +355,7 @@ output\\
 \tablehead{\hline
 Module & Name & Default & Description  \\ \hline\hline}
 \tabletail{\hline}
-\begin{supertabular}{|p{1.4cm}|l|l|p{6.6cm}|}
+\begin{supertabular}{|p{1.8cm}|l|l|p{6.6cm}|}
 
 % HCompV
   & \texttt{UPDATEMEANS} & \texttt{F} & Update means \\ \cline{2-4}
@@ -390,7 +396,6 @@ Module & Name & Default & Description  \\ \hline\hline}
  \hline
 
 % HMMIRest
-\htool{HMMIRest} 
 & \texttt{VARFLOORPERCENTILE} & \texttt{0} & Maximum number of Gaussian components (as the percentage of the total Gaussian components in the system) to undergo variance floor \\ \cline{2-4}
 & \texttt{C} & \texttt{1.0} & C value for both component weights and transition probabilities update \\ \cline{2-4}
 & \texttt{CW} & \texttt{1.0} & C value for component weights update\\ \cline{2-4}
@@ -400,6 +405,7 @@ Module & Name & Default & Description  \\ \hline\hline}
 & \texttt{MINOCCWEIGHTS} & \texttt{10} & Minimum occupancy counts for component weights \\ \cline{2-4}
 & \texttt{SAVEBINARY} & \texttt{F} & Save HMM models in binary format \\ \cline{2-4}
 & \texttt{E} & \texttt{2.0} & Scaling factor for the denominator counts to determine D-smoothing constant value \\ \cline{2-4}
+\htool{HMMIRest} 
 & \texttt{DFACTOROCC} & \texttt{2.0} & Scaling factor for the D-smoothing constant value required to yield positive variances \\ \cline{2-4}
 & \texttt{HCRIT} & \texttt{1.0} & Scaling factor for the denominator statistics \\ \cline{2-4}
 & \texttt{MPE} & \texttt{F} & Use MPE criterion \\ \cline{2-4}

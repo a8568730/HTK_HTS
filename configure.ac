@@ -74,8 +74,8 @@ AC_ARG_ENABLE(hdecode,
 
 dnl Build LM Tools
 AC_ARG_ENABLE(hlmtools,
-		AS_HELP_STRING([--enable-hlmtools],
-		[build Language Modelling tools]))
+		AS_HELP_STRING([--disable-hlmtools],
+		[don't build Language Modelling tools]))
 
 dnl Disable building for X
 dnl i.e. use HGraf.null, and don't build HSLab
@@ -167,13 +167,13 @@ case "$enable_trad_htk" in
 	;;
 esac
 case "$enable_hlmtools" in
-     yes)
+     no)
+	build_notes="$build_notes The Language Modelling tools will not be built. You can build them manually later by running 'make hlmtools install-hlmtools'"
+	;;
+     *)
 	make_all="$make_all hlmtools"
 	make_install="$make_install install-hlmtools"
 	build_notes="$build_notes Language Modelling tools will be built."
-	;;
-     *)
-	build_notes="$build_notes The Language Modelling tools will not be built. You can build them manually later by running 'make hlmtools install-hlmtools'"
 	;;
 esac
 case "$enable_hdecode" in

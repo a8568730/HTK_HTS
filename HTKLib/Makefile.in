@@ -46,7 +46,7 @@ CFLAGS := $(CFLAGS) @CFLAGS@ -I.
 RANLIB = @RANLIB@
 INSTALL= @INSTALL@
 target = HTKLib.a
-modules = @HGRAF@ esig_asc.o \
+objects = @HGRAF@ esig_asc.o \
 	esig_edr.o \
 	esignal.o \
 	esig_nat.o \
@@ -75,20 +75,59 @@ modules = @HGRAF@ esig_asc.o \
 	HWave.o \
 	strarr.o 
 
-all:    HTKLib.a
+lvobjects = $(basename @HGRAF@).lv.o esig_asc.lv.o \
+	esig_edr.lv.o \
+	esignal.lv.o \
+	esig_nat.lv.o \
+	HAdapt.lv.o \
+	HArc.lv.o \
+	HAudio.lv.o \
+	HDict.lv.o \
+	HExactMPE.lv.o \
+	HFB.lv.o \
+	HFBLat.lv.o \
+	HLabel.lv.o \
+	HLat.lv.o \
+	HLM.lv.o \
+	HMap.lv.o \
+	HMath.lv.o \
+	HMem.lv.o \
+	HModel.lv.o \
+	HNet.lv.o \
+	HParm.lv.o \
+	HRec.lv.o \
+	HShell.lv.o \
+	HSigP.lv.o \
+	HTrain.lv.o \
+	HUtil.lv.o \
+	HVQ.lv.o \
+	HWave.lv.o \
+	strarr.lv.o 
 
-$(target): $(modules)
+all:    HTKLib.a HTKLiblv.a
+
+# This is the library used by HTKTools and HLMTools
+HTKLib.a: $(objects)
 	if [ -f $@ ] ; then  /bin/rm $@ ; fi
 	ar rv $@ $^
 	$(RANLIB) $@
 
+# This version is used by HDecode (HTKLVRec)
+HTKLiblv.a: $(lvobjects)
+	if [ -f $@ ] ; then  /bin/rm $@ ; fi
+	ar rv $@ $^
+	$(RANLIB) $@
+
+%.lv.o: %.c
+	$(CC) -DNO_LAT_LM $(CFLAGS) -c -o $@ $<
+
 .PHONY: clean cleanup depend mkinstalldir install
 
 clean:
-	-rm -f $(modules) $(target)
+	-rm -f $(objects) $(lvobjects) HTKLib.a HTKLiblv.a
 
 cleanup:
-	-rm -f $(modules) 
+	-rm -f $(objects) $(lvobjects)
 
 depend:
 	-makedepend -Y *.c
@@ -96,8 +135,8 @@ depend:
 distclean: clean
 	-rm -f Makefile
 
-install: $(target) mkinstalldir 
-	$(INSTALL) -m 755 $< $(libdir)
+install: HTKLib.a HTKLiblv.a  mkinstalldir 
+	$(INSTALL) -m 755 HTKLib.a HTKLiblv.a $(libdir)
 
 mkinstalldir:
 	-mkdir -p $(libdir)

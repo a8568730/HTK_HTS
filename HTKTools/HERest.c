@@ -33,7 +33,7 @@
 /* ----------------------------------------------------------- */
 
 char *herest_version = "!HVER!HERest:   3.4 [CUED 25/04/06]";
-char *herest_vc_id = "$Id: HERest.c,v 3.4 2006/05/01 16:56:33 jal58 Exp $";
+char *herest_vc_id = "$Id: HERest.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -141,6 +141,8 @@ static XFInfo xfInfo;
 static int maxSpUtt = 0;
 static float varFloorPercent = 0;
 
+static char *labFileMask = NULL;
+
 /* ------------------ Process Command Line -------------------------- */
    
 /* SetConfParms: set conf parms relevant to HCompV  */
@@ -183,6 +185,11 @@ void SetConfParms(void)
       if (GetConfStr(cParm,nParm,"PAXFORMMASK",buf)) {
          xfInfo.paSpkrPat = CopyString(&hmmStack,buf);
       }
+      if (GetConfStr(cParm,nParm,"LABFILEMASK",buf)) {
+         labFileMask = (char*)malloc(strlen(buf)+1); 
+         strcpy(labFileMask, buf);
+      }
+
       if (GetConfStr(cParm,nParm,"UPDATEMODE",buf)) {
          if (!strcmp (buf, "DUMP")) updateMode = UPMODE_DUMP;
          else if (!strcmp (buf, "UPDATE")) updateMode = UPMODE_UPDATE;
@@ -211,6 +218,7 @@ void ReportUsage(void)
    printf(" -t f [i l] set pruning to f [inc limit]      inf\n");
    printf(" -u tmvwap  update t)rans m)eans v)ars w)ghts tmvw\n");
    printf("                a)daptation xform p)rior used     \n");
+   printf("                s)semi-tied xform                 \n");
    printf(" -v f    set minimum variance to f            0.0\n");
    printf(" -w f    set mix weight floor to f*MINMIX     0.0\n");
    printf(" -x s    extension for hmm files              none\n");
@@ -231,6 +239,7 @@ void SetuFlags(void)
       case 'm': uFlags = (UPDSet) (uFlags+UPMEANS); break;
       case 'v': uFlags = (UPDSet) (uFlags+UPVARS); break;
       case 'w': uFlags = (UPDSet) (uFlags+UPMIXES); break;
+      case 's': uFlags = (UPDSet) (uFlags+UPSEMIT); break;
       case 'a': uFlags = (UPDSet) (uFlags+UPXFORM); break;
       case 'p': uFlags = (UPDSet) (uFlags+UPMAP); break;
       default: HError(2320,"SetuFlags: Unknown update flag %c",*s);
@@ -276,8 +285,8 @@ void CheckUpdateSetUp()
   xf = xfInfo.paXForm;
   if ((xfInfo.paXForm != NULL) && !(uFlags&UPXFORM)) {
     while (xf != NULL) {
-      if (xf->xformSet->xkind != CMLLR)\
-	HError(999,"SAT only supported with CMLLR transforms");
+       if ((xf->xformSet->xkind != CMLLR) && (xf->xformSet->xkind != SEMIT))
+	HError(999,"SAT only supported with SEMIT/CMLLR transforms");
       xf = xf->parentXForm;
     }
   }
@@ -324,7 +333,7 @@ int main(int argc, char *argv[])
    al_hmmMMF[0] = '\0'; al_hmmLst[0] = '\0'; 
    up_hmmMMF[0] = '\0';
    CreateHeap(&hmmStack,"HmmStore", MSTAK, 1, 1.0, 50000, 500000);
-   SetConfParms();
+   SetConfParms(); 
    CreateHMMSet(&hset,&hmmStack,TRUE);
    CreateHeap(&uttStack,   "uttStore",    MSTAK, 1, 0.5, 100,   1000);
    utt = (UttInfo *) New(&uttStack, sizeof(UttInfo));
@@ -567,6 +576,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
       HError(2321,"Initialise: MakeHMMSet failed");
    if(LoadHMMSet( hset,hmmDir,hmmExt)<SUCCESS)
       HError(2321,"Initialise: LoadHMMSet failed");
+   if (uFlags&UPSEMIT) uFlags = uFlags|UPMEANS|UPVARS;
    AttachAccs(hset, &accStack, uFlags);
    ZeroAccs(hset, uFlags);
    P = hset->numPhyHMM;
@@ -577,7 +587,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
 
    hsKind = hset->hsKind;
    if (hsKind==DISCRETEHS)
-     uFlags = (UPDSet) (uFlags & (~(UPMEANS|UPVARS|UPXFORM)));
+     uFlags = (UPDSet) (uFlags & (~(UPMEANS|UPVARS|UPXFORM|UPSEMIT)));
 
    if (parMode != 0) {
       ConvDiagC(hset,TRUE);
@@ -588,6 +598,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
       if (uFlags&UPTRANS) printf("Transitions "); 
       if (uFlags&UPMEANS) printf("Means "); 
       if (uFlags&UPVARS)  printf("Variances "); 
+      if (uFlags&UPSEMIT)  printf("SemiTied "); 
       if (uFlags&UPXFORM)  printf("XForms "); 
       if (uFlags&UPMIXES && maxM>1)  printf("MixWeights "); 
       printf("\n\n ");
@@ -741,11 +752,19 @@ void StatReport(HMMSet *hset)
 /* Load data and call FBFile: apply forward-backward to given utterance */
 void DoForwardBackward(FBInfo *fbInfo, UttInfo *utt, char * datafn, char * datafn2)
 {
+   char datafn_lab[MAXFNAMELEN];
+
    utt->twoDataFiles = twoDataFiles ;
    utt->S = fbInfo->al_hset->swidth[0];
 
-   /* Load the labels */
-   LoadLabs(utt, lff, datafn, labDir, labExt);
+   /* Load the labels - support for label masks */
+   if (labFileMask) {
+      if (!MaskMatch (labFileMask, datafn_lab, datafn))
+         HError(2319,"HERest: LABFILEMASK %s has no match with segemnt %s", labFileMask, datafn);
+   }
+   else
+      strcpy (datafn_lab, datafn);
+   LoadLabs(utt, lff, datafn_lab, labDir, labExt);
    /* Load the data */
    LoadData(fbInfo->al_hset, utt, dff, datafn, datafn2);
 
@@ -759,6 +778,11 @@ void DoForwardBackward(FBInfo *fbInfo, UttInfo *utt, char * datafn, char * dataf
       /* update totals */
       totalT += utt->T ;
       totalPr += utt->pr ;
+      /* Handle the input xform Jacobian if necssary */
+      if (fbInfo->al_hset->xf != NULL) {
+         totalPr += utt->T*0.5*fbInfo->al_hset->xf->xform->det;
+      }
+
    }
 }
 
@@ -963,7 +987,8 @@ void UpdateMeans(HMMSet *hset, int px, HLink hmm)
    for (i=2; i<N; i++,se++){
       ste = se->info->pdf+1;
       for (s=1;s<=S;s++,ste++){
-         vSize = hset->swidth[s];
+         /* nuisance dimensions not updated */
+         vSize = hset->swidth[s]-hset->projSize;
          me = ste->spdf.cpdf + 1; M = ste->nMix;
          for (m=1;m<=M;m++,me++)
             if (me->weight > MINMIX){
@@ -1021,7 +1046,7 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
 {
    int i,s,m,k,l,M,N,S,vSize;
    float occim,x,muDiffk,muDiffl;
-   Vector minV;
+   Vector minV,mpV;
    VaAcc *va;
    MuAcc *ma;
    StateElem *se;
@@ -1037,11 +1062,13 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
    for (i=2; i<N; i++,se++){
       ste = se->info->pdf+1;
       for (s=1;s<=S;s++,ste++){
-         vSize = hset->swidth[s];
+         vSize = hset->swidth[s]-hset->projSize;
          minV = vFloor[s];
          me = ste->spdf.cpdf + 1; M = ste->nMix;
          for (m=1;m<=M;m++,me++)
             if (me->weight > MINMIX){
+               if (me->mpdf->vFloor == NULL) mpV=minV;
+               else mpV=me->mpdf->vFloor;
                cov = me->mpdf->cov;
                va = (VaAcc *) GetHook(cov.var);
                mean = me->mpdf->mean;
@@ -1055,8 +1082,8 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
                         for (k=1; k<=vSize; k++){
                            muDiffk=(shared)?0.0:ma->mu[k]/ma->occ;
                            x = va->cov.var[k]/occim - muDiffk*muDiffk;
-                           if (x<minV[k]) {
-                              x = minV[k];
+                           if (x<mpV[k]) {
+                              x = mpV[k];
                               nFloorVar++;
                               mixFloored = TRUE;
                            }
@@ -1069,8 +1096,8 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
                            for (l=1; l<=k; l++){
                               muDiffl=(shared)?0.0:ma->mu[l]/ma->occ;
                               x = va->cov.inv[k][l]/occim - muDiffk*muDiffl; 
-                              if (k==l && x<minV[k]) {
-                                 x = minV[k];
+                              if (k==l && x<mpV[k]) {
+                                 x = mpV[k];
                                  nFloorVar++;
                                  mixFloored = TRUE;
                               }
@@ -1186,7 +1213,7 @@ void FloorVars(HMMSet *hset1, int s){
      
      NewHMMScan(hset1,&hss1); 
      while(GoNextMix(&hss1,FALSE)){
-       M++;
+        if (hss1.s == s) M++;
      }
      EndHMMScan(&hss1); 
 
@@ -1195,13 +1222,15 @@ void FloorVars(HMMSet *hset1, int s){
 
      NewHMMScan(hset1,&hss1); 
      while(GoNextMix(&hss1,FALSE)){
-       int k;
-       if(hss1.mp->ckind != DIAGC ) HError(1, "FloorVars expects DIAGC covariances. ");
-       
-       for(k=1;k<=vsize;k++){
-          varray[k][m] = hss1.mp->cov.var[k];
-       }
-       m++;
+        if (hss1.s == s) {
+           int k;
+           if(hss1.mp->ckind != DIAGC ) HError(1, "FloorVars expects DIAGC covariances. ");
+           
+           for(k=1;k<=vsize;k++){
+              varray[k][m] = hss1.mp->cov.var[k];
+           }
+           m++;
+        }
      }
      EndHMMScan(&hss1); 
      
@@ -1214,11 +1243,13 @@ void FloorVars(HMMSet *hset1, int s){
 
      NewHMMScan(hset1,&hss1); 
      while(GoNextMix(&hss1,FALSE)){
-        int k, Pos = (int)(varFloorPercent*0.01*M);
-        for(k=1;k<=vsize;k++){
-           if(hss1.mp->cov.var[k] < varray[k][Pos]){
-              hss1.mp->cov.var[k] =  varray[k][Pos];
-              floored++;
+        if (hss1.s == s) {
+           int k, Pos = (int)(varFloorPercent*0.01*M);
+           for(k=1;k<=vsize;k++){
+              if(hss1.mp->cov.var[k] < varray[k][Pos]){
+                 hss1.mp->cov.var[k] =  varray[k][Pos];
+                 floored++;
+              }
            }
         }
      }
@@ -1306,6 +1337,16 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
       ConvExpWt(hset);
    }
    maxM = MaxMixInSet(hset);
+
+   /* 
+      This routine tidies up the semi-tied transform and 
+      tidies the model up. The transition and priors are 
+      not updated 
+   */
+   if (uFlags & UPSEMIT) {
+      UpdateSemiTiedModels(hset, &xfInfo);
+      uFlags = uFlags & ~(UPMEANS|UPVARS);
+   }
 
    if (uFlags & UPMAP)
      MAPUpdateModels(hset, uFlags);

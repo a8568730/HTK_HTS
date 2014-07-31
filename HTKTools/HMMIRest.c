@@ -31,7 +31,7 @@
 #define EXITSTATUS 0 /*2 for gprof.*/
 
 char *hmmirest_version = "!HVER!HMMIRest:   3.4 [CUED 25/04/06]";
-char *hmmirest_vc_id = "$Id: HMMIRest.c,v 3.2 2006/05/01 16:56:34 jal58 Exp $";
+char *hmmirest_vc_id = "$Id: HMMIRest.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 
 #include "HShell.h"     /* HMM ToolKit Modules */
@@ -1307,7 +1307,7 @@ Boolean UpdateGauss(int stream, MixPDF *mp){
 
    D= GiveMixD(mp,stream,0); /*Use constants on a mix level.*/
 
-   for (k=1; k<=vSize; k++){ /*For each vector component.*/
+   for (k=1; k<=vSize-hset.projSize; k++){ /*For each vector component.*/
       sqAcc1 = va1->cov.var[k]; sqAcc2 = va2?va2->cov.var[k]:0.0; sqAcc3 = va3?va3->cov.var[k]:0.0; oldVar = cov.var[k];
       Acc1 = ma1->mu[k], Acc2 = ma2?ma2->mu[k]:0.0; Acc3 = ma3 ? ma3->mu[k]:0.0;
     

@@ -95,10 +95,8 @@ command line options
   \ttitem{-m s} Direction of merging duplicate nodes and arcs of
   lattices. The default value is \texttt{b}, indicating a merging in
   a backward direction starting from the sentence end node of the
-  lattice will be performed first. This is then followed by a further merging
-  in a forward direction starting from the sentence start node again.
-  If using direction \texttt{f}, then the forward merging will be
-  performed first instead. 
+  lattice will be performed. If using direction \texttt{f}, then the
+  forward merging will be performed instead. 
 
   \ttitem{-n lm} Load ARPA-format n-gram language model from file
   \texttt{lm} and expand lattice with this LM. All acoustic scores are

@@ -89,6 +89,8 @@ typedef struct {
    float gConst;        /* Precomputed component of b(x) */
    int mIdx;            /* MixPDF index */
    int nUse;            /* usage counter */
+   int stream;          /* enables multi-stream semi-tied transforms */
+   SVector vFloor;      /* enables flooring for multiple semi-tied transforms */
    Ptr info;            /* hook to hang information from */
    Ptr hook;            /* general hook */
 } MixPDF;
@@ -153,7 +155,7 @@ typedef HMMDef * HLink;
 
 /* --------------------- Enumerated Types -------------------- */
 
-enum _XFormKind {MLLRMEAN, MLLRCOV, MLLRVAR, CMLLR};
+enum _XFormKind {MLLRMEAN, MLLRCOV, MLLRVAR, CMLLR, SEMIT};
 typedef enum _XFormKind XFormKind;
 
 enum _AdaptKind {TREE, BASE};
@@ -224,6 +226,7 @@ typedef struct {
   SVector bias;        /* bias vector, if no bias equals NULL */
   float det;           /* determinant of linxform */
   int nUse;            /* usage counter */
+  SVector vFloor;      /* used for SEMIT variance flooring */
 } LinXForm;
 
 typedef struct {
@@ -267,7 +270,8 @@ typedef struct {
      l logHMM     u mean      v variance  i invcovar  p pdf
      h phyHMM     d duration  t transP    m mixpdf    s state
      x xform      w strm wts  o options   c lltcovar  * deleted
-     r regtree
+     r regtree    b baseclass a adaptXfrm j inputXfm  f linXfm
+     g xformSet   y xformBias
    a HMMDef will have exactly 1 phyHMM macro referencing it but it can 
    have 0 or more logHMM macros referencing it.
 */
@@ -317,6 +321,8 @@ typedef struct _HMMSet{
    int numTransP;          /* Number of distinct transition matrices */
    int ckUsage[NUMCKIND];  /* Number of components using given ckind */
    InputXForm *xf;         /* Input transform of HMMSet */
+   AdaptXForm *semiTied;   /* SemiTied transform associated with model set */
+   short projSize;         /* dimension of vector to update */
 
    /* Adaptation information accumulates */
    Boolean attRegAccs;   /* have the set of accumulates been attached */
@@ -327,6 +333,9 @@ typedef struct _HMMSet{
    
    /* Added to support LogWgts */
    Boolean logWt;       /* Component weights are stored as Logs */
+
+   /* Added to support delayed loading of the semi-tied transform */
+   char *semiTiedMacro;  /* macroname of semi-tied transform */
 
 } HMMSet;
 

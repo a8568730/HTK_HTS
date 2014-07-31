@@ -28,7 +28,7 @@
 /* ----------------------------------------------------------- */
 
 char *hfblat_version = "!HVER!HFBLat:   3.4 [CUED 25/04/06]";
-char *hfblat_vc_id = "$Id: HFBLat.c,v 3.3 2006/05/09 13:17:45 jal58 Exp $";
+char *hfblat_vc_id = "$Id: HFBLat.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 /*
   Performs forward/backward alignment
@@ -963,10 +963,10 @@ void UpSkipTranParms(int q, int t){
 /* UpTranParms: update the transition counters of given hmm */
 
 static void UpTranParms(int t, int q){ 
-   TrAcc *ta,*tammi;   
+   TrAcc *ta,*tammi=NULL;   
    Acoustic *ac = fbInfo->aInfo->ac+q;
    HLink hmm = ac->hmm;
-   float x,mee_acc_scale = fbInfo->AccScale*(fbInfo->MPE?ac->mpe_occscale:1), abs_mee_acc_scale = fabs(mee_acc_scale);   
+   float x=0,mee_acc_scale = fbInfo->AccScale*(fbInfo->MPE?ac->mpe_occscale:1), abs_mee_acc_scale = fabs(mee_acc_scale);   
    DVector aqt = ac->alphat,
       bqtPlus = ac->betaPlus[t],
       bqt1Plus = (t<ac->t_end ? ac->betaPlus[t+1] : NULL);
@@ -1190,20 +1190,20 @@ static double UpMixParms(int q, HLink hmm, int t, DVector aqt,
    Acoustic *ac = fbInfo->aInfo->ac+q;
    double ans=LZERO;   
    double ans2=LZERO;   
-   int mx,s,j,m,M,N,vSize;
+   int mx,s,j,m=0,M=0,N,vSize;
    TMixRec *tmRec = NULL;
    float ***outprob;
-   LogFloat c_jm,prob;
+   LogFloat c_jm,prob=0;
    LogDouble x,initx = LZERO;
    double Lr,steSumLr;
    float tmp;
    StreamElem *ste;
    MixtureElem *me;
-   MixPDF *mp;
-   WtAcc *wa, *wammi;
+   MixPDF *mp=NULL;
+   WtAcc *wa, *wammi=NULL;
    PreComp *pMix;
    Boolean mmix=FALSE;  /* TRUE if multiple mixture */
-   float wght;
+   float wght=0;
    float mee_acc_scale =   fbInfo->AccScale * (fbInfo->MPE? fbInfo->aInfo->ac[q].mpe_occscale: 1 ),
       abs_mee_acc_scale = fabs(mee_acc_scale); int local_accindx = (mee_acc_scale > 0 ? fbInfo->num_index : fbInfo->den_index);
 
@@ -1519,7 +1519,7 @@ int MPE_GetFileLen(Lattice *lat){
 void FBLatClearUp(FBLatInfo *fbInfo); 
 
 void FBLatFirstPass(FBLatInfo *_fbInfo, FileFormat dff, char * datafn, char *datafn2, Lattice *MPECorrLat){
-   int q,T2; Boolean MPE;
+   int q,T2=0; Boolean MPE;
   
    fbInfo = _fbInfo;
    if(fbInfo->InUse) FBLatClearUp(fbInfo); 
