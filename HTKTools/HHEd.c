@@ -33,51 +33,51 @@
 /* ----------------------------------------------------------- */
 
 
-/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
-/* ---------------------------------------------------------------- */
-/*                                                                  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
-/*            HTS Working Group                                     */
-/*                                                                  */
-/*       Department of Computer Science                             */
-/*       Nagoya Institute of Technology                             */
-/*                and                                               */
-/*   Interdisciplinary Graduate School of Science and Engineering   */
-/*        Tokyo Institute of Technology                             */
-/*           Copyright (c) 2001-2002                                */
-/*             All Rights Reserved.                                 */
-/*                                                                  */
-/* Permission is hereby granted, free of charge, to use and         */
-/* distribute this software in the form of patch code to HTK and    */
-/* its documentation without restriction, including without         */
-/* limitation the rights to use, copy, modify, merge, publish,      */
-/* distribute, sublicense, and/or sell copies of this work, and to  */
-/* permit persons to whom this work is furnished to do so, subject  */
-/* to the following conditions:                                     */
-/*                                                                  */
-/*   1. Once you apply the HTS patch to HTK, you must obey the      */
-/*      license of HTK.                                             */
-/*                                                                  */
-/*   2. The code must retain the above copyright notice, this list  */
-/*      of conditions and the following disclaimer.                 */
-/*                                                                  */
-/*   3. Any modifications must be clearly marked as such.           */
-/*                                                                  */
-/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
-/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
-/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
-/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
-/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
-/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
-/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
-/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/* PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                  */
-/* ---------------------------------------------------------------- */ 
-/*     HHEd.c modified for HTS-1.0 2002/12/20 by Heiga Zen          */
-/* ---------------------------------------------------------------- */
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                     Copyright (c) 2001-2003                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The code must retain the above copyright notice, this list  */
+/*       of conditions and the following disclaimer.                 */
+/*                                                                   */
+/*    3. Any modifications must be clearly marked as such.           */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+/*      HHEd.c modified for HTS-1.1 2003/05/09 by Heiga Zen          */
+/*  ---------------------------------------------------------------  */
+
 
 char *hhed_version = "!HVER!HHEd:   3.2 [CUED 09/12/02]";
 char *hhed_vc_id = "$Id: HHEd.c,v 1.12 2002/12/19 16:37:40 ge204 Exp $";
@@ -178,15 +178,16 @@ static Boolean equivState = TRUE;      /* TRUE if states can be equivalent */
 /* ---------------- Configuration Parameters --------------------- */
 
 static ConfParam *cParm[MAXGLOBS];
-static int nParm = 0;            /* total num params */
-static Boolean treeMerge = TRUE; /* After tree spltting merge leaves */
-static char tiedMixName[MAXSTRLEN] = "TM"; /* Tied mixture base name */
-static Boolean useLeafStats = TRUE; /* Use leaf stats to init macros */
-static Boolean applyVFloor = TRUE; /* apply modfied varFloors to vars in model set */ 
-static Boolean singleTree = FALSE;     /* construct single tree */
-static Boolean applyMDL = FALSE;       /* apply MDL principle for clustering */
-static Boolean ignoreStrW = FALSE;     /* ignore stream weight */
-static float minVar = 1.0E-6;          /* minimum variance for clusterd item */
+static int     nParm = 0;                     /* total num params */
+static Boolean treeMerge = TRUE;              /* After tree spltting merge leaves */
+static char    tiedMixName[MAXSTRLEN] = "TM"; /* Tied mixture base name */
+static Boolean useLeafStats = TRUE;           /* Use leaf stats to init macros */
+static Boolean applyVFloor = TRUE;            /* apply modfied varFloors to vars in model set */ 
+static Boolean singleTree = FALSE;            /* construct single tree */
+static Boolean applyMDL = FALSE;              /* apply MDL principle for clustering */
+static float   MDLfactor = 1.0;               /* MDL control factor */
+static Boolean ignoreStrW = FALSE;            /* ignore stream weight */
+static float   minVar = 1.0E-6;               /* minimum variance for clusterd item */
 
 /* ------------------ Process Command Line -------------------------- */
 
@@ -206,6 +207,7 @@ void SetConfParms(void)
       if (GetConfBool(cParm,nParm,"APPLYMDL",&b)) applyMDL = b;
       if (GetConfBool(cParm,nParm,"IGNORESTRW",&b)) ignoreStrW = b;
       if (GetConfFlt(cParm,nParm,"MINVAR",&f)) minVar = f;
+      if (GetConfFlt(cParm,nParm,"MDLFACTOR",&f)) MDLfactor = f;
       GetConfStr(cParm,nParm,"TIEDMIXNAME",tiedMixName);
    }
 }
@@ -219,7 +221,9 @@ void Summary(void)
    printf("                       currently loaded HMM list using previously\n");
    printf("                       built decision trees.\n");
    printf("CL hmmList           - CLone hmms to give new hmmList\n");
+   printf("CM directory         - Convert models to pdf for speech synthesizer\n");
    printf("CO newHmmList        - COmpact identical HMM's by sharing same phys model\n");
+   printf("CT directory         - Convert trees/questions for speech synthesizer\n");
    printf("DP s n id ...        - Duplicate the hmm set n times using id to differentiate\n");
    printf("                       the new hmms and macros.  Only macros the type of which\n");
    printf("                       appears in s will be duplicated, others will be shared.\n");
@@ -269,6 +273,7 @@ void ReportUsage(void)
    printf("\nModified for HTS ver.1.0\n");
    printf("\nUSAGE: HHEd [options] editF hmmList\n\n");
    printf(" Option                                       Default\n\n");
+   printf(" -a f    MDL criterion control factor         1.0\n");
    printf(" -d s    dir to find hmm definitions          current\n");
    printf(" -i      ignore stream weight                 off\n");
    printf(" -m      apply MDL principle for clustering   off\n");
@@ -311,6 +316,8 @@ int main(int argc, char *argv[])
       if (strlen(s)!=1) 
          HError(2619,"HHEd: Bad switch %s; must be single letter",s);
       switch(s[0]) {
+      case 'a':
+         MDLfactor = GetChkedFlt(0.0,10.0,s); break;
       case 'd':
          if (NextArg()!=STRINGARG)
             HError(2619,"HHEd: Input HMM definition directory expected");
@@ -417,6 +424,7 @@ typedef struct _QEnt{           /* each question stored as both pattern and  */
    IPat *patList;               
    ILink ilist;
    QLink next;
+   Boolean used;
 }QEnt;
 
 static QLink qHead = NULL;      /* Head of question list */
@@ -480,7 +488,7 @@ void LoadQuestion(char *qName, ILink ilist, char *pattern)
    char *p,*r,buf[MAXSTRLEN];
    
    q=(QLink) New(&questHeap,sizeof(QEnt));
-   q->ilist=ilist;
+   q->ilist=ilist; q->used=FALSE;
    labid=GetLabId(qName,TRUE);
    for (c=qHead;c!=NULL;c=c->next) if (c->qName==labid) break;
    if (c!=NULL)
@@ -2503,29 +2511,29 @@ void DownMix(char *hname, StreamInfo *sti, int maxMix, Boolean inPlace)
 typedef struct _AccSumMixE {
    DVector sum;
    DVector sqr;
-   float occ;
+   double occ;
    int vSize;
 } AccSumMixE;
 
 typedef struct _AccSumStrE {
    int nMix;
-   float weight;
+   double weight;
    AccSumMixE *accme;
 } AccSumStrE;
 
 typedef struct _AccSum {        /* Accumulator Record for storing */
    DVector sum;                 /* the sum, sqr and occupation  */
    DVector sqr;                 /* count statistics             */
-   float  occ;
+   double  occ;
    int nStream;
    AccSumStrE *accse;
 } AccSum;
 
 typedef struct _Node {          /* Tree Node */
    CLink clist;                 /* list of cluster items */
-   float occ;                   /* total occupation count */
-   float tProb;                 /* likelihood of total cluster */
-   float sProb;                 /* likelihood of split cluster */
+   double occ;                  /* total occupation count */
+   double tProb;                /* likelihood of total cluster */
+   double sProb;                /* likelihood of split cluster */
    QLink quest;                 /* question used to do split */
    Boolean ans;                 /* TRUE = yes, FALSE = no */
    int snum;
@@ -2542,6 +2550,7 @@ typedef struct _Tree{           /* A tree */
    LabId baseId;                /* base phone name */
    int state;                   /* state (or 0 if hmm tree) */
    int size;                    /* number of non terminal nodes */
+   int nLeaves;                 /* number of terminal(leaf) nodes */
    Node *root;                  /* root of tree */
    Node *leaf;                  /* chain of leaf nodes */
    struct _Tree *next;          /* next tree in list */
@@ -2551,8 +2560,8 @@ typedef struct _Tree{           /* A tree */
 
 static Tree *treeList = NULL;   /* list of trees */
 static AccSum yes,no;           /* global accs for yes - no branches */
-static float occs[2];           /* array[Boolean]of occupation counts */
-static float  cprob;            /* complete likelihood at current node */
+static double occs[2];           /* array[Boolean]of occupation counts */
+static double  cprob;            /* complete likelihood at current node */
 static int numTreeClust;        /* number of clusters in tree */
 
 /* CreateTree: create a new tree */
@@ -2577,7 +2586,7 @@ Tree *CreateTree(ILink ilist, LabId baseId, int state)
    tree->state = state;
 
    /* set active stream of this tree */
-   tree->streams = CreateSet(SMAX);
+   tree->streams = CreateSet(hset->swidth[0]);
    tree->nActiveStr = 0;
    for (j=1;j<=hset->swidth[0];j++) {
       if (streams.set[j]) {
@@ -2748,11 +2757,12 @@ void InitTreeAccs(StateElem *se)
                acc->sum=CreateDVector(&tmpHeap,vSize);
                acc->sqr=CreateDVector(&tmpHeap,vSize);
                x *= w;
-               acc->occ=x;
+               acc->occ=(double)x;
                acc->accse=NULL;
+               
                for (k=1;k<=vSize;k++) {
-                  acc->sum[k]=(double)mp->mean[k]*x;
-                  acc->sqr[k]=(double)(mp->cov.var[k]+mp->mean[k]*mp->mean[k])*x;
+                  acc->sum[k] = mp->mean[k]*x;
+                  acc->sqr[k] = (mp->cov.var[k]+mp->mean[k]*mp->mean[k])*x;
                }
             }
          }
@@ -2794,7 +2804,7 @@ void DisposeAccSum(MemHeap *mem,AccSum *acc)
    AccSumMixE *amix;
 
    if(acc->sum != NULL)
-      Dispose(mem,acc->sum);
+      FreeDVector(mem,acc->sum);
 
    if(acc->accse != NULL) {
       for(s=1;s<=acc->nStream;s++) {
@@ -2802,7 +2812,7 @@ void DisposeAccSum(MemHeap *mem,AccSum *acc)
             astr = acc->accse+s;
             for(m=1;m<=astr->nMix;m++) {
                amix = astr->accme+m;
-               Dispose(mem,amix->sum);
+               FreeDVector(mem,amix->sum);
             }
          }
       }
@@ -2810,12 +2820,12 @@ void DisposeAccSum(MemHeap *mem,AccSum *acc)
 }
 
 /* AccSumProb: return log likelihood for given statistics */
-float AccSumProb(AccSum *acc)
+double AccSumProb(AccSum *acc)
 {
-   double variance,prob,x;
+   double variance,occ,weight;
+   double prob, x;
    int s,m,k,vSize;
    DVector sqr,sum;
-   float occ, weight;
    AccSumStrE *astr;
    AccSumMixE *amix;
 
@@ -2831,7 +2841,7 @@ float AccSumProb(AccSum *acc)
             sqr = amix->sqr;
             occ = amix->occ;
             if (occ > 0.0) {
-               x = 0;
+               x = 0.0;
                for (k=1;k<=vSize;k++) {
                   variance=(sqr[k]-(sum[k]*sum[k]/occ))/occ;
                   if (variance<=MINLARG) return(LZERO);
@@ -2851,6 +2861,7 @@ void IncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes)
 {
    AccSum *acc,*tacc;
    int s,m,k,vSize,first;
+   DVector tsum, tsqr, asum, asqr; 
    
    for(s=1,first=1;s<=no->nStream;s++){
       if (streams.set[s]) {
@@ -2861,9 +2872,12 @@ void IncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes)
             if(first>0) tacc->occ+=acc->occ;
             tacc->accse[s].accme[m].occ+=acc->occ;
             vSize = tacc->accse[s].accme[m].vSize;
+            tsum = tacc->accse[s].accme[m].sum;  tsqr = tacc->accse[s].accme[m].sqr;
+            asum = acc->sum;                     asqr = acc->sqr;
+            
             for (k=1;k<=vSize;k++) {
-               tacc->accse[s].accme[m].sum[k] += acc->sum[k];
-               tacc->accse[s].accme[m].sqr[k] += acc->sqr[k];
+               tsum[k] += asum[k];
+               tsqr[k] += asqr[k];
             }
          }
          first--;
@@ -2874,10 +2888,10 @@ void IncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes)
 /* ClusterLogL: return log likelihood of given cluster, this is used for both
    the complete and split clusters.  In the former case, the yes accumulator
    will be NULL and only the no accumulator is used */
-float ClusterLogL(CLink clist,AccSum *no,AccSum *yes,float *occs)
+double ClusterLogL(CLink clist, AccSum *no, AccSum *yes, double *occs)
 {
    CLink p;
-   float prob;
+   double prob;
    StateElem *se;
    int i;
 
@@ -2933,10 +2947,10 @@ void AnswerQuestion(CLink clist,QLink q)
 
 /* ValidProbNode: set tProb and sProb of given node according to best
    possible question which is stored in quest field.  */
-void ValidProbNode(Node *node,float thresh)
+void ValidProbNode(Node *node, double thresh)
 {
    QLink q,qbest;
-   float best,sProb;
+   double best,sProb;
    char buf[20];
    
    node->tProb = ClusterLogL(node->clist,&no,NULL,occs);
@@ -2946,7 +2960,7 @@ void ValidProbNode(Node *node,float thresh)
          sprintf(buf," ROOT ");
       else
          sprintf(buf,"%3d[%c]",node->parent->snum,
-                 (node->parent->yes==node?'Y':'N'));
+                 ((node->parent->yes==node)?'Y':'N'));
       
       printf("    Node %s:                  LogL=%5.3f (%.1f)\n",
              buf,node->tProb/node->occ,node->occ);
@@ -3030,10 +3044,10 @@ void SplitTreeNode(Tree *tree, Node *node)
 }
 
 /* FindBestSplit: find best node to split */
-Node *FindBestSplit(Node *first, float threshold)
+Node *FindBestSplit(Node *first, double threshold)
 {
    Node *best,*node;
-   float sProb,imp;
+   double sProb,imp;
 
    best=NULL;imp=0.0;
    for (node=first;node!=NULL;node=node->next) {
@@ -3047,9 +3061,9 @@ Node *FindBestSplit(Node *first, float threshold)
 
 /* MergeCost: return logL reduction if node b is merged with node a.
    On entry, atail points to last cluster item in node a clist. */
-float MergeCost(Node *a, Node *b, CLink atail)
+double MergeCost(Node *a, Node *b, CLink atail)
 {
-   float combProb;              /* combined logL */
+   double combProb;              /* combined logL */
    
    atail->next = b->clist;
    combProb = ClusterLogL(a->clist,&no,NULL,occs);
@@ -3060,11 +3074,11 @@ float MergeCost(Node *a, Node *b, CLink atail)
 /* MergeNode: find the as yet unseen node which when merged with
    given node gives smallest reduction in LogL.  If this reduction
    is less than threshold, merge the nodes and return TRUE */
-Boolean MergeNode(Node *node, float threshold)
+Boolean MergeNode(Node *node, double threshold)
 {
    Node *p, *min;
    CLink ctail;
-   float minCost,cost;
+   double minCost,cost;
 
    ctail = node->clist;         /* set ctail to last cluster item */
    if (ctail == NULL)
@@ -3079,10 +3093,10 @@ Boolean MergeNode(Node *node, float threshold)
          char buf1[20],buf2[20];
          if (node->parent==NULL) sprintf(buf1," ROOT ");
          else sprintf(buf1,"%3d[%c]",node->parent->snum,
-                      (node->parent->yes==node?'Y':'N'));
+                      ((node->parent->yes==node)?'Y':'N'));
          if (min->parent==NULL) sprintf(buf2," ROOT ");
          else sprintf(buf2,"%3d[%c]",min->parent->snum,
-                      (min->parent->yes==min?'Y':'N'));
+                      ((min->parent->yes==min)?'Y':'N'));
          printf("       M  %s (%.3f,%.1f) + %s (%.3f,%.1f)   Imp %.1f\n",
                 buf1,node->tProb/node->occ,node->occ,
                 buf2,min->tProb/min->occ,min->occ,-minCost);
@@ -3096,10 +3110,10 @@ Boolean MergeNode(Node *node, float threshold)
          char buf1[20],buf2[20];
          if (node->parent==NULL) sprintf(buf1," ROOT ");
          else sprintf(buf1,"%3d[%c]",node->parent->snum,
-                      (node->parent->yes==node?'Y':'N'));
+                      ((node->parent->yes==node)?'Y':'N'));
          if (min->parent==NULL) sprintf(buf2," ROOT ");
          else sprintf(buf2,"%3d[%c]",min->parent->snum,
-                      (min->parent->yes==min?'Y':'N'));
+                      ((min->parent->yes==min)?'Y':'N'));
          printf("    BestM  %s (%.3f,%.1f) + %s (%.3f,%.1f)   Imp -%4.1f\n",
                 buf1,node->tProb/node->occ,node->occ,
                 buf2,min->tProb/min->occ,min->occ,minCost);
@@ -3124,7 +3138,7 @@ Boolean MergeNode(Node *node, float threshold)
 /* MergeLeaves: merge any pair of leaf nodes in given tree for which 
    reduction in combined LogL is less than threshold.  Note that 
    after this call, the parent links are no longer valid. */
-void MergeLeaves(Tree *tree, float threshold)
+void MergeLeaves(Tree *tree, double threshold)
 {
    Node *node;
    
@@ -3135,18 +3149,17 @@ void MergeLeaves(Tree *tree, float threshold)
 /* GetCentroid: set centroid of given statistics */
 void GetCentroid(MLink macro, AccSum *acc, int stream)
 {
-   double v;
+   double v, occ;
    int s,m,k,vSize;
    StateInfo *si;
    StreamInfo *sti;
    MixPDF *mp;
    DVector sum,sqr;
-   float occ;
    AccSumStrE *astr;
    AccSumMixE *amix;
 
    si = (StateInfo *)macro->structure;
-   for (s=(stream==0)?1:stream;s<=acc->nStream;s++) {
+   for (s=((stream==0)?1:stream);s<=acc->nStream;s++) {
       if (streams.set[s]) {
          sti = (stream==0)?si->pdf[s].info:(StreamInfo *)macro->structure;
          astr = acc->accse+s;
@@ -3160,17 +3173,17 @@ void GetCentroid(MLink macro, AccSum *acc, int stream)
 
             if (occ > 0.0) {
                for (k=1;k<=vSize; k++) {
-                  mp->mean[k] = sum[k]/occ;
+                  mp->mean[k] = (float)(sum[k]/occ);
                   v = (sqr[k]-(sum[k]*sum[k]/occ))/occ;
                   if (v < minVar){
                      if (trace & T_DET)
                         HError(-2636, "GetCentroid: variance is floored from %e to %e for %s dim=%d",v,minVar,macro->id->name,k);
                      v = minVar;
                   }
-                  mp->cov.var[k] = v;
+                  mp->cov.var[k] = (float)v;
                }
             }
-            sti->spdf.cpdf[m].weight = occ/acc->occ;
+            sti->spdf.cpdf[m].weight = (float)(occ/acc->occ);
          }
       }
       if (stream!=0) break;
@@ -3180,7 +3193,7 @@ void GetCentroid(MLink macro, AccSum *acc, int stream)
 /* TieLeafNodes: tie all items in the leaf nodes of given tree */
 void TieLeafNodes(Tree *tree, char *macRoot)
 {
-   float occ;
+   double occ;
    ILink ilist,i;
    CLink cl;
    char clnum[20];              /* cluster number */
@@ -3204,7 +3217,7 @@ void TieLeafNodes(Tree *tree, char *macRoot)
          char buf[20];
          if (node->parent==NULL) sprintf(buf,"ROOT");
          else sprintf(buf,"%d[%c]",node->parent->snum,
-                      (node->parent->yes==node?'Y':'N'));
+                      ((node->parent->yes==node)?'Y':'N'));
          printf("  %-6s== %-3d LogL %6.3f (%.1f) ==",buf,clidx,
                 node->tProb/node->occ,node->occ);
       }
@@ -3221,7 +3234,7 @@ void TieLeafNodes(Tree *tree, char *macRoot)
       if (trace & T_CLUSTERS)
          printf("\n");
       if (hset->swidth[0] == tree->nActiveStr) {  /* not stream clustering */
-         ApplyTie(ilist,buf,(ilist->item==ilist->owner?'h':'s'));
+         ApplyTie(ilist,buf,((ilist->item==ilist->owner)?'h':'s'));
          id=GetLabId(buf,FALSE);
          node->macro[0] = FindMacroName(hset,((ilist->item==ilist->owner)?'h':'s'),id);
          if (useLeafStats)
@@ -3251,6 +3264,7 @@ void TieLeafNodes(Tree *tree, char *macRoot)
 
       FreeItems(&ilist);        /* free items at this node */
       node->clist=NULL;
+      
    }
 }
 
@@ -3258,7 +3272,7 @@ void TieLeafNodes(Tree *tree, char *macRoot)
    the actual clusters in rlist, the number of clusters
    in numCl.  The value of threshold determines when to stop.
    macRoot is the root prefix of the name to use in the tie  */
-void BuildTree(ILink ilist,float threshold, char *macRoot)
+void BuildTree(ILink ilist, double threshold, char *macRoot)
 {
    int i,j,l,s,m,N,snum,state,numItems,numParam;
    char buf[256];
@@ -3334,16 +3348,24 @@ void BuildTree(ILink ilist,float threshold, char *macRoot)
 
    if (applyMDL) {
       numParam=0;
-      for (s=1;s<=hset->swidth[0];s++) 
+      for (s=1;s<=hset->swidth[0];s++) {
          if (streams.set[s]) {
             for (m=1;m<=no.accse[s].nMix;m++)
                numParam += 2 * no.accse[s].accme[m].vSize;
             numParam += no.accse[s].nMix-1;
          }
-      threshold = 0.5 * numParam * log(node->occ);
+      }
+      threshold = MDLfactor * 0.5 * (double)numParam * log(node->occ);
       if (state<0)
          threshold *= N-2;
+      
+      if (trace & T_BID) 
+         printf("based on MDL criterion, threshold=%e", threshold);
+      
    }
+   
+   if (trace & T_BID)
+      printf("\n");
 
    if (trace & T_IND) {
       if (state<0) 
@@ -3362,12 +3384,12 @@ void BuildTree(ILink ilist,float threshold, char *macRoot)
    snum=0;
    node=FindBestSplit(tree->leaf,threshold);
    while(node != NULL) {
-      node->snum=snum++;
+      node->snum=snum++; node->quest->used=TRUE;
       if (trace & T_DET) {
          char buf[20];
          if (node->parent==NULL) sprintf(buf," ROOT ");
          else sprintf(buf,"%3d[%c]",node->parent->snum,
-                      (node->parent->yes==node?'Y':'N'));
+                      ((node->parent->yes==node)?'Y':'N'));
          printf("\n  Split %s == %-3d (%.1f)\n",
                 buf,node->snum,node->occ);
          printf("          %20s   LogL %7.3f -> %7.3f  Imp %.2f\n",
@@ -3405,6 +3427,7 @@ void BuildTree(ILink ilist,float threshold, char *macRoot)
    
    /* Finally assign a macro to each leaf node and do tie */
    totalItems += numItems; totalClust += numTreeClust;
+   tree->nLeaves = numTreeClust;
    if (trace & T_IND) {
       if (state<0) 
          printf("\n End    %4s : %d gives LogL=%6.3f occ=%4.1f\n",
@@ -3476,7 +3499,7 @@ Ptr AssignStructure(LabId id, int state)
       }
       while (node->yes != NULL) {
          isYes = QMatch(id->name,node->quest);
-         if (trace & T_TREE_ANS) printf("%s ",isYes?"yes":" no"),len+=4;
+         if (trace & T_TREE_ANS) printf("%s ",(isYes)?"yes":" no"),len+=4;
          node = (isYes)?node->yes:node->no;
       }
       if (nTree==1)   /* state-based clustering */
@@ -3488,7 +3511,7 @@ Ptr AssignStructure(LabId id, int state)
 
       if (trace & T_DET) {
          if (trace & T_TREE_ANS) printf("%*s",48-len," ");
-            printf("=~%c %-10s ",(state>0?((nTree>1)?'p':'s'):'h'),node->id->name);
+            printf("=~%c %-10s ",((state>0)?((nTree>1)?'p':'s'):'h'),node->id->name);
                fflush(stdout);
          }
    }
@@ -3599,13 +3622,64 @@ void DownTree(Node *node,Node **array)
    }
 }
 
+/* PrintQuestions: print questions for Tree-based clustering */
+void PrintQuestions(FILE *file)
+{
+   QLink q;
+   IPat *p;
+   
+   for (q=qHead;q;q=q->next) {
+      if (q->used) {
+         fprintf(file,"QS %s ",q->qName->name);
+         fprintf(file,"{ %s",ReWriteString(q->patList->pat,NULL,DBL_QUOTE));
+         for (p=q->patList->next;p;p=p->next)
+            fprintf(file,",%s",ReWriteString(p->pat,NULL,DBL_QUOTE));
+         fprintf(file," }\n");
+      }
+   }
+   fprintf(file,"\n");
+}
+
+/* PrintTree: print decision-tree */
+void PrintTree(Tree *tree, FILE *file)
+{
+   Node *node, **array;
+   int i;
+   
+   if (tree->size==0) {
+      fprintf(file,"   %-45s\n\n", 
+              ReWriteString(tree->root->id->name,NULL,DBL_QUOTE));
+   }
+   else {
+      array=(Node**) New(&tmpHeap,sizeof(Node*)*tree->size);
+      for (i=0;i<tree->size;i++)  array[i]=NULL;
+      DownTree(tree->root,array);
+      fprintf(file,"{\n");
+      for (i=0;i<tree->size;i++) {
+         node=array[i];
+         if (node==NULL) 
+            HError(2695,"ShowTreesCommand: Cannot find node %d",i);
+         if (node->yes==NULL || node->no==NULL) 
+            HError(2695,"ShowTreesCommand: Node %d has no children",i);
+         fprintf(file," %3d %-45s ",-i,
+                 node->quest->qName->name);
+         if (node->no->yes) fprintf(file,"      %5d      ",-node->no->snum);
+         else fprintf(file," %15s ",
+                      ReWriteString(node->no->id->name,NULL,DBL_QUOTE));
+         if (node->yes->yes) fprintf(file,"      %5d      ",-node->yes->snum);
+         else fprintf(file," %15s ",
+                      ReWriteString(node->yes->id->name,NULL,DBL_QUOTE));
+         fprintf(file,"\n");
+      }
+      fprintf(file,"}\n\n");
+      Dispose(&tmpHeap,array);
+   }
+}
+
 /* ShowTrees: print a summary of currently constructed trees */
 void ShowTreesCommand(void)
 {
    Tree *tree;
-   Node *node,**array;
-   QLink q;
-   IPat *p;
    int i,s;
    FILE *file;
    char fn[256];
@@ -3617,14 +3691,9 @@ void ShowTreesCommand(void)
    }
    if ((file=fopen(fn,"w"))==NULL)
       HError(2611,"ShowTreesCommand: Cannot open trees file %s",fn);
-   for (q=qHead;q;q=q->next) {
-      fprintf(file,"QS %s ",q->qName->name);
-      fprintf(file,"{ %s",ReWriteString(q->patList->pat,NULL,DBL_QUOTE));
-      for (p=q->patList->next;p;p=p->next)
-         fprintf(file,",%s",ReWriteString(p->pat,NULL,DBL_QUOTE));
-      fprintf(file," }\n");
-   }
-   fprintf(file,"\n");
+   
+   PrintQuestions(file);
+ 
    for (tree=treeList;tree!=NULL;tree=tree->next) {
       if (tree->state>0)                       
          fprintf(file,"%s[%d]",
@@ -3640,35 +3709,7 @@ void ShowTreesCommand(void)
             if (tree->streams.set[s])
                 fprintf(file,"%d%s",s,(i++<tree->nActiveStr)?",":"]\n");
       }
-			  
-      if (tree->size==0) {
-         fprintf(file,"   %-45s\n\n",
-                 ReWriteString(tree->root->id->name,NULL,DBL_QUOTE));
-      }
-      else {
-         array=(Node**) New(&tmpHeap,sizeof(Node*)*tree->size);
-         for (i=0;i<tree->size;i++) array[i]=NULL;
-         DownTree(tree->root,array);
-         fprintf(file,"{\n");
-         for (i=0;i<tree->size;i++) {
-            node=array[i];
-            if (node==NULL) 
-               HError(2695,"ShowTreesCommand: Cannot find node %d",i);
-            if (node->yes==NULL || node->no==NULL) 
-               HError(2695,"ShowTreesCommand: Node %d has no children",i);
-            fprintf(file," %3d %-45s ",-i,
-                    node->quest->qName->name);
-            if (node->no->yes) fprintf(file,"      %5d      ",-node->no->snum);
-            else fprintf(file," %15s ",
-                         ReWriteString(node->no->id->name,NULL,DBL_QUOTE));
-            if (node->yes->yes) fprintf(file,"      %5d      ",-node->yes->snum);
-            else fprintf(file," %15s ",
-                         ReWriteString(node->yes->id->name,NULL,DBL_QUOTE));
-            fprintf(file,"\n");
-         }
-         fprintf(file,"}\n\n");
-         Dispose(&tmpHeap,array);
-      }
+      PrintTree(tree,file);
    }
    fclose(file);
 }
@@ -3723,7 +3764,7 @@ Tree *LoadTree(char *name,Source *src)
       HError(2660,"LoadTree: Cannot parse tree name %s (base-phone)",name);
 
    tree=CreateTree(NULL,GetLabId(bname,FALSE),n);
-   nt=0;tree->size=0;
+   nt=0;tree->size=0;tree->nLeaves=0;
    tree->root=CreateTreeNode(NULL,NULL);
    tree->root->snum=0;
 
@@ -3741,16 +3782,29 @@ Tree *LoadTree(char *name,Source *src)
      while (*p==',') {
         p++;
         s = atoi(p);
-	if (s<=0 || s>hset->swidth[0])
-	   HError(9999,"LoadTree: stream index out of range");
-	tree->streams.set[s] = TRUE;
-	nStream++;
-	p++;
-	while (*p==' ') p++;
+        if (s<=0 || s>hset->swidth[0])
+           HError(9999,"LoadTree: stream index out of range");
+        tree->streams.set[s] = TRUE;
+        nStream++;
+        p++;
+        while (*p==' ') p++;
      }
-     type = 'p';
+     
      if (*p != ']')
        HError(9999,"LoadTree: stream index ] expected");
+     
+     if (IsFullSet(tree->streams)) {
+        type = 's';
+        strTree = FALSE;
+     }
+     else {
+        type = 'p';
+     }
+   }
+   else {
+      nStream = hset->swidth[0];
+      for (s=1;s<=hset->swidth[0];s++)
+         tree->streams.set[s] = TRUE;
    }
    tree->nActiveStr=nStream;
 
@@ -3772,6 +3826,7 @@ Tree *LoadTree(char *name,Source *src)
          if ((tree->root->macro[0]=FindMacroName(hset,type,GetLabId(buf,FALSE)))==NULL)
             HError(2661,"LoadTree: Macro %s not recognised",buf);
       }
+      tree->nLeaves=1;
    }
    else {
       while (ReadString(src,buf),strcmp("}",buf)!=0) {
@@ -3780,13 +3835,14 @@ Tree *LoadTree(char *name,Source *src)
 
          ReadString(src,buf);
          qname=GetLabId(buf,FALSE);
-         if (qname==NULL?TRUE:qname->aux==0)
+         if ((qname==NULL)?TRUE:qname->aux==0)
             HError(2661,"LoadTree: Question %s not recognised",buf);
 
          if ((node=GetNode(tree->root,-n))==NULL)
             HError(2661,"LoadTree: Node %d not in tree",n);
 
          node->quest=(QLink) qname->aux;
+         node->quest->used=TRUE;
          node->yes=CreateTreeNode(NULL,node);
          node->yes->ans=TRUE;
          node->no=CreateTreeNode(NULL,node);
@@ -3809,6 +3865,7 @@ Tree *LoadTree(char *name,Source *src)
          }
 
          if (lab_no) {
+            node->no->id = lab_no;
             node->no->macro = (MLink *) New(&hmmHeap,nStream*sizeof(MLink));
             if (strTree && nStream>1) {   /* stream share */
                for (s=1,n=0;s<=hset->swidth[0];s++)
@@ -3830,11 +3887,13 @@ Tree *LoadTree(char *name,Source *src)
             if (tree->leaf) tree->leaf->prev=node->no;
             node->no->prev=NULL;
             tree->leaf=node->no;
+            tree->nLeaves++;
          }
          else 
             node->no->snum=-num_no,node->no->macro=NULL;
 
          if (lab_yes) {
+            node->yes->id = lab_yes;
             node->yes->macro = (MLink *) New(&hmmHeap,nStream*sizeof(MLink));
             if (strTree && nStream>1) {   /* stream share */
                for (s=1,n=0;s<=hset->swidth[0];s++)
@@ -3856,6 +3915,7 @@ Tree *LoadTree(char *name,Source *src)
             if (tree->leaf) tree->leaf->prev=node->yes;
             node->yes->prev=NULL;
             tree->leaf=node->yes;
+            tree->nLeaves++;
          }
          else
             node->yes->snum=-num_yes,node->yes->macro=NULL;
@@ -3894,6 +3954,143 @@ void LoadTreesCommand(void)
    }
    while (ReadString(&src,info));
    CloseSource(&src);
+}
+
+/* ----------------- CM - Convert HMMSets to PDF --------------- */
+void ConvertModelsCommand(void)
+{
+   Boolean out[SMAX], first;
+   int i, j, k, s, vSize, idx;
+   float weight;
+   Tree *tree;
+   FILE *file;
+   char dn[256], fn[256], head[256], ext[256];
+   Node *leaf, **array;
+   StreamInfo *sti;
+   StateInfo  *si;
+   
+   ChkedAlpha("CM output directory name", dn);
+   if (trace & T_BID) {
+      printf("\nCM %s\n Convert current HMMSets to pdf for HMM-based speech synthesize module into directory\n",dn);
+      fflush(stdout);
+   }
+   
+   strcpy(head,"pdf.");
+   
+   for (s=1;s<=hset->swidth[0];s++)
+      out[s]=FALSE;
+   
+   for (s=1;s<=hset->swidth[0];s++) {
+      if (!out[s]) {
+         sprintf(ext,"%d",s);
+         MakeFN(head,dn,ext,fn);
+         if ((file=fopen(fn,"w"))==NULL)
+            HError(2611,"ConvertModelsCommand: Cannot open file %s",fn);
+
+         /* output vector size and number of pdfs for each tree */
+         first=TRUE; vSize=0;
+         for (i=2; i<=MaxStatesInSet(hset)+1; i++) {
+            for (tree=treeList; tree!=NULL; tree=tree->next) {
+               if (tree->state==i && tree->streams.set[s] ) {
+                  for (j=1; j<=hset->swidth[0]; j++)
+                     if (tree->streams.set[j]) {
+                        out[j]=TRUE;
+                        vSize += hset->swidth[j];
+                     }
+                  if (first) {
+                     fwrite(&vSize, sizeof(int), 1, file);
+                     first=FALSE;
+                  }
+                  fwrite(&tree->nLeaves, sizeof(int), 1, file);
+               }
+            }
+         }
+         
+         /* output pdf (mixture weight, mean vector and covariance matrix) */
+         for (i=2; i<=MaxStatesInSet(hset)+1; i++) {
+            for (tree=treeList; tree!=NULL; tree=tree->next) {
+               if (tree->state==i && tree->streams.set[s] ) {
+                  /* store leaf node to array */
+                  array = (Node **) New(&tmpHeap, tree->nLeaves*sizeof(Node *));
+                  array--;
+                  
+                  for (leaf=tree->leaf; leaf!=NULL; leaf=leaf->next) {
+                     idx = atoi(strrchr(leaf->id->name,'_')+1);
+                     array[idx] = leaf;
+                  }
+                  
+                  /* output array */
+                  for (j=1; j<=tree->nLeaves; j++) {
+                     for (k=0; k<tree->nActiveStr; k++) {
+                        if (IsFullSet(tree->streams))
+                           sti = ((StateInfo *)array[j]->macro[0]->structure)->pdf[k+1].info; /* state tying */
+                        else
+                           sti = (StreamInfo *)array[j]->macro[k]->structure;                 /* stream tying */
+                        vSize = VectorSize(sti->spdf.cpdf[1].mpdf->mean);
+                        fwrite(&sti->spdf.cpdf[1].mpdf->mean[1], sizeof(float), vSize, file);
+                        fwrite(&sti->spdf.cpdf[1].mpdf->cov.var[1], sizeof(float), vSize,file);
+                        if (sti->nMix>1) {  /* multi space (f0) */
+                           weight = sti->spdf.cpdf[1].weight;
+                           fwrite(&weight, sizeof(float), 1,file);
+                           weight = 1-weight;
+                           fwrite(&weight, sizeof(float), 1,file);
+                        }
+                     }
+                  }
+                  array++;
+                  Dispose(&tmpHeap, array);
+               }
+            }
+         }
+         fclose(file);
+      }
+   }
+}
+
+/* ----------------- CT - Convert Trees for synthesizer module --------------- */
+void ConvertTreesCommand(void)
+{
+   Boolean out[SMAX];
+   int i, j, s;
+   Tree *tree;
+   FILE *file;
+   char dn[256], fn[256], head[256], ext[256];
+   
+   ChkedAlpha("CT output directory ", dn);
+   if (trace & T_BID) {
+      printf("\nCT %s\n Convert current questions/trees for synthesize module \n",dn);
+      fflush(stdout);
+   }
+   strcpy(head,"trees.");
+   for (s=1;s<=hset->swidth[0];s++)
+      out[s]=FALSE;
+   
+   for (s=1;s<=hset->swidth[0];s++) {
+      if (!out[s]) {
+         sprintf(ext,"%d",s);
+         MakeFN(head,dn,ext,fn);
+         if ((file=fopen(fn,"w"))==NULL)
+            HError(2611,"ConvertTreessCommand: Cannot open file %s",fn);
+         PrintQuestions(file);
+      
+         for (i=2;i<=MaxStatesInSet(hset)+1;i++) {
+            for (tree=treeList;tree!=NULL;tree=tree->next) {
+               if (tree->state==i && tree->streams.set[s] ) {
+                  fprintf(file,"%s[%d]\n",
+                          ReWriteString(tree->baseId->name,NULL,ESCAPE_CHAR),
+                          tree->state);
+
+                  PrintTree(tree, file);
+                  
+                  for (j=1;j<=hset->swidth[0];j++)
+                     if (tree->streams.set[j])
+                        out[j]=TRUE;
+               }
+            }
+         }
+         fclose(file);
+      }
+   }
 }
 
 /* ----------------- TR - Set Trace Level Command --------------- */
@@ -4469,7 +4666,7 @@ void EditTransMat(Boolean adding)
    ClearSeenFlags(hset,CLR_HMMS);
    FreeItems(&ilist);
    if (trace & T_BID) {
-      printf(" %cT: %d transP matrices adjusted\n",(adding?'A':'R'),nedit);
+      printf(" %cT: %d transP matrices adjusted\n",((adding)?'A':'R'),nedit);
       fflush(stdout);
    }
 }
@@ -4716,7 +4913,7 @@ void ClusterCommand(Boolean nCluster)
       numClust = ChkedInt("No. clusters",1,INT_MAX);
    else
       thresh = ChkedFloat("Cluster threshold",0.0,FLOAT_MAX);
-   ChkedAlpha((char *) (nCluster ? "NC macro name" : "TC macro name"), macName);
+   ChkedAlpha((char *) ((nCluster) ? "NC macro name" : "TC macro name"), macName);
    if (trace & (T_BID | T_CLUSTERS)) {
       if (nCluster) 
          printf("\nNC %d %s {}\n Cluster items into N groups\n",
@@ -5507,15 +5704,15 @@ void TreeBuildCommand(void)
    ILink ilist = NULL;          /* list of items to tie */
    char type = ' ';             /* type of items to tie */
    char macName[255];           /* name of macro to use */
-   float thresh = 0.0;
+   double thresh = 0.0;
    int s;
 
    ClearSet(streams);
    
-   thresh = ChkedFloat("Tree build threshold",0.0,FLOAT_MAX);
+   thresh = (double) ChkedFloat("Tree build threshold",0.0,FLOAT_MAX);
    ChkedAlpha("TB macro name",macName);
    if (trace & (T_BID | T_MAC | T_CLUSTERS | T_TREE)) {
-      printf("\nTB %.2f %s {}\n Tree based clustering\n",thresh,macName);
+      printf("\nTB %.2lf %s {}\n Tree based clustering ",thresh,macName);
       fflush(stdout);
    }
    
@@ -5542,7 +5739,7 @@ void TreeBuildCommand(void)
          streams.set[s] = TRUE;
 
    /* Do Tree based clustering */
-   BuildTree(ilist,thresh,macName);
+   BuildTree(ilist, thresh, macName);
 }
 
 /* ------------- AU - Add Unseen Triphones Command --------- */
@@ -6628,14 +6825,14 @@ void Initialise(char *hmmListFn)
 
 static int  nCmds = 37;
 
-static char *cmdmap[] = {"AT","RT","SS","CL","CO","JO","MU","TI","UF","NC",
+static char *cmdmap[] = {"AT","RT","SS","CL","CM","CO","CT","JO","MU","TI","UF","NC",
                          "TC","UT","MT","SH","SU","SW","SK",
                          "RC",
                          "RO","RM","RN",
                          "LS","QS","TB","TR","AU","GQ","MD","ST","LT",
                          "MM","DP","HK","FC","FA","FV","XF","" };
 
-typedef enum           { AT=1, RT , SS , CL , CO , JO , MU , TI , UF , NC ,
+typedef enum           { AT=1, RT , SS , CL , CM , CO , CT , JO , MU , TI , UF , NC ,
                          TC , UT , MT , SH , SU , SW , SK ,
                          RC ,
                          RO , RM , RN ,
@@ -6680,7 +6877,9 @@ void DoEdit(char * editFn)
       case RT: EditTransMat(FALSE); break;
       case SS: SplitStreamCommand(FALSE); break;
       case CL: CloneCommand(); break;
+      case CM: ConvertModelsCommand(); break;
       case CO: CompactCommand(); break;
+      case CT: ConvertTreesCommand(); break;
       case JO: JoinSizeCommand(); break;
       case MU: MixUpCommand(); break;
       case MD: MixDownCommand(); break;

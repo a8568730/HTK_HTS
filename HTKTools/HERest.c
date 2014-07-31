@@ -33,51 +33,51 @@
 /* ----------------------------------------------------------- */
 
 
-/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
-/* ---------------------------------------------------------------- */
-/*                                                                  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
-/*            HTS Working Group                                     */
-/*                                                                  */
-/*       Department of Computer Science                             */
-/*       Nagoya Institute of Technology                             */
-/*                and                                               */
-/*   Interdisciplinary Graduate School of Science and Engineering   */
-/*       Tokyo Institute of Technology                              */
-/*          Copyright (c) 2001-2002                                 */
-/*            All Rights Reserved.                                  */
-/*                                                                  */
-/* Permission is hereby granted, free of charge, to use and         */
-/* distribute this software in the form of patch code to HTK and    */
-/* its documentation without restriction, including without         */
-/* limitation the rights to use, copy, modify, merge, publish,      */
-/* distribute, sublicense, and/or sell copies of this work, and to  */
-/* permit persons to whom this work is furnished to do so, subject  */
-/* to the following conditions:                                     */
-/*                                                                  */
-/*   1. Once you apply the HTS patch to HTK, you must obey the      */
-/*      license of HTK.                                             */
-/*                                                                  */
-/*   2. The code must retain the above copyright notice, this list  */
-/*      of conditions and the following disclaimer.                 */
-/*                                                                  */
-/*   3. Any modifications must be clearly marked as such.           */
-/*                                                                  */
-/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
-/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
-/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
-/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
-/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
-/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
-/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
-/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/* PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                  */
-/* ---------------------------------------------------------------- */ 
-/*     HERest.c modified for HTS-1.0 2002/12/25 by Heiga Zen        */
-/* ---------------------------------------------------------------- */
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                     Copyright (c) 2001-2003                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The code must retain the above copyright notice, this list  */
+/*       of conditions and the following disclaimer.                 */
+/*                                                                   */
+/*    3. Any modifications must be clearly marked as such.           */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+/*      HERest.c modified for HTS-1.1 2003/05/09 by Heiga Zen        */
+/*  ---------------------------------------------------------------  */
+
 
 char *herest_version = "!HVER!HERest:   3.2 [CUED 09/12/02]";
 char *herest_vc_id = "$Id: HERest.c,v 1.10 2002/12/19 16:37:40 ge204 Exp $";

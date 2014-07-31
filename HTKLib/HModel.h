@@ -33,51 +33,50 @@
 /* ----------------------------------------------------------- */
 
 
-/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
-/* ---------------------------------------------------------------- */
-/*                                                                  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
-/*            HTS Working Group                                     */
-/*                                                                  */
-/*       Department of Computer Science                             */
-/*       Nagoya Institute of Technology                             */
-/*                and                                               */
-/*   Interdisciplinary Graduate School of Science and Engineering   */
-/*       Tokyo Institute of Technology                              */
-/*          Copyright (c) 2001-2002                                 */
-/*            All Rights Reserved.                                  */
-/*                                                                  */
-/* Permission is hereby granted, free of charge, to use and         */
-/* distribute this software in the form of patch code to HTK and    */
-/* its documentation without restriction, including without         */
-/* limitation the rights to use, copy, modify, merge, publish,      */
-/* distribute, sublicense, and/or sell copies of this work, and to  */
-/* permit persons to whom this work is furnished to do so, subject  */
-/* to the following conditions:                                     */
-/*                                                                  */
-/*   1. Once you apply the HTS patch to HTK, you must obey the      */
-/*      license of HTK.                                             */
-/*                                                                  */
-/*   2. The code must retain the above copyright notice, this list  */
-/*      of conditions and the following disclaimer.                 */
-/*                                                                  */
-/*   3. Any modifications must be clearly marked as such.           */
-/*                                                                  */
-/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
-/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
-/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
-/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
-/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
-/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
-/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
-/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/* PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                  */
-/* ---------------------------------------------------------------- */ 
-/*     HModel.h modified for HTS-1.0 2002/12/20 by Heiga Zen        */
-/* ---------------------------------------------------------------- */
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                     Copyright (c) 2001-2003                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The code must retain the above copyright notice, this list  */
+/*       of conditions and the following disclaimer.                 */
+/*                                                                   */
+/*    3. Any modifications must be clearly marked as such.           */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */ 
+/*      HModel.h modified for HTS-1.1 2003/05/09 by Heiga Zen        */
+/*  ---------------------------------------------------------------  */
 
 /* !HVER!HModel:   3.2 [CUED 09/12/02] */
 
@@ -97,8 +96,9 @@ extern "C" {
 #define MACHASHSIZE 1277   /* Size of each HMM Set macro hash table */
 #define PTRHASHSIZE  513   /* Size of each HMM Set ptr map hash table */
 #define MINMIX  1.0E-5     /* Min usable mixture weight */
-#define LMINMIX -11.5     /* log(MINMIX) */
-
+#define LMINMIX -11.5      /* log(MINMIX) */
+#define MINSWEIGHT 1.0E-5  /* Min usable stream weight */
+   
 #define MINDLOGP 0.000001  /* prob = exp(shortform/DLOGSCALE) */
 #define DLOGSCALE -2371.8  /* = 32767/ln(MINDLOGP) */
 #define DLOGZERO 32767  
@@ -107,6 +107,7 @@ extern "C" {
 #define MixLogWeight(hset,weight) (weight<MINMIX ? LZERO : log(weight))
 #define MixFloor(hset)            ( MINMIX )
 
+#define StrLogWeight(hset,weight) (weight<MINSWEIGHT ? LZERO : log(weight)) 
 
 /* ------------------ Master Model File Info ----------------- */
 

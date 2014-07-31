@@ -1,54 +1,49 @@
-/* ---------------------------------------------------------------- */
-/*                                                                  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
-/*            HTS Working Group                                     */
-/*                                                                  */
-/*       Department of Computer Science                             */
-/*       Nagoya Institute of Technology                             */
-/*                and                                               */
-/*   Interdisciplinary Graduate School of Science and Engineering   */
-/*       Tokyo Institute of Technology                              */
-/*          Copyright (c) 2001-2002                                 */
-/*            All Rights Reserved.                                  */
-/*                                                                  */
-/* Permission is hereby granted, free of charge, to use and         */
-/* distribute this software in the form of patch code to HTK and    */
-/* its documentation without restriction, including without         */
-/* limitation the rights to use, copy, modify, merge, publish,      */
-/* distribute, sublicense, and/or sell copies of this work, and to  */
-/* permit persons to whom this work is furnished to do so, subject  */
-/* to the following conditions:                                     */
-/*                                                                  */
-/*   1. Once you apply the HTS patch to HTK, you must obey the      */
-/*      license of HTK.                                             */
-/*                                                                  */
-/*   2. The code must retain the above copyright notice, this list  */
-/*      of conditions and the following disclaimer.                 */
-/*                                                                  */
-/*   3. Any modifications must be clearly marked as such.           */
-/*                                                                  */
-/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
-/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
-/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
-/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
-/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
-/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
-/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
-/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/* PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                  */
-/* ---------------------------------------------------------------- */ 
-/*  HMGenS.c : generate speech parameters (spectrum and f0 ) from   */
-/*             HMMs based on Maximum Likelihood criterion with      */
-/*             dynamic feature window constraints                   */
-/*                                                                  */
-/*                                   2002/12/25 by Heiga Zen        */
-/* ---------------------------------------------------------------- */
+/*  ---------------------------------------------------------------  */
+/*      The HMM-Based Speech Synthesis System (HTS): version 1.1     */
+/*                        HTS Working Group                          */
+/*                                                                   */
+/*                   Department of Computer Science                  */
+/*                   Nagoya Institute of Technology                  */
+/*                                and                                */
+/*    Interdisciplinary Graduate School of Science and Engineering   */
+/*                   Tokyo Institute of Technology                   */
+/*                      Copyright (c) 2001-2003                      */
+/*                        All Rights Reserved.                       */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software and its documentation without           */
+/*  restriction, including without limitation the rights to use,     */
+/*  copy, modify, merge, publish, distribute, sublicense, and/or     */
+/*  sell copies of this work, and to permit persons to whom this     */
+/*  work is furnished to do so, subject to the following conditions: */
+/*                                                                   */
+/*    1. The code must retain the above copyright notice, this list  */
+/*       of conditions and the following disclaimer.                 */
+/*                                                                   */
+/*    2. Any modifications must be clearly marked as such.           */
+/*                                                                   */    
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSITITUTE OF TECHNOLOGY,  */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSITITUTE OF        */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */ 
+/*  HMGenS.c : generate speech parameters (spectrum and f0 ) from    */
+/*             HMMs based on Maximum Likelihood criterion with       */
+/*             dynamic feature window constraints                    */
+/*                                                                   */
+/*                                   2003/05/09 by Heiga Zen         */
+/*  ---------------------------------------------------------------  */
 
-char *hgens_version = "!HVER!HMGenS:   1.0 [zen 25/12/02]";
-char *hgens_sccs_id = "@(#)HMGenS.c    1.0 25/12/02 JST";
+char *hgens_version = "!HVER!HMGenS:   1.1 [zen 09/05/03]";
+char *hgens_sccs_id = "@(#)HMGenS.c    1.1 09/05/03 JST";
 
 /* ------------------- HMM ToolKit Modules ------------------- */
 
@@ -68,44 +63,45 @@ char *hgens_sccs_id = "@(#)HMGenS.c    1.0 25/12/02 JST";
 
 /* ----------------------- Trace Flags ----------------------- */
 
-#define	T_DUR 0002      /* show duration of each state */
-#define	T_GEN 0004      /* trace parameter generation */
-#define T_DMC 0010      /* show sum mean and sum variance
-                            of duration distribution */
+#define T_DUR 0002      /* show duration of each state    */
+#define T_GEN 0004      /* trace parameter generation     */
+#define T_DMC 0010      /* show sum mean and sum variance */
+                        /* of duration distribution       */
 
 /* ---------------- Global Data Structures --------------------- */
 
-static Source source;      /* the current input file */
-static MemHeap hmmHeap;    /* Heap holds all hmm related info */
-static MemHeap tmpHeap;    /* Heap holds all calcuration info */
+static Source source;          /* the current input file          */
+static MemHeap hmmHeap;        /* Heap holds all hmm related info */
+static MemHeap tmpHeap;        /* Heap holds all calcuration info */
 
-static HMMSet hmset;       /* Set of HMMs */
-static HMMSet dmset;       /* Set of Duration Models */
-static PStream ceppst;       /* PDF Stream for cepstrum */
-static PStream f0pst;       /* PDF Stream for F0 */
+static HMMSet hmset;           /* Set of HMMs             */
+static HMMSet dmset;           /* Set of Duration Models  */
+static PStream ceppst;         /* PDF Stream for cepstrum */
+static PStream f0pst;          /* PDF Stream for F0       */
 
-static Boolean outMean;    /* output mean vector */
-static Boolean outPDF;     /* output pdf */
-static Boolean phnDur;     /* use phoneme duration */
-static float tmpFactor = 0.0; /* control tempo */
-static float frmShift = 50000;     /* frame shift */
+static Boolean outMean;        /* output mean vector          */
+static Boolean outPDF;         /* output pdf                  */
+static Boolean phnDur;         /* use phoneme duration        */
+static float tmpFactor = 0.0;  /* control tempo               */
+static float UVthresh  = 0.5;  /* voiced / unvoiced threshold */
+static float frmShift = 50000; /* frame shift                 */
 
-static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
-static int nParm = 0;               /* total num params */
+static ConfParam *cParm[MAXGLOBS];  /* configuration parameters */
+static int nParm = 0;               /* total num params         */
 
-static char *outDir = NULL;   /* directory to output result */
-static char *labDir = NULL;   /* directory to look for label files */
-static char *labExt = "lab";  /* label file extension */
-static char *hmmExt = NULL;   /* hmm def file extension */
-static char *cepExt = "mcep"; /* mel-cepstrum parameter file extension */
-static char *f0Ext  = "lf0";  /* log F0 parameter file extension */
-static char *durExt = "dur";  /* state duration file extension */
-static char *mcpExt = "mcp";  /* mean of melcep parameter file extension */
-static char *mptExt = "mf0";  /* mean of f0 parameter file extension */
-static char *cpfExt = "pcp";  /* PDF file extension */
-static char *fpfExt = "pf0";  /* PDF file extension */
+static char *outDir = NULL;    /* directory to output result              */
+static char *labDir = NULL;    /* directory to look for label files       */
+static char *labExt = "lab";   /* label file extension                    */
+static char *hmmExt = NULL;    /* hmm def file extension                  */
+static char *cepExt = "mcep";  /* mel-cepstrum parameter file extension   */
+static char *f0Ext  = "lf0";   /* log F0 parameter file extension         */
+static char *durExt = "dur";   /* state duration file extension           */
+static char *mcpExt = "mcp";   /* mean of melcep parameter file extension */
+static char *mptExt = "mf0";   /* mean of f0 parameter file extension     */
+static char *cpfExt = "pcp";   /* PDF file extension                      */
+static char *fpfExt = "pf0";   /* PDF file extension                      */
 
-static int trace = 0;           /* trace level */
+static int trace = 0;          /* trace level */
 static int total_frame = 0;
 
 static Boolean LoadModel = FALSE;
@@ -151,6 +147,7 @@ void ReportUsage(void)
    printf(" -g      use phone duration from label                 off\n");
    printf(" -f f    frame shift [100ns]                           50000\n");
    printf(" -r f    tempo factor( f < 0 : fast   f > 0 : slow )   0.0\n");  
+   printf(" -v f    voiced / unvoiced threshold                   0.5\n");
    PrintStdOpts("Q");
    printf("\n");
    Exit(0);
@@ -190,6 +187,7 @@ int main(int argc,char *argv[])
       case 'm': outMean = TRUE; break;
       case 'f': frmShift = GetChkedFlt(0.0,100000.0,s); break;
       case 'r': tmpFactor = GetChkedFlt(-10.0,10.0,s); break;
+      case 'v': UVthresh  = GetChkedFlt(0.0,1.0,s); break;
       case 'Q': Summary();      break;
       default : HError(9919,"HMGenS: Unknown switch %s",s);
       }
@@ -205,6 +203,9 @@ int main(int argc,char *argv[])
    Initialise();
 
    DoGen(GetStrArg());
+   
+   if (trace)
+      printf("total %d frames generated.\n", total_frame);
 
    ResetHeap(&tmpHeap);
    ResetHeap(&hmmHeap);
@@ -248,7 +249,7 @@ Boolean ChkBoundary(IntVec voiced, int t)
     
    for (i=1;i<f0pst.dw.num;i++)
       for (j=f0pst.dw.width[i][0];j<=f0pst.dw.width[i][1];j++)
-         if ( (f0pst.dw.coef[i][j]!=0.0) && (t+j>0) && (t+j<f0pst.T) && (voiced[t+j]==0) )
+         if ( (f0pst.dw.coef[i][j]!=0.0) && (t+j>0) && (t+j<ceppst.T) && (voiced[t+j]==0) )
             return TRUE;
  
    return FALSE;
@@ -276,9 +277,12 @@ void Generator(char *labfn)
    Label *label;
    HMMDef *hmm,*dmm;
    MLink hmacro,dmacro;
-   Vector f0;
-   SVector zero;
-
+   Vector f0, zero;
+   Boolean bound;
+   
+   if (ceppst.vSize>hmset.swidth[1] || f0pst.vSize>hmset.swidth[0]-1)
+      HError(9999,"Number of delta window is invalid");
+   
    /* open output_files for cepstrum, f0 and duration */
    MakeFN(labfn,outDir,cepExt,cepfn);
    if ((cepfp = fopen(cepfn,"w")) == NULL)
@@ -376,7 +380,9 @@ void Generator(char *labfn)
    
    /* allocate memory for results of voiced/unvoiced judgement */
    voiced = CreateIntVec(&tmpHeap,tframe);
-   f0 = CreateVector(&tmpHeap,tframe);
+   f0     = CreateVector(&tmpHeap,tframe);
+   zero   = CreateVector(&tmpHeap,f0pst.vSize);
+   
    nframe = 1;
    vframe = 0;
 
@@ -391,14 +397,12 @@ void Generator(char *labfn)
       for (j=2;j<=hmm->numStates-1;j++) {
          for (s=1;s<=hmset.swidth[0];s++) {
             if ( NumNonZeroSpace(hmm->svec[j].info->pdf[s].info)>1 )
-               HError(9999, "Generator: More than 2 non-zero order distribution are 
-                             exist at %s.state[%d].stream[%d]", label->labid->name, j, s);
+               HError(9999, "Generator: More than 2 non-zero order distribution are exist at %s.state[%d].stream[%d]", label->labid->name, j, s);
             if (hmm->svec[j].info->pdf[s].info->spdf.cpdf[1].mpdf->ckind==FULLC)
-               HError(9999, "Generator: parameter generation only currently available for 
-                             diagonal covariance matrix");
+               HError(9999, "Generator: parameter generation only currently available for diagonal covariance matrix");
          }
          for (k=1;k<=durseq[i][j];k++) {
-            if (hmm->svec[j].info->pdf[2].info->spdf.cpdf[1].weight>=0.5){
+            if (hmm->svec[j].info->pdf[2].info->spdf.cpdf[1].weight>=UVthresh){
                voiced[nframe++] = 1;
                vframe++;
             }
@@ -415,9 +419,7 @@ void Generator(char *labfn)
 
    InitPStream(&tmpHeap,&ceppst);
    InitPStream(&tmpHeap,&f0pst);
-   zero = CreateSVector(&tmpHeap,f0pst.vSize);
-   for (i=1;i<=f0pst.vSize;i++) zero[i] = INVINF;
-
+   
    for (i=1,t=1,pt=1;i<=labseqlen;i++) {
       label = GetLabN(lablist,i);
       /* find hmm */
@@ -431,14 +433,13 @@ void Generator(char *labfn)
             ceppst.sm.ivseq[t] = hmm->svec[j].info->pdf[1].info->spdf.cpdf[1].mpdf->cov.var;
             /* copy vector for f0 */
             if (voiced[t]) {
+               bound = ChkBoundary(voiced,t);
                f0pst.sm.mseq[pt]  = CreateSVector(&tmpHeap,f0pst.vSize);
                f0pst.sm.ivseq[pt] = CreateSVector(&tmpHeap,f0pst.vSize);
                for (s=1;s<=f0pst.vSize;s++) {
                   f0pst.sm.mseq[pt][s]  = hmm->svec[j].info->pdf[s+1].info->spdf.cpdf[1].mpdf->mean[1];
-                  f0pst.sm.ivseq[pt][s] = hmm->svec[j].info->pdf[s+1].info->spdf.cpdf[1].mpdf->cov.var[1];
+                  f0pst.sm.ivseq[pt][s] = (bound && s!=1) ? 0.0 : hmm->svec[j].info->pdf[s+1].info->spdf.cpdf[1].mpdf->cov.var[1];
                }
-               if ( ChkBoundary(voiced,t) )   /* voiced/unvoiced boundary */
-                  f0pst.sm.ivseq[pt] = zero;
                pt++;
             }
             t++;
