@@ -19,8 +19,8 @@
 /*     File: HBuild.c:  Word-Lattice Building                  */
 /* ----------------------------------------------------------- */
 
-char *hbuild_version = "!HVER!HBuild:   3.2 [CUED 09/12/02]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 1.9 2002/12/19 16:37:40 ge204 Exp $";
+char *hbuild_version = "!HVER!HBuild:   3.2.1 [CUED 15/10/03]";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.

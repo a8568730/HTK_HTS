@@ -19,8 +19,8 @@
 /*         File: HMath.c   Math Support Module                 */
 /* ----------------------------------------------------------- */
 
-char *hmath_version = "!HVER!HMath:   3.2 [CUED 09/12/02]";
-char *hmath_vc_id = "$Id: HMath.c,v 1.8 2002/12/19 16:37:11 ge204 Exp $";
+char *hmath_version = "!HVER!HMath:   3.2.1 [CUED 15/10/03]";
+char *hmath_vc_id = "$Id: HMath.c,v 1.10 2003/10/15 08:10:12 ge204 Exp $";
 
 /*
    This library provides math support in the following three areas
@@ -682,7 +682,7 @@ void LinTranQuaProd(Matrix Prod, Matrix A, Matrix C)
 #define MACHEPS 2.22045e-16
 #define FZERO 1.0e-6
 #define sgn(x)  ((x) >= 0 ? 1 : -1)
-#define min(a,b) ((a) > (b) ? (b) : (a))
+#define minab(a,b) ((a) > (b) ? (b) : (a))
 #define MAX_STACK       100
 
 /* Givens -- returns c,s parameters for Givens rotation to
@@ -1132,7 +1132,7 @@ static void InitIdentity(DMatrix A)
    int     i, size;
   
    ZeroDMatrix(A);
-   size = min(NumDRows(A), DVectorSize(A[1]));
+   size = minab(NumDRows(A), DVectorSize(A[1]));
    for ( i = 1; i <= size; i++ )
       A[i][i] = 1.0;
 }
@@ -1178,7 +1178,7 @@ void InvSVD(DMatrix A, DMatrix U, DVector W, DMatrix V, DMatrix Result)
 {
    int m, n, i, j, k;
    double wmax, wmin;
-   Boolean small = FALSE;
+   Boolean isSmall = FALSE;
    DMatrix tmp1;
 
    m = NumDRows(U);
@@ -1206,9 +1206,9 @@ void InvSVD(DMatrix A, DMatrix U, DVector W, DMatrix V, DMatrix Result)
             fflush(stdout);
          }
          W[k] = 0.0;
-         small = TRUE;
+         isSmall = TRUE;
       }
-   if (trace>0 && small) {
+   if (trace>0 && isSmall) {
       printf("\n"); 
       fflush(stdout);
    }

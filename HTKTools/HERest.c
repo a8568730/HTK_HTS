@@ -32,8 +32,8 @@
 /*         File: HERest.c: Embedded B-W ReEstimation           */
 /* ----------------------------------------------------------- */
 
-char *herest_version = "!HVER!HERest:   3.2 [CUED 09/12/02]";
-char *herest_vc_id = "$Id: HERest.c,v 1.10 2002/12/19 16:37:40 ge204 Exp $";
+char *herest_version = "!HVER!HERest:   3.2.1 [CUED 15/10/03]";
+char *herest_vc_id = "$Id: HERest.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -1082,8 +1082,8 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
       if (parMode == 0){
          SetChannel("HPARM2");
          nParm = GetConfig("HPARM2", TRUE, cParm, MAXGLOBS);
-         GetConfStr(cParm,nParm,"TARGETKIND",str);
-         hset->pkind = Str2ParmKind(str);
+         if (GetConfStr(cParm,nParm,"TARGETKIND",str))
+            hset->pkind = Str2ParmKind(str);
       }else{
          GetBufferInfo(pbuf2,&info2);
          hset->pkind = info2.tgtPK;

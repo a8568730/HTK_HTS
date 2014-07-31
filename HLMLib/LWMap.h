@@ -29,7 +29,7 @@
 /*      File: LWMap:  Word List and Word Map Routines          */
 /* ----------------------------------------------------------- */
 
-/* !HVER!lwmap:   3.2 [CUED 09/12/02] */
+/* !HVER!lwmap:   3.2.1 [CUED 15/10/03] */
 
 
 #ifndef _LWMAP_H

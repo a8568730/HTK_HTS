@@ -32,7 +32,7 @@
 /*         File: HNet.h  Network and Lattice Functions         */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HNET:   3.2 [CUED 09/12/02] */
+/* !HVER!HNET:   3.2.1 [CUED 15/10/03] */
 
 /*
    Nets come in two forms.

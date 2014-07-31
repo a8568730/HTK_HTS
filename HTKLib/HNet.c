@@ -32,8 +32,8 @@
 /*         File: HNet.c  Network and Lattice Functions         */
 /* ----------------------------------------------------------- */
 
-char *hnet_version = "!HVER!HNet:   3.2 [CUED 09/12/02]";
-char *hnet_vc_id = "$Id: HNet.c,v 1.14 2002/12/19 16:37:11 ge204 Exp $";
+char *hnet_version = "!HVER!HNet:   3.2.1 [CUED 15/10/03]";
+char *hnet_vc_id = "$Id: HNet.c,v 1.15 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

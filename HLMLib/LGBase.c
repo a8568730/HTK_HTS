@@ -29,8 +29,8 @@
 /*         File: LGBase: Gram File Database Routines           */
 /* ----------------------------------------------------------- */
 
-char *lgbase_version = "!HVER!LGBase:   3.2 [CUED 09/12/02]";
-char *lgbase_vc_id = "$Id: LGBase.c,v 1.1 2002/12/19 16:35:33 ge204 Exp $";
+char *lgbase_version = "!HVER!LGBase:   3.2.1 [CUED 15/10/03]";
+char *lgbase_vc_id = "$Id: LGBase.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -165,7 +165,7 @@ static void ReadHGram(char *name, LMFileHdr hdr, int N, LabId *ng, char *fn)
       HError(15350,"ReadHGram: No %s field in %s",name,fn);
    strcpy(sbuf,s);
    for (i=0; i<N; i++){
-      s = strtok((i==0)?sbuf:NULL," \t\r\n:");
+      s = strtok((i==0)?sbuf:NULL," \t\r\n");
       if (s==NULL)
 	 HError(15350,"ReadHGram: Missing Sep in %s in %s",name,fn);
       ng[i] = GetLabId(s,TRUE);
@@ -721,6 +721,8 @@ void OpenInputSet(NGInputSet *inset)
       ShowInputSetTree(inset);
    /* open all root file's offspring */
    for (p=inset->head.next; p!=NULL; p=p->alt,inset->nOpen++){
+      if(inset->nOpen >= MAXINF)
+         HError(15390,"OpenInputSet: max number of input gram files %d exceeded", MAXINF);
       OpenNGramFile(&(inset->ngs[inset->nOpen]),p->fn,inset->wm);
       inset->gf[inset->nOpen] = p;
       inset->gfsort[inset->nOpen] = inset->nOpen;

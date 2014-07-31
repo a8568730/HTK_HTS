@@ -32,8 +32,8 @@
 /*      File: HVite.c: recognise or align file or audio        */
 /* ----------------------------------------------------------- */
 
-char *hvite_version = "!HVER!HVite:   3.2 [CUED 09/12/02]";
-char *hvite_vc_id = "$Id: HVite.c,v 1.12 2002/12/19 16:37:40 ge204 Exp $";
+char *hvite_version = "!HVER!HVite:   3.2.1 [CUED 15/10/03]";
+char *hvite_vc_id = "$Id: HVite.c,v 1.13 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

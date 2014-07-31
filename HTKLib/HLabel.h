@@ -19,7 +19,7 @@
 /*         File: HLabel.h:   Speech Label File Input           */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HLabel:   3.2 [CUED 09/12/02] */
+/* !HVER!HLabel:   3.2.1 [CUED 15/10/03] */
 
 
 /* 

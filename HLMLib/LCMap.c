@@ -29,8 +29,8 @@
 /*      File: LCMap:  Class Map Routines                       */
 /* ----------------------------------------------------------- */
 
-char *lcmap_version = "!HVER!LCMap:   3.2 [CUED 09/12/02]";
-char *lcmap_vc_id = "$Id: LCMap.c,v 1.1 2002/12/19 16:35:33 ge204 Exp $";
+char *lcmap_version = "!HVER!LCMap:   3.2.1 [CUED 15/10/03]";
+char *lcmap_vc_id = "$Id: LCMap.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -150,6 +150,10 @@ static void SetClassWords(ClassEntry *ce, WordMap *wmap, int nItem, LabId *cword
       for (i=0; i<nItem; i++) {
 	 id = cword[i];
 	 me = (MapEntry *)id->aux;
+         if((void*)ce == (void*)me){
+            HError(15058, "SetClassWords: word %s cannot be in the list of words excluded from class %s",
+                   id->name, ce->id->name);
+         }
 	 if (!me) {
 	    if (trace&T_TOP) {
 	       printf("  Adding word %-12s from class %s to map\n",

@@ -32,8 +32,8 @@
 /*  File: HCompV.c: HMM global mean/variance initialisation    */
 /* ----------------------------------------------------------- */
 
-char *hcompv_version = "!HVER!HCompV:   3.2 [CUED 09/12/02]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.11 2002/12/19 16:37:40 ge204 Exp $";
+char *hcompv_version = "!HVER!HCompV:   3.2.1 [CUED 15/10/03]";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
 
 
 /* 

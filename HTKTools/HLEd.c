@@ -19,8 +19,8 @@
 /*      File: HLEd.c: Edit label file(s)                       */
 /* ----------------------------------------------------------- */
 
-char *hled_version = "!HVER!HLEd:   3.2 [CUED 09/12/02]";
-char *hled_vc_id = "$Id: HLEd.c,v 1.8 2002/12/19 16:37:40 ge204 Exp $";
+char *hled_version = "!HVER!HLEd:   3.2.1 [CUED 15/10/03]";
+char *hled_vc_id = "$Id: HLEd.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -66,7 +66,7 @@ static char * newExt    = "lab";    /* dest label file extension */
 
 typedef enum { 
    NOCMD=0, 
-   REPLACE, CHANGE, FIND,   MERGE,  DELETE, DEFCON, TRIST,  
+   REPLACE, CHANGE, FIND,   MERGE,  EDOP_DELETE, DEFCON, TRIST,  
    SBDEF,   EXPAND, IFILL,  SORT,   WBDEF,  VBDEF,  LCTXT,  
    RCTXT,   TCTXT,  SETLEV, DELLEV, SPLLEV, ISIL,
    LASTCMD
@@ -510,7 +510,7 @@ void PrintScript(char *scriptFN)
       case SORT:
          printf("Sort\n"); 
          break;
-      case DELETE:
+      case EDOP_DELETE:
          printf("Delete  ["); PrintIdList(i->cmd.args); printf(" ]\n");
          break;
       case REPLACE:
@@ -689,7 +689,7 @@ void ReadScript(char *scriptFn)
       i = (ScriptItem *)New(&permHeap,sizeof(ScriptItem));
       i->cmd.op = op;
       switch (op) {
-      case DELETE:
+      case EDOP_DELETE:
       case REPLACE:
       case MERGE:
          i->cmd.nArgs = ReadIdList(&src,i->cmd.args);
@@ -1422,7 +1422,7 @@ void EditFile(char *labfn)
                c += DoRCtxt(ll,i->cmd.nArgs,i->cmd.args); break;
             case TCTXT:
                c += DoTCtxt(ll,i->cmd.nArgs,i->cmd.args); break;
-            case DELETE:
+            case EDOP_DELETE:
                d += DeleteOp(ll,i->cmd.args); break;
             case DELLEV:
                if (i->cmd.nArgs==1)

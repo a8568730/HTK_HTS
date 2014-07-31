@@ -1,3 +1,25 @@
+2003-10-14  Anna Langley <jal58@eng.cam.ac.uk>
+
+	* htk_htktools_nt.mkf: Use backslashes in pathnames.
+
+2003-10-14  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HLEd.c: Rename DELETE as Visual C++ doen't seem to like it.
+
+2003-09-10  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+        * HHEd.c (ParseAlpha): Fix parsing of octal charcter codes.
+        From Tanel Alumäe <tanel.alumae@aqris.com>
+
+2003-07-28  Anna Langley <jal58@eng.cam.ac.uk>
+        * htk_htktools_nt.mkf: was not building HLRescore, applied changes
+        supplied by Arlindo Veiga which corrects this.
+        
+2003-07-24  M. J. F. Gales  <mjfg@eng.cam.ac.uk>
+ 
+ 	* HERest.c: clarify the single pass retraining when 
+ 	the TARGETKIND does not change.
+ 
 2002-12-19  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
 	* *.[hc]: Bump version to 3.2.

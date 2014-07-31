@@ -32,8 +32,8 @@
 /*         File: HModel.c  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
-char *hmodel_version = "!HVER!HModel:   3.2 [CUED 09/12/02]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
+char *hmodel_version = "!HVER!HModel:   3.2.1 [CUED 15/10/03]";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.13 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -329,6 +329,20 @@ static ReturnStatus CheckTMRecs(HMMSet *hset)
    return(SUCCESS);
 }
 
+/* CheckDiscrete: check discrete HMM Set */
+static ReturnStatus CheckDiscrete(HMMSet *hset)
+{
+   int s;
+
+   for (s=1;s<=hset->swidth[0]; s++){
+      if (hset->swidth[s] != 1) {
+         HRError(7030,"CheckDiscrete: stream width not equal to 1 in discrete stream %d ",s);
+         return(FAIL);
+      }
+   }
+   return (SUCCESS);
+}
+
 /* CheckHSet: check the consistency of a complete HMM Set */
 static ReturnStatus CheckHSet(HMMSet *hset)
 {
@@ -342,6 +356,9 @@ static ReturnStatus CheckHSet(HMMSet *hset)
                return(FAIL);
    if ((hset->hsKind == TIEDHS) && (CheckTMRecs(hset)<SUCCESS))
       return(FAIL);
+   if ((hset->hsKind == DISCRETEHS) && (CheckDiscrete(hset)<SUCCESS))
+      return(FAIL);
+
    ClearSeenFlags(hset,CLR_ALL);
    return(SUCCESS);
 
@@ -3392,23 +3409,25 @@ void SetCovKindUsage (HMMSet *hset)
    for (ck = 0; ck < NUMCKIND; ck++)
       hset->ckUsage[ck] =0;
 
-   NewHMMScan(hset,&hss);
-   while(GoNextMix(&hss,FALSE))
-      ++hset->ckUsage[hss.mp->ckind];
-   EndHMMScan(&hss);
+   if (hset->hsKind == PLAINHS || hset->hsKind == SHAREDHS) {
+      NewHMMScan(hset,&hss);
+      while(GoNextMix(&hss,FALSE))
+         ++hset->ckUsage[hss.mp->ckind];
+      EndHMMScan(&hss);
 
-   /* set global covKind if currently unset (i.e. NULLC) */
-   if (hset->ckind == NULLC) {
-      CovKind lastSeenCK;
-      int nCK = 0;
+      /* set global covKind if currently unset (i.e. NULLC) */
+      if (hset->ckind == NULLC) {
+         CovKind lastSeenCK;
+         int nCK = 0;
 
-      for (ck = 0; ck < NUMCKIND; ck++)
-         if (hset->ckUsage[ck] > 0) {
-            ++nCK;
-            lastSeenCK = ck;
-         }
-      if (nCK == 1)
-         hset->ckind = lastSeenCK;
+         for (ck = 0; ck < NUMCKIND; ck++)
+            if (hset->ckUsage[ck] > 0) {
+               ++nCK;
+               lastSeenCK = ck;
+            }
+         if (nCK == 1)
+            hset->ckind = lastSeenCK;
+      }
    }
 }
 

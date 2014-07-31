@@ -32,8 +32,8 @@
 /*         File: HUtil.c      HMM utility routines             */
 /* ----------------------------------------------------------- */
 
-char *hutil_version = "!HVER!HUtil:   3.2 [CUED 09/12/02]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.9 2002/12/19 16:37:11 ge204 Exp $";
+char *hutil_version = "!HVER!HUtil:   3.2.1 [CUED 15/10/03]";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

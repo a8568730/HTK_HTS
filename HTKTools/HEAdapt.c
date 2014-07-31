@@ -32,8 +32,8 @@
 /*             File: HEAdapt.c: Adaptation Tool                */
 /* ----------------------------------------------------------- */
 
-char *headapt_version = "!HVER!HEAdapt:   3.2 [CUED 09/12/02]";
-char *headapt_vc_id = "$Id: HEAdapt.c,v 1.10 2002/12/19 16:37:40 ge204 Exp $";
+char *headapt_version = "!HVER!HEAdapt:   3.2.1 [CUED 15/10/03]";
+char *headapt_vc_id = "$Id: HEAdapt.c,v 1.11 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"

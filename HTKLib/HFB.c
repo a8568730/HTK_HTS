@@ -32,8 +32,8 @@
 /*         File: HFB.c: Forward Backward routines module       */
 /* ----------------------------------------------------------- */
 
-char *hfb_version = "!HVER!HFB:   3.2 [CUED 09/12/02]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
+char *hfb_version = "!HVER!HFB:   3.2.1 [CUED 15/10/03]";
+char *hfb_vc_id = "$Id: HFB.c,v 1.11 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"

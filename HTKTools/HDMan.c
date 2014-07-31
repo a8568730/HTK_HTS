@@ -32,8 +32,8 @@
 /*    File: HDMan:   pronunciation dictionary manager          */
 /* ----------------------------------------------------------- */
 
-char *hdman_version = "!HVER!HDMan:   3.2 [CUED 09/12/02]";
-char *hdman_vc_id = "$Id: HDMan.c,v 1.12 2002/12/19 16:37:40 ge204 Exp $";
+char *hdman_version = "!HVER!HDMan:   3.2.1 [CUED 15/10/03]";
+char *hdman_vc_id = "$Id: HDMan.c,v 1.13 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

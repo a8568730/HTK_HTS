@@ -1,5 +1,8 @@
 2002-12-19  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
+	* train.tex: Mention strctural constraints for 2-model
+	re-estimation model sets.
+
 	* speechio.tex: Document _T qualifier.
 
 	* models.tex: Document input linear transforms.

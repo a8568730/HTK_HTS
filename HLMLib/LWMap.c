@@ -29,8 +29,8 @@
 /*      File: LWMap:  Word List and Word Map Routines          */
 /* ----------------------------------------------------------- */
 
-char *lwmap_version = "!HVER!LWMap:   3.2 [CUED 09/12/02]";
-char *lwmap_vc_id = "$Id: LWMap.c,v 1.1 2002/12/19 16:35:33 ge204 Exp $";
+char *lwmap_version = "!HVER!LWMap:   3.2.1 [CUED 15/10/03]";
+char *lwmap_vc_id = "$Id: LWMap.c,v 1.2 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

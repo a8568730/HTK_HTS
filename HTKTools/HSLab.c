@@ -32,8 +32,8 @@
 /*         File: HSLab.c:   The Speech Label Editor            */
 /* ----------------------------------------------------------- */
 
-char *hslab_version = "!HVER!HSLab:   3.2 [CUED 09/12/02]";
-char *hslab_vc_id = "$Id: HSLab.c,v 1.9 2002/12/19 16:37:40 ge204 Exp $";
+char *hslab_version = "!HVER!HSLab:   3.2.1 [CUED 15/10/03]";
+char *hslab_vc_id = "$Id: HSLab.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
 
 /* 
    --------------------------------------------------------------

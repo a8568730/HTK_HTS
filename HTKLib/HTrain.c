@@ -32,8 +32,8 @@
 /*         File: HTrain.c   HMM Training Support Routines      */
 /* ----------------------------------------------------------- */
 
-char *htrain_version = "!HVER!HTrain:   3.2 [CUED 09/12/02]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.8 2002/12/19 16:37:11 ge204 Exp $";
+char *htrain_version = "!HVER!HTrain:   3.2.1 [CUED 15/10/03]";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

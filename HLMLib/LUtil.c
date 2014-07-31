@@ -29,8 +29,8 @@
 /*      File: LUtil:    General Utility Routines               */
 /* ----------------------------------------------------------- */
 
-char *lutil_version = "!HVER!LUtil:   3.2 [CUED 09/12/02]";
-char *lutil_vc_id = "$Id: LUtil.c,v 1.1 2002/12/19 16:35:33 ge204 Exp $";
+char *lutil_version = "!HVER!LUtil:   3.2.1 [CUED 15/10/03]";
+char *lutil_vc_id = "$Id: LUtil.c,v 1.2 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

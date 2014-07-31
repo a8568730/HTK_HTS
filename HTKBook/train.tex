@@ -730,8 +730,9 @@ parameter estimates, prior to clustering.  This can be ameliorated by
 the use of well-trained \textit{alignment models} for computing the
 forward-backward probabilities. In the maximisation stage of the
 Baum-Welch algorithm the state level posteriors are used to
-re-restimate the parameters of the \textit{update model set}. Note
-that
+re-restimate the parameters of the \textit{update model set}. Note that
+the corresponding models in the two sets must have the same number of
+states.
 
 As an example, suppose that we would like to update a set of cloned
 single Gaussian monophone models in {\tt dir1/hmacs} using the well

@@ -32,7 +32,7 @@
 /*         File: HModel.h  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HModel:   3.2 [CUED 09/12/02] */
+/* !HVER!HModel:   3.2.1 [CUED 15/10/03] */
 
 #ifndef _HMODEL_H_
 #define _HMODEL_H_
@@ -60,6 +60,10 @@ extern "C" {
 #define MixLogWeight(hset,weight) (weight<MINMIX ? LZERO : log(weight))
 #define MixFloor(hset)            ( MINMIX )
 
+
+#ifdef WIN32
+#define XFORM HTK_XFORM
+#endif
 
 /* ------------------ Master Model File Info ----------------- */
 

@@ -29,8 +29,8 @@
 /*   File: HLMCopy.c  LM conversion/normalisation utility      */
 /* ----------------------------------------------------------- */
 
-char *prog_version = "!HVER!HLMCopy:   3.2 [CUED 09/12/02]";
-char *prog_vc_id = "$Id: HLMCopy.c,v 1.1 2002/12/19 16:36:27 ge204 Exp $";
+char *prog_version = "!HVER!HLMCopy:   3.2.1 [CUED 15/10/03]";
+char *prog_vc_id = "$Id: HLMCopy.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 
    if (!InfoPrinted() && NumArgs() == 0)
       ReportUsage();
-   if (NumArgs() == 0) return EXIT_SUCCESS;
+   if (NumArgs() == 0) Exit(EXIT_SUCCESS);
 
    SetConfParms();
 
@@ -277,7 +277,8 @@ int main(int argc, char *argv[])
       MakeDictionary(outDictFn,dList,voc);
    }
 
-   return EXIT_SUCCESS;
+   Exit(EXIT_SUCCESS);
+   return EXIT_SUCCESS; /* never reached -- make compiler happy */
 }   
 
 /* ReplaceUnigrams: replace unigrams in lm with ones from fn */

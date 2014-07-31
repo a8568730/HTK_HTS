@@ -32,7 +32,7 @@
 /*         File: HShell.h:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HShell:   3.2 [CUED 09/12/02] */
+/* !HVER!HShell:   3.2.1 [CUED 15/10/03] */
 
 #ifndef _HSHELL_H_
 #define _HSHELL_H_
@@ -44,8 +44,12 @@
 #include <ctype.h>
 #include <math.h>
 #include <limits.h>
+#ifdef WIN32 /* WIN32 modification */
 #include <time.h>
+#include <Winsock2.h>
+#else
 #include <sys/time.h>
+#endif
 #include <errno.h>
 #include <signal.h>
 #include <assert.h>
@@ -60,6 +64,7 @@ extern "C" {
 
 #ifdef UNIX
 #include <unistd.h>
+#include <time.h>
 #endif
 
 
@@ -85,13 +90,7 @@ typedef int int32;
 typedef enum {FAIL=-1, SUCCESS=0} ReturnStatus;
 
 /* Boolean type definition */
-#ifdef __cplusplus
-typedef bool Boolean;
-const Boolean FALSE=false;
-const Boolean TRUE=true;
-#else
 typedef enum {FALSE=0, TRUE=1} Boolean;
-#endif
 
 typedef double HTime;      /* time in 100ns units */
 
@@ -541,21 +540,19 @@ char *RetrieveCommandLine(void);
 
 
 /* ----------------------- Timing functions for diagnostics ----------- */
-
+#ifndef WIN32
 typedef struct TimeStruct_s {
    char timestr[50];
    struct timeval time;
    clock_t clock_time;
 } TimeStruct;
 
-
 void SetTime(TimeStruct *t);
 
 char *GiveTime(TimeStruct *t);  /* Gives CPU and clock time elapsed in seconds
                                    since SetTime was called on t,
                                    in format "?.????/clock ?.????" . */
-
-
+#endif  /* WIN32 */
 #endif  /* _HSHELL_H_ */
 
 /* ----------------------- End of HShell.h --------------------------- */

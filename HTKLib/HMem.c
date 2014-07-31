@@ -19,8 +19,8 @@
 /*         File: HMem.c:   Memory Management Module            */
 /* ----------------------------------------------------------- */
 
-char *hmem_version = "!HVER!HMem:   3.2 [CUED 09/12/02]";
-char *hmem_vc_id = "$Id: HMem.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
+char *hmem_version = "!HVER!HMem:   3.2.1 [CUED 15/10/03]";
+char *hmem_vc_id = "$Id: HMem.c,v 1.11 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

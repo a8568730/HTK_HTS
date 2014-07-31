@@ -32,8 +32,8 @@
 /*         File: HHEd:  HMM Source Definition Editor           */
 /* ----------------------------------------------------------- */
 
-char *hhed_version = "!HVER!HHEd:   3.2 [CUED 09/12/02]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.12 2002/12/19 16:37:40 ge204 Exp $";
+char *hhed_version = "!HVER!HHEd:   3.2.1 [CUED 15/10/03]";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.14 2003/10/15 08:10:13 ge204 Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -386,9 +386,10 @@ char *ParseAlpha(char *src, char *s)
       if (*src==ESCAPE_CHAR) {
          src++;
          if (src[0]>='0' && src[1]>='0' && src[2]>='0' &&
-             src[0]<='7' && src[1]<='7' && src[2]<='7')
+             src[0]<='7' && src[1]<='7' && src[2]<='7') {
             c = 64*(src[0] - '0') + 8*(src[1] - '0') + (src[2] - '0');
-         else
+            src+=2;
+         } else
             c = *src;
       }
       else c = *src;
