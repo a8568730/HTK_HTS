@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,7 +75,7 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HVite.c modified for HTS-1.1 2003/05/09 by Heiga Zen         */
+/*      HVite.c modified for HTS-1.1b 2003/06/07 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
 
@@ -223,7 +223,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.0\n");
+   printf("\nModified for HTS ver.1.1b\n");
    printf("\nUSAGE: HVite [options] VocabFile HMMList DataFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -a      align from label files               off\n");

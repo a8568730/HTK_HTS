@@ -1,5 +1,5 @@
 /*  ---------------------------------------------------------------  */
-/*      The HMM-Based Speech Synthesis System (HTS): version 1.1     */
+/*      The HMM-Based Speech Synthesis System (HTS): version 1.1b    */
 /*                        HTS Working Group                          */
 /*                                                                   */
 /*                   Department of Computer Science                  */
@@ -39,7 +39,7 @@
 /*              Maximum Likelihood criterion with dynamic feature    */
 /*              window constraints                                   */
 /*                                                                   */
-/*                                    2003/05/09 by Heiga Zen        */
+/*                                    2003/06/07 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
 #define	WLEFT    0

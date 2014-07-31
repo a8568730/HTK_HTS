@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,7 +75,7 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HInit.c modified for HTS-1.1 2003/05/09 by Heiga Zen         */
+/*      HInit.c modified for HTS-1.1b 2003/06/07 by Heiga Zen         */
 /*  ---------------------------------------------------------------  */
 
 
@@ -180,7 +180,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.0\n");
+   printf("\nModified for HTS ver.1.1b\n");
    printf("\nUSAGE: HInit [options] hmmFile trainFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -e f    Set convergence factor epsilon       1.0E-4\n");
@@ -539,11 +539,11 @@ Sequence *** CreateSeqMat(void)
       seqMat[i] = (Sequence**)New(&gstack, nStreams*sizeof(Sequence*));
       --seqMat[i];
       for (j=1; j<=nStreams; j++ ){
-	 nKindS = msdInfo[i][j]->nKindS;
-	 seqMat[i][j] = (Sequence*)New(&gstack, nKindS*sizeof(Sequence));
-	 --seqMat[i][j];
-	 for(k=1; k<=nKindS; k++)
-	    seqMat[i][j][k] = CreateSequence(&sequenceStack, 100);
+         nKindS = msdInfo[i][j]->nKindS;
+         seqMat[i][j] = (Sequence*)New(&gstack, nKindS*sizeof(Sequence));
+         --seqMat[i][j];
+         for(k=1; k<=nKindS; k++)
+            seqMat[i][j][k] = CreateSequence(&sequenceStack, 100);
       }
    }
    return seqMat;
@@ -581,24 +581,23 @@ void UCollectData(Sequence ***seqMat)
       segLen=SegLength(segStore,i);
       obsPerState=((float) segLen)/((float) (nStates-2));
       if (obsPerState < 1.0)
-	 HError(2122,"UCollectData: segment too short[%d]",segLen);
+         HError(2122,"UCollectData: segment too short[%d]",segLen);
       for (j=1;j<=segLen;j++){
-	 obs = GetSegObs(segStore,i,j);
-	 n = (int)(((float)(j-1)/obsPerState)+2);
-	 for (s=1; s<=nStreams; s++){
-	    if (hset.hsKind==DISCRETEHS){
-	       p = (Ptr)((int)obs.vq[s]);
-	       StoreItem(seqMat[n][s][1],p);
-	    } else if(hset.msdflag[s]){
-	       order = SpaceOrder(obs.fv[s]);
-	       if((k = IncludeSpace(msdInfo[n][s],order)))
-		  StoreItem(seqMat[n][s][k],obs.fv[s]);
-	       else if(!ignOutVec)
-		  HError(2122,"UCollectData: no space corresponded to order[%d]",
-			 order);
-	    } else
-	       StoreItem(seqMat[n][s][1],obs.fv[s]);
-	 }
+         obs = GetSegObs(segStore,i,j);
+         n = (int)(((float)(j-1)/obsPerState)+2);
+         for (s=1; s<=nStreams; s++){
+            if (hset.hsKind==DISCRETEHS){
+               p = (Ptr)((int)obs.vq[s]);
+               StoreItem(seqMat[n][s][1],p);
+            } else if(hset.msdflag[s]){
+               order = SpaceOrder(obs.fv[s]);
+               if ((k = IncludeSpace(msdInfo[n][s],order)))
+                  StoreItem(seqMat[n][s][k],obs.fv[s]);
+               else if(!ignOutVec)
+                  HError(2122,"UCollectData: no space corresponded to order[%d]",order);
+            } else
+               StoreItem(seqMat[n][s][1],obs.fv[s]);
+         }    
       }
    }
 }
@@ -652,7 +651,7 @@ void UniformSegment(void)
             for(k=1,si=msdInfo[n][s]->next; k<=msdInfo[n][s]->nKindS; k++,si=si->next){
                seq = seqMat[n][s][k];
                if(seq->nItems == 0){
-		  for (m=1; m<=si->count; m++)
+                  for (m=1; m<=si->count; m++)
                      if (uFlags&UPMIXES)
                         sti->spdf.cpdf[si->sindex[m]].weight = 0;
                } else {
@@ -671,7 +670,7 @@ void UniformSegment(void)
                      if (uFlags&UPVARS){
                         switch(ck){
                         case DIAGC:
-			  for (j=1; j<=size; j++){
+                           for (j=1; j<=size; j++){
                               z= c->cov.var[j];
                               mp->cov.var[j] = (z<floor[j])?floor[j]:z;
                            }
@@ -847,7 +846,7 @@ void FindBestMixes(int segNum, int segLen, IntVec states, IntVec *mixes)
       if (hset.hsKind == TIEDHS)
          PrecomputeTMix(&hset, &obs, 0.0, 1);
       for (s=1; s<=nStreams; s++,ste++){
-	 sti = ste->info;
+         sti = ste->info;
          if (hset.hsKind != TIEDHS)
             M = sti->nMix;
          smix = mixes[s];
@@ -857,7 +856,7 @@ void FindBestMixes(int segNum, int segLen, IntVec states, IntVec *mixes)
             bestm = 1;   
          else{
             v = obs.fv[s];
-	    /* printf("segNum = %d   pos = %d   vector = %f\n",segNum,i,v[1]); */ 
+            /* printf("segNum = %d   pos = %d   vector = %f\n",segNum,i,v[1]); */ 
             bestP = LZERO; bestm=0;
             if (trace&T_MIX)
                printf("  seg %d, stream %d: ",i,s);
@@ -998,7 +997,7 @@ void UpdateCounts(int segNum, int segLen, IntVec states,IntVec *mixes)
             PrecomputeTMix(&hset, &obs, 50.0, 0);         
          ste = hmmLink->svec[state].info->pdf+1;
          for (s=1; s<=nStreams; s++,ste++){
-	    sti = ste->info;
+            sti = ste->info;
             if (hset.hsKind==DISCRETEHS){
                m = obs.vq[s]; v = NULL;
             } else {
@@ -1041,11 +1040,11 @@ void UpdateCounts(int segNum, int segLen, IntVec states,IntVec *mixes)
             ma = (MuAcc *)GetHook(mp->mean);
             va = (VaAcc *)GetHook(mp->cov.var);
             ma->occ += 1.0; va->occ += 1.0;
-	    size = VectorSize(mp->mean);
+            size = VectorSize(mp->mean);
             for (j=1; j<=size; j++) {
                x = v[j] - mp->mean[j];
-	       /* if (s==2)
-		  printf("segLen = %d  vec = %d  difference = %f \n",i,j,x); */
+               /* if (s==2)
+               printf("segLen = %d  vec = %d  difference = %f \n",i,j,x); */
                ma->mu[j] += x;
                if (uFlags&UPVARS)
                   switch(mp->ckind){
@@ -1241,11 +1240,11 @@ void UpdateParameters(void)
             }
             if (hss.isCont && (uFlags&(UPMEANS|UPVARS)))/*PLAINHS or SHAREDHS*/
                while (GoNextMix(&hss,TRUE)) {
-		  size = VectorSize(hss.mp->mean);
+                  size = VectorSize(hss.mp->mean);
                   if (!IsSeenV(hss.mp->mean)) {
                      ma = (MuAcc *)GetHook(hss.mp->mean);
-		     if (ma->occ!=0.0)
-		        UpMeans(hss.i,hss.s,hss.m,size,ma,hss.mp->mean);
+                     if (ma->occ!=0.0)
+                        UpMeans(hss.i,hss.s,hss.m,size,ma,hss.mp->mean);
                      /* NB old mean left in ma->mu */
                      TouchV(hss.mp->mean);
                   }
@@ -1253,9 +1252,8 @@ void UpdateParameters(void)
                      if (uFlags&UPVARS) {
                         va = (VaAcc *)GetHook(hss.mp->cov.var);
                         shared = GetUse(hss.mp->cov.var) > 1;
-			if (va->occ!=0.0)
-			   UpVars(hss.i,hss.s,hss.m,size,va,ma->mu,hss.mp->mean,
-				  shared,hss.mp);
+                        if (va->occ!=0.0)
+                           UpVars(hss.i,hss.s,hss.m,size,va,ma->mu,hss.mp->mean,shared,hss.mp);
                      }
                      TouchV(hss.mp->cov.var);
                   }
@@ -1312,8 +1310,7 @@ void EstimateModel(void)
       for (newP=0.0,i=1;i<=numSegs;i++) {
          segLen = SegLength(segStore,i);
          states = CreateIntVec(&gstack,segLen);
-         mixes  = (hset.hsKind==DISCRETEHS)?NULL:
-	    CreateMixes(&gstack,segLen);
+         mixes  = (hset.hsKind==DISCRETEHS)? NULL : CreateMixes(&gstack,segLen);
          newP += ViterbiAlign(i,segLen,states,mixes);
          if (trace&T_ALN) ShowAlignment(i,segLen,states,mixes);
          UpdateCounts(i,segLen,states,mixes);

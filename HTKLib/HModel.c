@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,7 +75,7 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */ 
-/*      HModel.c modified for HTS-1.1 2003/05/09 by Heiga Zen        */
+/*      HModel.c modified for HTS-1.1b 2003/06/07 by Heiga Zen       */
 /*  ---------------------------------------------------------------  */
 
 char *hmodel_version = "!HVER!HModel:   3.2 [CUED 09/12/02]";
@@ -4932,46 +4932,45 @@ MSDInfo *** CreateMSDInfo(MemHeap *mem, HLink hmm)
    msdInfo = (MSDInfo***)New(mem, (hmm->numStates-2)*sizeof(MSDInfo**));
    msdInfo -= 2;
    for(i=2; i<hmm->numStates; i++){
-     nStream = hmm->owner->swidth[0];
-     msdInfo[i] = (MSDInfo**)New(mem, nStream*sizeof(MSDInfo *));
-     --msdInfo[i];
-     for(j=1; j<=nStream; j++){
-       msdInfo[i][j] = (MSDInfo*)New(mem, sizeof(MSDInfo));
-       ste = hmm->svec[i].info->pdf+j;
-       sti = ste->info;
+      nStream = hmm->owner->swidth[0];
+      msdInfo[i] = (MSDInfo**)New(mem, nStream*sizeof(MSDInfo *));
+      --msdInfo[i];
+      for(j=1; j<=nStream; j++){
+         msdInfo[i][j] = (MSDInfo*)New(mem, sizeof(MSDInfo));
+         ste = hmm->svec[i].info->pdf+j;
+         sti = ste->info;
        
-       sorder = CreateIntVec(mem, sti->nMix);
+         sorder = CreateIntVec(mem, sti->nMix);
        
-       msdInfo[i][j]->nSpace = sti->nMix;
-       msdInfo[i][j]->nKindS = 0;
-       msdInfo[i][j]->sorder = sorder;
-       msdInfo[i][j]->next   = NULL;
+         msdInfo[i][j]->nSpace = sti->nMix;
+         msdInfo[i][j]->nKindS = 0;
+         msdInfo[i][j]->sorder = sorder;
+         msdInfo[i][j]->next   = NULL;
        
-       for(k=1; k<=sti->nMix; k++){
-	 sorder[k] = VectorSize(sti->spdf.cpdf[k].mpdf->mean);
-	 pre_si = msdInfo[i][j];
-	 cur_si = msdInfo[i][j]->next;
-	 while(cur_si != NULL) {
-	   if(((SpaceInfo *)cur_si)->order == sorder[k]) break;
-	   pre_si = cur_si;
-	   cur_si = ((SpaceInfo *)pre_si)->next;
-	 }
-	 if(cur_si == NULL){
-	   msdInfo[i][j]->nKindS++;
+         for(k=1; k<=sti->nMix; k++){
+            sorder[k] = VectorSize(sti->spdf.cpdf[k].mpdf->mean);
+            pre_si = msdInfo[i][j];
+            cur_si = msdInfo[i][j]->next;
+            while (cur_si != NULL) {
+               if (((SpaceInfo *)cur_si)->order == sorder[k]) break;
+               pre_si = cur_si;
+               cur_si = ((SpaceInfo *)pre_si)->next;
+            }
+            if (cur_si == NULL){
+               msdInfo[i][j]->nKindS++;
 	   
-	   ((SpaceInfo *)pre_si)->next
-	     = (SpaceInfo *)New(mem, sizeof(SpaceInfo));
-	   cur_si = ((SpaceInfo *)pre_si)->next;
-	   ((SpaceInfo *)cur_si)->order = sorder[k];
-	   ((SpaceInfo *)cur_si)->count = 0;
-	   ((SpaceInfo *)cur_si)->sindex = CreateIntVec(mem, sti->nMix);
-	   ((SpaceInfo *)cur_si)->next = NULL;
-	   ZeroIntVec(((SpaceInfo *)cur_si)->sindex);
-	 }
-	 ((SpaceInfo *)cur_si)->count++;
-	 ((SpaceInfo *)cur_si)->sindex[((SpaceInfo *)cur_si)->count] = k;
-       }
-     }
+               ((SpaceInfo *)pre_si)->next = (SpaceInfo *)New(mem, sizeof(SpaceInfo));
+               cur_si = ((SpaceInfo *)pre_si)->next;
+               ((SpaceInfo *)cur_si)->order = sorder[k];
+               ((SpaceInfo *)cur_si)->count = 0;
+               ((SpaceInfo *)cur_si)->sindex = CreateIntVec(mem, sti->nMix);
+               ((SpaceInfo *)cur_si)->next = NULL;
+               ZeroIntVec(((SpaceInfo *)cur_si)->sindex);
+            }
+            ((SpaceInfo *)cur_si)->count++;
+            ((SpaceInfo *)cur_si)->sindex[((SpaceInfo *)cur_si)->count] = k;
+         }
+      }
    }
    
    return msdInfo;
@@ -4983,9 +4982,10 @@ int SpaceOrder(Vector vec)
   int order;
   
   order = VectorSize(vec);
-  while(order != 0){
-      if(vec[order] == ignoreValue) --order;
-      else break;
+   
+  while (order != 0){
+     if (vec[order] == ignoreValue) --order;
+     else break;
   }
   
   return order;
@@ -4998,10 +4998,11 @@ int IncludeSpace(MSDInfo *msdInfo, int order)
    SpaceInfo *spaceInfo;
    
    spaceInfo = msdInfo->next;
-   while(spaceInfo != NULL){
-     if(spaceInfo->order ==  order) break;
-     spaceInfo = spaceInfo->next;
-     i++;
+   
+   while (spaceInfo != NULL){
+      if (spaceInfo->order ==  order) break;
+      spaceInfo = spaceInfo->next;
+      i++;
    }
    
    if(spaceInfo == NULL) return 0;

@@ -1,5 +1,5 @@
 /*  ---------------------------------------------------------------  */
-/*      The HMM-Based Speech Synthesis System (HTS): version 1.1     */
+/*      The HMM-Based Speech Synthesis System (HTS): version 1.1b    */
 /*                        HTS Working Group                          */
 /*                                                                   */
 /*                   Department of Computer Science                  */
@@ -39,7 +39,7 @@
 /*              Maximum Likelihood criterion with dynamic feature    */
 /*              window constraints                                   */
 /*                                                                   */
-/*                                   2003/05/09 by Heiga Zen         */
+/*                                   2003/06/07 by Heiga Zen         */
 /* ----------------------------------------------------------------  */
 
 #include "HShell.h"
@@ -198,7 +198,7 @@ static void Cholesky_forward(PStream *pst)
 
    pst->sm.g[1] = pst->sm.WUM[1]/pst->sm.WUW[1][1];
 
-   for (t=1;t<=pst->T;t++) {
+   for (t=2;t<=pst->T;t++) {
       hold = 0.0;
       for (i=1;i<pst->width;i++)
          if (t-i>0)

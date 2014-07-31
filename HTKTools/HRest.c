@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,7 +75,7 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HRest.c modified for HTS-1.1 2003/05/09 by Heiga Zen         */
+/*      HRest.c modified for HTS-1.1b 2003/06/07 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
 
@@ -201,7 +201,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.0\n");
+   printf("\nModified for HTS ver.1.1b\n");
    printf("\nUSAGE: HRest [options] hmmFile trainFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -e f    Set convergence factor epsilon       1.0E-4\n");
@@ -938,7 +938,7 @@ void UpStreamCounts(int j, int s, StreamInfo *sti, int vSize, LogDouble pr, int 
          me = sti->spdf.cpdf+m;
          wght=me->weight;
          mpdf=me->mpdf;
-	 if(hset.msdflag[s]) vSize = VectorSize(mpdf->mean);
+         if(hset.msdflag[s]) vSize = VectorSize(mpdf->mean);
          break;
       }
       if (hsKind!=DISCRETEHS){
@@ -1296,7 +1296,7 @@ void RestStream(int state, int s, StreamInfo *sti, int vSize)
          me = sti->spdf.cpdf+m;
          wght=me->weight;
          mp=me->mpdf;
-	 if(hset.msdflag[s]) vSize = VectorSize(mp->mean);
+         if(hset.msdflag[s]) vSize = VectorSize(mp->mean);
          if (wght > MINMIX) {
             if (trace&(T_MRE|T_VRE) && M>1)
                printf("Mixture %d\n",m);

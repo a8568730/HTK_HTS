@@ -1,6 +1,6 @@
 
           The HMM-based Speech Synthesis System (HTS)
-               version 1.1 release May 9, 2003
+               version 1.1b release June 11, 2003
                                 
 The HMM-Based Speech Synthesis System (HTS)
 (http://hts.ics.nitech.ac.jp/) was developed by the HTS working
@@ -29,7 +29,7 @@ for limited domain (not for general purpose).  Other synthesized
 speech samples can be found at
 http://kt-lab.ics.nitech.ac.jp/~tokuda/HTS_demo/.
 
-HTS version 1.1 comes with a small run-time synthesis engine
+HTS version 1.1b comes with a small run-time synthesis engine
 (less than 1 M byte including acoustic models), which can run
 without the HTK library.
 
@@ -37,7 +37,7 @@ Two HTS voices for Festival trained by using 450 utterances of
 "CSTR US KED Timit" (http://www.festvox.org/dbs/dbs_kdt.html)
 and 523 utterances of "CMU Communicator KAL limited domain"
 (http://www.festvox.org/dbs/dbs_com.html), respectively, are
-also released with HTS version 1.1.  They are based on the small
+also released with HTS version 1.1b.  They are based on the small
 synthesis engine.  Each of HTS voices can be used as a "voice"
 of Festival Speech Synthesis System without any other HTS tools.
 
@@ -69,7 +69,7 @@ An explanation can also be found at
 http://kt-lab.ics.nitech.ac.jp/~tokuda/HTS_demo/synHMM_o_e.pdf.
 
 ****************************************************************
-                   What's new in version 1.1
+                   What's new in version 1.1b
 ****************************************************************
 
  - A small synthesis engine (to be called from Festival).
@@ -82,7 +82,7 @@ http://kt-lab.ics.nitech.ac.jp/~tokuda/HTS_demo/synHMM_o_e.pdf.
 ****************************************************************
 
 The basic core system of HMM-Based Speech Synthesis System (HTS)
-version 1.1 (http://hts.ics.nitech.ac.jp/) is released as a
+version 1.1b (http://hts.ics.nitech.ac.jp/) is released as a
 patch code to HTK version 3.2 (http://htk.eng.cam.ac.uk/).  The
 patch code is released under a free license, without commercial
 restrictions.  However, it should be noted that once you apply
@@ -96,7 +96,7 @@ guarantee it.  We will consider consultancy if desired, please
 contacts us for details.
 
 If you are using HMM-based Speech Synthesis System (HTS) version
-1.1 or Speech Signal Processing Toolkit (SPTK) version 3.0 in
+1.1b or Speech Signal Processing Toolkit (SPTK) version 3.0 in
 commercial environment, even though no license is required, we
 would be grateful if you let us know as it helps justify
 ourselves to our various sponsors.
@@ -104,7 +104,7 @@ ourselves to our various sponsors.
 The current copyright on the core system is
 
 ----------------------------------------------------------------
-    The HMM-Based Speech Synthesis System (HTS): version 1.1
+    The HMM-Based Speech Synthesis System (HTS): version 1.1b
                       HTS Working Group
 
                  Department of Computer Science
@@ -144,12 +144,12 @@ ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ----------------------------------------------------------------
 
-Several tools in HTS version 1.1 are independent of HTK (though
+Several tools in HTS version 1.1b are independent of HTK (though
 some of them use the HTK library).  The copyright of these tools
 is
 
 ----------------------------------------------------------------
-    The HMM-Based Speech Synthesis System (HTS): version 1.1
+    The HMM-Based Speech Synthesis System (HTS): version 1.1b
                       HTS Working Group
 
                  Department of Computer Science
@@ -217,21 +217,21 @@ HTS needs SPTK and HTK.
 
 3. Installation of HTS
 
-   0) Download "HTS-1.1_for_HTK-3.2.tar.gz" from
+   0) Download "HTS-1.1b_for_HTK-3.2.tar.gz" from
       http://hts.ics.nitech.ac.jp/ and expand it in a directory
       on your disk.
 
-   1) Copy "HTS-1.1/HTS-1.1_for_HTK-3.2.patch" into
+   1) Copy "HTS-1.1b/HTS-1.1b_for_HTK-3.2.patch" into
       ".../HTK-3.2/htk"
 
    2) Move into "HTK-3.2/htk", and type:
 
-        % patch -p1 < HTS-1.1_for_HTK-3.2.patch
+        % patch -p1 < HTS-1.1b_for_HTK-3.2.patch
 
-   3) Copy "HTS-1.1/HGen.c" and "HTS-1.1/HGen.h" into
+   3) Copy "HTS-1.1b/HGen.c" and "HTS-1.1b/HGen.h" into
       "HTK-3.2/htk/HTKLib"
 
-   4) Copy "HTS-1.1/HMGenS.c" into "HTK-3.2/htk/HTKTools"
+   4) Copy "HTS-1.1b/HMGenS.c" into "HTK-3.2/htk/HTKTools"
 
    5) According "README" file of HTK, make any necessary changes
       to "HTK-3.2/htk/HTKLib/Makefile" and
@@ -301,7 +301,7 @@ Keiichi Tokuda
   Overall concept and design.
 Heiga Zen
   Throwing away all old codes of HTS and rewriting them as HTS
-  version 1.0 and 1.1.
+  version 1.0, 1.1, and 1.1b.
 Jun-ichi Yamagishi
   Testing out various clustering algorithms.
 Takayoshi Yoshimura
@@ -411,11 +411,10 @@ members are
   Shinji Sako                sako@ics.nitech.ac.jp
   Heiga Zen                  zen@ics.nitech.ac.jp
   Jun-ichi Yamagishi         Junichi.Yamagishi@ip.titech.ac.jp
-  Yuzo Takamido              Yuzo.Kakamido@ip.titech.ac.jp
+  Daiki Sanno                Daiki.Sanno@ip.titech.ac.jp
   Masatsune Tamura           mstune@nifty.com
   Takayoshi Yoshimura        yossie@dii.tytlabs.co.jp
   Alan W. Black              awb@cs.cmu.edu
 
 and the members are dynamically changing.  The current formal
 contact address of HTS working group is hts-wg@ip.titech.ac.jp.
-

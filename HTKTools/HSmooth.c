@@ -22,7 +22,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -62,7 +62,7 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HSmooth.c modified for HTS-1.1 2003/05/09 by Heiga Zen       */
+/*      HSmooth.c modified for HTS-1.1b 2003/06/07 by Heiga Zen      */
 /*  ---------------------------------------------------------------  */
 
 char *hsmooth_version = "!HVER!HSmooth:   3.2 [CUED 09/12/02]";
@@ -165,7 +165,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.0\n");
+   printf("\nModified for HTS ver.1.1b\n");
    printf("\nUSAGE: HSmooth [options] hmmList AccFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -b f    set convergence epsilon              0.0001\n");

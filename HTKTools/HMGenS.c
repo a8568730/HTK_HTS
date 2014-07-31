@@ -1,5 +1,5 @@
 /*  ---------------------------------------------------------------  */
-/*      The HMM-Based Speech Synthesis System (HTS): version 1.1     */
+/*      The HMM-Based Speech Synthesis System (HTS): version 1.1b    */
 /*                        HTS Working Group                          */
 /*                                                                   */
 /*                   Department of Computer Science                  */
@@ -39,11 +39,11 @@
 /*             HMMs based on Maximum Likelihood criterion with       */
 /*             dynamic feature window constraints                    */
 /*                                                                   */
-/*                                   2003/05/09 by Heiga Zen         */
+/*                                   2003/06/07 by Heiga Zen         */
 /*  ---------------------------------------------------------------  */
 
-char *hgens_version = "!HVER!HMGenS:   1.1 [zen 09/05/03]";
-char *hgens_sccs_id = "@(#)HMGenS.c    1.1 09/05/03 JST";
+char *hgens_version = "!HVER!HMGenS:   1.1b [zen 06/07/03]";
+char *hgens_sccs_id = "@(#)HMGenS.c    1.1b 06/07/03 JST";
 
 /* ------------------- HMM ToolKit Modules ------------------- */
 

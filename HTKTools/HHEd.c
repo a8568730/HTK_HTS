@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,7 +75,7 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HHEd.c modified for HTS-1.1 2003/05/09 by Heiga Zen          */
+/*      HHEd.c modified for HTS-1.1b 2003/06/11 by Heiga Zen         */
 /*  ---------------------------------------------------------------  */
 
 
@@ -214,7 +214,7 @@ void SetConfParms(void)
 
 void Summary(void)
 {
-   printf("\nModified for HTS ver.1.0\n");
+   printf("\nModified for HTS ver.1.1b\n");
    printf("\nHHEd Command Summary\n\n");
    printf("AT i j prob itemlist - Add Transition from i to j in given mats\n");
    printf("AU hmmlist           - Add Unseen triphones in given hmmlist to\n");
@@ -3827,6 +3827,7 @@ Tree *LoadTree(char *name,Source *src)
             HError(2661,"LoadTree: Macro %s not recognised",buf);
       }
       tree->nLeaves=1;
+      tree->root->id = GetLabId(buf, FALSE);
    }
    else {
       while (ReadString(src,buf),strcmp("}",buf)!=0) {
@@ -3902,7 +3903,7 @@ Tree *LoadTree(char *name,Source *src)
                      sprintf(index,"%d",s);   /* construct macro name for each stream */
                      strcat(mname,"-");
                      strcat(mname,index);
-                    if ((node->yes->macro[n++]=FindMacroName(hset,type,GetLabId(mname,FALSE)))==NULL)
+                     if ((node->yes->macro[n++]=FindMacroName(hset,type,GetLabId(mname,FALSE)))==NULL)
                        HError(2661,"LoadTree: Macro %s not recognised",buf);
                   }
             }             
@@ -3974,6 +3975,9 @@ void ConvertModelsCommand(void)
       printf("\nCM %s\n Convert current HMMSets to pdf for HMM-based speech synthesize module into directory\n",dn);
       fflush(stdout);
    }
+   
+   if (treeList==NULL)
+      HError(2655,"ConvertModelsCommand: No trees loaded - use LT command");
    
    strcpy(head,"pdf.");
    
@@ -4061,6 +4065,10 @@ void ConvertTreesCommand(void)
       printf("\nCT %s\n Convert current questions/trees for synthesize module \n",dn);
       fflush(stdout);
    }
+
+   if (treeList==NULL)
+      HError(2655,"ConvertTreesCommand: No trees loaded - use LT command");
+
    strcpy(head,"trees.");
    for (s=1;s<=hset->swidth[0];s++)
       out[s]=FALSE;

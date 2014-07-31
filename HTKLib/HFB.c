@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,7 +75,7 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */ 
-/*      HFB.c modified for HTS-1.1 2003/05/09 by Heiga Zen           */
+/*      HFB.c modified for HTS-1.1b 2003/06/07 by Heiga Zen          */
 /*  ---------------------------------------------------------------  */
 
 char *hfb_version = "!HVER!HFB:   3.2 [CUED 09/12/02]";
@@ -441,7 +441,7 @@ static void SetOcct(HLink hmm, int q, Vector occt, Vector *occa,
       x -= pr;
       occt[i] = (x>MINEARG) ? exp(x) : 0.0;
    }
-   if (trace&T_OCC || calcDuration) {
+   if (trace&T_OCC) {
       occaq = occa[q];
       for (i=1;i<=N;i++) occaq[i] += occt[i];
    }
@@ -603,22 +603,36 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
 }
 
 /* CreateAlpha: allocate alpha columns */
-static void CreateAlpha(AlphaBeta *ab, HMMSet *hset, int Q)
+static void CreateAlpha(AlphaBeta *ab, HMMSet *hset, int Q, int T)
 {
 
-   int q;
-   DVector *alphat, *alphat1;
+   int t, q;
+   DVector *alphat, *alphat1, **alpha;
  
    /* Create Storage Space - two columns */
    alphat = (DVector *)New(&ab->abMem, Q*sizeof(DVector));
    --alphat;
    for (q=1;q<=Q;q++)
       alphat[q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
+   
    alphat1=(DVector *)New(&ab->abMem, Q*sizeof(DVector));
    --alphat1;
    for (q=1;q<=Q;q++)
       alphat1[q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
-
+   
+   /* for duration model estimation */
+   if (calcDuration) {
+      alpha = (DVector **)New(&ab->abMem, T*sizeof(DVector *));
+      --alpha;
+      for (t=1;t<=T;t++){
+         alpha[t] = (DVector *)New(&ab->abMem, T*sizeof(DVector));
+         alpha[t]--;
+         for (q=1;q<=Q;q++) 
+            alpha[t][q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
+      }
+      ab->alpha = alpha;
+   }
+   
    ab->occt = CreateVector(&ab->abMem,MaxStatesInSet(hset));
    ab->alphat  = alphat;
    ab->alphat1 = alphat1;
@@ -809,6 +823,11 @@ static void StepAlpha(AlphaBeta *ab, int t, int *start, int *end,
    }
 
    *start=sq; *end=eq;
+   
+   if (calcDuration) {
+      for (q=1; q<=Q; q++) 
+         CopyDVector(alphat[q], ab->alpha[t][q]);
+   }
 
 }
 
@@ -976,34 +995,33 @@ static void Setotprob(AlphaBeta *ab, HMMSet *hset, ParmBuf pbuf,
       if (trace&T_OUT && NonSkipRegion(skipstart,skipend,t)) 
          printf(" Q%2d: ",q);
       hmm = ab->al_qList[q]; Nq = hmm->numStates;
-      if (otprob[t][q] == NULL) {
-         outprob = otprob[t][q] = NewOtprobVec(&ab->abMem,Nq,S);
-         for (j=2;j<Nq;j++){
-            si=hmm->svec[j].info;
-            ste=si->pdf+1; sum = 0.0;
-            outprobj = outprob[j];
-            for (s=1;s<=S;s++,ste++){
-               sti = ste->info;
-               switch (hset->hsKind){
-               case TIEDHS:  /* SOutP deals with tied mix calculation */
-               case DISCRETEHS:
-               case PLAINHS:  x = SOutP(hset,s,&ot,sti);     break;
-               case SHAREDHS: 
-                              if (hset->msdflag[s])
-                                 x = SOutP(hset,s,&ot,sti);
-                              else
-                                 x = ShStrP(hset,ot.fv[s],t,hmm,j,s); 
-                              break;
-               default:       x = LZERO; 
+      if (otprob[t][q] == NULL)
+         {
+            outprob = otprob[t][q] = NewOtprobVec(&ab->abMem,Nq,S);
+            for (j=2;j<Nq;j++){
+               si=hmm->svec[j].info;
+               ste=si->pdf+1; sum = 0.0;
+               outprobj = outprob[j];
+               for (s=1;s<=S;s++,ste++){
+                  sti = ste->info;
+                  switch (hset->hsKind){
+                  case TIEDHS:  /* SOutP deals with tied mix calculation */
+                  case DISCRETEHS:
+                  case PLAINHS:  x = SOutP(hset,s,&ot,sti);     break;
+                  case SHAREDHS: 
+                                 if (hset->msdflag[s])
+                                    x = SOutP(hset,s,&ot,sti);
+                                 else
+                                    x = ShStrP(hset,ot.fv[s],t,hmm,j,s); break;
+                  default:       x = LZERO; 
+                  }
+                  if (S==1)
+                     outprobj[0] = x;
+                  else{
+                     outprobj[s] = si->weights[s]*x; sum += outprobj[s];
+                  }
                }
-               if (S==1)
-                  outprobj[0] = x;
-               else{
-                  outprobj[s] = si->weights[s]*x; 
-                  sum += outprobj[s];
-               }
-            }
-            if (S>1){
+               if (S>1){
                   outprobj[0] = sum;
                   for (s=1;s<=S;s++)
                      outprobj[s] = sum - outprobj[s];
@@ -1634,11 +1652,11 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
    /* ResetHeap(&(fbMemInfo.alphaStack)); */
   
    ab = fbInfo->ab;
-   CreateAlpha(ab,fbInfo->al_hset,utt->Q); /* al_hset may be idential to up_hset */
+   CreateAlpha(ab,fbInfo->al_hset,utt->Q, utt->T); /* al_hset may be idential to up_hset */
    InitAlpha(ab,&start,&end,utt->Q,fbInfo->skipstart,fbInfo->skipend);
 
    ab->occa = NULL;
-   if (trace&T_OCC || calcDuration) 
+   if (trace&T_OCC) 
       CreateTraceOcc(ab,utt);
    for (q=1;q<=utt->Q;q++){             /* inc access counters */
       up_hmm = ab->up_qList[q];
@@ -1669,7 +1687,7 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
          bqt1 = (t==utt->T) ? NULL:ab->beta[t+1][q];
          aqt1 = (t==1)      ? NULL:ab->alphat1[q];
          bq1t = (q==utt->Q) ? NULL:ab->beta[t][q+1];
-         if (trace&T_OCC || calcDuration)
+         if (trace&T_OCC)
             SetOcct(al_hmm,q,ab->occt,ab->occa[t],aqt,bqt,bq1t,utt->pr);
          else
             SetOcct(al_hmm,q,ab->occt,NULL,aqt,bqt,bq1t,utt->pr);
@@ -1797,23 +1815,34 @@ void InitUttObservations(UttInfo *utt, HMMSet *al_hset,
 /* AccDuration: accumulate factors of duration distributions */
 void AccDuration(FBInfo *fbInfo, UttInfo *utt)
 {
-   int i,j,t,t0,t1,Nq,SumNq = 0;
-   double x,x0,Sumx;
+   int i,j,k,m,n,t,t0,t1,Nq,SumNq = 0;
+   LogDouble x,x0,Sumx;
+   LogDouble sqr, sum, occ;
    DAcc *acc;
-   HLink hmm;
+   HLink hmm, hmm2;
    MLink mac;
    AlphaBeta *ab;
    short *qHi,*qLo;
    HMMSet *hset;
    Vector **occa;
+   DVector **alpha, **beta;
 
    hset = fbInfo->al_hset;
    ab = fbInfo->ab;
-   occa = ab->occa;
+   alpha = ab->alpha;
+   beta  = ab->beta;
    qHi = ab->pInfo->qHi;
    qLo = ab->pInfo->qLo;
 
-   for (i=1;i<=utt->Q;i++) {
+   /* initialise alpha[1] */
+   for (i=1; i<=utt->Q; i++)
+      for (j=1; j<=ab->al_qList[i]->numStates; j++)
+         alpha[1][i][j] = LZERO;
+   for (j=2; j<ab->al_qList[1]->numStates; j++)
+      alpha[1][1][j] = ab->otprob[1][1][j][0] + ab->al_qList[1]->transP[1][j];
+  
+   /* Accumurate Statistics for Duration Modeling */
+   for (i=1; i<=utt->Q; i++) {
       hmm = ab->al_qList[i];
       Nq = hmm->numStates;
       if ((mac=FindMacroStruct(hset,'h',hmm))==NULL)
@@ -1829,32 +1858,70 @@ void AccDuration(FBInfo *fbInfo, UttInfo *utt)
          acc = (DAcc *)New(hset->hmem,(Nq-2)*sizeof(DAcc)); 
          acc -= 2; 
          for (j=2;j<Nq;j++) 
-            acc[j].sqr = acc[j].sum = acc[j].occ = 0; 
+            acc[j].sqr = acc[j].sum = acc[j].occ = LZERO; 
          mac->hook = acc; 
       } else acc = mac->hook; 
 
       for (j=2;j<Nq;j++) { 
          SumNq++; 
-         for (t0=SumNq;t0<=utt->T;t0++)  
-            if (qLo[t0]<=i && i<=qHi[t0]) { 
-               if (t0 == 1) x0 = 1; 
-               else if (qHi[t0-1]<i) x0 = 0; 
-               else x0 = 1-occa[t0-1][i][j]; 
+         for (t0=SumNq; t0<=utt->T; t0++)  
+            if (qLo[t0]<=i && i<=qHi[t0]) {
+               if (t0 == 1) x0 = 0; 
+               else if (qHi[t0-1]<i) x0 = LZERO; 
+               else {
+                  x0 = LZERO;
+                  if (i!=1) {
+                     hmm2 = ab->al_qList[i-1];
+                     for (k=2; k<hmm2->numStates; k++)
+                        x0 = LAdd(x0, alpha[t0-1][i-1][k]+(double)hmm2->transP[k][hmm2->numStates]);
+                     x0 += (double)hmm->transP[1][j];
+                  }
+                  for (k=2; k<Nq; k++)
+                     if (k!=j)
+                        x0 = LAdd(x0, alpha[t0-1][i][k]+(double)hmm->transP[k][j]);
+               }
+               
+               Sumx = x0;
+               sqr = sum = occ = LZERO;
+               
+               for (t1=t0; t1<=utt->T; t1++) { 
+                  if (Sumx<=LZERO) break; 
+                  if (qLo[t1]<=i && i<=qHi[t1]){
+                     Sumx += (double)ab->otprob[t1][i][j][0];
+                     if (t1-t0 > 0) 
+                        Sumx += (double)hmm->transP[j][j];
 
-               Sumx = 1; 
-               for (t1=t0;t1<=utt->T;t1++) { 
-                  if (Sumx<=0) break; 
-                  if (qLo[t1]<=i && i<=qHi[t1]){ 
-                     if (t1==utt->T) x = x0; 
-                     else if(qLo[t1+1] > i) x = 0; 
-                     else x = x0*(1-occa[t1+1][i][j]); 
-                     Sumx *= occa[t1][i][j]; 
-                     x *= Sumx; 
-                     acc[j].sqr += x*(t1-t0+1)*(t1-t0+1); 
-                     acc[j].sum += x*(t1-t0+1); 
-                     acc[j].occ += x; 
+                     if (t1==utt->T) { 
+                        x = 0;
+                     }
+                     else if(qLo[t1+1] > i) {
+                        Sumx = x = LZERO;
+                     }
+                     else {
+                        x = LZERO;
+                        if (i<qHi[t1]) {
+                           hmm2 = ab->al_qList[i+1];
+                           for (k=2; k<hmm2->numStates; k++)
+                              x = LAdd(x, (double)hmm2->transP[1][k]+(double)ab->otprob[t1+1][i+1][k][0]+beta[t1+1][i+1][k]);
+                           x += hmm->transP[j][Nq];
+                        }
+                        for (k=2; k<Nq; k++)
+                           if (k!=j)
+                              x = LAdd(x, (double)hmm->transP[j][k]+(double)ab->otprob[t1+1][i][k][0]+beta[t1+1][i][k]);
+                     }
+                     
+                     x = x+Sumx-utt->pr;
+                     
+                     sqr = LAdd(sqr, x+2*log(t1-t0+1)); 
+                     sum = LAdd(sum, x+log(t1-t0+1)); 
+                     occ = LAdd(occ, x);
+                     
                   } else break; 
-               } 
+               }
+               
+               acc[j].sqr = LAdd(acc[j].sqr, sqr);
+               acc[j].sum = LAdd(acc[j].sum, sum);
+               acc[j].occ = LAdd(acc[j].occ, occ);
             } 
       } 
    } 
@@ -1895,15 +1962,21 @@ void SaveDuration(FBInfo *fbInfo, char *durfn, float vfloor, DurKind dkind)
                fprintf(fp,"<BEGINHMM>\n<NUMSTATES> 3\n<STATE> 2\n");
                fprintf(fp,"<MEAN> %d\n",Nq-2);
                for (i=2;i<Nq;i++){
-                  if (acc[i].occ==0) mean = 0;
-                  else mean = acc[i].sum/acc[i].occ;
+                  if (acc[i].occ==LZERO) mean = 0;
+                  else mean = L2F(acc[i].sum-acc[i].occ);
                   fprintf(fp,"%e ",mean);
                }
                fprintf(fp,"\n<VARIANCE> %d\n",Nq-2);
                for (i=2;i<Nq;i++){
-                  if (acc[i].occ==0) var = vfloor;
-                  else var = (acc[i].sqr-acc[i].sum*acc[i].sum
-                             /acc[i].occ)/acc[i].occ;
+                  if (acc[i].occ<=LZERO) var = vfloor;
+                  else {
+                     if ( acc[i].sqr-acc[i].occ < 2*(acc[i].sum-acc[i].occ) )
+                        var = vfloor;
+                     else {
+                        var = LSub(acc[i].sqr-acc[i].occ, 2*(acc[i].sum-acc[i].occ));
+                        var = L2F(var);
+                     }
+                  }
                   if (var<vfloor) var = vfloor;
                      fprintf(fp,"%e ",var);
                }

@@ -22,7 +22,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1      */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -62,7 +62,7 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */ 
-/*      HFB.h modified for HTS-1.1 2003/05/09 by Heiga Zen           */
+/*      HFB.h modified for HTS-1.1b 2003/06/07 by Heiga Zen          */
 /*  ---------------------------------------------------------------  */
 
 /* !HVER!HFB:   3.2 [CUED 09/12/02] */
@@ -119,20 +119,21 @@ typedef struct {
 /* structure for the forward-backward alpha-beta structures */
 typedef struct {
   
-  MemHeap abMem;      /* alpha beta memory heap */
-  PruneInfo *pInfo;   /* pruning information */
-  HLink *up_qList;    /* array[1..Q] of active HMM defs */
-  HLink *al_qList;    /* array[1..Q] of active align HMM defs */
-  MLink *qLink;       /* array[1..Q] of link to active HMM defs */
-  LabId  *qIds;       /* array[1..Q] of logical HMM names (in qList) */
-  short *qDms;        /* array[1..Q] of minimum model duration */
-  DVector *alphat;    /* array[1..Q][1..Nq] of prob */
-  DVector *alphat1;   /* alpha[t-1] */
-  DVector **beta;     /* array[1..T][1..Q][1..Nq] of prob */
-  float ****otprob;   /* array[1..T][1..Q][2..Nq-1][0..S] of prob */
-  LogDouble pr;       /* log prob of current utterance */
-  Vector occt;        /* occ probs for current time t */
-  Vector **occa;      /* array[1..T][1..Q][1..Nq] of occ probs (trace only) */
+   MemHeap abMem;      /* alpha beta memory heap */
+   PruneInfo *pInfo;   /* pruning information */
+   HLink *up_qList;    /* array[1..Q] of active HMM defs */
+   HLink *al_qList;    /* array[1..Q] of active align HMM defs */
+   MLink *qLink;       /* array[1..Q] of link to active HMM defs */
+   LabId  *qIds;       /* array[1..Q] of logical HMM names (in qList) */
+   short *qDms;        /* array[1..Q] of minimum model duration */
+   DVector *alphat;    /* array[1..Q][1..Nq] of prob */
+   DVector *alphat1;   /* alpha[t-1] */
+   DVector **alpha;    /* array[1..T][1..Q][1..Nq] of prob */
+   DVector **beta;     /* array[1..T][1..Q][1..Nq] of prob */
+   float ****otprob;   /* array[1..T][1..Q][2..Nq-1][0..S] of prob */
+   LogDouble pr;       /* log prob of current utterance */
+   Vector occt;        /* occ probs for current time t */
+   Vector **occa;      /* array[1..T][1..Q][1..Nq] of occ probs (trace only) */
 
 } AlphaBeta;
 
