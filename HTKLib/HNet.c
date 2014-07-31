@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HNet.c  Network and Lattice Functions         */
 /* ----------------------------------------------------------- */
 
-char *hnet_version = "!HVER!HNet:   3.0 [CUED 05/09/00]";
-char *hnet_vc_id = "$Id: HNet.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *hnet_version = "!HVER!HNet:   3.1 [CUED 16/01/02]";
+char *hnet_vc_id = "$Id: HNet.c,v 1.8 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -164,7 +177,7 @@ Lattice *NewLattice(MemHeap *heap,int nn,int na)
       ln->sublat=NULL;
    }
    for(i=0,la=lat->larcs;i<na;i++,la++) {
-      la->aclike=la->lmlike=0.0;
+      la->aclike=la->lmlike=la->prlike=0.0;
       la->start=la->end=NNODE;
       la->farc=la->parc=NARC;
       la->nAlign=0;la->lAlign=NULL;
@@ -235,7 +248,7 @@ Lattice *NewILattice(MemHeap *heap,int nn,int na,Lattice *info)
             ln->sublat=AdjSubList(lat,in->sublat->lat->subLatId,
                                   in->sublat->lat,+1);
             if(ln->sublat==NULL){
-               HError(8299, "NewILattice: AdjSubList failed");
+               HError(8253, "NewILattice: AdjSubList failed");
             }
          }
          if (in->foll!=NULL) ln->foll=NumbLArc(lat,LArcNumb(in->foll,info));
@@ -320,7 +333,7 @@ static Lattice *GetSubLat(LabId subLatId,Lattice *subLat)
          subLatHashTab[h]=cur;
       }
       if (cur!=subLat)
-         HError(9999,"GetSubLat: All sublats must have unique names");
+         HError(8253,"GetSubLat: All sublats must have unique names");
    }
       
    return(cur);
@@ -341,7 +354,7 @@ SubLatDef *AdjSubList(Lattice *lat,LabId subLatId,Lattice *subLat,int adj)
       if (p->lat->subLatId==subLatId) break;
    if (adj<0) {
       if (p==NULL)
-         HError(9999,"AdjSubList: Decreasing non-existent sublat",
+         HError(8253,"AdjSubList: Decreasing non-existent sublat",
                 subLatId->name);
       p->usage+=adj;
       if (p->usage<=0) {
@@ -349,7 +362,7 @@ SubLatDef *AdjSubList(Lattice *lat,LabId subLatId,Lattice *subLat,int adj)
          for (r=p->lat->refList,s=NULL;r!=NULL;s=r,r=r->chain) 
             if (r==p) break;
          if (r!=p || r==NULL)
-            HError(9999,"AdjSubList: Could not find SubLatDef in refList");
+            HError(8253,"AdjSubList: Could not find SubLatDef in refList");
          if (s==NULL) p->lat->refList=p->chain;
          else s->chain=r->chain;
          /* Then remove from subList */
@@ -364,13 +377,13 @@ SubLatDef *AdjSubList(Lattice *lat,LabId subLatId,Lattice *subLat,int adj)
          /* p->subLatId=subLatId; */
          if (subLat!=NULL) p->lat=subLat;
          else if ((p->lat=GetSubLat(subLatId,NULL))==NULL){
-            HRError(8299,"AdjSubList: SUBLAT %s not found",subLatId->name);
+            HRError(8253,"AdjSubList: SUBLAT %s not found",subLatId->name);
             return NULL;
          }
          p->next=lat->subList;
          lat->subList=p;
          if (p->lat==lat){
-            HRError(8299,"AdjSubList: Circular subLat reference to %s",
+            HRError(8253,"AdjSubList: Circular subLat reference to %s",
                     subLatId->name);
             return NULL;
          }
@@ -390,7 +403,7 @@ Lattice *SubLatList(Lattice *lat, Lattice *tail, int depth)
    SubLatDef *sub;
 
    if (depth>MAXLATDEPTH)
-      HError(9999,"SubLatList: Nesting too deep (%d == recursive ?)",depth);
+      HError(8253,"SubLatList: Nesting too deep (%d == recursive ?)",depth);
 
    for (sub=lat->subList;sub!=NULL;sub=sub->next) {
       if (tail==NULL) sub->lat->chain=NULL;
@@ -409,7 +422,7 @@ Lattice *SubLatList(Lattice *lat, Lattice *tail, int depth)
             if (sub->lat==cur || sub->lat->subLatId==cur->subLatId || 
                 sub->lat->subLatId==NULL) break;
          if (cur!=tail->chain) /* Match */
-            HError(9999,"Match");
+            HError(8253,"Match");
          }
 #endif
          sub->lat->chain=tail->chain;
@@ -521,6 +534,7 @@ ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
       for (i=0;i<lat->nn;i++) {
          ln=lat->lnodes+order[i];
          rorder[order[i]]=i;
+         ln->n = i;
          OutputIntField('I',i,format&HLAT_LBIN,"%-4d",file);
          if (format&HLAT_TIMES)
             OutputFloatField('t',ln->time,format&HLAT_LBIN,"%-5.2f",file);
@@ -620,7 +634,7 @@ ReturnStatus WriteLattice(Lattice *lat,FILE *file,LatFormat format)
       list->chain=NULL;
       for (list=lat->chain;list!=NULL;list=list->chain) {
          if (list->subLatId==NULL){ 
-            HRError(9999,"WriteLattice: Sublats must be labelled");
+            HRError(8253,"WriteLattice: Sublats must be labelled");
             return(FAIL);
          }
          if(WriteOneLattice(list,file,format)<SUCCESS){
@@ -2206,7 +2220,8 @@ static PronHolder *NewPronHolder(MemHeap *heap,HMMSetCxtInfo *hci,
             pInst->clen++;
       if (pInst->clen==0 || pInst->fc==-1 || pInst->ic==-1)
          HError(8230,"NewPronHolder: Every word must define some context [%s=%d/%d/%d]",
-                thisPron->outSym->name,pInst->ic,pInst->clen,pInst->fc);
+                thisPron->outSym ? thisPron->outSym->name :thisPron->word->wordName->name,
+                pInst->ic, pInst->clen, pInst->fc);
       pInst->fci=IsRContextInd(hci,pInst,pInst->nphones,-1);
    }
    return(pInst);
@@ -2383,7 +2398,7 @@ static int InitPronHolders(Network *net,Lattice *lat,HMMSetCxtInfo *hci,
       Dispose(&gstack,++pii);
    }
    if (t!=0) 
-      HError(-9999,"InitPronHolders: Total of %d duplicate pronunciations removed",t);
+      HError(-8221,"InitPronHolders: Total of %d duplicate pronunciations removed",t);
    return(nNull);
 }
 

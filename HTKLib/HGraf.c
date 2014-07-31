@@ -19,8 +19,8 @@
 /*         File: HGraf.X.c:  HGraf for X-Windows               */
 /* ----------------------------------------------------------- */
 
-char *hgraf_version = "!HVER!HGraf(X):   3.0 [CUED 05/09/00]";
-char *hgraf_vc_id = "$Id: HGraf.c,v 1.6 2000/09/15 11:54:04 ge204 Exp $";
+char *hgraf_version = "!HVER!HGraf(X):   3.1 [CUED 16/01/02]";
+char *hgraf_vc_id = "$Id: HGraf.c,v 1.7 2002/01/16 18:11:28 ge204 Exp $";
 
 /*
    This is the X Windows implementation of HGraf.  It is server

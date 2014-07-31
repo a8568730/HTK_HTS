@@ -19,7 +19,7 @@
 /*         File: HNet.h  Network and Lattice Functions         */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HNET:   3.0 [CUED 05/09/00] */
+/* !HVER!HNET:   3.1 [CUED 16/01/02] */
 
 /*
    Nets come in two forms.
@@ -362,6 +362,7 @@ struct _NetNode {
    NetLink *links;      /* Array[0..nlinks-1] of links to connected nodes */
    NetInst *inst;       /* Model Instance (if one exists, else NULL) */   
    NetNode *chain;
+   int aux;
 };
 
 struct _NetLink{

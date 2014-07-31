@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*      File: HVite.c: recognise or align file or audio        */
 /* ----------------------------------------------------------- */
 
-char *hvite_version = "!HVER!HVite:   3.0 [CUED 05/09/00]";
-char *hvite_vc_id = "$Id: HVite.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hvite_version = "!HVER!HVite:   3.1 [CUED 16/01/02]";
+char *hvite_vc_id = "$Id: HVite.c,v 1.10 2002/01/16 18:11:29 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -94,6 +107,8 @@ static double prScale = 1.0;      /* pronunciation scale factor */
 
 /* Pruning */
 static LogDouble genBeam = -LZERO;/* genBeam threshold */
+static LogDouble genBeamInc  = 0.0;       /* increment         */
+static LogDouble genBeamLim = -LZERO;     /* max value       */
 static LogDouble nBeam = 0.0;     /* nBeam threshold */
 static LogDouble wordBeam = -LZERO;/* word-end pruning threshold */
 static LogFloat tmBeam = 10.0;    /* tied mix prune threshold */
@@ -143,6 +158,7 @@ static int nParm = 0;            /* total num params */
 void SetConfParms(void)
 {
    int i;
+   Boolean b;
    char buf[MAXSTRLEN];
 
    nParm = GetConfig("HVITE", TRUE, cParm, MAXGLOBS);
@@ -152,40 +168,42 @@ void SetConfParms(void)
          roPrefix=CopyString(&gstack,buf);
       if (GetConfStr(cParm,nParm,"RECOUTSUFFIX",buf))
          roSuffix=CopyString(&gstack,buf);
+      if (GetConfBool(cParm,nParm,"SAVEBINARY",&b)) 
+         saveBinary = b;
    }
 }
 
 void ReportUsage(void)
 {
    printf("\nUSAGE: HVite [options] VocabFile HMMList DataFiles...\n\n");
-   printf(" Option                                   Default\n\n");
-   printf(" -a      align from label files              off\n");
-   printf(" -b s    def s as utterance boundary word   none\n");
-   printf(" -c f    tied mixture pruning threshold     10.0\n");
-   printf(" -d s    dir to find hmm definitions       current\n");
-   printf(" -e      save direct audio rec output        off\n");
-   printf(" -f      output full state alignment         off\n");
-   printf(" -g      enable audio replay                 off\n");
-   printf(" -i s    Output transcriptions to MLF s      off\n"); 
-   printf(" -j i    Online MLLR adaptation              off\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -a      align from label files               off\n");
+   printf(" -b s    def s as utterance boundary word     none\n");
+   printf(" -c f    tied mixture pruning threshold       10.0\n");
+   printf(" -d s    dir to find hmm definitions          current\n");
+   printf(" -e      save direct audio rec output         off\n");
+   printf(" -f      output full state alignment          off\n");
+   printf(" -g      enable audio replay                  off\n");
+   printf(" -i s    Output transcriptions to MLF s       off\n"); 
+   printf(" -j i    Online MLLR adaptation               off\n");
    printf("         Perform update every i utterances      \n");
-   printf(" -k s1 s2  Save s2 for field s1 in tmf   defaults saved\n");
-   printf(" -l s    dir to store label/lattice files  current\n");
-   printf(" -m      output model alignment              off\n");
+   printf(" -k s1 s2  Save s2 for field s1 in tmf        defaults saved\n");
+   printf(" -l s    dir to store label/lattice files     current\n");
+   printf(" -m      output model alignment               off\n");
    printf(" -n i [N] N-best recognition (using i tokens) off\n");
-   printf(" -o s    output label formating NCSTWMX      none\n");
-   printf(" -p f    inter model trans penalty (log)     0.0\n");
-   printf(" -q s    output lattice formating ABtvaldmn tvaldmn\n");
-   printf(" -r f    pronunciation prob scale factor     1.0\n");
-   printf(" -s f    grammar scale factor                1.0\n");
-   printf(" -t f    set pruning threshold               0.0\n");
-   printf(" -u i    set pruning max active                0\n");
-   printf(" -v f    set word end pruning threshold      0.0\n"); 
-   printf(" -w [s]  recognise from network              off\n");
-   printf(" -x s    extension for hmm files            none\n");
-   printf(" -y s    output label file extension         rec\n");
-   printf(" -z s    generate lattices with extension s  off\n");
-   PrintStdOpts("FGHIJKLPSX");
+   printf(" -o s    output label formating NCSTWMX       none\n");
+   printf(" -p f    inter model trans penalty (log)      0.0\n");
+   printf(" -q s    output lattice formating ABtvaldmn   tvaldmn\n");
+   printf(" -r f    pronunciation prob scale factor      1.0\n");
+   printf(" -s f    grammar scale factor                 1.0\n");
+   printf(" -t f [f f] set pruning threshold             0.0\n");
+   printf(" -u i    set pruning max active               0\n");
+   printf(" -v f    set word end pruning threshold       0.0\n"); 
+   printf(" -w [s]  recognise from network               off\n");
+   printf(" -x s    extension for hmm files              none\n");
+   printf(" -y s    output label file extension          rec\n");
+   printf(" -z s    generate lattices with extension s   off\n");
+   PrintStdOpts("BFGHIJKLPSX");
    printf("\n\n");
 }
 
@@ -313,9 +331,20 @@ int main(int argc, char *argv[])
          lmScale = GetChkedFlt(0.0,1000.0,s);  break;
       case 't':
          genBeam = GetChkedFlt(0,1.0E20,s); 
-         if (genBeam == 0.0)
-            genBeam = -LZERO;
-         break;
+	 if (genBeam == 0.0)
+	    genBeam = -LZERO;
+         if (NextArg()==FLOATARG || NextArg()==INTARG) {
+             genBeamInc = GetChkedFlt(0.0,1.0E20,s);
+             genBeamLim = GetChkedFlt(0.0,1.0E20,s);
+             if (genBeamLim < (genBeam + genBeamInc)) {
+                genBeamLim = genBeam; genBeamInc = 0.0;
+             }
+          }
+          else {
+             genBeamInc = 0.0;
+             genBeamLim = genBeam;
+          }  
+          break;
       case 'w':
          if (NextArg()!=STRINGARG)
             loadNetworks=TRUE;
@@ -385,8 +414,9 @@ int main(int argc, char *argv[])
          if((ofmt = Str2Format(GetStrArg())) == ALIEN)
             HError(-3289,"HVite: Warning ALIEN Label output file format set");
          break;
-      case 'S':
+      case 'B':
          saveBinary = TRUE;
+         break;
       case 'T':
          trace = GetChkedInt(0,511,s); break;
       case 'X':
@@ -501,7 +531,7 @@ void Initialise(void)
     
    if (transFile != NULL) {
       if (rt->rtree == NULL)
-         HError(3299, "Main: Error loading the MLLR transforms!\n");
+         HError(3232, "Main: Error loading the MLLR transforms!\n");
       LoadTransformSet(&hset, transFile, uid, rt, &loadTransStats);
       if (rt->transId->name != NULL && rt->transId->uid != NULL)
          printf("Loaded speaker transforms for %s (%s)\n", rt->transId->name,
@@ -603,7 +633,9 @@ int DoOnlineAdaptation(Lattice *lat, ParmBuf pbuf, int nFrames)
    utt->ot = obs;
   
    /* do frame state alignment and accumulate statistics */
-   FBFile(fbInfo, utt, NULL);
+   if (!FBFile(fbInfo, utt, NULL))
+     nFrames = 0;
+
    Dispose(&netHeap, trans);
 
    if (trace&T_TOP) {
@@ -614,7 +646,7 @@ int DoOnlineAdaptation(Lattice *lat, ParmBuf pbuf, int nFrames)
 } 
 
 /* ProcessFile: process given file. If fn=NULL then direct audio */
-void ProcessFile(char *fn, Network *net, int utterNum)
+Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam, Boolean restartable)
 {
    FILE *file;
    ParmBuf pbuf;
@@ -650,7 +682,7 @@ void ProcessFile(char *fn, Network *net, int utterNum)
    if (pbinfo.a != NULL && replay)  AttachReplayBuf(pbinfo.a, (int) (3*(1.0E+07/pbinfo.srcSampRate)));
 
    StartRecognition(vri,net,lmScale,wordPen,prScale);
-   SetPruningLevels(vri,maxActive,genBeam,wordBeam,nBeam,tmBeam);
+   SetPruningLevels(vri,maxActive,currGenBeam,wordBeam,nBeam,tmBeam);
  
    tact=0;nFrames=0;
    StartBuffer(pbuf);
@@ -695,9 +727,12 @@ void ProcessFile(char *fn, Network *net, int utterNum)
       }      
       if (pbinfo.a != NULL && replay)  ReplayAudio(pbinfo);
       CloseBuffer(pbuf);
-      return;
+      return FALSE;
    }
    
+   if (vri->noTokenSurvived && restartable)
+      return FALSE;
+
    if (vri->noTokenSurvived && trace & T_TOP) {
       printf("No tokens survived to final node of network\n");
       printf("  Output most likely partial hypothesis within network\n");
@@ -786,6 +821,8 @@ void ProcessFile(char *fn, Network *net, int utterNum)
       printf("Memory State after utter %d\n",utterNum);
       PrintAllHeapStats();
    }
+
+   return !vri->noTokenSurvived;
 }
 
 /* --------------------- Top Level Processing --------------------- */
@@ -799,6 +836,7 @@ void DoAlignment(void)
    Network *net;
    Boolean isPipe;
    int n=0;
+   LogDouble currGenBeam;
 
    if (trace&T_TOP) {
       if (loadNetworks) 
@@ -839,7 +877,23 @@ void DoAlignment(void)
          }
       }
       net=ExpandWordNet(&netHeap,wdNet,&vocab,&hset);
-      ProcessFile(datFN,net,++n);
+
+      ++n;
+      currGenBeam = genBeam;
+      if (genBeamInc == 0.0)
+         ProcessFile (datFN, net, n, currGenBeam, FALSE);
+      else {
+         Boolean completed;
+
+         completed = ProcessFile (datFN, net, n, currGenBeam, TRUE);
+         currGenBeam += genBeamInc;
+         while (!completed && (currGenBeam <= genBeamLim - genBeamInc)) {
+            completed = ProcessFile (datFN, net, n, currGenBeam, TRUE);
+            currGenBeam += genBeamInc;
+         }
+         if (!completed)
+            ProcessFile (datFN, net, n, currGenBeam, FALSE);
+      }
 
       if (update > 0 && n%update == 0) {
          if (trace&T_TOP) {
@@ -888,7 +942,7 @@ void DoRecognition(void)
    if (NumArgs()==0) {      /* Process audio */
       while(TRUE){
          printf("\nREADY[%d]>\n",++n); fflush(stdout);
-         ProcessFile(NULL,net,n);
+         ProcessFile(NULL,net,n,genBeam, FALSE);
          if (update > 0 && n%update == 0) {
             if (trace&T_TOP) {
                printf("Transforming model set\n");
@@ -907,7 +961,7 @@ void DoRecognition(void)
          if (trace&T_TOP) {
             printf("File: %s\n",datFN); fflush(stdout);
          }
-         ProcessFile(datFN,net,n++);
+         ProcessFile(datFN,net,n++,genBeam,FALSE);
          if (update > 0 && n%update == 0) {
             if (trace&T_TOP) {
                printf("Transforming model set\n");

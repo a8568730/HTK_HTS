@@ -19,8 +19,8 @@
 /*         File: HRest.c: HMM initialisation program           */
 /* ----------------------------------------------------------- */
 
-char *hrest_version = "!HVER!HRest:   3.0 [CUED 05/09/00]";
-char *hrest_vc_id = "$Id: HRest.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hrest_version = "!HVER!HRest:   3.1 [CUED 16/01/02]";
+char *hrest_vc_id = "$Id: HRest.c,v 1.7 2002/01/16 18:11:29 ge204 Exp $";
 
 /*
    This program is used to estimate the transition parameters,
@@ -142,16 +142,16 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HRest [options] hmmFile trainFiles...\n\n");
-   printf(" Option                                   Default\n\n");
-   printf(" -e f    Set convergence factor epsilon    1.0E-4\n");
-   printf(" -i N    Set max iterations to N            20\n");
-   printf(" -l s    Set segment label to s             None\n");
-   printf(" -m N    Set min segments needed            3\n");
-   printf(" -t      Disable short segment rejection    On\n");
-   printf(" -u tmvw Update t)rans m)eans v)ars w)ghts  tmvw\n");
-   printf(" -v f    Set minimum variance to f          0.0\n");
-   printf(" -c f    Tied Mixture pruning threshold     10.0\n");
-   printf(" -w f    Set mix wt floor to f x MINMIX     0.0\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -e f    Set convergence factor epsilon       1.0E-4\n");
+   printf(" -i N    Set max iterations to N              20\n");
+   printf(" -l s    Set segment label to s               none\n");
+   printf(" -m N    Set min segments needed              3\n");
+   printf(" -t      Disable short segment rejection      on\n");
+   printf(" -u tmvw Update t)rans m)eans v)ars w)ghts    tmvw\n");
+   printf(" -v f    Set minimum variance to f            0.0\n");
+   printf(" -c f    Tied Mixture pruning threshold       10.0\n");
+   printf(" -w f    Set mix wt floor to f x MINMIX       0.0\n");
    PrintStdOpts("BFGHILMSTX");
    printf("\n\n");
 }
@@ -485,7 +485,8 @@ void LoadFile(char *fn)
             segEnIdx  = (long) (p->end/info.tgtSampRate);
             if (segEnIdx >= ObsInBuffer(pbuf)) 
                segEnIdx = ObsInBuffer(pbuf)-1;
-            if ((segEnIdx - segStIdx + 1 >= nStates-2) || !segReject) {
+            if (((segEnIdx - segStIdx + 1 >= nStates-2) || !segReject) 
+		&& (segStIdx <= segEnIdx)) {	/* skip short segments */
                LoadSegment(segStore, p->start, p->end, pbuf);
                if (trace&T_LD1)
                   printf("  loading seg %s %f[%ld]->%f[%ld]\n",segId->name,

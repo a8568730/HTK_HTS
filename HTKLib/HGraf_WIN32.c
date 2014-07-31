@@ -20,8 +20,8 @@
 /* ----------------------------------------------------------- */
 /* Win32 port Peter Silsbee                                    */
 
-char *hgraf_version = "!HVER!HGraf(NT):   3.0 [CUED 05/09/00]";
-char *hgraf_vc_id = "$Id: HGraf_WIN32.c,v 1.4 2000/09/14 15:40:19 ge204 Exp $";
+char *hgraf_version = "!HVER!HGraf(NT):   3.1 [CUED 16/01/02]";
+char *hgraf_vc_id = "$Id: HGraf_WIN32.c,v 1.5 2002/01/16 18:11:28 ge204 Exp $";
 
 /* define CAPTURE_ALT to allow application to respond to Alt-key presses. */
 /* "Normal" windows application behavior is to allow the system to handle it. */

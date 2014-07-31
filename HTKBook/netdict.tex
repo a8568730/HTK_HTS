@@ -7,9 +7,22 @@
 %/*                                                             */
 %/*                                                             */
 %/* ----------------------------------------------------------- */
+%/* developed at:                                               */
+%/*                                                             */
+%/*      Speech Vision and Robotics group                       */
+%/*      Cambridge University Engineering Department            */
+%/*      http://svr-www.eng.cam.ac.uk/                          */
+%/*                                                             */
+%/*      Entropic Cambridge Research Laboratory                 */
+%/*      (now part of Microsoft)                                */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
 %/*         Copyright: Microsoft Corporation                    */
 %/*          1995-2000 Redmond, Washington USA                  */
-%/*                    http://www.microsoft.com                */
+%/*                    http://www.microsoft.com                 */
+%/*                                                             */
+%/*          2001-2002 Cambridge University                     */
+%/*                    Engineering Department                   */
 %/*                                                             */
 %/*   Use of this software is governed by a License Agreement   */
 %/*    ** See the file License for the Conditions of Use  **    */
@@ -695,24 +708,31 @@ dictionary\index{dictionary!construction}.
 A dictionary for use in \HTK\ has a very simple format.\index{dictionary!formats}
 Each line consists of a single word pronunciation with format
 \begin{verbatim}
-    WORD [OUTSYM] PRONPROB P1 P2 P3 P4 ....
+    WORD [ '['OUTSYM']' ] [PRONPROB] P1 P2 P3 P4 ....
 \end{verbatim}
-where \texttt{WORD} represents the word, \texttt{OUTSYM} is the symbol to
-output when that word is recognised, \texttt{PRONPROB} is the pronunciation
-probability ($0.0$ - $1.0$) and \texttt{P1}, \texttt{P2}, \ldots are the
-sequence of phones or HMMs to be used in recognising that word. The output
-symbol and the pronunciation probability are optional. If an output symbol is
-not specified, the name of the word itself is output. Empty square brackets,
+where \texttt{WORD} represents the word, followed by the optional
+parameters \texttt{OUTSYM} and \texttt{PRONPROB}, where
+\texttt{OUTSYM} is the symbol to output when that word is
+recognised (which must be enclosed in square brackets, \verb|[| and
+\verb|]|) and \texttt{PRONPROB} is the pronunciation probability
+($0.0$ - $1.0$).  \texttt{P1}, \texttt{P2}, \ldots is the sequence of
+phones or HMMs to be used in recognising that word. The output symbol
+and the pronunciation probability are optional. If an output symbol is
+not specified, the name of the word itself is output. If a
+pronunciation probability is not specified then a default of 1.0 is
+assumed.  Empty square brackets,
 \texttt{[]}, can be used to suppress any output when that word is recognised.
-For example, a dictionary for the But-Bit grammar might contain
+For example, a dictionary might contain
 \begin{verbatim}
-    bit           b  i  t 
-    but           b  u  t
+    bit           b  ih t 
+    but           b  ah t
+    dog    [woof] d  ao g
+    cat    [meow] k  ae t
     start  []     sil
     end    []     sil
 \end{verbatim}
-where for simplicity the phones are being represented by the letters of the alphabet.
 
+\noindent
 If any word has more than one pronunciation, then the word
 has a repeated entry, for example,
 \begin{verbatim}
@@ -727,8 +747,8 @@ level as in the above examples.  However, if context-dependent
 models are wanted, these can be included directly in the dictionary.
 For example, the Bit-But entries might be written as
 \begin{verbatim}
-    bit           b+i  b-i+t  i-t 
-    but           b+u  b-u+t  u-t
+    bit           b+ih  b-ih+t  ih-t 
+    but           b+ah  b-ah+t  ah-t
 \end{verbatim}
 In principle, this is never necessary since \htool{HNet} can perform context
 expansion automatically, however, it saves computation to do this

@@ -19,8 +19,8 @@
 /*     File: HBuild.c:  Word-Lattice Building                  */
 /* ----------------------------------------------------------- */
 
-char *hbuild_version = "!HVER!HBuild:   3.0 [CUED 05/09/00]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 1.4 2000/09/11 13:53:33 ge204 Exp $";
+char *hbuild_version = "!HVER!HBuild:   3.1 [CUED 16/01/02]";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.7 2002/01/16 18:11:29 ge204 Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.
@@ -86,16 +86,16 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HBuild [options] wordList latFile\n\n");
-   printf(" Option                                     Default\n\n");
-   printf(" -b      binary lattice output              ASCII\n");
-   printf(" -m s    load matrix bigram from s          Off\n");
-   printf(" -n s    load back-off bigram from s        Off\n");
-   printf(" -s s1 s2 s1/s2 are bigram start/end labels !ENTER !EXIT\n");
-   printf(" -t s1 s2 bracket word-loop/pair with s1 s2 Off\n");
-   printf(" -u s    set unknown symbol to s            !NULL\n");
-   printf(" -w s    load word-pair grammar from s      Off\n");
-   printf(" -x s    load multi-level lattice from s    Off\n");
-   printf(" -z      ignore ngrams with unknown symbol  Off\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -b      binary lattice output                ASCII\n");
+   printf(" -m s    load matrix bigram from s            off\n");
+   printf(" -n s    load back-off bigram from s          off\n");
+   printf(" -s s1 s2 s1/s2 are bigram start/end labels   !ENTER !EXIT\n");
+   printf(" -t s1 s2 bracket word-loop/pair with s1 s2   off\n");
+   printf(" -u s    set unknown symbol to s              !NULL\n");
+   printf(" -w s    load word-pair grammar from s        off\n");
+   printf(" -x s    load multi-level lattice from s      off\n");
+   printf(" -z      ignore ngrams with unknown symbol    off\n");
    PrintStdOpts(""); 
    printf("\n\n");
 }
@@ -416,7 +416,7 @@ Lattice *ProcessBoBiGram(MemHeap *latHeap, Vocab *voc, NGramLM *nLM)
       ln = lat->lnodes+j;
       ln->word = wd; ln->n=0; ln->v=0;
       wd->aux = (Ptr) j;
-      if (nLM->wdlist[j] != enterId) {
+      if (nLM->wdlist[i] != enterId) {
          la = lat->larcs+k;
          la->start = lat->lnodes;
          la->end = lat->lnodes+j;

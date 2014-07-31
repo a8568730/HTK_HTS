@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,7 +32,7 @@
 /*      File: HSigP.h:   Signal Processing Routines            */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HSigP:   3.0 [CUED 05/09/00] */
+/* !HVER!HSigP:   3.1 [CUED 16/01/02] */
 
 #ifndef _HSIGP_H_
 #define _HSIGP_H_
@@ -133,7 +146,9 @@ float Mel(int k, float fres);
 */
 
 FBankInfo InitFBank(MemHeap *x, int frameSize, long sampPeriod, int numChans,
-      float lopass, float hipass, Boolean usePower, Boolean takeLogs);
+                    float lopass, float hipass, Boolean usePower, Boolean takeLogs,
+                    Boolean doubleFFT,
+                    float alpha, float warpLowCut, float warpUpCut);
 /*
    Initialise an FBankInfo record prior to calling Wave2FBank.
 */
@@ -169,6 +184,24 @@ float FBank2C0(Vector fbank);
    compute sum of fbank channels and do standard normalisation
 */
 
+
+/* ------------------- PLP Related Operations ---------------------- */
+
+void InitPLP(FBankInfo info, int lpcOrder, Vector eql, DMatrix cm);
+/*
+   Initialise equal-loudness curve and cosine matrix for IDFT
+*/
+void FBank2ASpec(Vector fbank, Vector as, Vector eql, float compressFact,
+		 FBankInfo info);
+/*
+   Pre-emphasise with simulated equal-loudness curve and perform
+   cubic root amplitude compression.
+*/
+void ASpec2LPCep(Vector as, Vector ac, Vector lp, Vector c, DMatrix cm);
+/*
+   Do IDFT giving autocorrelation values then do linear prediction
+   and finally, transform into cepstral coefficients
+*/
 
 /* ------------------- Feature Level Operations -------------------- */
 

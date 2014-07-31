@@ -19,8 +19,8 @@
 /*         File: HTrain.c   HMM Training Support Routines      */
 /* ----------------------------------------------------------- */
 
-char *htrain_version = "!HVER!HTrain:   3.0 [CUED 05/09/00]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *htrain_version = "!HVER!HTrain:   3.1 [CUED 16/01/02]";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.6 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -784,7 +784,7 @@ ClusterSet *FlatCluster(MemHeap *x, Sequence vpool, int nc,
    return ccs;
 }  
 
-/* EXPORT->TreeCluster: apply linear clustering to vpool */
+/* EXPORT->TreeCluster: apply binary tree clustering to vpool */
 ClusterSet *TreeCluster(MemHeap *x, Sequence vpool, int nc, 
                         CovKind dck, CovKind cck, Covariance dcov)
 {

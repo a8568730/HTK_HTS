@@ -19,8 +19,8 @@
 /*         File: HERest.c: Embedded B-W ReEstimation           */
 /* ----------------------------------------------------------- */
 
-char *herest_version = "!HVER!HERest:   3.0 [CUED 05/09/00]";
-char *herest_vc_id = "$Id: HERest.c,v 1.4 2000/09/11 13:53:33 ge204 Exp $";
+char *herest_version = "!HVER!HERest:   3.1 [CUED 16/01/02]";
+char *herest_vc_id = "$Id: HERest.c,v 1.8 2002/01/16 18:11:29 ge204 Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -127,20 +127,20 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HERest [options] hmmList dataFiles...\n\n");
-   printf(" Option                                   Default\n\n");
-   printf(" -c f    Mixture pruning threshold          10.0\n");
-   printf(" -d s    dir to find hmm definitions       current\n");
-   printf(" -m N    set min examples needed per model   3\n");
-   printf(" -o s    extension for new hmm files        as src\n");
-   printf(" -p N    set parallel mode to N             off\n");
-   printf(" -r      Enable Single Pass Training...      \n");
-   printf("         ...using two parameterisations     off\n");
-   printf(" -s s    print statistics to file s         off\n");
-   printf(" -t f [i l] set pruning to f [inc limit]    inf\n");
-   printf(" -u tmvw update t)rans m)eans v)ars w)ghts  tmvw\n");
-   printf(" -v f    set minimum variance to f          0.0\n");
-   printf(" -w f    set mix weight floor to f*MINMIX   0.0\n");
-   printf(" -x s    extension for hmm files            none\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -c f    Mixture pruning threshold            10.0\n");
+   printf(" -d s    dir to find hmm definitions          current\n");
+   printf(" -m N    set min examples needed per model    3\n");
+   printf(" -o s    extension for new hmm files          as src\n");
+   printf(" -p N    set parallel mode to N               off\n");
+   printf(" -r      Enable Single Pass Training...       \n");
+   printf("         ...using two parameterisations       off\n");
+   printf(" -s s    print statistics to file s           off\n");
+   printf(" -t f [i l] set pruning to f [inc limit]      inf\n");
+   printf(" -u tmvw update t)rans m)eans v)ars w)ghts    tmvw\n");
+   printf(" -v f    set minimum variance to f            0.0\n");
+   printf(" -w f    set mix weight floor to f*MINMIX     0.0\n");
+   printf(" -x s    extension for hmm files              none\n");
    PrintStdOpts("BFGHILMSTX");
    printf("\n\n");
 }
@@ -401,9 +401,9 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
 
    /* Load HMMs and init HMMSet related global variables */
    if(MakeHMMSet( hset, hmmListFn )<SUCCESS)
-      HError(2399,"Initialise: MakeHMMSet failed");
+      HError(2321,"Initialise: MakeHMMSet failed");
    if(LoadHMMSet( hset,hmmDir,hmmExt)<SUCCESS)
-      HError(2399,"Initialise: LoadHMMSet failed");
+      HError(2321,"Initialise: LoadHMMSet failed");
    AttachAccs(hset, &gstack);
    ZeroAccs(hset);
    P = hset->numPhyHMM;
@@ -519,12 +519,11 @@ void DoForwardBackward(FBInfo *fbInfo, UttInfo *utt, char * datafn, char * dataf
    }
   
    /* fill the alpha beta and otprobs (held in fbInfo) */
-   FBFile(fbInfo, utt, datafn);
-
-   /* update totals */
-   totalT += utt->T ;
-   totalPr += utt->pr ;
-
+   if (FBFile(fbInfo, utt, datafn)) {
+      /* update totals */
+      totalT += utt->T ;
+      totalPr += utt->pr ;
+   }
 }
 
 /* --------------------------- Model Update --------------------- */

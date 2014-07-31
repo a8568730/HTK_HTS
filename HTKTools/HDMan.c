@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*    File: HDMan:   pronunciation dictionary manager          */
 /* ----------------------------------------------------------- */
 
-char *hdman_version = "!HVER!HDMan:   3.0 [CUED 05/09/00]";
-char *hdman_vc_id = "$Id: HDMan.c,v 1.5 2000/09/15 11:54:06 ge204 Exp $";
+char *hdman_version = "!HVER!HDMan:   3.1 [CUED 16/01/02]";
+char *hdman_vc_id = "$Id: HDMan.c,v 1.10 2002/01/16 18:11:29 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -46,7 +59,7 @@ static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
 static int nParm = 0;               /* total num params */
 
 #define MAXARGS  100    /* max args in any command */
-#define MAXPHONE 60     /* max phones in any pronunciation */
+/* MAXPHONES (max phones in any pronunciation) is defined in HDict.h */
 #define MAXPRONS 20     /* max number of pronunciations per word */
 #define MAXDICTS 20     /* max number of source dictionaries */
 #define MAXCONS  20     /* max number of contexts per script */
@@ -80,7 +93,7 @@ typedef struct _ScriptItem{     /* internal rep of a complete edit script */
 typedef struct {                /* a single pronunciation */
    short nPhone;
    float prob;
-   LabId phone[MAXPHONE];
+   LabId phone[MAXPHONES];
    LabId source;                /* name of source dict */
 }Pronunciation;
 
@@ -194,20 +207,20 @@ void Summary(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HDMan [options] newDict srcDict1 srcDict2 ... \n\n");
-   printf(" Option                                      Default\n\n");
-   printf(" -a s    chars in s start comment lines      #\n");
-   printf(" -b s    define word boundary symbol         #\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -a s    chars in s start comment lines       #\n");
+   printf(" -b s    define word boundary symbol          #\n");
    printf(" -e dir  look for edit scripts in dir\n");
-   printf(" -g f    global dictionary is in file f      global.ded\n");
-   printf(" -h i j  skip 1st i lines of j'th dic file   0\n");
-   printf(" -i      include output symbols              Off\n");
-   printf(" -j      include pronunciation probabilities Off\n");
-   printf(" -l s    write log file in file s         no logging\n");
-   printf(" -m      merge prons from all sources      first_only\n");
-   printf(" -n f    output union of all phones to f     Off\n");
-   printf(" -o      disable dictionary output         enabled\n");
+   printf(" -g f    global dictionary is in file f       global.ded\n");
+   printf(" -h i j  skip 1st i lines of j'th dic file    0\n");
+   printf(" -i      include output symbols               off\n");
+   printf(" -j      include pronunciation probabilities  off\n");
+   printf(" -l s    write log file in file s             no logging\n");
+   printf(" -m      merge prons from all sources         first_only\n");
+   printf(" -n f    output union of all phones to f      off\n");
+   printf(" -o      disable dictionary output            enabled\n");
    printf(" -p f    load phone list stored in f\n");
-   printf(" -t      tag output words with source        Off\n");
+   printf(" -t      tag output words with source         off\n");
    printf(" -w f    load word list stored in f\n");
    PrintStdOpts("Q");
    printf("\n\n");
@@ -817,25 +830,6 @@ Boolean IsCommentChar(int c)
    return FALSE;
 }
 
-/* ReadRawString: ie ignore normal HTK escaping */
-Boolean ReadRawString(Source *src, char *s)
-{
-   int i,c;
-
-   while (isspace(c=GetCh(src)));
-   if (c == EOF) return FALSE;
-   for (i=0; i<MAXSTRLEN ; i++){
-      if (c == EOF || isspace(c)){
-         UnGetCh(c,src);
-         s[i] = '\0';
-         return TRUE;
-      }
-      s[i] = c; c = GetCh(src);
-   }     
-   HError(1413,"ReadRawString: String too long");
-   return FALSE;
-}
-
 /* SetCase: of given string in s */
 static void SetCase(EdOp cmd, char *s)
 {
@@ -946,7 +940,7 @@ Boolean ReadNextWord(DBuffer *db)
 }
 
 /* WriteEntry: write out a dictionary entry and update newPhones */
-void WriteEntry(FILE *f, LabId word, LabId outsym, Pronunciation *p, int margin)
+void WriteEntry(FILE *f, LabId word, LabId outsym, Pronunciation *p, int margin, Boolean findNew)
 {
    int i,st,en;
    char buf[256],m[20];
@@ -987,7 +981,8 @@ void WriteEntry(FILE *f, LabId word, LabId outsym, Pronunciation *p, int margin)
    for (i=st; i<en; i++) { 
       if (!nullOutput)
          fprintf(f," %s",ReWriteString((p->phone[i])->name,NULL,ESCAPE_CHAR));
-      PutPhone(p->phone[i]); 
+      if (findNew)
+         PutPhone(p->phone[i]); 
    }
    if (tagSources && !nullOutput)
       fprintf(f,"   [%s]",ReWriteString(p->source->name,NULL,ESCAPE_CHAR));
@@ -1025,13 +1020,13 @@ Boolean ReadDictProns(DBuffer *db)
 }
 
 /* WriteDictWord: write current word to output file */
-void WriteDictWord(DBuffer *db, FILE *f, int margin)
+void WriteDictWord(DBuffer *db, FILE *f, int margin, Boolean findNew)
 {
    int i;
 
    if (f==NULL) return;
    for (i=0; i<db->wbuf.nPron; i++)
-      WriteEntry(f,db->wbuf.word,db->wbuf.outsym,db->wbuf.pron+i,margin);
+      WriteEntry(f,db->wbuf.word,db->wbuf.outsym,db->wbuf.pron+i,margin, findNew);
 }
 
 void ShowDB(DBuffer *db, char * title)
@@ -1302,7 +1297,7 @@ void SplitPhon(Pronunciation *p, int nArgs, LabId *args)
    nExtra = nSplit-1;
    for (i=0;i<p->nPhone;)
       if (p->phone[i] == args[0]) {
-         if (p->nPhone+nExtra > MAXPHONE)
+         if (p->nPhone+nExtra > MAXPHONES)
             HError(1430,"SplitPhon: Too many phones to split");
          for (j=p->nPhone-1+nExtra; j>=i+1; j--)
             p->phone[j] = p->phone[j-nExtra];
@@ -1348,8 +1343,8 @@ void DeletePhoneOp(WordBuf *wb, LabId *args)
 /* AppendPhone: append id to given pronunciation */
 void AppendPhone(Pronunciation *p, LabId id)
 {
-   if (p->nPhone == MAXPHONE)
-      HError(1430,"AppendPhone: MAXPHONE exceeded");
+   if (p->nPhone == MAXPHONES)
+      HError(1430,"AppendPhone: MAXPHONES exceeded");
    p->phone[p->nPhone-1] = id;
    p->phone[p->nPhone++] = wdBnd;
 }
@@ -1519,7 +1514,7 @@ void EditWordBuf(DBuffer *db)
    if (trace&T_EDW1) {
       printf("   before:\n"); 
       if (db->wbuf.nPron>0 ) 
-         WriteDictWord(db,stdout,4);
+         WriteDictWord(db,stdout,4, FALSE);
       else
          printf("    ** deleted **\n");
    }
@@ -1573,14 +1568,14 @@ void EditWordBuf(DBuffer *db)
       }
       if (trace&T_EDW1) {
          printf("      after %s: ",cmdMap[i->cmd.op]);
-         WriteDictWord(db,stdout,6);
+         WriteDictWord(db,stdout,6, FALSE);
       }
       i = i->next;
    }
    if (trace&T_EDW0) {
       printf("   after:\n"); 
       if (db->wbuf.nPron>0 ) 
-         WriteDictWord(db,stdout,4);
+         WriteDictWord(db,stdout,4, FALSE);
       else
          printf("    ** deleted **\n");
    }
@@ -1828,7 +1823,7 @@ void EditAndMerge(void)
          RemDuplicates(&outbuf);
          EditWordBuf(&outbuf);
          RemDuplicates(&outbuf);
-         WriteDictWord(&outbuf, outfile, 0);
+         WriteDictWord(&outbuf, outfile, 0, TRUE);
       } else {
          if (isLogging){
             if (numMissing==0){

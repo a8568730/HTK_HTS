@@ -18,6 +18,7 @@ htkbook.dvi: htkbook.tex
 	latex htkbook
 
 html: htkbook.dvi
+	-mkdir htkbook
 	latex2html -t "HTKBook for HTK3" -address "<A HREF="http://htk.eng.cam.ac.uk/docs/docs.shtml" TARGET="_top">Back to HTK site</A><BR>See front page for HTK Authors" -white -transparent -html_version 4.0,frame -rootdir htkbook/ htkbook.tex
 
 .PHONY: clean

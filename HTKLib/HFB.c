@@ -19,8 +19,8 @@
 /*         File: HFB.c: Forward Backward routines module       */
 /* ----------------------------------------------------------- */
 
-char *hfb_version = "!HVER!HFB:   3.0 [CUED 05/09/00]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *hfb_version = "!HVER!HFB:   3.1 [CUED 16/01/02]";
+char *hfb_vc_id = "$Id: HFB.c,v 1.8 2002/01/16 18:11:27 ge204 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -1110,7 +1110,7 @@ static Boolean StepBack(FBInfo *fbInfo, UttInfo *utt, char * datafn)
          p->pruneThresh = pruneThresh;
          qt=CreateInsts(ab,fbInfo->hset,utt->Q,utt->tr);
          if (qt>utt->T) {
-            if (trace&T_TOP)
+            if (traceHFB || trace&T_TOP)
                printf(" Unable to traverse %d states in %d frames\n",qt,utt->T);
             HError(-7324,"StepBack: File %s - bad data or over pruning\n",datafn);
             return FALSE;
@@ -1122,12 +1122,12 @@ static Boolean StepBack(FBInfo *fbInfo, UttInfo *utt, char * datafn)
          if (lbeta>LSMALL) break;
          pruneThresh+=pruneSetting.pruneInc;
          if (pruneThresh>pruneSetting.pruneLim || pruneSetting.pruneInc==0.0) {
-            if (trace&T_TOP)
+            if (traceHFB || trace&T_TOP)
                printf(" No path found in beta pass\n");
             HError(-7324,"StepBack: File %s - bad data or over pruning\n",datafn);
             return FALSE;
          }
-         if (trace&T_TOP) {
+         if (traceHFB || trace&T_TOP) {
             printf("Retrying Beta pass at %5.1f\n",pruneThresh);
          }
       }
@@ -1448,7 +1448,9 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
    CreateAlpha(ab,fbInfo->hset,utt->Q);
    InitAlpha(ab,&start,&end,utt->Q,fbInfo->skipstart,fbInfo->skipend);
 
-   if (trace&T_OCC) CreateTraceOcc(ab,utt);
+   ab->occa = NULL;
+   if (trace&T_OCC) 
+      CreateTraceOcc(ab,utt);
    for (q=1;q<=utt->Q;q++){             /* inc access counters */
       hmm = ab->qList[q];
       negs = (int)hmm->hook+1;
@@ -1601,14 +1603,16 @@ void InitUttObservations(UttInfo *utt, HMMSet *hset,
 
 
 /* FBFile: apply forward-backward to given utterance */
-void FBFile(FBInfo *fbInfo, UttInfo *utt, char * datafn)
+Boolean FBFile(FBInfo *fbInfo, UttInfo *utt, char * datafn)
 {
+   Boolean success;
 
-   if( StepBack(fbInfo,utt,datafn) ) {
+   if ((success = StepBack(fbInfo,utt,datafn)))
       StepForward(fbInfo,utt);
-   }
 
    ResetStacks(fbInfo->ab);
+
+   return success;
 }
 
 

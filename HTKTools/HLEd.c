@@ -19,8 +19,8 @@
 /*      File: HLEd.c: Edit label file(s)                       */
 /* ----------------------------------------------------------- */
 
-char *hled_version = "!HVER!HLEd:   3.0 [CUED 05/09/00]";
-char *hled_vc_id = "$Id: HLEd.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hled_version = "!HVER!HLEd:   3.1 [CUED 16/01/02]";
+char *hled_vc_id = "$Id: HLEd.c,v 1.6 2002/01/16 18:11:29 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -143,12 +143,12 @@ void Summary(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HLEd [options] edCmdFile labFiles...\n\n");
-   printf(" Option                                     Default\n\n");
+   printf(" Option                                       Default\n\n");
    printf(" -b      suppress boundary times              off\n");
    printf(" -d s    load dictionary from s               off\n");
    printf(" -i s    Output transcriptions to MLF s       off\n"); 
-   printf(" -g f    Set min gap for FG command to f     50000.0\n"); 
-   printf(" -l s    Dir to store output label file(s)   current\n");
+   printf(" -g f    Set min gap for FG command to f      50000.0\n"); 
+   printf(" -l s    Dir to store output label file(s)    current\n");
    printf(" -m      Strip to monophones on loading       off\n");
    printf(" -n f    Output list of all new labs to f     off\n");
    PrintStdOpts("GIPQX");

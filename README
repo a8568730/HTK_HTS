@@ -1,4 +1,4 @@
-		Hidden Markov Toolkit (HTK) 3.0
+		Hidden Markov Toolkit (HTK) 3.1
 
 Use of this software is governed by a license agreement, the terms and
 conditions of which are set forth in the file LICENSE in the
@@ -9,7 +9,7 @@ therein.
 Introduction
 ============
 
-HTK is a toolkit for use in research into automatic speech recogntion
+HTK is a toolkit for use in research into automatic speech recognition
 and has been developed by the Speech Vision Robotics Group at the
 Cambridge University Engineering Department (http://svr-www.eng.cam.ac.uk) 
 and Entropic Ltd (http://www.entropic.com).
@@ -17,7 +17,7 @@ and Entropic Ltd (http://www.entropic.com).
 Please visit the HTK homepage at the following address for more
 information about HTK:
 
-    http://htk.eng.cam.ac.uk
+    http://htk.eng.cam.ac.uk/
 
 A number of mailing lists have been established to help users build
 and understand HTK, for details see
@@ -38,11 +38,11 @@ be found in the LICENSE file.
 Compiling & Installing HTK under UNIX
 =====================================
 
-HTK consists of a library (built from the source code in HKTLib/) and
+HTK consists of a library (built from the source code in HTKLib/) and
 a set of command line tools (in HTKTools/).
 
 The supplied makefiles require the following environment variables
-to be set
+to be set:
 
  CPU   current CPU type 
  HBIN  specifies location of executables $HBIN/bin.$CPU
@@ -52,22 +52,25 @@ to be set
 
 See the makefiles in HTKLib/ or HTKTools/ for detailed information
 about how these are used. The directory env/ contains example settings
-of theses variables for a range of Operating Systems.
+of these variables for a range of Operating Systems.
 
 First build the library in HTKLib/ and then build the tools in
-HTKTools/.
+HTKTools/. The executables will be copied to the directory
+$HBIN/bin.$CPU which should be added to your PATH.
 
 Please address questions regarding building HTK to
 HTK-users@eng.cam.ac.uk
 
 In a future version we will provide an autoconf based build system. 
 
-Compiling & Installing HTK under Windows NT
-===========================================
+
+Compiling & Installing HTK under Windows
+========================================
 
 HTK can be compiled under Windows using the Visual Studio C compiler
-and the 'nmake' facility.  To do this, open a DOS window and cd to the
-htk directory.  Create a directory for the executables
+and the 'nmake' facility.  To do this, open a DOS or Command Prompt
+window and cd to the htk directory.  Create a directory for the
+executables
 
    > mkdir bin.win32
 
@@ -89,8 +92,9 @@ Notes
 1) VCVARS32, nmake and the C compiler are usually stored in 
      C:\Program Files\Microsoft Visual Studio\VC98\bin 
    This must be in your path.
-2) The variables CPU,HBIN,HTKCC, etc are set directly in the NT
+2) The variables CPU,HBIN,HTKCC, etc are set directly in the Windows
    makefiles and any existing settings are ignored.
+
 
 Testing the Installation
 ========================
@@ -106,7 +110,10 @@ HTKDemo directory explaining the operation of the demonstration in
 detail but, in short, you need to run the demonstration script passing
 it the configuration file configs/monPlainM1S1.dcf as input. 
 
-To run the demonstration type:
+Before running the demo make sure you have compiled all the HTK tools
+and the executables are in your PATH, i.e. just typing 'HInit' at the
+commandline prints a short usage summary. To run the demonstration
+type:
 
 $ cd HTKDemo
 $ ./runDemo configs/monPlainM1S1.dcf
@@ -126,8 +133,9 @@ WORD: %Corr=63.91, Acc=59.40 [H=85, D=35, S=13, I=6, N=133]
 ===================================================================
 
 NB to run this demo under Windows you must have perl installed and you
-need to invoke perl explicitly. See http://www.perl.org to download
+need to invoke perl explicitly. See http://www.perl.org/ to download
 the perl distribution. The script runDemo.pl should be used in place
-of runDemo ie to run the test above type
+of runDemo i.e. to run the test above type
 
  > perl runDemo.pl configs\monPlainM1S1.dcf
+

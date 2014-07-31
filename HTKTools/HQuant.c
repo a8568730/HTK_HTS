@@ -19,8 +19,8 @@
 /*       File: HQuant.c: VQ table generation                   */
 /* ----------------------------------------------------------- */
 
-char *hquant_version = "!HVER!HQuant:   3.0 [CUED 05/09/00]";
-char *hquant_vc_id = "$Id: HQuant.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hquant_version = "!HVER!HQuant:   3.1 [CUED 16/01/02]";
+char *hquant_vc_id = "$Id: HQuant.c,v 1.6 2002/01/16 18:11:29 ge204 Exp $";
 
 /* 
    This program calculates a vector quantisation table from a
@@ -111,15 +111,15 @@ void InitStreamVars(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HQuant [options] vqFile trainFiles...\n\n" );
-   printf(" Option                                    Default\n\n");
-   printf(" -d      Use diagonal cov Mahalanobis      Euclidean\n");
-   printf(" -f      Use full covariance Mahalanobis   Euclidean\n");
-   printf(" -g      Output global covar to codebook     off\n");
-   printf(" -l s    Set segment label to s             none\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -d      Use diagonal cov Mahalanobis         Euclidean\n");
+   printf(" -f      Use full covariance Mahalanobis      Euclidean\n");
+   printf(" -g      Output global covar to codebook      off\n");
+   printf(" -l s    Set segment label to s               none\n");
    printf(" -n S N  Set codebook size for stream S to N  N=%d\n",DEF_NCLUST);
-   printf(" -s N    Set number of streams to N          1\n");
-   printf(" -t      Create tree-stuctured codebooks   Linear\n");
-   printf(" -w S N  Set width of stream S to N        Default\n");
+   printf(" -s N    Set number of streams to N           1\n");
+   printf(" -t      Create tree-stuctured codebooks      linear\n");
+   printf(" -w S N  Set width of stream S to N           default\n");
    PrintStdOpts("FGILX");
    printf("\n\n");
 }

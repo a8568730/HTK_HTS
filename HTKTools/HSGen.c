@@ -19,8 +19,8 @@
 /*    File: HSGen: Generate Sentences from a Lattice           */
 /* ----------------------------------------------------------- */
 
-char *hsgen_version = "!HVER!HSGen:   3.0 [CUED 05/09/00]";
-char *hsgen_vc_id = "$Id: HSGen.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hsgen_version = "!HVER!HSGen:   3.1 [CUED 16/01/02]";
+char *hsgen_vc_id = "$Id: HSGen.c,v 1.7 2002/01/16 18:11:29 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -72,11 +72,11 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HSGen [options] latticeFile dictFile\n\n");
-   printf(" Option                                   Default\n\n");
-   printf(" -l      Include line numbers               off\n");
-   printf(" -n N    Number of sentences to generate    100\n");
-   printf(" -q      Suppress sentence output           off\n");
-   printf(" -s      Compute grammar stats              off\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -l      Include line numbers                 off\n");
+   printf(" -n N    Number of sentences to generate      100\n");
+   printf(" -q      Suppress sentence output             off\n");
+   printf(" -s      Compute grammar stats                off\n");
    PrintStdOpts("");
    printf("\n\n");
 }
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
    void  GenSentences(char *latfn, char *dicfn);
   
    if(InitShell(argc,argv,hsgen_version,hsgen_vc_id)<SUCCESS)
-      HError(3200,"HSGen: InitShell failed");
+      HError(3400,"HSGen: InitShell failed");
 
    InitMem();   InitLabel();
    InitMath();  InitSigP();
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
    while (NextArg() == SWITCHARG) {
       s = GetSwtArg();
       if (strlen(s)!=1) 
-         HError(1,"Bad switch %s; must be single letter",s);
+         HError(3419, "Bad switch %s; must be single letter", s);
       switch(s[0]){
       case 's':
          stats = TRUE; break;
@@ -119,14 +119,14 @@ int main(int argc, char *argv[])
       case 'T':
          trace = GetChkedInt(0,07,s); break;
       default:
-         HError(1,"Unknown switch %s",s);
+         HError(3419, "Unknown switch %s", s);
       }
    }
    if (NextArg()!=STRINGARG)
-      HError(1,"lattice file name expected");
+      HError(3419, "lattice file name expected");
    lfn = GetStrArg(); 
    if (NextArg()!=STRINGARG)
-      HError(1,"dictionary file name expected");
+      HError(3419, "dictionary file name expected");
    dfn = GetStrArg(); 
    GenSentences(lfn,dfn);
    Exit(0);
@@ -217,7 +217,7 @@ NodeId RandSucc(NodeId n)
    for (j=1; j<sel; j++){
       a=a->farc;
       if (a==NARC) 
-         HError(999,"RandSucc: null arc j=%d,sel=%d,nfoll=%d",j,sel,nfoll);
+         HError(3420, "RandSucc: null arc j=%d,sel=%d,nfoll=%d",j,sel,nfoll);
    }
    if (trace&T_DET) printf(": choose %s\n",a->end->word->wordName->name);
    return a->end;
@@ -231,7 +231,7 @@ void PrintWord(NodeId n)
    Pron p;
 
    if ((w = n->word)==NULL)
-      HError(999,"PrintWord: node %d has no word",n->n);
+      HError(3420, "PrintWord: node %d has no word",n->n);
    if ((p = w->pron)==NULL)
       printf("%s ",w->wordName->name);
    else if (p->outSym!=NULL)
@@ -275,12 +275,12 @@ void  GenSentences(char * latfn, char * dicfn)
 
    InitVocab(&voc);
    if(ReadDict(dicfn,&voc)<SUCCESS)
-      HError(713,"GenSententces:ReadDict failed" );
+      HError(3413,"GenSententces:ReadDict failed" );
    CreateHeap(&lheap,"Lattice Heap",MSTAK,1,0.4,1000,5000);
    if ((f=FOpen(latfn,NetFilter,&isPipe)) == NULL)
-      HError(777,"GenSentences: Can't open lattice file %s",latfn);
+      HError(3410,"GenSentences: Can't open lattice file %s",latfn);
    if((lat = ReadLattice(f, &lheap, &voc, TRUE, FALSE))==NULL)
-      HError(777,"GenSentences: ReadLattice failed");
+      HError(3410,"GenSentences: ReadLattice failed");
    FClose(f,isPipe);
 
    if (trace&T_TOP)

@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HSLab.c:   The Speech Label Editor            */
 /* ----------------------------------------------------------- */
 
-char *hslab_version = "!HVER!HSLab:   3.0 [CUED 05/09/00]";
-char *hslab_vc_id = "$Id: HSLab.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hslab_version = "!HVER!HSLab:   3.1 [CUED 16/01/02]";
+char *hslab_vc_id = "$Id: HSLab.c,v 1.7 2002/01/16 18:11:29 ge204 Exp $";
 
 /* 
    --------------------------------------------------------------
@@ -217,11 +230,11 @@ static char spcl_str[SLEN] = "Command";   /* special button string */
 void ReportUsage(void)
 {
    printf("\nUSAGE: HSLab [options] waveformFile\n\n");
-   printf(" Option                                     Default\n\n");
-   printf(" -a      auto-increment global label         Off\n");
-   printf(" -i s    Output transcriptions to MLF s      Off\n");  
-   printf(" -n      Create new transcription            Off\n");
-   printf(" -s str  Set special button label          command\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -a      auto-increment global label          off\n");
+   printf(" -i s    Output transcriptions to MLF s       off\n");  
+   printf(" -n      Create new transcription             off\n");
+   printf(" -s str  Set special button label             command\n");
    PrintStdOpts("FGILPX");
 }
 
@@ -1193,9 +1206,15 @@ Boolean GetString(RectWin *win, char *str, short minlen, short maxlen)
 /* FileExists: check to see if a file exsists */
 Boolean FileExists(char *fn, char *fmode)
 {
+   Boolean isEXF;               /* File name is extended */
+   char actfile[MAXFNAMELEN];   /* actual file name */
+   long stindex,enindex;        /* segment indices */
    FILE *f;
    
-   if ((f=fopen(fn, fmode)) == NULL)
+   strcpy (actfile, fn);
+   isEXF = GetFileNameExt (fn, actfile, &stindex, &enindex);
+
+   if ((f=fopen(actfile, fmode)) == NULL)
       return FALSE;
    fclose(f);
    return TRUE;

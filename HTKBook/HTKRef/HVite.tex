@@ -191,10 +191,17 @@ command line options
         This factor post-multiplies the language model likelihoods
         from the word lattices.  (default value 1.0).
    
-  \ttitem{-t f} Enable beam searching such that any model whose 
+  \ttitem{-t f [i l]} Enable beam searching such that any model whose 
         maximum log probability token falls more than \texttt{f} below
         the maximum for all models is deactivated.  Setting \texttt{f}
-        to 0.0 disables the beam search mechanism (default value \texttt{0.0}).
+        to 0.0 disables the beam search mechanism (default value
+        \texttt{0.0}). In alignment mode two extra parameters
+        \texttt{i} and \texttt{l} can be specified. If the alignment
+        fails at the initial pruning threshold \texttt{f}, then the
+        threshold will by increased by \texttt{i} and the alignment
+        will be retried. This procedure is repeated until the
+        alignment succeeds or the threshold limit \texttt{l} is
+        reached.        
 
   \ttitem{-u i} Set the maximum number of active models to \texttt{i}.
         Setting \texttt{i} to \texttt{0} disables this limit (default 0).

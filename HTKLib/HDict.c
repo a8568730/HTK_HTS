@@ -19,8 +19,8 @@
 /*         File: HDict.c  Dictionary Storage                   */
 /* ----------------------------------------------------------- */
 
-char *hdict_version = "!HVER!HDict:   3.0 [CUED 05/09/00]";
-char *hdict_vc_id = "$Id: HDict.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *hdict_version = "!HVER!HDict:   3.1 [CUED 16/01/02]";
+char *hdict_vc_id = "$Id: HDict.c,v 1.6 2002/01/16 18:11:27 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -183,7 +183,10 @@ void ShowDict(Vocab *voc)
       for ( wid = voc->wtab[i]; wid != NULL; wid = wid->next ) 
          for (thisPron = wid->pron; thisPron != NULL; thisPron = thisPron->next) {
             printf("%4d: %-20s",i,wid->wordName->name);
-            printf(" [%s]",thisPron->outSym->name);
+            if (thisPron->outSym)
+               printf(" [%s]",thisPron->outSym->name);
+            else
+               printf(" []");
             for (j=0; j < thisPron->nphones; j++)
                printf(" %s",thisPron->phones[j]->name);
             printf("\n");

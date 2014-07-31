@@ -36,9 +36,11 @@ modules = HShell.o HMath.o  HSigP.o  HWave.o HAudio.o HParm.o HVQ.o  HGraf.o\
 all:    HTKLib.$(CPU).a
 
 HTKLib.$(CPU).a: $(modules)
+	-rm HTKLib.$(CPU).a
 	ar rv HTKLib.$(CPU).a $?
 	-ranlib HTKLib.$(CPU).a
 
+.PHONY: clean cleanup depend
 clean:
 	-rm -f *.o HTKLib.$(CPU).a *.cpu
 	touch $(CPU).cpu
@@ -46,3 +48,42 @@ clean:
 cleanup:
 	-rm -f *.o *.cpu
 
+depend:
+	-makedepend -Y *.c
+
+# DO NOT DELETE THIS LINE -- make depend depends on it.
+
+HAdapt.o: HShell.h HMem.h HMath.h HSigP.h HWave.h HAudio.h HParm.h HLabel.h
+HAdapt.o: HModel.h HTrain.h HUtil.h HAdapt.h
+HAudio.o: HShell.h HMem.h HMath.h HWave.h HAudio.h
+HDict.o: HShell.h HMem.h HMath.h HWave.h HLabel.h HDict.h
+HFB.o: HShell.h HMem.h HMath.h HSigP.h HAudio.h HWave.h HVQ.h HParm.h
+HFB.o: HLabel.h HModel.h HTrain.h HUtil.h HAdapt.h HFB.h
+HGraf.o: HShell.h HMem.h HMath.h HGraf.h
+HGraf.null.o: HShell.h HMem.h HMath.h HGraf.h
+HGraf_WIN32.o: HShell.h HMem.h HMath.h HGraf.h
+HLM.o: HShell.h HMem.h HMath.h HWave.h HLabel.h HLM.h
+HLabel.o: HShell.h HMem.h HMath.h HWave.h HLabel.h
+HMath.o: HShell.h HMem.h HMath.h
+HMem.o: HShell.h HMem.h
+HModel.o: HShell.h HMem.h HMath.h HWave.h HAudio.h HParm.h HLabel.h HModel.h
+HModel.o: HUtil.h HTrain.h HAdapt.h
+HNet.o: HShell.h HMem.h HMath.h HWave.h HAudio.h HParm.h HLabel.h HModel.h
+HNet.o: HUtil.h HDict.h HNet.h
+HParm.o: HShell.h HMem.h HMath.h HSigP.h HAudio.h HWave.h HVQ.h HParm.h
+HParm.o: HLabel.h HModel.h esignal.h
+HRec.o: HShell.h HMem.h HMath.h HWave.h HAudio.h HParm.h HLabel.h HModel.h
+HRec.o: HDict.h HNet.h HRec.h HUtil.h
+HShell.o: HShell.h
+HSigP.o: HShell.h HMem.h HMath.h HSigP.h
+HTrain.o: HShell.h HMem.h HMath.h HSigP.h HAudio.h HWave.h HVQ.h HParm.h
+HTrain.o: HLabel.h HModel.h HUtil.h HTrain.h
+HUtil.o: HShell.h HMem.h HMath.h HSigP.h HAudio.h HWave.h HVQ.h HParm.h
+HUtil.o: HLabel.h HModel.h HUtil.h
+HVQ.o: HShell.h HMem.h HMath.h HVQ.h
+HWave.o: HShell.h HMem.h HMath.h HWave.h esignal.h HAudio.h HParm.h
+esig_asc.o: esignal.h
+esig_edr.o: esignal.h
+esig_nat.o: esignal.h
+esignal.o: esignal.h
+strarr.o: esignal.h strarr.h

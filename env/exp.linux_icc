@@ -1,6 +1,6 @@
-export HTKCF='-ansi -g -O2 -DOSS_AUDIO'
-export HTKLF='-L/usr/X11R6/lib'
-export HTKCC='gcc'
+export HTKCF='-DNDEBUG -DOSS_AUDIO -O3 -ip -tpp6 '
+export HTKLF='-static -L/usr/X11R6/lib'
+export HTKCC='icc'
 export Arch=LINUX
 export Objcopy="echo"
 export PRILF='-x'

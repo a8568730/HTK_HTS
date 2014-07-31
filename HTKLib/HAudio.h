@@ -19,7 +19,7 @@
 /*         File: HAudio.h:   Audio Input/Output                */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HAudio:   3.0 [CUED 05/09/00] */
+/* !HVER!HAudio:   3.1 [CUED 16/01/02] */
 
 #ifndef _HAUDIO_H_
 #define _HAUDIO_H_

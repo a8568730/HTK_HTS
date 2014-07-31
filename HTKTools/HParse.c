@@ -19,8 +19,8 @@
 /*     File: HParse.c: HParse based word-network definition    */
 /* ----------------------------------------------------------- */
 
-char *hparse_version = "!HVER!HParse:   3.0 [CUED 05/09/00]";
-char *hparse_vc_id = "$Id: HParse.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hparse_version = "!HVER!HParse:   3.1 [CUED 16/01/02]";
+char *hparse_vc_id = "$Id: HParse.c,v 1.6 2002/01/16 18:11:29 ge204 Exp $";
 
 /* The HParse program reads in a set of HTK  HParse rewrite rules
    (as used in HTK V1.x) and writes out an HTK V2 lattice and
@@ -190,11 +190,11 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HParse [options] netFile latFile\n\n");
-   printf(" Option                                    Default\n\n");
-   printf(" -b      output lattice in binary           ascii\n");   
-   printf(" -c      set V1.x compatability mode        off\n");
-   printf(" -d s    output dictionary to file s        none\n");
-   printf(" -l      include LM log probs in lattice    off\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -b      output lattice in binary             ascii\n");   
+   printf(" -c      set V1.x compatability mode          off\n");
+   printf(" -d s    output dictionary to file s          none\n");
+   printf(" -l      include LM log probs in lattice      off\n");
    PrintStdOpts(""); 
    printf("\n\n");
 }

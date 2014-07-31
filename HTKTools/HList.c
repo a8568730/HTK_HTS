@@ -19,8 +19,8 @@
 /*      File: HList.c: List a Speech File or Audio Source      */
 /* ----------------------------------------------------------- */
 
-char *hlist_version = "!HVER!HList:   3.0 [CUED 05/09/00]";
-char *hlist_vc_id = "$Id: HList.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hlist_version = "!HVER!HList:   3.1 [CUED 16/01/02]";
+char *hlist_vc_id = "$Id: HList.c,v 1.7 2002/01/16 18:11:29 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -81,18 +81,18 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HList [options] file ...\n\n");
-   printf(" Option                                   Default\n\n");
-   printf(" -d      Coerce observation to VQ symbols    Off\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -d      Coerce observation to VQ symbols     off\n");
    printf(" -e N    End at sample N                      0\n");
-   printf(" -h      Print source header info            Off\n");
-   printf(" -i N    Set items per line to N             10\n");
+   printf(" -h      Print source header info             off\n");
+   printf(" -i N    Set items per line to N              10\n");
    printf(" -n N    Set num streams to N                 1\n");
-   printf(" -o      Print observation structure         Off\n");
-   printf(" -p      Playback audio                      Off\n");
-   printf(" -r      Write raw output                    Off\n");
+   printf(" -o      Print observation structure          off\n");
+   printf(" -p      Playback audio                       off\n");
+   printf(" -r      Write raw output                     off\n");
    printf(" -s N    Start at sample N                    0\n");
-   printf(" -t      Print target header info            Off\n");
-   printf(" -z      Suppress printing data              On\n");
+   printf(" -t      Print target header info             off\n");
+   printf(" -z      Suppress printing data               on\n");
    PrintStdOpts("F");
    printf("\n\n");
 }
@@ -279,6 +279,9 @@ Boolean IsWave(char *srcFile)
    char buf[MAXSTRLEN];
    ParmKind tgtPK=ANON;
    FileFormat srcFF=HTK;
+   Boolean isEXF;               /* srcFile is extended file */
+   char actfname[MAXFNAMELEN];  /* actual filename */
+   long stIndex, enIndex;       /* start and end indices */
    
    if (ff!=UNDEFF) srcFF = ff;
    /* Read all configuration params and get target */
@@ -287,7 +290,10 @@ Boolean IsWave(char *srcFile)
    isWave = tgtPK == WAVEFORM;
    if (tgtPK == ANON){
       if ((srcFF == HTK || srcFF == ESIG) && srcFile != NULL){
-         if ((f=FOpen(srcFile,WaveFilter,&isPipe)) == NULL)
+         strncpy (actfname, srcFile, MAXFNAMELEN);
+         isEXF = GetFileNameExt (srcFile, actfname, &stIndex, &enIndex);
+         
+         if ((f = FOpen (actfname, WaveFilter, &isPipe)) == NULL)
             HError(1110,"IsWave: cannot open File %s",srcFile);
          switch (srcFF) {
          case HTK:

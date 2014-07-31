@@ -19,17 +19,12 @@
 /*         File: HMem.c:   Memory Management Module            */
 /* ----------------------------------------------------------- */
 
-char *hmem_version = "!HVER!HMem:   3.0 [CUED 05/09/00]";
-char *hmem_vc_id = "$Id: HMem.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *hmem_version = "!HVER!HMem:   3.1 [CUED 16/01/02]";
+char *hmem_vc_id = "$Id: HMem.c,v 1.8 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
 
-#if defined MPW
-#pragma segment hmods2
-#endif
-
-static Boolean license_okay=FALSE;
 int debug_level = 0;               /* For esps linking */
 
 /* --------------------------- Trace Flags ------------------------ */
@@ -52,7 +47,7 @@ static int trace = 0;
 */
 
 /* EXPORT->MRound: round up a mem size request to be a multiple of FWORD */
-int MRound(int size)
+size_t MRound(size_t size)
 {
    return ((size % FWORD) == 0)?size : (size/FWORD + 1) * FWORD;
 }
@@ -104,18 +99,18 @@ static void UnRecordHeap(MemHeap *x)
 }
 
 /* AllocBlock: allocate and initialise a block for num items each of size */
-static BlockP AllocBlock(int size, int num, HeapType type)
+static BlockP AllocBlock(size_t size, size_t num, HeapType type)
 {
    BlockP p;
    ByteP c;
    int i;
    
    if (trace&T_TOP)
-      printf("HMem: AllocBlock of %d bytes\n",num*size);
+      printf("HMem: AllocBlock of %u bytes\n",num*size);
    if ((p = (BlockP) malloc(sizeof(Block))) == NULL)
       HError(5105,"AllocBlock: Cannot allocate Block");
    if ((p->data = (void *)malloc(size*num)) == NULL)
-      HError(5105,"AllocBlock: Cannot allocate block data of %d bytes",size*num);
+      HError(5105,"AllocBlock: Cannot allocate block data of %u bytes",size*num);
    switch (type){
    case MHEAP:
       if ((p->used = (ByteP)malloc((num+7)/8)) == NULL)
@@ -196,10 +191,8 @@ void InitMem(void)
    int i;
    Boolean b;
    
-   license_okay=TRUE;
-
    Register(hmem_version, hmem_vc_id);
-   CreateHeap(&gstack, "Global Stack",  MSTAK, 1, 0.0, 100000, LONG_MAX );
+   CreateHeap(&gstack, "Global Stack",  MSTAK, 1, 0.0, 100000, ULONG_MAX ); /* #### should be max size_t */
    CreateHeap(&gcheap, "Global C Heap", CHEAP, 1, 0.0, 0,      0 );
    numParm = GetConfig("HMEM", TRUE, cParm, MAXGLOBS);
    if (numParm>0){
@@ -210,23 +203,18 @@ void InitMem(void)
 
 /* EXPORT->CreateHeap: create a memory heap with given characteristics */
 void CreateHeap(MemHeap *x, char *name, HeapType type, size_t elemSize, 
-                float growf, long numElem, long maxElem)
+                float growf, size_t numElem, size_t maxElem)
 {
    char c;
-
-   if (!license_okay) {
-      HError(5199,"HMem: InitMem not called correctly");
-      exit(5199);
-   }
 
    if (growf<0.0)
       HError(5170,"CreateHeap: -ve grow factor in heap %s",name);
    if (numElem>maxElem)
       HError(5170,"CreateHeap: init num elem > max elem in heap %s",name);
    if (elemSize <= 0)
-      HError(5170,"CreateHeap: elem size = %d in heap %s",elemSize,name);
+      HError(5170,"CreateHeap: elem size = %u in heap %s",elemSize,name);
    if (type == MSTAK && elemSize !=1)
-      HError(5170,"CreateHeap: elem size = %d in MSTAK heap %s",elemSize,name);
+      HError(5170,"CreateHeap: elem size = %u in MSTAK heap %s",elemSize,name);
    x->name = (char *)malloc(strlen(name)+1);
    strcpy(x->name,name); /* cant use a MemHeap for this!! */
    x->type  = type; x->growf = growf;
@@ -243,7 +231,7 @@ void CreateHeap(MemHeap *x, char *name, HeapType type, size_t elemSize,
       case MSTAK: c='S'; break;
       case CHEAP: c='C'; break;
       }
-      printf("HMem: Create Heap %s[%c] %d %.1f %ld %ld\n",name,c,
+      printf("HMem: Create Heap %s[%c] %u %.1f %u %u\n",name,c,
              elemSize, growf, numElem, maxElem);
    }
 }
@@ -252,11 +240,6 @@ void CreateHeap(MemHeap *x, char *name, HeapType type, size_t elemSize,
 void ResetHeap(MemHeap *x)
 {
    BlockP cur,next;
-
-   if (!license_okay) {
-      HError(5199,"HMem: InitMem not called correctly");
-      exit(5199);
-   }
 
    switch(x->type){
    case MHEAP:
@@ -301,11 +284,6 @@ void ResetHeap(MemHeap *x)
 /* EXPORT->DeleteHeap: delete given heap */
 void DeleteHeap(MemHeap *x)
 {
-   if (!license_okay) {
-      HError(5199,"HMem: InitMem not called correctly");
-      exit(5199);
-   }
-
    if (x->type == CHEAP) 
       HError(5172,"DeleteHeap: cant delete C Heap %s",x->name);
    if (trace&T_TOP)
@@ -327,15 +305,10 @@ void *New(MemHeap *x,size_t size)
 {
    void *q;
    BlockP newp;
-   long num,bytes,*ip,chdr;
+   size_t num,bytes,*ip,chdr;
    Boolean noSpace;
    Ptr *pp;
   
-   if (!license_okay) {
-      HError(5199,"HMem: InitMem not called correctly");
-      exit(5199);
-   }
-
    if (x->elemSize <= 0)
       HError(5174,"New: heap %s not initialised",
              (x->name==NULL)? "Unnamed":x->name);
@@ -346,14 +319,14 @@ void *New(MemHeap *x,size_t size)
          determined by the curElem, the grow factor growf and the
          upper limit maxElem. */
       if (size != 0 && size != x->elemSize)
-         HError(5173,"New: MHEAP req for %d size elem from heap %s size %d",
+         HError(5173,"New: MHEAP req for %u size elem from heap %s size %u",
                 size,x->name,x->elemSize);
 
       noSpace = x->totUsed == x->totAlloc;
       if (noSpace || (q=GetElem(x->heap,x->elemSize,x->type)) == NULL) {
          if (!noSpace) BlockReorder(&(x->heap),1);
          if (noSpace || (q=GetElem(x->heap,x->elemSize,x->type)) == NULL) {
-            num = (int)((float)x->curElem * (x->growf + 1.0) + 0.5);
+            num = (size_t) ((double)x->curElem * (x->growf + 1.0) + 0.5);
             if (num>x->maxElem) num = x->maxElem;
             newp = AllocBlock(x->elemSize, num, x->type);
             x->totAlloc += num; x->curElem = num;
@@ -366,18 +339,18 @@ void *New(MemHeap *x,size_t size)
       }
       x->totUsed++;
       if (trace&T_MHP)
-         printf("HMem: %s[M] %d bytes at %p allocated\n",x->name,size,q);
+         printf("HMem: %s[M] %u bytes at %p allocated\n",x->name,size,q);
       return q;
    case CHEAP:
-      chdr = MRound(sizeof(long));
+      chdr = MRound(sizeof(size_t));
       q = malloc(size+chdr);
       if (q==NULL)
          HError(5105,"New: memory exhausted");
       x->totUsed += size; 
       x->totAlloc += size+chdr;
-      ip = (long *)q; *ip = size;
+      ip = (size_t *)q; *ip = size;
       if (trace&T_CHP)
-         printf("HMem: %s[C] %ld+%d bytes at %p allocated\n",x->name,chdr,size,q);
+         printf("HMem: %s[C] %u+%u bytes at %p allocated\n",x->name,chdr,size,q);
       return (Ptr)((ByteP)q+chdr);
    case MSTAK:
       /* set required size - must alloc on double boundaries */
@@ -386,7 +359,7 @@ void *New(MemHeap *x,size_t size)
       /* get elem from current block if possible */
       if ((q=GetElem(x->heap,size,x->type)) == NULL) {
          /* no space - so add a new (maybe bigger) block */
-         bytes = (int)((float)x->curElem * (x->growf + 1.0) + 0.5);
+         bytes = (size_t)((double)x->curElem * (x->growf + 1.0) + 0.5);
          if (bytes > x->maxElem) bytes = x->maxElem;
          x->curElem = bytes;
          if (bytes < size) bytes = size;
@@ -401,9 +374,9 @@ void *New(MemHeap *x,size_t size)
       }
       x->totUsed += size;
       if (trace&T_STK)
-         printf("HMem: %s[S] %d bytes at %p allocated\n",x->name,size,q);
+         printf("HMem: %s[S] %u bytes at %p allocated\n",x->name,size,q);
       if (x->protectStk) {
-         pp = (Ptr *)((long)q + size - sizeof(Ptr));
+         pp = (Ptr *)((long)q + size - sizeof(Ptr)); /* #### fix this! */
          *pp = q;
       }
       return q;
@@ -417,15 +390,10 @@ void Dispose(MemHeap *x, void *p)
    BlockP head,cur,prev;
    Boolean found=FALSE;
    ByteP bp;
-   long size,chdr;
-   long num,index, *ip;
+   size_t size,chdr;
+   size_t num,index, *ip;
    Ptr *pp;
    
-   if (!license_okay) {
-      HError(5199,"HMem: InitMem not called correctly");
-      exit(5199);
-   }
-
    if (x->totUsed == 0)
       HError(5105,"Dispose: heap %s is empty",x->name);
    switch(x->type){
@@ -442,7 +410,7 @@ void Dispose(MemHeap *x, void *p)
       }
       if (cur == NULL)
          HError(5175,"Dispose: Item to free in MHEAP %s not found",x->name);
-      index = ((unsigned long)p-(unsigned long)cur->data)/size;
+      index = ((size_t)p-(size_t)cur->data)/size;
       cur->used[index/8] &= ~(1 <<(index&7));
       if (index < cur->firstFree) cur->firstFree = index;
       cur->numFree++; x->totUsed--;
@@ -455,18 +423,18 @@ void Dispose(MemHeap *x, void *p)
          free(cur->data); free(cur->used); free(cur);
       }
       if (trace&T_MHP)
-         printf("HMem: %s[M] %ld bytes at %p de-allocated\n",x->name,size,p);
+         printf("HMem: %s[M] %u bytes at %p de-allocated\n",x->name,size,p);
       return;
    case MSTAK:
       /* search for item to dispose */
       cur = x->heap;
       if (x->protectStk){
          if (cur->firstFree > 0 ) /* s-top in current block */
-            pp = (Ptr *)((long)cur->data+cur->firstFree-sizeof(Ptr));
+            pp = (Ptr *)((size_t)cur->data+cur->firstFree-sizeof(Ptr));
          else{                      /* s-top in previous block */
             if (cur->next == NULL)
                HError(5175,"Dispose: empty stack");
-            pp = (Ptr *)((long)cur->next->data+cur->next->firstFree-sizeof(Ptr));
+            pp = (Ptr *)((size_t)cur->next->data+cur->next->firstFree-sizeof(Ptr));
          }
          if (*pp != p)
             HError(-5175,"Dispose: violation of stack discipline in %s [%p != %p]",
@@ -498,15 +466,15 @@ void Dispose(MemHeap *x, void *p)
       cur->firstFree -= size;
       cur->numFree += size; x->totUsed -= size;
       if (trace&T_STK)
-         printf("HMem: %s[S] %ld bytes at %p de-allocated\n",x->name,size,p);
+         printf("HMem: %s[S] %u bytes at %p de-allocated\n",x->name,size,p);
       return;
    case CHEAP:
-      chdr = MRound(sizeof(long));
+      chdr = MRound(sizeof(size_t));
       bp = (ByteP)p-chdr;
-      ip = (long *)bp;
+      ip = (size_t *)bp;
       x->totAlloc -= (*ip + chdr); x->totUsed -= *ip;
       if (trace&T_CHP)
-         printf("HMem: %s[C] %ld+%ld bytes at %p de-allocated\n",
+         printf("HMem: %s[C] %u+%u bytes at %p de-allocated\n",
                 x->name,chdr,*ip,bp);
       free(bp);
       return;
@@ -520,18 +488,13 @@ void PrintHeapStats(MemHeap *x)
    BlockP p;
    int nBlocks = 0;
    
-   if (!license_okay) {
-      HError(5199,"HMem: InitMem not called correctly");
-      exit(5199);
-   }
-
    switch (x->type){
    case MHEAP: tc = 'M'; break;
    case MSTAK: tc = 'S'; break;
    case CHEAP: tc = 'C'; break;
    }
    for (p=x->heap; p != NULL; p = p->next) ++nBlocks;
-   printf("nblk=%3d, siz=%6ld*%-3d, used=%9ld, alloc=%9ld : %s[%c]\n",
+   printf("nblk=%3d, siz=%6u*%-3u, used=%9u, alloc=%9u : %s[%c]\n",
           nBlocks, x->curElem, x->elemSize, x->totUsed, 
           x->totAlloc*x->elemSize,x->name,tc) ;
    fflush(stdout);

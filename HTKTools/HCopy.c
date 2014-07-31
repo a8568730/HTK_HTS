@@ -19,8 +19,8 @@
 /*      File: HCopy.c: Copy one Speech File to another         */
 /* ----------------------------------------------------------- */
 
-char *hcopy_version = "!HVER!HCopy:   3.0 [CUED 05/09/00]";
-char *hcopy_vc_id = "$Id: HCopy.c,v 1.4 2000/09/11 13:53:33 ge204 Exp $";
+char *hcopy_version = "!HVER!HCopy:   3.1 [CUED 16/01/02]";
+char *hcopy_vc_id = "$Id: HCopy.c,v 1.6 2002/01/16 18:11:29 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -109,16 +109,16 @@ static MemHeap tStack;          /* trace list  stack */
 void ReportUsage(void)
 {
    printf("\nUSAGE: HCopy [options] src [ + src ...] tgt ...\n\n");
-   printf(" Option                                     Default\n\n");
+   printf(" Option                                       Default\n\n");
    printf(" -a i     Use level i labels                  1\n");
-   printf(" -e t     End copy at time t                 EOF\n");
-   printf(" -i mlf   Save labels to mlf s               null\n");
-   printf(" -l dir   Output target label files to dir  current\n");
+   printf(" -e t     End copy at time t                  EOF\n");
+   printf(" -i mlf   Save labels to mlf s                null\n");
+   printf(" -l dir   Output target label files to dir    current\n");
    printf(" -m t     Set margin of t around x/n segs     0\n");
-   printf(" -n i [j] Extract i'th [to j'th] label       Off\n");
+   printf(" -n i [j] Extract i'th [to j'th] label        off\n");
    printf(" -s t     Start copy at time t                0\n");
-   printf(" -t n     Set trace line width to n          70\n");
-   printf(" -x s [n] Extract [n'th occ of] label  s     Off\n");
+   printf(" -t n     Set trace line width to n           70\n");
+   printf(" -x s [n] Extract [n'th occ of] label  s      off\n");
    PrintStdOpts("FGILPOX");
 }
 

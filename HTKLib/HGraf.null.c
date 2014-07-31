@@ -19,8 +19,8 @@
 /*         File: HGraf.null.c:  HGraf (null implementation)    */
 /* ----------------------------------------------------------- */
 
-char *hgraf_version = "!HVER!HGraf(null):   3.0 [CUED 05/09/00]";
-char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.3 2000/09/14 15:40:19 ge204 Exp $";
+char *hgraf_version = "!HVER!HGraf(null):   3.1 [CUED 16/01/02]";
+char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.4 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

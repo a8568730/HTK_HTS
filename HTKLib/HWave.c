@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HWave.c:   Speech Wave File Input/Output      */
 /* ----------------------------------------------------------- */
 
-char *hwave_version = "!HVER!HWave:   3.0 [CUED 05/09/00]";
-char *hwave_vc_id = "$Id: HWave.c,v 1.5 2000/09/15 11:54:05 ge204 Exp $";
+char *hwave_version = "!HVER!HWave:   3.1 [CUED 16/01/02]";
+char *hwave_vc_id = "$Id: HWave.c,v 1.7 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -590,7 +603,8 @@ static void GetNISTSVal(FILE *f, char *s)
 static long GetNISTHeaderInfo(FILE *f, Wave w, InputAction *ia)
 {
    char token[100],*lab,byteFormat[100],sampCoding[100],buf[100];
-   long nS,sR,sS;
+   Boolean interleaved = FALSE;
+   long nS,sR,sS, cC;
    long dataBytes;
    
    cNIST = ' '; cCount = 0;
@@ -618,8 +632,15 @@ static long GetNISTHeaderInfo(FILE *f, Wave w, InputAction *ia)
          GetNISTSVal(f,sampCoding);
       else if (strcmp(token,"channels_interleaved") == 0){
          GetNISTSVal(f,buf);
-         if (strcmp(buf,"TRUE") == 0 )
-            strcat(sampCoding,"-interleaved");
+         if (strcmp(buf,"TRUE") == 0)
+            interleaved = TRUE;
+      }
+      else if (strcmp (token, "channel_count") == 0) {
+         cC = GetNISTIVal(f);
+         if (cC==2)
+            interleaved = TRUE;
+         else if (cC!=1)
+            HError(6251,"GetNISTHeaderInfo: channel count = %d in NIST header",cC);
       }
       NISTSkipLine(f);
    }
@@ -635,10 +656,13 @@ static long GetNISTHeaderInfo(FILE *f, Wave w, InputAction *ia)
       HRError(6252,"GetNISTHeaderInfo: Sample Rate undefined in NIST header");
       return -1;
    }
-   if (byteFormat == ""){
-      HRError(6252,"GetNISTHeaderInfo: Byte Format undefined in NIST header");
-      return -1;
+   if (strcmp(byteFormat, "") == 0) {
+      HRError(-6252,"GetNISTHeaderInfo: Byte Format undefined in NIST header");
    }
+   if (strcmp(sampCoding,"ulaw")==0)
+      strcpy(sampCoding,"mu-law");
+   if (interleaved)
+      strcat (sampCoding, "-interleaved");
 
    w->nSamples = nS;
    w->sampPeriod = 1.0E7 / (float)sR;
@@ -671,7 +695,7 @@ static long GetNISTHeaderInfo(FILE *f, Wave w, InputAction *ia)
    }
    /* Interleaved Mu-Law */
    else if (DoMatch(sampCoding,"*mu-law-interleaved*")) {
-      w->nSamples /= 2;
+      /*      w->nSamples /= 2; */ 
       *ia = (InputAction) (*ia | DoMULAW);
       *ia = (InputAction) (*ia | DoCVT);
       dataBytes = FileBytes(f, w);
@@ -1474,13 +1498,26 @@ Wave OpenWaveInput(MemHeap *x, char *fname, FileFormat fmt, HTime winDur,
    InputAction ia=(InputAction)0;      /* flags to enable conversions etc */
    long fBytes=0;         /* Num data bytes in file to load */
    HTime t;
+   Boolean isEXF;	  /* File name is extended */
+   char actfile[MAXFNAMELEN]; /* actual file name */
+   long stindex,enindex;  /* segment indices */
+   int sampSize = 2;       
 
    /* Create Wave Object and open external file */
    w = CreateWave(x,fmt);
-   if ((f = FOpen(fname, WaveFilter, &(w->isPipe))) == NULL){
-      HRError(6210,"OpenWaveInput: Cannot open waveform file %s",fname);
-      return(NULL);
+
+   /* extended filename handling */
+   strcpy(actfile,fname);
+   isEXF = GetFileNameExt(fname,actfile,&stindex,&enindex);
+   if ((f = FOpen(actfile, WaveFilter, &(w->isPipe))) == NULL) {
+      HError(6210,"OpenWaveInput: Cannot open waveform file %s",fname);
+      return NULL;
    }
+   if (isEXF && w->isPipe && stindex >= 0) {
+      HError(6210,"OpenWaveInput: cannot segment piped input");
+      return NULL;
+   }
+   
    /* Get Header  */
    switch(w->fmt) {
    case ALIEN:    fBytes = GetALIENHeaderInfo (f, w, &ia);  break;
@@ -1492,7 +1529,9 @@ Wave OpenWaveInput(MemHeap *x, char *fname, FileFormat fmt, HTime winDur,
    case SCRIBE:   fBytes = GetSCRIBEHeaderInfo(f, w, &ia);  break; 
    case SDES1:    fBytes = GetSDES1HeaderInfo (f, w, &ia);  break; 
    case AIFF:     fBytes = GetAIFFHeaderInfo  (f, w, &ia);  break;
-   case SUNAU8:   fBytes = GetSUNAU8HeaderInfo(f, w, &ia);  break;
+   case SUNAU8:   fBytes = GetSUNAU8HeaderInfo(f, w, &ia);
+      sampSize = 1;
+      break;
    case WAV:      fBytes = GetWAVHeaderInfo(f, w, &ia);     break;
    case ESIG:     fBytes = GetESIGHeaderInfo(f, w, &ia);    break;
    default:       
@@ -1501,6 +1540,17 @@ Wave OpenWaveInput(MemHeap *x, char *fname, FileFormat fmt, HTime winDur,
       return(NULL);
       break;
    }
+
+   /* If extended indexed file, modify header and skip to segment start */
+   if (isEXF && stindex >= 0) {
+      if (enindex < 0) enindex = w->nSamples-1;
+      if (w->nSamples < enindex-stindex+1)
+         HError(6210,"OpenWaveInput: EXF segment bigger than file");
+      w->nSamples = enindex-stindex+1;
+      fseek(f,stindex*sampSize,SEEK_CUR);
+      fBytes = w->nSamples*sampSize;
+   }
+
    if(fBytes<0){
       FClose(f,w->isPipe);  
       HRError(6213,"OpenWaveInput: Get[format]HeaderInfo failed");

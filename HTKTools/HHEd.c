@@ -19,8 +19,8 @@
 /*         File: HHEd:  HMM Source Definition Editor           */
 /* ----------------------------------------------------------- */
 
-char *hhed_version = "!HVER!HHEd:   3.0 [CUED 05/09/00]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.4 2000/09/11 13:53:33 ge204 Exp $";
+char *hhed_version = "!HVER!HHEd:   3.1 [CUED 16/01/02]";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.9 2002/01/16 18:11:29 ge204 Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -42,10 +42,6 @@ char *hhed_vc_id = "$Id: HHEd.c,v 1.4 2000/09/11 13:53:33 ge204 Exp $";
 #include "HUtil.h"
 #include "HTrain.h"
 #include "HAdapt.h"
-
-#if defined MPW
-#pragma segment htool
-#endif
 
 #define FLOAT_MAX 1E10      /* Limit for float arguments */
 #define BIG_FLOAT 1E20      /* Limit for float arguments */
@@ -88,7 +84,7 @@ static char * hmmDir = NULL;     /* directory to look for hmm def files */
 static char * hmmExt = NULL;     /* hmm def file extension */
 static char * newDir = NULL;     /* directory to store new hmm def files */
 static char * newExt = NULL;     /* extension of new edited hmm files */
-static Boolean noAlias = FALSE;  /* set to zap all aliasses in hmmlist */
+static Boolean noAlias = FALSE;  /* set to zap all aliases in hmmlist */
 static Boolean inBinary = FALSE; /* set to save models in binary */
 static char * mmfFn  = NULL;     /* output MMF file, if any */
 static int  cmdTrace    = 0;     /* trace level from command line */
@@ -196,10 +192,10 @@ void ReportUsage(void)
    printf("\nUSAGE: HHEd [options] editF hmmList\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -d s    dir to find hmm definitions          current\n");
-   printf(" -o s    extension for new hmm files          as src\n");
-   printf(" -w mmf  Save all HMMs to macro file mmf s    as src\n");
+   printf(" -o s    extension for new hmm files          as source\n");
+   printf(" -w mmf  Save all HMMs to macro file mmf s    as source\n");
    printf(" -x s    extension for hmm files              none\n");
-   printf(" -z      zap aliasses in hmmList\n");
+   printf(" -z      zap aliases in hmmList\n");
    PrintStdOpts("BHMQ");
 }
 
@@ -2277,7 +2273,7 @@ void ChkTreeObject(ILink obj)
          se = hmm->svec+j;
          if (se->info->pdf[1].nMix!=1 || 
              se->info->pdf[1].spdf.cpdf[1].mpdf->ckind!=DIAGC)
-            HError(2663,"ChkTreeObject: TB only valid for 1 mix models");
+            HError(2663,"ChkTreeObject: TB only valid for 1 mix diagonal covar models");
          se->info->pdf[1].spdf.cpdf[1].mpdf->hook = NULL;
       }
    }
@@ -2287,7 +2283,7 @@ void ChkTreeObject(ILink obj)
          HError(2690,"ChkTreeObject: null state elem ptr");
       if (se->info->pdf[1].nMix!=1 || 
           se->info->pdf[1].spdf.cpdf[1].mpdf->ckind!=DIAGC)
-         HError(2663,"ChkTreeObject: TB only valid for 1 mix models");
+         HError(2663,"ChkTreeObject: TB only valid for 1 mix diagonal covar models");
       se->info->pdf[1].spdf.cpdf[1].mpdf->hook = NULL;
    }
 }
@@ -4302,7 +4298,7 @@ void SplitStreamCommand(Boolean userWidths)
 /* SetStreamWidthCommand: change width of stream s to n */
 void SetStreamWidthCommand(void)
 {
-   int s,n,nedit=0;
+   int i, size, s, n, nedit=0;
    char c=' ';
    HMMScanState hss;
    HLink hmm=NULL;
@@ -4353,6 +4349,11 @@ void SetStreamWidthCommand(void)
    badGC = TRUE;
    hset->swidth[s]=n;
 
+   size=0;
+   for (i = 1; i <= hset->swidth[0]; i++)
+      size += hset->swidth[i];
+   hset->vecSize = size;
+   
    if (trace & (T_BID | T_SIZ)) {
       printf(" SW: Stream width changed for %d mixes\n",nedit);
       fflush(stdout);

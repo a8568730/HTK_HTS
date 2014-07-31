@@ -1,3 +1,77 @@
+2002-01-16  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* Makefile (html): Create dir for html version. 
+
+2002-01-16  Gareth Moore  <glm20@eng.cam.ac.uk>
+
+	* HTKRef/HResults.tex: Add FAQ entry for confusion matrix.
+	
+	* netdict.tex: Clarify dictionary format definition.
+
+	* config.tex: Add documentation for all filters in HShell.
+
+	* openviron.tex: Clarify.
+
+	* HTKRef/HResults.tex: Document confusion matrix output.
+	
+2001-12-13  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* htkoview.tex: New features in 3.1.
+
+	* openviron.tex: Document extended filename syntax.
+
+	* speechio.tex: Document VTLN, cluster-based CMN/CVN and PLP.
+
+	* config.tex: 
+	* errors.tex: New error codes and config variables for the above.
+
+	* HTKXFigs/vtlnpiecewise.fig:
+	* HTKFigs/vtlnpiecewise.eps: New files.
+
+2001-09-26  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* exampsys.tex: Add comment about applying TI to sil/sp.
+	Save big MMFs as binary.
+
+2001-08-28  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* exampsys.tex: Lots of improvements and corrections.
+	From: Will Bradley <wjb21@cam.ac.uk> and
+	      Alexios Daniel <atd25@cam.ac.uk>
+
+2001-07-03  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* config.tex: Use a multi-page supertabular environment instead of
+	many small one-page tabulars.
+
+2001-04-17  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* errors.tex : Correct error messages and add new error codes.
+	New range 3400-3499 for HSGen.
+	
+
+2001-04-11  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HTKRef/HVite.tex: Document pruning increase/limt parameters.
+
+2001-03-18  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* errors.tex (HParm): mean & var normalisation.
+
+2000-12-18  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* exampsys.tex (Step 13 - Generating the Transforms): add RN
+	command to regtree.hed
+
+2000-11-30  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* config.tex: Add HVITE:SAVEBINARY.
+	Make LaTeX source more readable.
+
+2000-11-15  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* exampsys.tex (Step 10): Fix HDMan invocation.
+
 2000-09-06  Rich Wareham  <rjw57@cam.ac.uk>
 
 	* HTK.tex: Removed warnings when generating HTML        

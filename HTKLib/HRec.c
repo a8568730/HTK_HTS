@@ -19,8 +19,8 @@
 /*         File: HRec.c  Viterbi Recognition Engine Library    */
 /* ----------------------------------------------------------- */
 
-char *hrec_version = "!HVER!HRec:   3.0 [CUED 05/09/00]";
-char *hrec_vc_id = "$Id: HRec.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *hrec_version = "!HVER!HRec:   3.1 [CUED 16/01/02]";
+char *hrec_vc_id = "$Id: HRec.c,v 1.8 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -265,7 +265,7 @@ static void TokSetMerge(TokenSet *res,Token *cmp,TokenSet *src)
    TokenSet tmp;
    LogFloat diff,like,limit;
    RelToken *cur,*mch,rtoks[MAX_TOKS];
-   Word word,words[MAX_TOKS];
+   NetNode *node, *nodes[MAX_TOKS];
    int i,nw,k,null,aux;
 
 #ifdef SANITY
@@ -329,8 +329,9 @@ static void TokSetMerge(TokenSet *res,Token *cmp,TokenSet *src)
          null=i+1;
       else {
          /* allow for NULL nodes in path */
-         word=path->node->info.pron->word;
-         word->aux=(void*)(i+1); words[nw++]=word;
+         node=path->node;
+         node->aux = i+1; 
+         nodes[nw++] = node;
       }
    }
    
@@ -343,10 +344,10 @@ static void TokSetMerge(TokenSet *res,Token *cmp,TokenSet *src)
          if (path->node->info.pron != NULL)
             break;
       if (path==NULL)
-         aux=null, word=NULL;
+         aux=null, node=NULL;
       else {
-         word=path->node->info.pron->word;
-         aux=(int)word->aux;
+         node=path->node;
+         aux=node->aux;
       }
       like=cur->like-diff;
       mch=NULL;
@@ -358,13 +359,15 @@ static void TokSetMerge(TokenSet *res,Token *cmp,TokenSet *src)
                   break;
             if (path==NULL) {
                /* NULL paths match null paths */
-               if (word==NULL) {
+               if (!node || !node->info.pron->word) {
                   mch=res->set+k;
                   break;
                }
             }
-            else if (word!=NULL) {
-               if (path->node->info.pron->word==word) {
+            else if (node && node->info.pron->word) {
+               /* should compare actual net node, not the pron to avoid 
+                  incorrectly merging two distinct paths */
+               if (path->node==node) {
                   mch=res->set+k;
                   break;
                }
@@ -398,7 +401,7 @@ static void TokSetMerge(TokenSet *res,Token *cmp,TokenSet *src)
 
    /* Void lookup information */
    for (i=0;i<nw;i++)
-      words[i]->aux=0;
+      nodes[i]->aux=0;
 }
 
 /* Caching version of SOutP used when mixPDFs shared */
@@ -430,7 +433,7 @@ static LogFloat cSOutP(HMMSet *hset, int s, Observation *x, StreamElem *se,
    } else {
       bx=LZERO;                   /* Multi Mixture Case */
       for (m=1; m<=se->nMix; m++,me++) {
-         wt = me->weight; 
+         wt = MixLogWeight(hset, me->weight);
          if (wt>LMINMIX) {   
             if (me->mpdf->mIdx>0 && me->mpdf->mIdx<=pri->psi->nmp)
                pre=pri->psi->mPre+me->mpdf->mIdx;
@@ -549,6 +552,7 @@ static Align *NewNRefAlign(NetNode *node,int state,double like,
    align->knil=&pri->aNoRef;
    align->link->knil=align->knil->link=align;
    align->usage=0;
+   align->used=FALSE;
 
    align->node=node;
    align->state=state;
@@ -744,6 +748,7 @@ static Path *NewNRefPath(void)
    path->knil=&pri->pNoRef;
    path->link->knil=path->knil->link=path;
    path->chain=NULL;
+   path->used=FALSE;
    pri->npth++;
 #ifdef SANITY
    pri->pnlen++;
@@ -837,7 +842,7 @@ static void CollectPaths(void)
             n=1;
          for (i=1,cur=inst->state;i<=n;i++,cur++) {
             path=cur->tok.path;
-            if (path!=NULL) if (!path->used) {
+            if (path && !path->used) {
                if (path->usage!=0) MovePathYesRef(path);
                path->used=TRUE;
             }
@@ -847,19 +852,19 @@ static void CollectPaths(void)
 #endif
             for (k=1;k<cur->n;k++) {
                path=cur->set[k].path;
-               if (path!=NULL) if (!path->used) {
+               if (path && !path->used) {
                   if (path->usage!=0) MovePathYesRef(path);
                   path->used=TRUE;
                }
             }
             align=cur->tok.align;
-            if (align!=NULL) if (!align->used) {
+            if (align && !align->used) {
                if (align->usage!=0) MoveAlignYesRef(align);
                align->used=TRUE;
             }
          }
          path=inst->exit->tok.path;
-         if (path!=NULL) if (!path->used) {
+         if (path && !path->used) {
             if (path->usage!=0) MovePathYesRef(path);
             path->used=TRUE;
          }
@@ -870,13 +875,13 @@ static void CollectPaths(void)
 #endif
          for (k=1;k<inst->exit->n;k++) {
             path=inst->exit->set[k].path;
-            if (path!=NULL) if (!path->used) {
+            if (path && !path->used) {
                if (path->usage!=0) MovePathYesRef(path);
                path->used=TRUE;
             }
          }
          align=inst->exit->tok.align;
-         if (align!=NULL) if (!align->used) {
+         if (align && !align->used) {
             if (align->usage!=0) MoveAlignYesRef(align);
             align->used=TRUE;
          }
@@ -1611,6 +1616,8 @@ VRecInfo *InitVRecInfo(PSetInfo *psi,int nToks,Boolean models,Boolean states)
 #ifdef SANITY
    pri->ipos=0;
    pri->start_inst=NULL;
+   pri->pnlen = pri->pylen = 0;
+   pri->anlen = pri->aylen = 0;
 #endif
 
    /* Reset readable parameters */

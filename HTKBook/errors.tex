@@ -7,9 +7,22 @@
 %/*                                                             */
 %/*                                                             */
 %/* ----------------------------------------------------------- */
+%/* developed at:                                               */
+%/*                                                             */
+%/*      Speech Vision and Robotics group                       */
+%/*      Cambridge University Engineering Department            */
+%/*      http://svr-www.eng.cam.ac.uk/                          */
+%/*                                                             */
+%/*      Entropic Cambridge Research Laboratory                 */
+%/*      (now part of Microsoft)                                */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
 %/*         Copyright: Microsoft Corporation                    */
 %/*          1995-2000 Redmond, Washington USA                  */
-%/*                    http://www.microsoft.com                */
+%/*                    http://www.microsoft.com                 */
+%/*                                                             */
+%/*              2001  Cambridge University                     */
+%/*                    Engineering Department                   */
 %/*                                                             */
 %/*   Use of this software is governed by a License Agreement   */
 %/*    ** See the file License for the Conditions of Use  **    */
@@ -102,11 +115,11 @@ HHEd     & 2600-2699     & HTrain        & 7100-7199    \\
 HEAdapt  & 2700-2799     & HUtil         & 7200-7299    \\
          &               & HFB           & 7300-7399    \\
          &               & HAdapt        & 7400-7499    \\
-         &               &               &              \\
-HBuild   & 3000-3099     & HDict         & 8000-8099    \\
-HParse   & 3100-3199     & HLM           & 8100-8199    \\
-HVite    & 3200-3299     & HNet          & 8200-8299    \\
-HResults & 3300-3399     & HRec          & 8500-8599    \\
+HBuild   & 3000-3099     &               &              \\
+HParse   & 3100-3199     & HDict         & 8000-8099    \\
+HVite    & 3200-3299     & HLM           & 8100-8199    \\
+HResults & 3300-3399     & HNet          & 8200-8299    \\
+HSGen    & 3400-3499     & HRec          & 8500-8599    \\
 \hline
 \end{tabular}
 \end{center}
@@ -267,6 +280,10 @@ HResults & 3300-3399     & HRec          & 8500-8599    \\
         HCompV can only operate on models with an HMM set kind
         of \texttt{PLAINHS} or \texttt{SHAREDHS}.
 
+\erno{+2039}    Speaker pattern matching failure\\
+        The specified speaker pattern could not be matched against a
+        given untterance file name.
+
 \erno{+2050}    Data does not match HMM\\
         An aspect of the data does not match the equivalent aspect in 
         the HMMSet.  Check the parameter kind of the data.
@@ -389,6 +406,10 @@ HResults & 3300-3399     & HRec          & 8500-8599    \\
 \erno{+2320}    Unknown update flag\\
         Unknown flag set by \texttt{-u} option, use combinations of 
         \texttt{tmvw}.
+
+\erno{+2321}    Load/Make HMMSet failed\\
+        The model set could not be loaded due to either an error opening the
+        file or the data within being inconsistent.
 
 \erno{-2326}    No transitions\\
         No transition out of an emitting state, ensure that
@@ -556,8 +577,8 @@ HResults & 3300-3399     & HRec          & 8500-8599    \\
         tree has been constructed for the base phone.
 
 \erno{\pm 2663} Invalid types to tree cluster\\
-        Tree clustering will only work for single Gaussian untied models of
-        similar topology.
+        Tree clustering will only work for single Gaussian diagonal
+        covariance untied models of similar topology.
 
 \end{itemize}
 
@@ -571,6 +592,10 @@ HResults & 3300-3399     & HRec          & 8500-8599    \\
 
 \erno{-2721} No update requested\\
         Mean transformation will be updated even though none specified.\\
+
+\erno{+2728}    Load/Make HMMSet failed\\
+        The model set could not be loaded due to either an error opening the
+        file or the data within being inconsistent.
 
 \erno{+2730} Invalid HMM kind\\
         MLLR adaptation only available for PLAIN or SHARED systems.\\
@@ -643,6 +668,9 @@ HResults & 3300-3399     & HRec          & 8500-8599    \\
         the data is parameterised in the correct format and the configuration
         parameters match those used during training.
 
+\erno{+3232} MMF Load Error\\
+        The HMMSet does not contain a well-formed regression class tree.
+
 \erno{-3289}    ALIEN format set\\
         Input/output format has been set to \texttt{ALIEN}, ensure that 
         this was intended.
@@ -672,6 +700,15 @@ HResults & 3300-3399     & HRec          & 8500-8599    \\
 \erno{-3389}    ALIEN format set\\
         Input format has been set to \texttt{ALIEN}, ensure that this was 
         intended.
+
+\end{itemize}
+
+\module{\htool{HSGen}}
+
+\begin{itemize}
+\erno{-3420}    Network malformed\\
+        The word network is malformed. The information in a node (word
+        and following arcs) is set incorrectly.
 
 \end{itemize}
 
@@ -903,6 +940,9 @@ HResults & 3300-3399     & HRec          & 8500-8599    \\
 \erno{+6324}    Buffer not initialised\\
         Ensure that the buffer is used in the correct manner.
 
+\erno{+6325}    Silence detection failed\\
+        The silence detector was not initialised correctly before use.
+
 \erno{+6328}    Load/Make HMMSet failed\\
         The model set could not be loaded due to either an error opening the
         file or the data within being inconsistent.
@@ -945,6 +985,12 @@ HResults & 3300-3399     & HRec          & 8500-8599    \\
 \erno{+6375}    Frame not in buffer\\
         An attempt was made to access a frame that does not appear in the 
         buffer.  Make sure that the file actually contains the specified frame.
+
+\erno{+6376}    Mean/Variance normalisation failed\\
+        The mean or variance normalisation vector from the file
+        specified by the normalisation dir and mask cannot be applied.
+        Make sure the file format is correct and the vectors are of
+        the right dimension.
 
 \end{itemize}
 
@@ -1209,6 +1255,10 @@ HResults & 3300-3399     & HRec          & 8500-8599    \\
         The specified word does not exist or does not have a valid 
         pronunciation.
 
+\erno{-8221}    Duplicate pronunciations removed\\
+        During network generations duplicate identical pronunciations
+        of the same word are removed.
+
 \erno{+8230}    Contexts not consistent\\
         \htool{HNet} can only deal with the standard HTK method for specifying
         context \texttt{left-phone+right} and will only allow context free 
@@ -1240,6 +1290,10 @@ HResults & 3300-3399     & HRec          & 8500-8599    \\
 \erno{+8252}    Lattice file with multiple start/end nodes\\
         A lattice should have only one well defined start node and one
         well defined end node.
+
+\erno{+8253}    Lattice with invalid sub lattices\\
+        The sub lattices referred to by the main lattices are
+        malformed.
 
 \end{itemize}
 

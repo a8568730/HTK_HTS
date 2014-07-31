@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*  File: HCompV.c: HMM global mean/variance initialisation    */
 /* ----------------------------------------------------------- */
 
-char *hcompv_version = "!HVER!HCompV:   3.0 [CUED 05/09/00]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.4 2000/09/11 13:53:33 ge204 Exp $";
+char *hcompv_version = "!HVER!HCompV:   3.1 [CUED 16/01/02]";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.8 2002/01/16 18:11:29 ge204 Exp $";
 
 
 /* 
@@ -55,6 +68,7 @@ char *hcompv_vc_id = "$Id: HCompV.c,v 1.4 2000/09/11 13:53:33 ge204 Exp $";
 #define T_COVS    0002           /* show covariance matrices */
 #define T_LOAD    0004           /* trace data loading */
 #define T_SEGS    0010           /* list label segments */
+#define T_CMV     0012           /* doing CMV */
 
 static int  trace    = 0;           /* trace level */
 static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
@@ -79,8 +93,8 @@ static Boolean saveBinary = FALSE;  /* save output in binary  */
 static float vFloorScale = 0.0;     /* if >0.0 then vFloor scaling */
 
 /* Major Data Structures */
-static MLink macroLink;                  /* Link to specific HMM macro */
-static HLink hmmLink;                   /* Link to the physical HMM */
+static MLink macroLink;             /* Link to specific HMM macro */
+static HLink hmmLink;               /* Link to the physical HMM */
 static HMMSet hset;                 /* HMM to be initialised with */
 
 static MemHeap iStack;
@@ -89,12 +103,36 @@ static MemHeap iStack;
 typedef struct {
    Vector       meanSum;            /* acc for mean vector value */
    Covariance   squareSum;          /* acc for sum of squares */
-   Covariance   fixed;              /* fixed (co)variance values  */
+   Covariance   fixed;              /* fixed (co)variance values */
 } CovAcc;
 static CovAcc accs[SMAX];           /* one CovAcc for each stream */
 static Boolean fullcNeeded[SMAX];   /* true for each stream that needs full
                                        covariance calculated */
 static Observation obs;             /* storage for observations  */
+
+
+/* ------------ structures for cmn ------------ */
+
+typedef struct{
+   char SpkrName[MAXSTRLEN];             /* speaker name */
+   int NumFrame;                         /* number of frames for speaker */
+   Vector meanSum;                       /* mean accumulate structure for speaker */
+   Vector squareSum;                     /* variance structure for speaker */
+}SpkrAcc;                  
+
+typedef struct SpkrAccListItem{
+   SpkrAcc *sa;                          /* speaker accumulate */
+   struct SpkrAccListItem *nextSpkr;     /* next pointer */
+}SpkrAccListItem;
+
+static SpkrAccListItem *salist = NULL;   /* global speaker accumulate list */
+static int vSize = 39;                   /* target observation vector size */
+static char spPattern[MAXSTRLEN];        /* speaker mask */
+static char oflags[MAXSTRLEN] = "m";     /* export flags for CMV */  
+static char cmDir[MAXSTRLEN];            /* directory to export CMV */
+static char TargetPKStr[MAXSTRLEN];      /* target parm kind string */
+static Boolean DoCMV = FALSE;            /* switch from old HCompV to CMV */
+
 
 /* ------------- Process Command Line and Check Data ------------ */
 
@@ -116,136 +154,20 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nUSAGE: HCompV [options] hmmFile trainFiles...\n\n" );
-   printf(" Option                                    Default\n\n");
-   printf(" -f f    Output vFloor as f * global var    none\n");
-   printf(" -l s    Set segment label to s             none\n");
-   printf(" -m      Update means                        off\n");
-   printf(" -o fn   Store new hmm def in fn (name only) outDir/srcfn\n");
-   printf(" -v f    Set minimum variance to f           0.0\n");
-   PrintStdOpts("BFGHILMX");
+   printf("\nUSAGE: HCompV [options] [hmmFile] trainFiles...\n" );
+   printf(" Option                                       Default\n\n");
+   printf(" -c dir  Set output directiry for CMV         none\n");
+   printf(" -f f    Output vFloor as f * global var      none\n");
+   printf(" -k s    spkr pattern for CMV                 none\n");
+   printf(" -l s    Set segment label to s               none\n");
+   printf(" -m      Update means                         off\n");
+   printf(" -o fn   Store new hmm def in fn (name only)  outDir/srcfn\n");
+   printf(" -q nmv  output type flags for CMV            m\n");
+   printf(" -v f    Set minimum variance to f            0.0\n");
+   PrintStdOpts("BCFGHILMX");
    printf("\n\n");
 }
 
-int main(int argc, char *argv[])
-{
-   char *datafn, *s;
-   void Initialise(void);
-   void LoadFile(char *fn);
-   void SetCovs(void);
-   void PutVFloor(void);
-   void SaveModel(char *outfn);
-   
-   if(InitShell(argc,argv,hcompv_version,hcompv_vc_id)<SUCCESS)
-      HError(2000,"HCompV: InitShell failed");
-   InitMem();   InitLabel();
-   InitMath();  InitSigP();
-   InitWave();  InitAudio();
-   InitVQ();    InitModel();
-   if(InitParm()<SUCCESS)  
-      HError(2000,"HCompV: InitParm failed");
-
-   if (!InfoPrinted() && NumArgs() == 0)
-      ReportUsage();
-   if (NumArgs() == 0) Exit(0);
-   SetConfParms();
-
-   CreateHMMSet(&hset,&gstack,FALSE);
-   while (NextArg() == SWITCHARG) {
-      s = GetSwtArg();
-      if (strlen(s)!=1) 
-         HError(2019,"HCompV: Bad switch %s; must be single letter",s);
-      switch(s[0]){
-      case 'f':
-         if (NextArg() != FLOATARG)
-            HError(2019,"HCompV: Variance floor scale expected");
-         vFloorScale = GetChkedFlt(0.0,100.0,s);
-         break;
-      case 'l':
-         if (NextArg() != STRINGARG)
-            HError(2019,"HCompV: Segment label expected");
-         segLab = GetStrArg();
-         break;
-      case 'm':
-         meanUpdate = TRUE;
-         break;
-      case 'o':
-         outfn = GetStrArg();
-         break;     
-      case 'v':
-         if (NextArg() != FLOATARG)
-            HError(2019,"HCompV: Minimum variance level expected");
-         minVar = GetChkedFlt(0.0,100.0,s);
-         break;
-      case 'B':
-         saveBinary = TRUE;
-         break;
-      case 'F':
-         if (NextArg() != STRINGARG)
-            HError(2019,"HCompV: Data File format expected");
-         if((dff = Str2Format(GetStrArg())) == ALIEN)
-            HError(-2089,"HCompV: Warning ALIEN Data file format set");
-         break;
-      case 'G':
-         if (NextArg() != STRINGARG)
-            HError(2019,"HCompV: Label File format expected");
-         if((lff = Str2Format(GetStrArg())) == ALIEN)
-            HError(-2089,"HCompV: Warning ALIEN Label file format set");
-         break;
-      case 'H':
-         if (NextArg() != STRINGARG)
-            HError(2019,"HCompV: HMM macro file name expected");
-         AddMMF(&hset,GetStrArg());
-         break;
-      case 'I':
-         if (NextArg() != STRINGARG)
-            HError(2019,"HCompV: MLF file name expected");
-         LoadMasterFile(GetStrArg());
-         break;
-      case 'L':
-         if (NextArg()!=STRINGARG)
-            HError(2019,"HCompV: Label file directory expected");
-         labDir = GetStrArg();
-         break;
-      case 'M':
-         if (NextArg()!=STRINGARG)
-            HError(2019,"HCompV: Output macro file directory expected");
-         outDir = GetStrArg();
-         break;
-      case 'T':
-         if (NextArg() != INTARG)
-            HError(2019,"HCompV: Trace value expected");
-         trace = GetChkedInt(0,077,s); 
-         break;
-      case 'X':
-         if (NextArg()!=STRINGARG)
-            HError(2019,"HCompV: Label file extension expected");
-         labExt = GetStrArg();
-         break;
-      default:
-         HError(2019,"HCompV: Unknown switch %s",s);
-      }
-   }
-   if (NextArg()!=STRINGARG)
-      HError(2019,"HCompV: Source HMM file name expected");
-   hmmfn = GetStrArg();
-   Initialise();
-   do {
-      if (NextArg()!=STRINGARG)
-         HError(2019,"HCompV: Training data file name expected");
-      datafn = GetStrArg();
-      LoadFile(datafn);
-   } while (NumArgs()>0);
-   SetCovs();
-   FixGConsts(hmmLink);
-   SaveModel(outfn);   
-   if (trace&T_TOP)
-      printf("Output written to directory %s\n",(outDir==NULL)?"./":outDir);
-   if (vFloorScale>0.0)
-      PutVFloor();
-   Exit(0);
-   return (0);          /* never reached -- make compiler happy */
-}
 
 /* ------------------------ Initialisation ----------------------- */
 
@@ -566,6 +488,408 @@ void SaveModel(char *outfn)
       macroLink->id = GetLabId(outfn,TRUE);
    if(SaveHMMSet(&hset,outDir,NULL,saveBinary)<SUCCESS)
       HError(2011,"SaveModel: SaveHMMSet failed");
+}
+
+
+
+/* ------------- Cepstral Mean Substraction & Variance Normalisation ------------ */
+
+/* initialise and return an instance of SpkrAcc */  
+SpkrAcc *InitSpkrAcc(void)
+{
+   SpkrAcc *sa;
+
+   sa = New(&gstack,sizeof(SpkrAcc));
+   sa->meanSum = CreateVector(&gstack,vSize);
+   ZeroVector(sa->meanSum);
+   sa->squareSum = CreateVector(&gstack,vSize);
+   ZeroVector(sa->squareSum);
+   sa->NumFrame = 0;
+   return sa;
+}
+
+/* reset an instance of SpkrAcc type */ 
+void ClrSpkrAcc(SpkrAcc *sa)
+{
+   ZeroVector(sa->meanSum);
+   ZeroVector(sa->squareSum);
+   sa->NumFrame = 0;
+}
+  
+/* Accumulate stats from an utterance file */
+SpkrAcc *AccGenUtt(char *SpkrPattern, char *UttFileName, SpkrAcc *sa)
+{
+   char SpkrName[MAXSTRLEN];
+   ParmBuf pbuf;
+   BufferInfo info;
+   short swidth[SMAX];
+   Boolean eSep;
+   Vector tempV;
+   int i;
+
+   if (MaskMatch(SpkrPattern,SpkrName,UttFileName)==TRUE){
+      /* open buffer and construct observation */
+      pbuf = OpenBuffer(&iStack,UttFileName,0,dff,FALSE_dup,FALSE_dup);
+      GetBufferInfo(pbuf,&info);
+      if ((info.tgtPK & HASZEROM) && strchr(oflags,'m')) {
+         HError(-2021,"HCompV: AccGenUtt: qualifier _Z not appropriate when calculating means!\n");
+      }
+      /* treat as single stream system though a bit weird */
+      ZeroStreamWidths(1,swidth);
+      SetStreamWidths(info.tgtPK,info.tgtVecSize,swidth,&eSep);
+      obs = MakeObservation(&gstack,swidth,info.tgtPK,FALSE,eSep);
+      if (info.tgtVecSize != vSize){
+         vSize = info.tgtVecSize;
+         /* if needed init a SpkrAcc */
+         sa = InitSpkrAcc();
+         fprintf(stdout,"Target observation vector size set to %d ......\n",info.tgtVecSize);
+         fflush(stdout);
+      }
+      ParmKind2Str(info.tgtPK,TargetPKStr);
+      /* accumulate stats for current utterance file */
+      StartBuffer(pbuf);
+      while (BufferStatus(pbuf) != PB_CLEARED) 
+         {
+            /* copy current observation and set vector ptr to first stream */
+            ReadAsBuffer(pbuf,&obs);
+            tempV = obs.fv[1];
+            for (i=1;i<=vSize;i++){
+               sa->meanSum[i] += tempV[i];
+               sa->squareSum[i] += tempV[i]*tempV[i];
+            }
+            sa->NumFrame += 1;
+         }
+      CloseBuffer(pbuf);
+      strcpy(sa->SpkrName,SpkrName);
+      if (trace&T_CMV){
+         fprintf(stdout,"Utterance %s accumulate generated for speaker %s\n",UttFileName,sa->SpkrName);
+         fflush(stdout);
+      }
+      ResetHeap(&iStack);
+      return sa;
+   }
+   else {
+      HError(2039,"HCompV: AccGenUtt: speaker pattern matching failure on file: %s\n",UttFileName);
+      return NULL;
+   }
+}
+
+
+/* Append speaker accumulate structure list */
+SpkrAccListItem *AppendSpkrAccList(SpkrAccListItem *sal, SpkrAcc *sa)
+{
+   SpkrAccListItem *temp;
+   int i;
+
+   temp = New(&gstack,sizeof(SpkrAccListItem));
+   temp->sa = InitSpkrAcc();
+   for (i=1;i<=vSize;i++){
+      temp->sa->meanSum[i] = sa->meanSum[i];
+      temp->sa->squareSum[i] = sa->squareSum[i];
+   }
+   temp->sa->NumFrame = sa->NumFrame;
+   strcpy(temp->sa->SpkrName,sa->SpkrName);
+   temp->nextSpkr = sal;
+   sal = temp;
+  
+   if (trace&T_CMV){
+      fprintf(stdout,"Creating entry for speaker %s ......\n",sa->SpkrName);
+      fflush(stdout);
+   }
+
+   return sal;
+}
+
+/* 
+   search the speaker accumulate list and if there is an entry for the
+   current speaker given in sa, then update the entry in the list; otherwise
+   insert sa into the list as a new speaker entry
+*/
+SpkrAccListItem *UpdateSpkrAccList(SpkrAccListItem *sal, SpkrAcc *sa)
+{ 
+   SpkrAccListItem *p;
+   int i;
+   Boolean tag = FALSE;
+
+   p = sal;
+
+   while (p != NULL){
+      if (strcmp(p->sa->SpkrName,sa->SpkrName)==0){
+         for (i=1;i<=vSize;i++){
+            p->sa->meanSum[i] += sa->meanSum[i];
+            p->sa->squareSum[i] += sa->squareSum[i];
+         }
+         p->sa->NumFrame += sa->NumFrame;
+         tag = TRUE;
+         break;
+      }
+      p = p->nextSpkr;
+   }
+   if (tag == FALSE){
+      sal = AppendSpkrAccList(sal,sa);
+   }
+
+   return sal;
+}
+
+
+/* Compute Mean and Var */
+void UpdateMeanVar(SpkrAccListItem *sal)
+{
+   int i;
+   SpkrAccListItem *p;
+  
+   p = sal;
+   while (p != NULL){
+      for (i=1;i<=vSize;i++){
+         p->sa->meanSum[i] /= ((float)(p->sa->NumFrame));
+      }
+      for (i=1;i<=vSize;i++){
+         p->sa->squareSum[i] /= ((float)(p->sa->NumFrame));
+         p->sa->squareSum[i] -= (p->sa->meanSum[i])*(p->sa->meanSum[i]);
+      }
+      p = p->nextSpkr;
+   }  
+}
+
+/* Report output type NumFrame/cms/cvn */
+void ReportOutput()
+{
+   if (strcmp(oflags,"m")==0){
+      fprintf(stdout,"\n  HCompV: Comptuting side based cepstral mean ......\n\n");
+   }
+   else if (strcmp(oflags,"v")==0){
+      fprintf(stdout,"\n  HCompV: Computing side based cepstral variance normaliser ......\n\n");
+   }
+   else if (strcmp(oflags,"mv")==0){
+      fprintf(stdout,"\n  HCompV: Comptuting side based cepstral mean & variance normaliser ......\n\n");
+   }
+   else if (strcmp(oflags,"nv")==0){
+      fprintf(stdout,"\n  HCompV: Comptuting side based frame number & variance normaliser ......\n\n");
+   }
+   else if (strcmp(oflags,"nmv")==0){
+      fprintf(stdout,"\n  HCompV: Comptuting side based frame number & cepstral mean & variance normaliser ......\n\n");
+   }
+   else {
+      fprintf(stdout,"\n  HCompV: ReportOutput: Unrecognisable output flag setting: %s\n",oflags);
+      fflush(stdout);
+      HError(2019,"HCompV: ReportOutput: Unrecognisable output flag setting: %s\n",oflags);
+   }
+   fflush(stdout);
+}
+
+
+/* Export number of frames, mean, var to a given directory */
+void ExportNMV(SpkrAccListItem *sal, char *OutDirName, char *tgtPKStr) 
+{
+   FILE *oFile;
+   Boolean isPipe;
+   char oFileName[MAXSTRLEN];
+   SpkrAccListItem *p;
+   int i;
+
+   p = sal;
+   while(p != NULL){
+      /* create output file name for current spkr index */    
+      MakeFN(p->sa->SpkrName,OutDirName,NULL,oFileName);
+
+      /* open and write */
+      oFile = FOpen(oFileName,NoOFilter,&isPipe);
+      if (oFile == NULL){
+         HError(2011,"HCompV: ExportNMV: output file creation error %s",oFileName);
+      }
+    
+      /* write header */
+      fprintf(oFile,"<CEPSNORM> <%s>",tgtPKStr);
+    
+      /* write number frames */
+      if (strchr(oflags,'n')){
+         fprintf(oFile,"\n<NFRAMES> %d",p->sa->NumFrame);
+      }
+      /* write mean */
+      if (strchr(oflags,'m')){
+         fprintf(oFile,"\n<MEAN> %d\n",vSize);
+         for (i=1;i<=vSize;i++){
+            fprintf(oFile," %e",(p->sa->meanSum[i]));
+         }
+      }
+      /* write variance */
+      if (strchr(oflags,'v')){   
+         fprintf(oFile,"\n<VARIANCE> %d\n",vSize);
+         for (i=1;i<=vSize;i++){
+            fprintf(oFile," %e",(p->sa->squareSum[i]));
+         }
+      }
+      fprintf(oFile,"\n");
+      FClose(oFile,isPipe);
+      p = p->nextSpkr;
+   }
+}
+
+/* main func */
+int main(int argc, char *argv[])
+{
+   char *datafn, *s;
+   void Initialise(void);
+   void LoadFile(char *fn);
+   void SetCovs(void);
+   void PutVFloor(void);
+   void SaveModel(char *outfn);
+   SpkrAcc *sa;
+
+   if(InitShell(argc,argv,hcompv_version,hcompv_vc_id)<SUCCESS)
+      HError(2000,"HCompV: InitShell failed");
+   InitMem();   InitLabel();
+   InitMath();  InitSigP();
+   InitWave();  InitAudio();
+   InitVQ();    InitModel();
+   if(InitParm()<SUCCESS)  
+      HError(2000,"HCompV: InitParm failed");
+
+   if (!InfoPrinted() && NumArgs() == 0)
+      ReportUsage();
+   if (NumArgs() == 0) Exit(0);
+   SetConfParms();
+
+   CreateHMMSet(&hset,&gstack,FALSE);
+   while (NextArg() == SWITCHARG) {
+      s = GetSwtArg();
+      if (strlen(s)!=1) 
+         HError(2019,"HCompV: Bad switch %s; must be single letter",s);
+      switch(s[0]){
+      case 'f':
+         if (NextArg() != FLOATARG)
+            HError(2019,"HCompV: Variance floor scale expected");
+         vFloorScale = GetChkedFlt(0.0,100.0,s);
+         break;
+      case 'l':
+         if (NextArg() != STRINGARG)
+            HError(2019,"HCompV: Segment label expected");
+         segLab = GetStrArg();
+         break;
+      case 'm':
+         meanUpdate = TRUE;
+         break;
+      case 'o':
+         outfn = GetStrArg();
+         break;     
+      case 'v':
+         if (NextArg() != FLOATARG)
+            HError(2019,"HCompV: Minimum variance level expected");
+         minVar = GetChkedFlt(0.0,100.0,s);
+         break;
+      case 'k':
+         if (NextArg() != STRINGARG)
+            HError(2019,"HCompV: speaker pattern expected");
+         strcpy(spPattern,GetStrArg());
+         if (strchr(spPattern,'%')==NULL)
+            HError(2019,"HCompV: Speaker mask invalid");
+         break;
+      case 'c':
+         if (NextArg() != STRINGARG)
+            HError(2019,"HCompV: CMV output dir expected");
+         strcpy(cmDir,GetStrArg());
+         DoCMV = TRUE;
+         break;
+      case 'q':
+         if (NextArg() != STRINGARG)
+            HError(2019,"HCompV: output flags (nmv)");
+         strcpy(oflags,GetStrArg());
+         break;
+      case 'B':
+         saveBinary = TRUE;
+         break;
+      case 'F':
+         if (NextArg() != STRINGARG)
+            HError(2019,"HCompV: Data File format expected");
+         if((dff = Str2Format(GetStrArg())) == ALIEN)
+            HError(-2089,"HCompV: Warning ALIEN Data file format set");
+         break;
+      case 'G':
+         if (NextArg() != STRINGARG)
+            HError(2019,"HCompV: Label File format expected");
+         if((lff = Str2Format(GetStrArg())) == ALIEN)
+            HError(-2089,"HCompV: Warning ALIEN Label file format set");
+         break;
+      case 'H':
+         if (NextArg() != STRINGARG)
+            HError(2019,"HCompV: HMM macro file name expected");
+         AddMMF(&hset,GetStrArg());
+         break;
+      case 'I':
+         if (NextArg() != STRINGARG)
+            HError(2019,"HCompV: MLF file name expected");
+         LoadMasterFile(GetStrArg());
+         break;
+      case 'L':
+         if (NextArg()!=STRINGARG)
+            HError(2019,"HCompV: Label file directory expected");
+         labDir = GetStrArg();
+         break;
+      case 'M':
+         if (NextArg()!=STRINGARG)
+            HError(2019,"HCompV: Output macro file directory expected");
+         outDir = GetStrArg();
+         break;
+      case 'T':
+         if (NextArg() != INTARG)
+            HError(2019,"HCompV: Trace value expected");
+         trace = GetChkedInt(0,077,s); 
+         break;
+      case 'X':
+         if (NextArg()!=STRINGARG)
+            HError(2019,"HCompV: Label file extension expected");
+         labExt = GetStrArg();
+         break;
+      default:
+         HError(2019,"HCompV: Unknown switch %s",s);
+      }
+   }
+
+   /* if not doing CMV, do standard HCompV */
+   if (DoCMV == FALSE){
+      if (NextArg()!=STRINGARG)
+         HError(2019,"HCompV: Source HMM file name expected");
+      hmmfn = GetStrArg();
+      Initialise();
+      do {
+         if (NextArg()!=STRINGARG)
+            HError(2019,"HCompV: Training data file name expected");
+         datafn = GetStrArg();
+         LoadFile(datafn);
+      } while (NumArgs()>0);
+      SetCovs();
+      FixGConsts(hmmLink);
+      SaveModel(outfn);   
+      if (trace&T_TOP)
+         printf("Output written to directory %s\n",(outDir==NULL)?"./":outDir);
+      if (vFloorScale>0.0)
+         PutVFloor();
+   }
+   else {
+      /* report export data type */
+      ReportOutput();
+      /* init input buffer mem heap */
+      CreateHeap(&iStack,"BufferIn",MSTAK,1,0.5,100000,5000000);
+      do {
+         if (NextArg()!=STRINGARG){
+            HError(2019,"HCompV: Training data file name expected");
+         }
+         datafn = GetStrArg();       
+         /* accumulate stats for current utterance file and update speaker list */
+         sa = AccGenUtt(spPattern,datafn,sa);
+         salist = UpdateSpkrAccList(salist,sa);
+         /* reset for next utterance */
+         ClrSpkrAcc(sa);
+      } while (NumArgs()>0);
+      /* compute the means and variances for each speaker */
+      UpdateMeanVar(salist);
+      /* export NMV for each speaker */
+      ExportNMV(salist,cmDir,TargetPKStr);
+   }
+
+   Exit(0);
+   return (0);          /* never reached -- make compiler happy */
 }
 
 /* ----------------------------------------------------------- */

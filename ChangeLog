@@ -1,0 +1,12 @@
+2002-01-16  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HTK 3.1 released.
+
+2001-12-11  Gareth Moore  <glm20@eng.cam.ac.uk>
+
+	* README: Fixed various typing errors.
+
+2001-08-28  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* README: Explicitly mention adding bin.${CPU}/ to $PATH. 
+

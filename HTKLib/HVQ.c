@@ -19,8 +19,8 @@
 /*         File: HVQ.c:   Vector Quantisation                  */
 /* ----------------------------------------------------------- */
 
-char *hvq_version = "!HVER!HVQ:   3.0 [CUED 05/09/00]";
-char *hvq_vc_id = "$Id: HVQ.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *hvq_version = "!HVER!HVQ:   3.1 [CUED 16/01/02]";
+char *hvq_vc_id = "$Id: HVQ.c,v 1.6 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -447,7 +447,7 @@ float VQNodeScore(VQNode n, Vector v, int size, CovKind ck)
       FreeVector(&gstack,vx);
       return n->gconst+sum;
    default:
-      HError(6199,"VQNodeScore: bad kind %d",ck);
+      HError(6172,"VQNodeScore: bad kind %d",ck);
    }
    return 0; /* to keep compiler happy */
 }

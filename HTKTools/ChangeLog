@@ -1,3 +1,85 @@
+2002-01-16  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* *.[hc]: Bump version to 3.1.
+
+2001-12-11  Gareth Moore  <glm20@eng.cam.ac.uk>
+
+	* *.c (ReportUsage): Tool usage report formatting tidied.
+
+2001-12-03  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HDMan.c (WriteDictWord): 
+	(WriteEntry): 
+	(EditWordBuf): 
+	(EditAndMerge): Do not update new phone list when outputting trace
+	info.
+
+2001-11-14  Xunying Liu  <xl207@eng.cam.ac.uk>
+
+	* HCompV.c: Added support for cluster-based mean and variance
+	normalisation. 
+
+2001-06-08  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HHEd.c (SetStreamWidthCommand): Recalculate vecSize of HMMSet
+	From: Mark Gales <mjfg@eng.cam.ac.uk>
+
+2001-04-18  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HList.c (IsWave): Take extended filenames into account.
+
+2001-04-17  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HSGen.c: Assign new error code range 3400-3499 to HSGen.
+
+	* HVite.c (Initialise): 
+	* HEAdapt.c (Initialise): 
+	* HERest.c (Initialise): Fix error codes.
+
+	* HHEd.c (ChkTreeObject): Correct error message.
+
+2001-04-11  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HVite.c (DoAlignment): 
+	(ProcessFile): Support iterative increase of beam limit for alignment.
+
+2000-11-30  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HVite.c: Add missing option -B and SAVEBINARY config variable.
+
+2000-10-27  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HRest.c (LoadFile): Do not try to load zero frame segments even
+	if '-t' option is specified.
+
+	* HVite.c (DoOnlineAdaptation): Return 0 if forward-backward
+	failed.
+
+	* HEAdapt.c (DoForwardBackward): Only update total frame and
+	logprob counters if forward-backward succeeded.
+
+2000-10-26  Phil Woodland  <pcw@eng.cam.ac.uk>
+
+	* HBuild.c (ProcessBoBiGram): Fix generation of bigram network for
+	zapUnknown==TRUE case.
+
+2000-10-26  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HERest.c (DoForwardBackward): Only update total frame and
+	logprob counters if forward-backward succeeded.
+	From: Mark Gales <mjfg@eng.cam.ac.uk>
+
+2000-10-24  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HSmooth.c: Rename MAXPHONES to MAXMONOPHONES.
+
+	* HDMan.c: Consistently use MAXPHONES (defined in HDict.h).
+	From Gunnar Lehtinen <lehtinen@tik.ee.ethz.ch>
+
+2000-10-06  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HHEd.c: Remove MPW segment pragmas.
+
 2000-09-25  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
 	* Makefile: Copy compile settings from env files.

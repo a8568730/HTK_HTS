@@ -19,8 +19,8 @@
 /*         File: HInit.c: HMM initialisation program           */
 /* ----------------------------------------------------------- */
 
-char *hinit_version = "!HVER!HInit:   3.0 [CUED 05/09/00]";
-char *hinit_vc_id = "$Id: HInit.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hinit_version = "!HVER!HInit:   3.1 [CUED 16/01/02]";
+char *hinit_vc_id = "$Id: HInit.c,v 1.6 2002/01/16 18:11:29 ge204 Exp $";
 
 /*
    This program is used to initialise (or tune) a single hidden
@@ -117,16 +117,16 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HInit [options] hmmFile trainFiles...\n\n");
-   printf(" Option                                   Default\n\n");
-   printf(" -e f    Set convergence factor epsilon     1.0E-4\n");
-   printf(" -i N    Set max iterations to N             20\n");
-   printf(" -l s    Set segment label to s             none\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -e f    Set convergence factor epsilon       1.0E-4\n");
+   printf(" -i N    Set max iterations to N              20\n");
+   printf(" -l s    Set segment label to s               none\n");
    printf(" -m N    Set min segments needed              3\n");
-   printf(" -n      Update hmm (suppress uniform seg)   off\n");
-   printf(" -o fn   Store new hmm def in fn (name only) outDir/srcfn\n");
-   printf(" -u mvwt Update m)eans v)ars w)ghts t)rans   mvwt\n");
-   printf(" -v f    Set minimum variance to f          1.0E-2\n");
-   printf(" -w f    set mix wt/disc prob floor to f     0.0\n");
+   printf(" -n      Update hmm (suppress uniform seg)    off\n");
+   printf(" -o fn   Store new hmm def in fn (name only)  outDir/srcfn\n");
+   printf(" -u mvwt Update m)eans v)ars w)ghts t)rans    mvwt\n");
+   printf(" -v f    Set minimum variance to f            1.0E-2\n");
+   printf(" -w f    set mix wt/disc prob floor to f      0.0\n");
    PrintStdOpts("BFGHILMX");
    printf("\n\n");
 }

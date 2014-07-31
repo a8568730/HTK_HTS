@@ -7,9 +7,22 @@
 %/*                                                             */
 %/*                                                             */
 %/* ----------------------------------------------------------- */
+%/* developed at:                                               */
+%/*                                                             */
+%/*      Speech Vision and Robotics group                       */
+%/*      Cambridge University Engineering Department            */
+%/*      http://svr-www.eng.cam.ac.uk/                          */
+%/*                                                             */
+%/*      Entropic Cambridge Research Laboratory                 */
+%/*      (now part of Microsoft)                                */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
 %/*         Copyright: Microsoft Corporation                    */
 %/*          1995-2000 Redmond, Washington USA                  */
-%/*                    http://www.microsoft.com                */
+%/*                    http://www.microsoft.com                 */
+%/*                                                             */
+%/*          2001-2002 Cambridge University                     */
+%/*                    Engineering Department                   */
 %/*                                                             */
 %/*   Use of this software is governed by a License Agreement   */
 %/*    ** See the file License for the Conditions of Use  **    */
@@ -79,7 +92,42 @@ in the US NIST scoring package, i.e.\
     `-------------------------------------------------------------'
 
 \end{verbatim}
-\noindent
+
+
+When \htool{HResults} is used to generate a confusion matrix, the
+values are as follows:
+\begin{description}
+\item[\%c] The percentage correct in the row; that is, how many times a phone
+     instance was correctly labelled.
+\item[\%e] The percentage of incorrectly labeled phones in the row as
+     a percentage of the total number of labels in the set.
+\end{description}
+An example from the HTKDemo routines:
+\begin{verbatim}
+====================== HTK Results Analysis =======================
+  Date: Thu Jan 10 19:00:03 2002
+  Ref : labels/bcplabs/mon
+  Rec : test/te1.rec
+      : test/te2.rec
+      : test/te3.rec
+------------------------ Overall Results --------------------------
+SENT: %Correct=0.00 [H=0, S=3, N=3]
+WORD: %Corr=63.91, Acc=59.40 [H=85, D=35, S=13, I=6, N=133]
+------------------------ Confusion Matrix -------------------------
+       S   C   V   N   L  Del [ %c / %e]
+   S   6   1   0   1   0    0 [75.0/1.5]
+   C   2  35   3   1   0   18 [85.4/4.5]
+   V   0   1  28   0   1   12 [93.3/1.5]
+   N   0   1   0   7   0    1 [87.5/0.8]
+   L   0   1   1   0   9    4 [81.8/1.5]
+Ins    2   2   0   2   0
+===================================================================
+\end{verbatim}
+Reading across the rows, \%c indicates the number of correct instances
+divided by the total number of instances in the row.  \%e is the
+number of incorrect instances in the row divided by the total number
+of instances (N).
+
 Optional extra outputs available from \htool{HResults} are
 \begin{itemize}
  \item   recognition statistics on a per file basis

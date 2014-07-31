@@ -19,8 +19,8 @@
 /*             File: HEAdapt.c: Adaptation Tool                */
 /* ----------------------------------------------------------- */
 
-char *headapt_version = "!HVER!HEAdapt:   3.0 [CUED 05/09/00]";
-char *headapt_vc_id = "$Id: HEAdapt.c,v 1.4 2000/09/11 13:53:33 ge204 Exp $";
+char *headapt_version = "!HVER!HEAdapt:   3.1 [CUED 16/01/02]";
+char *headapt_vc_id = "$Id: HEAdapt.c,v 1.8 2002/01/16 18:11:29 ge204 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -115,21 +115,21 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HEAdapt [options] hmmList dataFiles...\n\n");
-   printf(" Option                                     Default\n\n");
-   printf(" -b N    set no. of blocks for transform    1\n");
-   printf(" -c f    Mixture pruning threshold          10.0\n");
-   printf(" -d s    dir to find hmm definitions        current\n");
-   printf(" -f s1 s2  Save s2 for field s1 in tmf      defaults saved\n");
-   printf(" -g      do global adaptation only          reg classes\n");
-   printf(" -i N    update the transforms every N utts static\n");
-   printf(" -j f    Map adaptation with scaling factor off\n");
-   printf(" -k      Use MLLR before performing MAP     off\n");
-   printf(" -m f    occ count min. to calc transform   700.0\n");
-   printf(" -o s    extension for new hmm files        as src\n");
-   printf(" -t f [i l] set pruning to f [inc limit]    inf\n");
-   printf(" -u [mv] update means(m) vars(v)            means\n");
-   printf(" -v f    set minimum variance to f          0.0\n");
-   printf(" -x s    extension for hmm files            none\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -b N    set no. of blocks for transform      1\n");
+   printf(" -c f    Mixture pruning threshold            10.0\n");
+   printf(" -d s    dir to find hmm definitions          current\n");
+   printf(" -f s1 s2  Save s2 for field s1 in tmf        defaults saved\n");
+   printf(" -g      do global adaptation only            reg classes\n");
+   printf(" -i N    update the transforms every N utts   static\n");
+   printf(" -j f    Map adaptation with scaling factor   off\n");
+   printf(" -k      Use MLLR before performing MAP       off\n");
+   printf(" -m f    occ count min. to calc transform     700.0\n");
+   printf(" -o s    extension for new hmm files          as src\n");
+   printf(" -t f [i l] set pruning to f [inc limit]      inf\n");
+   printf(" -u [mv] update means(m) vars(v)              means\n");
+   printf(" -v f    set minimum variance to f            0.0\n");
+   printf(" -x s    extension for hmm files              none\n");
    PrintStdOpts("BFGHIJKLMSTX");
    printf("\n\n");
 }
@@ -422,9 +422,9 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset,
 
    /* Load HMMs and init HMMSet related global variables */
    if(MakeHMMSet( hset, hmmListFn )<SUCCESS)
-      HError(2799,"Initialise: MakeHMMSet failed");
+      HError(2728,"Initialise: MakeHMMSet failed");
    if(LoadHMMSet( hset,hmmDir,hmmExt)<SUCCESS)
-      HError(2799,"Initialise: LoadHMMSet failed");
+      HError(2728,"Initialise: LoadHMMSet failed");
   
    /* needs to be plain or shard system for adaptation purposes */
    if (hset->hsKind == TIEDHS || hset->hsKind == DISCRETEHS)
@@ -474,11 +474,10 @@ void DoForwardBackward(FBInfo *fbInfo, UttInfo *utt, char * datafn, char * dataf
    }
 
    /* fill the alpha beta and otprobs (held in fbInfo) */
-   FBFile(fbInfo, utt, datafn);
-
-   /* update totals */
-   totalT += utt->T ;
-   totalPr += utt->pr ;
-
+   if (FBFile(fbInfo, utt, datafn)) {
+      /* update totals */
+      totalT += utt->T ;
+      totalPr += utt->pr ;
+   }
 }
 

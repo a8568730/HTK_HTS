@@ -19,7 +19,7 @@
 /*         File: HAdapt.h      Adaptation Library module       */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HAdapt:   3.0 [CUED 05/09/00] */
+/* !HVER!HAdapt:   3.1 [CUED 16/01/02] */
 
 #ifndef _HADAPT_H_
 #define _HADAPT_H_

@@ -19,8 +19,8 @@
 /*    File: HResults.c: gather statistics on results           */
 /* ----------------------------------------------------------- */
 
-char *hresults_version = "!HVER!HResults:   3.0 [CUED 05/09/00]";
-char *hresults_vc_id = "$Id: HResults.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hresults_version = "!HVER!HResults:   3.1 [CUED 16/01/02]";
+char *hresults_vc_id = "$Id: HResults.c,v 1.6 2002/01/16 18:11:29 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -130,24 +130,24 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HResults [options] labelList recFiles...\n\n");
-   printf(" Option                                   Default\n\n");
-   printf(" -a s    Redefine string level label         SENT\n");
-   printf(" -b s    Redefine unitlevel label            WORD\n");
-   printf(" -c      Ignore case differences             off\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -a s    Redefine string level label          SENT\n");
+   printf(" -b s    Redefine unitlevel label             WORD\n");
+   printf(" -c      Ignore case differences              off\n");
    printf(" -d N    Find best of N levels                1\n");
    printf(" -e s t  Label t is equivalent to s\n");
-   printf(" -f      Enable full results                 off\n");
-   printf(" -g fmt  Set test label format to fmt        HTK\n");
-   printf(" -h      Enable NIST style formatting        off\n");
-   printf(" -k s    Results per spkr using mask s       off\n");
-   printf(" -m N    Process only the first N rec files  all\n");
-   printf(" -n      Use NIST alignment procedure        off\n");
-   printf(" -p      Output phoneme statistics           off\n");
-   printf(" -s      Strip triphone contexts             off\n");
-   printf(" -t      Output time aligned transcriptions  off\n");
-   printf(" -u f    False alarm time units (hours)      1.0\n");
-   printf(" -w      Enable word spotting analysis       off\n");
-   printf(" -z s    Redefine null class name to s       ???\n");
+   printf(" -f      Enable full results                  off\n");
+   printf(" -g fmt  Set test label format to fmt         HTK\n");
+   printf(" -h      Enable NIST style formatting         off\n");
+   printf(" -k s    Results per spkr using mask s        off\n");
+   printf(" -m N    Process only the first N rec files   all\n");
+   printf(" -n      Use NIST alignment procedure         off\n");
+   printf(" -p      Output phoneme statistics            off\n");
+   printf(" -s      Strip triphone contexts              off\n");
+   printf(" -t      Output time aligned transcriptions   off\n");
+   printf(" -u f    False alarm time units (hours)       1.0\n");
+   printf(" -w      Enable word spotting analysis        off\n");
+   printf(" -z s    Redefine null class name to s        ???\n");
    PrintStdOpts("GILX");
    printf("\n\n");
 }

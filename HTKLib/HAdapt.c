@@ -19,8 +19,8 @@
 /*         File: HAdapt.c      Adaptation Library module       */
 /* ----------------------------------------------------------- */
 
-char *hadapt_version = "!HVER!HAdapt:   3.0 [CUED 05/09/00]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.5 2000/09/15 11:54:04 ge204 Exp $";
+char *hadapt_version = "!HVER!HAdapt:   3.1 [CUED 16/01/02]";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.6 2002/01/16 18:11:27 ge204 Exp $";
 
 
 #include <stdio.h>      /* Standard C Libraries */

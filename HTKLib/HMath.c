@@ -19,8 +19,8 @@
 /*         File: HMath.c   Math Support Module                 */
 /* ----------------------------------------------------------- */
 
-char *hmath_version = "!HVER!HMath:   3.0 [CUED 05/09/00]";
-char *hmath_vc_id = "$Id: HMath.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *hmath_version = "!HVER!HMath:   3.1 [CUED 16/01/02]";
+char *hmath_vc_id = "$Id: HMath.c,v 1.6 2002/01/16 18:11:28 ge204 Exp $";
 
 /*
    This library provides math support in the following three areas
@@ -39,10 +39,6 @@ char *hmath_vc_id = "$Id: HMath.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"
 #include "HMath.h"
-
-#if defined MPW
-#pragma segment hmods
-#endif
 
 /* ----------------------------- Trace Flags ------------------------- */
 

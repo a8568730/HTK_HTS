@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,7 +32,7 @@
 /*         File: HShell.h:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HShell:   3.0 [CUED 05/09/00] */
+/* !HVER!HShell:   3.1 [CUED 16/01/02] */
 
 #ifndef _HSHELL_H_
 #define _HSHELL_H_
@@ -34,6 +47,7 @@
 #include <time.h>
 #include <errno.h>
 #include <signal.h>
+#include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,6 +63,7 @@ extern "C" {
 
 
 #define MAXSTRLEN 256    /* max length of a string */
+#define MAXFNAMELEN 1034 /* max length of a file name */
 #define SMAX      5      /* max num data streams + 1 */
 #define MAXGLOBS  256    /* max num global config parms */
 
@@ -291,6 +306,18 @@ Boolean GetIntEnvVar(char *envVar, int *value);
    Returns false if envVar not set
 */
 
+Boolean GetFileNameExt(char *logfn, char *actfn, long *st, long *en);
+/* 
+   Return true if given file has extensions, i.e. an alias and/or st/end
+   indices.  If true actual file name is copied into actfn and indices
+   are copied into st and en.   Extended file names have the form
+             file[1,999]
+   or        logfile=actfile
+   or        logfile=actfile[1,999]
+     
+   File extensions can be disabled by seting EXTENDFILENAMES to F
+*/       
+
 /* ---------------------- Input Handling ----------------------------- */
 
 FILE *FOpen(char *fname, IOFilter filter, Boolean *isPipe);
@@ -351,6 +378,11 @@ char *ParseString(char *src, char *s);
    '"QUOTE' "\"QUOTE" \"QUOTE \042QUOTE all return "QUOTE in s
 */
 
+Boolean ReadRawString(Source *src, char *s);
+/* 
+   Read a raw string (i.e. word upto next white-space) from src and store it in s 
+*/
+
 void WriteString(FILE *f,char *s,char q);
 char *ReWriteString(char *s,char *dst, char q);
 /*
@@ -370,6 +402,11 @@ Boolean SkipLine(Source *src);
 Boolean ReadLine(Source *src,char *s);
 /* 
    read to next newline in source, return FALSE when EOF reached
+*/
+
+void ReadUntilLine (Source *src, char *s);
+/* 
+   read to next occurrence of string 
 */
 
 void SkipWhiteSpace(Source *src);
@@ -482,6 +519,11 @@ Boolean DoMatch(char *s, char *p);
    The pattern p may contain the metacharacters '?'
    which will match exactly 1 character and '*'
    which will match zero or more characters.
+*/
+
+Boolean MaskMatch(char *mask, char *spkr, char *str);
+/* Returns true if the string str matches the pattern.
+   The string matched to the '%' is returned in spkr.
 */
 
 char *RetrieveCommandLine(void);

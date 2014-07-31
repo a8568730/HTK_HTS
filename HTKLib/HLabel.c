@@ -19,18 +19,14 @@
 /*         File: HLabel.c:   Speech Label File Input           */
 /* ----------------------------------------------------------- */
 
-char *hlabel_version = "!HVER!HLabel:   3.0 [CUED 05/09/00]";
-char *hlabel_vc_id = "$Id: HLabel.c,v 1.5 2000/09/15 11:54:05 ge204 Exp $";
+char *hlabel_version = "!HVER!HLabel:   3.1 [CUED 16/01/02]";
+char *hlabel_vc_id = "$Id: HLabel.c,v 1.8 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
 #include "HMath.h"
 #include "HWave.h"
 #include "HLabel.h"
-
-#if defined MPW
-#pragma segment hmods
-#endif
 
 /* ----------------------------- Trace Flags ------------------------- */
 
@@ -1471,7 +1467,6 @@ static void SaveESPSLabels( FILE *f, Transcription *t)
    ll = t->head;
    for (p=ll->head->succ; p->succ != NULL; p=p->succ)
       fprintf(f,"%f 121 %s\n", (p->end+0.5)*1E-7, p->labid->name);
-   fclose(f);
 }
 
 /* SaveHTKLabels: Save transcription in f using HTK format */

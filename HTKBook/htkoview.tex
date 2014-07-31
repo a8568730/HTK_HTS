@@ -7,9 +7,22 @@
 %/*                                                             */
 %/*                                                             */
 %/* ----------------------------------------------------------- */
+%/* developed at:                                               */
+%/*                                                             */
+%/*      Speech Vision and Robotics group                       */
+%/*      Cambridge University Engineering Department            */
+%/*      http://svr-www.eng.cam.ac.uk/                          */
+%/*                                                             */
+%/*      Entropic Cambridge Research Laboratory                 */
+%/*      (now part of Microsoft)                                */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
 %/*         Copyright: Microsoft Corporation                    */
 %/*          1995-2000 Redmond, Washington USA                  */
-%/*                    http://www.microsoft.com                */
+%/*                    http://www.microsoft.com                 */
+%/*                                                             */
+%/*              2001  Cambridge University                     */
+%/*                    Engineering Department                   */
 %/*                                                             */
 %/*   Use of this software is governed by a License Agreement   */
 %/*    ** See the file License for the Conditions of Use  **    */
@@ -376,10 +389,36 @@ applications, it can also compute \textit{Figure of Merit} (FOM) scores
 and \textit{Receiver Operating Curve} (ROC) information.
 \index{NIST}\index{FOM}\index{Figure of Merit}
 
-\mysect{Whats New In Version 2.2}{whatsnew}
 
-This \index{new features!in Version 2.2} section lists the new features and
-refinements in \HTK\ Version 2.2 compared to the preceding Version 2.1.
+\mysect{Whats New In Version 3.1}{whatsnew}
+
+This \index{new features!in Version 3.1} section lists the new
+features in \HTK\ Version 3.1 compared to the preceding Version~3.0
+which was functionally equivalent to Version~2.2.
+
+\begin{enumerate}
+
+\item \htool{HPARM} supports Perceptual Linear Prediction (PLP) feature
+  extraction.
+
+\item \htool{HPARM} supports Vocal Tract Length Normalisation (VTLN)
+  by warping the frequency axis in the filterbank analysis.
+
+\item \htool{HPARM} supports variance scaling.
+
+\item \htool{HPARM} supports cluster-based cepstral mean and variance
+  normalisation. 
+
+\item All tools support an extended filename syntax that can be used
+  to deal with unsegmented data more easily.
+
+\end{enumerate}
+
+
+\subsection{New In Version 2.2}{}
+
+This section lists the new features and refinements in \HTK\ Version
+2.2 compared to the preceding Version 2.1.
  
 \begin{enumerate}
 
@@ -460,6 +499,7 @@ format.
 \item \htool{HAudio} allows key-press control of live audio input.
 
 \end{enumerate}
+
 
 
 %%% Local Variables: 

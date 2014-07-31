@@ -19,7 +19,7 @@
 /*         File: HMath.h:   Math Support                       */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HMath:   3.0 [CUED 05/09/00] */
+/* !HVER!HMath:   3.1 [CUED 16/01/02] */
 
 #ifndef _HMATH_H_
 #define _HMATH_H_

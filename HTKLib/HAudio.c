@@ -19,18 +19,14 @@
 /*      File: HAudio.c: Audio Input/Output Interface           */
 /* ----------------------------------------------------------- */
 
-char *haudio_version = "!HVER!HAudio:   3.0 [CUED 05/09/00]";
-char *haudio_vc_id = "$Id: HAudio.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *haudio_version = "!HVER!HAudio:   3.1 [CUED 16/01/02]";
+char *haudio_vc_id = "$Id: HAudio.c,v 1.6 2002/01/16 18:11:27 ge204 Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"
 #include "HMath.h"
 #include "HWave.h"
 #include "HAudio.h"
-
-#if defined MPW
-#pragma segment hmods
-#endif
 
 /* ----------------------------- Trace Flags ------------------------- */
 

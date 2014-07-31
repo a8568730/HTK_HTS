@@ -19,7 +19,7 @@
 /*         File: HFB.h: Forward Backward routines module       */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HFB:   3.0 [CUED 05/09/00] */
+/* !HVER!HFB:   3.1 [CUED 16/01/02] */
 
 #ifndef _HFB_H_
 #define _HFB_H_
@@ -134,7 +134,7 @@ void InitUttObservations(UttInfo *utt, HMMSet *hset,
 			 char * datafn, int * maxmixInS);
 
 /* FBFile: apply forward-backward to given utterance */
-void FBFile(FBInfo *fbInfo, UttInfo *utt, char * datafn);
+Boolean FBFile(FBInfo *fbInfo, UttInfo *utt, char * datafn);
 
 /* PrLog: print a log value */
 void PrLog(LogDouble x);

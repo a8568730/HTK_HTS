@@ -7,9 +7,22 @@
 %/*                                                             */
 %/*                                                             */
 %/* ----------------------------------------------------------- */
+%/* developed at:                                               */
+%/*                                                             */
+%/*      Speech Vision and Robotics group                       */
+%/*      Cambridge University Engineering Department            */
+%/*      http://svr-www.eng.cam.ac.uk/                          */
+%/*                                                             */
+%/*      Entropic Cambridge Research Laboratory                 */
+%/*      (now part of Microsoft)                                */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
 %/*         Copyright: Microsoft Corporation                    */
 %/*          1995-2000 Redmond, Washington USA                  */
-%/*                    http://www.microsoft.com                */
+%/*                    http://www.microsoft.com                 */
+%/*                                                             */
+%/*              2001  Cambridge University                     */
+%/*                    Engineering Department                   */
 %/*                                                             */
 %/*   Use of this software is governed by a License Agreement   */
 %/*    ** See the file License for the Conditions of Use  **    */
@@ -179,7 +192,7 @@ itself can be built from a standard source
 using \htool{HDMan}\index{hdman@\htool{HDMan}}.
 For this example, the British English BEEP pronouncing dictionary will be
 used\footnote{Available by anonymous ftp from 
-\texttt{svr-ftp.eng.cam.ac.uk/comp.speech/dictionaries/beep.tar.gz}.
+\texttt{svr-ftp.eng.cam.ac.uk/pub/comp.speech/dictionaries/beep.tar.gz}.
 Note that items beginning with unmatched quotes, found at the start
 of the dictionary, should be removed.}.  
 Its phone set will be adopted without modification except that 
@@ -192,7 +205,7 @@ containing the three commands
 \begin{verbatim}
    AS sp
    RS cmu
-   MP sil sp sil
+   MP sil sil sp
 \end{verbatim}
 where \texttt{cmu} refers to a style of stress marking\index{stress marking} in which 
 the lexical stress level is
@@ -268,10 +281,10 @@ the name of a normal file is given as argument, \htool{HSLab} displays its
 contents.  Here, the special file name \texttt{noname} indicates that new data
 is to be recorded. \htool{HSLab} makes no special provision for prompting the
 user.  However, each time the record button is pressed, it writes the
-subsequent recording alternately to a file called \texttt{noname0.wav} and to a
-file called \texttt{noname1.wav}.  Thus, it is simple to write a shell script
+subsequent recording alternately to a file called \verb|noname_0.| and to a
+file called \verb|noname_1.|.  Thus, it is simple to write a shell script
 which for each successive line of a prompt file, outputs the prompt, waits for
-either \texttt{noname0.wav} or \texttt{noname1.wav} to appear, and then renames
+either \verb|noname_0.| or \verb|noname_1.| to appear, and then renames
 the file to the name prepending the prompt (see Fig.~\href{f:step3}).
 \index{extensions!wav@\texttt{wav}}
 
@@ -281,10 +294,9 @@ The tool\index{prompt script!generationof}\index{hsgen@\htool{HSGen}}
 \htool{HSGen} can be used to do this by randomly traversing a word network and 
 outputting each word encountered. For example, typing
 \begin{verbatim}
-    HSGen -l -n 200 wdnet dict
+    HSGen -l -n 200 wdnet dict > testprompts
 \end{verbatim}
-would generate 200 numbered test utterances, the first few of which would
-look something like
+would generate 200 numbered test utterances, the first few of which would look something like:
 \begin{verbatim}
     1.  PHONE YOUNG  
     2.  DIAL OH SIX SEVEN SEVEN OH ZERO
@@ -293,8 +305,8 @@ look something like
     5.  CALL JULIAN ODELL
     ... etc
 \end{verbatim}
-These can be used to construct the a prompt script
-for the required test data.
+These can be piped to construct the prompt file \texttt{testprompts} for
+the required test data.
 
 \subsection{Step 4 - Creating the Transcription Files}
 
@@ -483,9 +495,9 @@ the training data would be coded by executing
 \begin{verbatim}
     HCopy -T 1 -C config -S codetr.scp
 \end{verbatim}
-This is illustrated in Fig.~\href{f:step5}.
-A similar procedure is used to code the test data after which
-all of the pieces are in place to start training 
+This is illustrated in Fig.~\href{f:step5}. A similar procedure is
+used to code the test data (using \verb|TARGETKIND = MFCC_0_D_A| in
+config) after which all of the pieces are in place to start training
 the HMMs.
  
 
@@ -558,7 +570,7 @@ Hence, assuming that a list of all the training files is stored in
 will create a new version of \texttt{proto} in the directory \texttt{hmm0}
 in which the zero means and unit variances above have been replaced
 by the global speech means and variances.
-Note that the prototype HMM defines the parameter kind as \texttt{MFCC\_0\_D\_A}.
+Note that the prototype HMM defines the parameter kind as \texttt{MFCC\_0\_D\_A} (Note: 'zero' not 'oh').
 This means that delta and acceleration coefficients are to be computed and
 appended to the static MFCC coefficients computed and stored during the
 coding process described above.  To ensure that these are computed during loading,
@@ -580,7 +592,7 @@ new prototype model stored in the directory
 (MMF) called \texttt{hmmdefs} \index{MMF}
 containing a copy for each of the required monophone HMMs is constructed 
 by manually copying the prototype and relabeling it for each required 
-monophone.  
+monophone (including ``sil'').  
 The format of an MMF is similar to that
 of an MLF and it serves a similar purpose in that it avoids having
 a large number of individual HMM definition files\index{HMM!definition files} 
@@ -731,7 +743,8 @@ on the assumption that the dictionary contains an entry
 \begin{verbatim}
     silence sil
 \end{verbatim}
-The \texttt{-t} option sets a pruning level of 250.0 and the \texttt{-o} 
+Note that the dictionary should be sorted firstly by case (upper case first) and secondly 
+alphabetically.  The \texttt{-t} option sets a pruning level of 250.0 and the \texttt{-o} 
 option is used to suppress the printing of scores, word names and time
 boundaries in the output MLF.
 
@@ -810,6 +823,10 @@ the transition matrices in each triphone\index{triphones!notation} set, that is:
 \end{verbatim}  
 The file \texttt{mktri.hed} can be generated using the {\em Perl} script
 \texttt{maketrihed} included in the \texttt{HTKTutorial} directory.
+When running the \htool{HHEd}\index{hled@\htool{HHEd}} command you
+will get warnings about trying to tie transition matrices for the sil
+and sp models. Since neither model is context-dependent there aren't
+actually any matrices to tie.
 
 The clone command \texttt{CL}\index{cl@\texttt{CL} command} takes as its
 argument the name of the file containing the list of triphones (and
@@ -868,8 +885,8 @@ procedure. Re-estimation should be again done twice, so that the resultant
 model sets will ultimately be saved in \texttt{hmm12}.  
 }
 \begin{verbatim}
-   HERest -C config -I wintri.mlf -t 250.0 150.0 1000.0 -s stats \
-    -S train.scp -H hmm10/macros -H hmm10/hmmdefs -M hmm11 triphones1
+   HERest -B -C config -I wintri.mlf -t 250.0 150.0 1000.0 -s stats \
+    -S train.scp -H hmm11/macros -H hmm11/hmmdefs -M hmm12 triphones1
 \end{verbatim}
 
 
@@ -1019,11 +1036,14 @@ just the training dictionary), converting it to triphones using the command
 option \texttt{-n} 
 
 \begin{verbatim}
-    HDMan -n fulllist -g global.ded -l flog beep
+    HDMan -b sp -n fulllist -g global.ded -l flog beep-tri beep
 \end{verbatim}
+
 \noindent
-The effect of the \texttt{AU} command is to use the decision trees to
-synthesise all of the new previously unseen triphones in the new list.
+The -b sp option specifies that the sp phone is used as a word boundary, and so 
+is excluded from triphones.  The effect of the \texttt{AU} command is to use the 
+decision trees to synthesise all of the new previously unseen triphones in the new 
+list.
 \index{au@\texttt{AU} command}
 
 Once all state-tying has been completed and new models synthesised, 
@@ -1139,7 +1159,8 @@ The recogniser can also be run with live input\index{live input}.
 To do this it is only
 necessary to set the configuration variables needed to convert the input
 audio to the correct form of  parameterisation.  Specifically, the following
-need to be set
+needs to be appended to the configuration file \texttt{config} to
+create a new configuration file \texttt{config2}
 \begin{verbatim}
     # Waveform capture
     SOURCERATE=625.0
@@ -1157,7 +1178,14 @@ that a warning is printed when this silence measurement is being made.
 
 Once the configuration file has been set-up for direct audio input,
 \htool{HVite} can be run as in the previous step except that no files need be
-given as arguments. On start-up, \htool{HVite} will prompt the user to speak an
+given as arguments
+
+\begin{verbatim}
+    HVite -H hmm15/macros -H hmm15/hmmdefs -C config2 \
+          -w wdnet -p 0.0 -s 5.0 dict tiedlist
+\end{verbatim}
+
+On start-up, \htool{HVite} will prompt the user to speak an
 arbitrary sentence (approx. 4 secs) in order to measure the speech and
 background silence levels. It will then repeatedly recognise and, if trace
 level bit 1 is set, it will output each utterance to the terminal. A typical
@@ -1304,21 +1332,24 @@ transformation. The \HTK\ tool \htool{HHEd} can be used to build a
 regression class tree and store it as part of the HMM set. For example,
 
 \begin{verbatim}
-    HHEd -H hmm15/macros -H hmm15/hmmdefs -M hmm16 regtree.hed tiedlist
+    HHEd -B -H hmm15/macros -H hmm15/hmmdefs -M hmm16 regtree.hed tiedlist
 \end{verbatim}
 
 \noindent
 creates a regression class tree using the models stored in \texttt{hmm15}. 
 The models are written out to the \texttt{hmm16} directory together with the 
 regression class tree information. The \htool{HHEd} edit script 
-\texttt{regtree.scp} contains the following commands
+\texttt{regtree.hed} contains the following commands
 
 \begin{verbatim}
+    RN "models"
     LS "stats"
     RC 32 "rtree"
 \end{verbatim}
 
 \noindent
+The \texttt{RN}\index{rn@\texttt{RN} command} command assigns an
+identifier to the HMM set.
 The \texttt{LS}\index{ls@\texttt{LS} command} command loads the state 
 occupation statistics file 
 \texttt{stats} generated by the last application of \htool{HERest} which 

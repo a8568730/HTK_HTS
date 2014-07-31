@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,17 +32,13 @@
 /*      File: HSigP.c:   Signal Processing Routines            */
 /* ----------------------------------------------------------- */
 
-char *hsigp_version = "!HVER!HSigP:   3.0 [CUED 05/09/00]";
-char *hsigp_vc_id = "$Id: HSigP.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *hsigp_version = "!HVER!HSigP:   3.1 [CUED 16/01/02]";
+char *hsigp_vc_id = "$Id: HSigP.c,v 1.9 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"
 #include "HMath.h"
 #include "HSigP.h"
-
-#if defined MPW
-#pragma segment hmods
-#endif
 
 /*
    This module provides a set of basic speech signal processing
@@ -435,9 +444,33 @@ float Mel(int k,float fres)
    return 1127 * log(1 + (k-1)*fres);
 }
 
+/* EXPORT->WarpFreq: return warped frequency */
+float WarpFreq (float fcl, float fcu, float freq, float minFreq, float maxFreq , float alpha)
+{
+   if (alpha == 1.0)
+      return freq;
+   else {
+      float scale = 1.0 / alpha;
+      float cu = fcu * 2 / (1 + scale);
+      float cl = fcl * 2 / (1 + scale);
+
+      float au = (maxFreq - cu * scale) / (maxFreq - cu);
+      float al = (cl * scale - minFreq) / (cl - minFreq);
+      
+      if (freq > cu)
+         return  au * (freq - cu) + scale * cu ;
+      else if (freq < cl)
+         return al * (freq - minFreq) + minFreq ;
+      else
+         return scale * freq ;
+   }
+}
+
 /* EXPORT->InitFBank: Initialise an FBankInfo record */
 FBankInfo InitFBank(MemHeap *x, int frameSize, long sampPeriod, int numChans,
-                    float lopass, float hipass, Boolean usePower, Boolean takeLogs)
+                    float lopass, float hipass, Boolean usePower, Boolean takeLogs,
+                    Boolean doubleFFT,
+                    float alpha, float warpLowCut, float warpUpCut)
 {
    FBankInfo fb;
    float mlo,mhi,ms,melk;
@@ -450,6 +483,8 @@ FBankInfo InitFBank(MemHeap *x, int frameSize, long sampPeriod, int numChans,
    /* Calculate required FFT size */
    fb.fftN = 2;   
    while (frameSize>fb.fftN) fb.fftN *= 2;
+   if (doubleFFT) 
+      fb.fftN *= 2;
    Nby2 = fb.fftN / 2;
    fb.fres = 1.0E7/(sampPeriod * fb.fftN * 700.0);
    maxChan = numChans+1;
@@ -473,8 +508,22 @@ FBankInfo InitFBank(MemHeap *x, int frameSize, long sampPeriod, int numChans,
    /* Create vector of fbank centre frequencies */
    fb.cf = CreateVector(x,maxChan);
    ms = mhi - mlo;
-   for (chan=1;chan<=maxChan;chan++) 
-      fb.cf[chan] = ((float)chan/(float)maxChan)*ms + mlo;
+   for (chan=1; chan <= maxChan; chan++) {
+      if (alpha == 1.0) {
+         fb.cf[chan] = ((float)chan/(float)maxChan)*ms + mlo;
+      }
+      else {
+         /* scale assuming scaling starts at lopass */
+         float minFreq = 700.0 * (exp (mlo / 1127.0) - 1.0 );
+         float maxFreq = 700.0 * (exp (mhi / 1127.0) - 1.0 );
+         float cf = ((float)chan / (float) maxChan) * ms + mlo;
+         
+         cf = 700 * (exp (cf / 1127.0) - 1.0);
+         
+         fb.cf[chan] = 1127.0 * log (1.0 + WarpFreq (warpLowCut, warpUpCut, cf, minFreq, maxFreq, alpha) / 700.0);
+      }
+   }
+   
    /* Create loChan map, loChan[fftindex] -> lower channel index */
    fb.loChan = CreateShortVec(x,Nby2);
    for (k=1,chan=1; k<=Nby2; k++){
@@ -485,6 +534,7 @@ FBankInfo InitFBank(MemHeap *x, int frameSize, long sampPeriod, int numChans,
          fb.loChan[k] = chan-1;
       }
    }
+
    /* Create vector of lower channel weights */   
    fb.loWt = CreateVector(x,Nby2);
    for (k=1; k<=Nby2; k++) {
@@ -507,7 +557,7 @@ FBankInfo InitFBank(MemHeap *x, int frameSize, long sampPeriod, int numChans,
 void Wave2FBank(Vector s, Vector fbank, float *te, FBankInfo info)
 {
    const float melfloor = 1.0;
-   int k,bin;
+   int k, bin;
    float t1,t2;   /* real and imag parts */
    float ek;      /* energy of k'th fft channel */
    
@@ -528,6 +578,7 @@ void Wave2FBank(Vector s, Vector fbank, float *te, FBankInfo info)
    for (k=info.frameSize+1; k<=info.fftN; k++) 
       info.x[k] = 0.0;   /* pad with zeroes */
    Realft(info.x);                            /* take fft */
+
    /* Fill filterbank channels */
    ZeroVector(fbank); 
    for (k = info.klo; k <= info.khi; k++) {             /* fill bins */
@@ -541,6 +592,7 @@ void Wave2FBank(Vector s, Vector fbank, float *te, FBankInfo info)
       if (bin>0) fbank[bin] += t1;
       if (bin<info.numChans) fbank[bin+1] += ek - t1;
    }
+
    /* Take logs */
    if (info.takeLogs)
       for (bin=1; bin<=info.numChans; bin++) { 
@@ -602,6 +654,96 @@ float FBank2C0(Vector fbank)
    for (k=1; k<=numChan; k++)
       sum += fbank[k];
    return sum * mfnorm;
+}
+
+/* --------------------- PLP Related Operations -------------------- */
+
+/* EXPORT->InitPLP: Initialise equal-loudness curve & IDT cosine matrix */
+void InitPLP (FBankInfo info, int lpcOrder, Vector eql, DMatrix cm)
+{
+   int i,j;
+   double baseAngle;
+   float f_hz_mid, fsub, fsq;
+   int  nAuto, nFreq;
+
+   /* Create the equal-loudness curve */
+   for (i=1; i<=info.numChans; i++) {
+      f_hz_mid = 700*(exp(info.cf[i]/1127)-1); /* Mel to Hz conversion */
+      fsq = (f_hz_mid * f_hz_mid);
+      fsub = fsq / (fsq + 1.6e5);
+      eql[i] = fsub * fsub * ((fsq + 1.44e6)  /(fsq + 9.61e6));
+   }
+
+   /* Builds up matrix of cosines for IDFT */
+   nAuto = lpcOrder+1; 
+   nFreq = info.numChans+2;
+   baseAngle =  PI / (double)(nFreq - 1);
+   for (i=0; i<nAuto; i++) {
+      cm[i+1][1] = 1.0;
+      for (j=1; j<(nFreq-1); j++)
+         cm[i+1][j+1] = 2.0 * cos(baseAngle * (double)i * (double)j);
+
+      cm[i+1][nFreq] = cos(baseAngle * (double)i * (double)(nFreq-1));
+   }
+}
+
+/* EXPORT->FBank2ASpec: Pre-emphasise filter bank output with the simulated 
+           equal-loudness curve and perform amplitude compression */
+void FBank2ASpec (Vector fbank, Vector as, Vector eql, float compressFact, 
+                  FBankInfo info)
+{
+   const float melfloor = 1.0;
+   int i;
+
+   for (i=1; i<=info.numChans; i++) {
+      if (fbank[i] < melfloor) fbank[i] = melfloor;
+      as[i+1] = fbank[i] * eql[i]; /* Apply equal-loudness curve */
+      as[i+1] = pow((double) as[i+1], (double) compressFact);
+   }
+   as[1] = as[2];  /* Duplicate values at either end */
+   as[info.numChans+2] = as[info.numChans+1];
+}
+
+
+/* Matrix IDFT converts from auditory spectrum into autocorrelation values */
+float MatrixIDFT(Vector as, Vector ac, DMatrix cm)
+{
+   double acc;
+   float E;
+   int nAuto, nFreq;
+   int i, j;
+
+   nFreq = VectorSize(as);
+   nAuto = VectorSize(ac);
+
+   for (i=0; i<nAuto; i++) {
+      acc = cm[i+1][1] * (double)as[1];
+      for (j=1; j<nFreq; j++)
+         acc += cm[i+1][j+1] * (double)as[j+1];
+
+      if (i>0) 
+         ac[i] = (float)(acc / (double)(2.0 * (nFreq-1)));
+      else  
+         E = (float)(acc / (double)(2.0 * (nFreq-1)));
+   }     
+   return E; /* Return zero'th auto value separately */
+}
+
+/* EXPORT->ASpec2LPCep: Perform IDFT to get autocorrelation values then 
+           produce autoregressive coeffs. and cepstral transform them */
+void ASpec2LPCep (Vector as, Vector ac, Vector lp, Vector c, DMatrix cm)
+{
+   float lpcGain, E;
+
+   /* Do IDFT to get autocorrelation values */
+   E = MatrixIDFT(as, ac, cm);
+   lp[VectorSize(lp)] = 0.0;    /* init to make Purify et al. happy */
+   /* do Durbin recursion to get predictor coefficients */
+   lpcGain = Durbin(NULL,lp,ac,E,VectorSize(ac)-1);
+   if (lpcGain<=0) 
+      HError(-5323,"ASpec2LPCep: Negative lpcgain");
+   LPC2Cepstrum(lp,c);
+   c[VectorSize(c)] = (float) -log((double) 1.0/lpcGain); /* value forms C0 */
 }
 
 /* ------------------- Feature Level Operations -------------------- */

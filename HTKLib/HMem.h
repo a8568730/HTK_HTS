@@ -19,7 +19,7 @@
 /*         File: HMem.h:   Memory Management Module            */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HMem:   3.0 [CUED 05/09/00] */
+/* !HVER!HMem:   3.1 [CUED 16/01/02] */
 
 /*
    This module provides a type MemHeap which once initialised
@@ -63,9 +63,9 @@ typedef void * Ptr;
 typedef struct _Block *BlockP;
 
 typedef struct _Block{  /*      MHEAP                     MSTAK           */
-   long numFree;        /* #free elements            #free bytes          */
-   long firstFree;      /* idx of 1st free elem      idx of stack top     */
-   long numElem;        /* #elems in blk             #bytes in blk        */
+   size_t numFree;      /* #free elements            #free bytes          */
+   size_t firstFree;    /* idx of 1st free elem      idx of stack top     */
+   size_t numElem;      /* #elems in blk             #bytes in blk        */
    ByteP used;          /* alloc map, 1 bit/elem         not used         */
    Ptr   data;          /*        actual data for this block              */
    BlockP next;         /*           next block in chain                  */
@@ -76,18 +76,18 @@ typedef struct {
    HeapType type;       /*              type of this heap                 */
    float growf;         /*           succ blocks grow as 1+growf          */
    size_t elemSize;     /*  size of each elem              1 always       */
-   long minElem;        /*  init #elems per blk      init #bytes per blk  */
-   long maxElem;        /*  max #elems per block     max #bytes per blk   */
-   long curElem;        /*  current #elems per blk   curr #bytes per blk  */
-   long totUsed;        /*  total #elems used        total #bytes used    */
-   long totAlloc;       /*  total #elems alloc'ed    total #bytes alloc'd */
+   size_t minElem;      /*  init #elems per blk      init #bytes per blk  */
+   size_t maxElem;      /*  max #elems per block     max #bytes per blk   */
+   size_t curElem;      /*  current #elems per blk   curr #bytes per blk  */
+   size_t totUsed;      /*  total #elems used        total #bytes used    */
+   size_t totAlloc;     /*  total #elems alloc'ed    total #bytes alloc'd */
    BlockP heap;         /*               linked list of blocks            */
    Boolean protectStk;  /*  MSTAK only, prevents disposal below Stack Top */
 }MemHeap;
 
 /* ---------------------- Alignment Issues -------------------------- */
 
-int MRound(int size);
+size_t MRound(size_t size);
 /*
    Round size to align elements of array on full word boundary.
 */
@@ -104,7 +104,7 @@ void InitMem(void);
 */
 
 void CreateHeap(MemHeap *x, char *name, HeapType type, size_t elemSize, 
-                float growf, long numElem,  long maxElem);
+                float growf, size_t numElem,  size_t maxElem);
 /*
    Create a memory heap x for elements of size elemSize and numElem in
    first block.  If type is MSTAK or CHEAP then elemSize should be 1.

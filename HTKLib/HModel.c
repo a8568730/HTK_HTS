@@ -19,8 +19,8 @@
 /*         File: HModel.c  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
-char *hmodel_version = "!HVER!HModel:   3.0 [CUED 05/09/00]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *hmodel_version = "!HVER!HModel:   3.1 [CUED 16/01/02]";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.6 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -2989,13 +2989,13 @@ ReturnStatus LoadHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt)
       if (hset->hsKind == PLAINHS && IsShared(hset))
          hset->hsKind = SHAREDHS;
    }
-   SetIndexes(hset);
    if (checking) 
       if (CheckHSet(hset)<SUCCESS){
          ResetHMMSet(hset);
          HRError(7031,"LoadHMMSet: Invalid HMM data");
          return(FAIL);
       }
+   SetIndexes(hset);
    return(SUCCESS);
 }
 

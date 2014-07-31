@@ -19,8 +19,8 @@
 /*    File: HLStats.c: gather statistics from transcriptions   */
 /* ----------------------------------------------------------- */
 
-char *hlstats_version = "!HVER!HLStats:   3.0 [CUED 05/09/00]";
-char *hlstats_vc_id = "$Id: HLStats.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hlstats_version = "!HVER!HLStats:   3.1 [CUED 16/01/02]";
+char *hlstats_vc_id = "$Id: HLStats.c,v 1.6 2002/01/16 18:11:29 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -104,17 +104,17 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HLStats [options] hmmList labFile...\n\n");
-   printf(" Option                                   Default\n\n");
+   printf(" Option                                       Default\n\n");
    printf(" -b fn    output bigram to file fn            off\n");
-   printf(" -c N     count num logical occs upto N      none\n");
+   printf(" -c N     count num logical occs upto N       none\n");
    printf(" -d       compute duration statistics         off\n");
    printf(" -f f     set matrix bigram floor prob f      0.0\n");
-   printf(" -h N     set hashsize: medium(1), large(2)  small(0)\n");
+   printf(" -h N     set hashsize: medium(1), large(2)   small(0)\n");
    printf(" -l s     output covering list of models to s off\n");
-   printf(" -o       generate wsj style back-off files  matrix\n");
+   printf(" -o       generate wsj style back-off files   matrix\n");
    printf(" -p N     count num physical occs upto N      none\n");
-   printf(" -s s1 s2 select start s1 and end s2 labels !ENTER !EXIT\n");
-   printf(" -t n     set threshold for including bigram   0\n");
+   printf(" -s s1 s2 select start s1 and end s2 labels   !ENTER !EXIT\n");
+   printf(" -t n     set threshold for including bigram  0\n");
    printf(" -u f     set back off unigram floor prob f   1.0\n");
    PrintStdOpts("GIX");
    printf("\n\n");

@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*         File: HShell.c:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-char *hshell_version = "!HVER!HShell:   3.0 [CUED 05/09/00]";
-char *hshell_vc_id = "$Id: HShell.c,v 1.5 2000/09/25 10:18:06 ge204 Exp $";
+char *hshell_version = "!HVER!HShell:   3.1 [CUED 16/01/02]";
+char *hshell_vc_id = "$Id: HShell.c,v 1.10 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 
@@ -38,6 +51,8 @@ char *hshell_vc_id = "$Id: HShell.c,v 1.5 2000/09/25 10:18:06 ge204 Exp $";
 
 static int trace = 0;
 #define T_IOP   0002       /* i/o input via FOpen */
+#define T_EXF   0004       /* extended file name processing */
+
 /* --------------------- Global Variables ------------------- */
 
 static Boolean infoPrinted = FALSE;      /* set when -A -B or -V is used */
@@ -47,10 +62,141 @@ static Boolean showConfig = FALSE;       /* show configuration params */
 static Boolean noNumEscapes = FALSE;     /* Prevent writing in \012 format */
 static Boolean natReadOrder = FALSE;     /* Preserve natural mach read order*/
 static Boolean natWriteOrder = FALSE;    /* Preserve natural mach write order*/
+static Boolean extendedFileNames = TRUE; /* allow extended file names */
 
 /* Global variable indicating VAX-order architecture for storing numbers */
 Boolean vaxOrder = FALSE;
 
+#define MAXEFS 5                        /* max num ext files to remember */
+
+typedef struct {                        /* extended file name */
+   char logfile[1024];                  /* logical name */
+   char actfile[1024];                  /* actual file name */
+   long stindex;                        /* start sample to extract */
+   long enindex;                        /* end sample to extract */
+}ExtFile;
+
+static ExtFile extFiles[MAXEFS];        /* circ buf of ext file names */
+static int extFileNext = 0;             /* next slot to save into */
+static int extFileUsed = 0;             /* total ext files in buffer */
+
+/* ------------- Extended File Name Handling ---------------- */
+
+/* RegisterExtFileName: record details of fn exts if any in circ buffer */
+static char * RegisterExtFileName(char *s)
+{
+   char *eq,*rb,*lb,*co;
+   char buf[1024];
+   ExtFile *p;
+
+   strcpy(buf,s);
+   eq = strchr(buf,'=');
+   lb = strchr(buf,'[');
+   if (eq == NULL && lb == NULL) 
+      return s;
+
+   if (trace&T_EXF)
+      printf("Ext File Name: %s\n",buf);
+
+   p = extFiles+extFileNext;
+   ++extFileNext; 
+   if (extFileNext==MAXEFS) 
+      extFileNext=0;
+   if (extFileUsed < MAXEFS) 
+      ++extFileUsed;
+   p->stindex = p->enindex = -1;
+
+   if (lb!=NULL) {
+      if ((co = strchr(buf,',')) == NULL)
+         HError(5024,"RegisterExtFileName: comma missing in index spec");
+      if ((rb = strchr(buf,']')) == NULL)
+         HError(5024,"RegisterExtFileName: ] missing in index spec");
+      *rb = '\0'; p->enindex = atol(co+1);
+      *co = '\0'; p->stindex = atol(lb+1);
+      *lb = '\0';
+   }
+
+   if (eq!=NULL) {
+      strcpy(p->actfile,eq+1); *eq = '\0';
+      strcpy(p->logfile,buf);
+   } else {
+      strcpy(p->logfile,buf);
+      strcpy(p->actfile,buf);
+   }
+
+   if (trace&T_EXF) {
+      printf("%s=%s", p->logfile, p->actfile);
+      if(p->stindex >=0) 
+         printf("[%ld,%ld]", p->stindex, p->enindex);
+      printf("\n");
+   }
+
+   return p->logfile;
+}
+
+/* GetFileNameExt: return true if given file has extensions and return
+   the extend info.  The problem with this routine is that the logical
+   name can be repeated in the buffer.  This is normally handled by 
+   comparing the pointer rather than the string itself.  However, if
+   the application copies the logical file name, this would break.
+   Hence, if the pointer is not there, the name is searched for
+   going back in time.  If the name is found and it occurs more
+   than once, a warning is printed.
+*/
+Boolean GetFileNameExt(char *logfn, char *actfn, long *st, long *en)
+{
+   int i, noccs;
+   ExtFile *p;
+   Boolean found = FALSE;
+   Boolean ambiguous = FALSE;
+
+   /* First count number of times logfn occurs in buffer */
+   noccs = 0;
+   for (i=0,p=extFiles; i<extFileUsed; i++,p++){
+      if (strcmp(logfn,p->logfile) == 0 ) 
+         ++noccs;
+   }
+   if (noccs==0) 
+      return FALSE;
+
+   /* Try to find the logfn, by pointer first */
+   for (i=0,p=extFiles; i<extFileUsed && !found; i++){
+      if (logfn == p->logfile) 
+         found = TRUE; 
+      else 
+         p++;
+   }
+
+   if (!found) {   /* look for actual name */
+      if (noccs>1) 
+         ambiguous = TRUE;
+      p = extFiles + extFileNext;
+      for (i=0; i<extFileUsed && !found; i++){
+         if (p==extFiles) 
+            p += MAXEFS;
+         else
+            p--;
+         if (strcmp(logfn,p->logfile) == 0 ) 
+            found = TRUE;
+      }
+   }
+
+   if (!found) 
+      return FALSE;
+
+   /* Copy back info and warn if ambiguous */
+   strcpy(actfn,p->actfile);
+   *st = p->stindex; *en = p->enindex;
+   if (trace&T_EXF)
+      printf("%sFile Ext found: %s=%s[%ld,%ld]\n",
+             (ambiguous) ? "Ambiguous " : "",
+             logfn, actfn, *st, *en);
+   if (ambiguous)
+      HError(-1,"GetFileNameExt: ambiguous extended file name %s=%s[%ld,%ld]",
+             logfn, actfn, *st, *en);
+
+   return TRUE;
+}
 
 
 /* --------------------- Version Display -------------------- */
@@ -599,9 +745,16 @@ static void ArgError(char *s)
 /* EXPORT->GetStrArg: get string arg */
 char * GetStrArg(void)
 {
+   char *s;
+
    if (NextArg() != STRINGARG) 
       ArgError("String");
-   return GetNextArg(TRUE);
+
+   s = GetNextArg (TRUE);
+   if (extendedFileNames)
+      s = RegisterExtFileName (s);
+
+   return s;
 }
    
 /* EXPORT->GetSwtArg: get switch arg */
@@ -814,7 +967,8 @@ void FClose(FILE *f, Boolean isPipe)
       return;
    }
 #endif
-   fclose(f);
+   if (fclose(f) != 0)
+      HError (5010, "FClose: closing file failed");
 }
 
 
@@ -914,6 +1068,17 @@ Boolean ReadLine(Source *src,char *s)
    while (c != EOF && c != '\n') *s++=c,c=GetCh(src);
    *s=0;
    return(c!=EOF);
+}
+
+/* EXPORT->ReadUntilLine: read to next occurrence of string */
+void ReadUntilLine (Source *src, char *s)
+{
+   char buf[MAXSTRLEN];
+   
+   do {
+      if (!ReadLine (src, buf))
+         HError (5013, "ReadUntilLine: reached EOF while scanning for '%s'", s);
+   } while (strcmp (buf, s) != 0);
 }
 
 /* EXPORT->SkipComment: skip comment if any */
@@ -1025,6 +1190,26 @@ Boolean ReadString(Source *src, char *s)
       s[i] = c; c = GetCh(src);
    }     
    HError(5013,"ReadString: String too long");
+   return FALSE;
+}
+
+/* EXPORT->ReadRawString: get next raw string (i.e. word) from src and store it in s */
+/* ReadRawString: ie ignore normal HTK escaping */
+Boolean ReadRawString(Source *src, char *s)
+{
+   int i,c;
+
+   while (isspace(c=GetCh(src)));
+   if (c == EOF) return FALSE;
+   for (i=0; i<MAXSTRLEN ; i++){
+      if (c == EOF || isspace(c)){
+         UnGetCh(c,src);
+         s[i] = '\0';
+         return TRUE;
+      }
+      s[i] = c; c = GetCh(src);
+   }     
+   HError (5013, "ReadRawString: String too long");
    return FALSE;
 }
 
@@ -1266,7 +1451,8 @@ Boolean KeyPressed(int tWait)
    if( charsPeeked > 0 ){
       ReadConsoleInput( stdinHdle, &inRec, charToRead, &charsRead );
       FlushConsoleInputBuffer( stdinHdle );
-      if(inRec.Event.KeyEvent.uChar.AsciiChar == '\r') {
+      if(inRec.Event.KeyEvent.bKeyDown &&
+         inRec.Event.KeyEvent.uChar.AsciiChar == '\r') {
          rtn = TRUE;
       }
    } 
@@ -1565,7 +1751,7 @@ Boolean RMatch(char *s,char *p,int slen,int minplen,int numstars)
       return FALSE;  
 }
 
-/* DoMatch: return TRUE if s matches pattern p */
+/* EXPORT->DoMatch: return TRUE if s matches pattern p */
 Boolean DoMatch(char *s, char *p)
 {
    int slen, minplen, numstars;
@@ -1578,6 +1764,62 @@ Boolean DoMatch(char *s, char *p)
    return RMatch(s,p,slen,minplen,numstars);
 }
 
+
+/* SpRMatch: recursively match s against pattern p, minplen
+   is the min length string that can match p and
+   numstars is the number of *'s in p 
+	   spkr is next character of the spkr name */
+static Boolean SpRMatch(char *s,char *p,char *spkr,
+			int slen,int minplen,int numstars)
+{
+   Boolean match;
+   
+   if (slen==0 && minplen==0)
+      match=TRUE;
+   else if ((numstars==0 && minplen!=slen) || minplen>slen)
+      match=FALSE;
+   else if (*p == '*') {
+      match=(SpRMatch(s+1,p,spkr,slen-1,minplen,numstars) ||
+	     SpRMatch(s,p+1,spkr,slen,minplen,numstars-1) ||
+	     SpRMatch(s+1,p+1,spkr,slen-1,minplen,numstars-1));
+   }
+   else if (*p == '%') {
+      *spkr=*s,spkr[1]=0;
+      match=SpRMatch(s+1,p+1,spkr+1,slen-1,minplen-1,numstars);
+      if (!match) *spkr=0;
+   }
+   else if (*p == *s || *p == '?')
+      match=SpRMatch(s+1,p+1,spkr,slen-1,minplen-1,numstars);
+   else
+      match=FALSE;
+   
+   return(match);
+}
+
+/* EXPORT->MaskMatch: return spkr if s matches pattern p */
+Boolean MaskMatch(char *mask, char *spkr, char *str)
+{
+   int spkrlen, slen, minplen, numstars;
+   char *q,c;
+  
+   if (mask == NULL || str==NULL) return(FALSE);
+   slen = strlen(str);
+   spkrlen = minplen = numstars = 0;
+   q = mask;
+   while ((c=*q++)) {
+      if (c == '*') ++numstars; else ++minplen;
+      if (c == '%') ++spkrlen;
+   }
+   if (spkrlen>=MAXSTRLEN)
+      HError(3390,"MaskMatch: Speaker name too long %d vs %d",spkrlen,MAXSTRLEN);
+   spkr[0]=0;
+   if (SpRMatch(str,mask,spkr,slen,minplen,numstars))
+      return(TRUE);
+   else {
+      spkr[0]=0;
+      return(FALSE);
+   }
+}
 
 static char *savedCommandLine;
 /* SaveCommandLine: Stores all command line arguments in 1 string */
@@ -1677,6 +1919,7 @@ ReturnStatus InitShell(int argc, char *argv[], char *ver, char *sccs)
       if (GetConfBool(cParm,nParm,"ABORTONERR",&b)) abortOnError = b;
       if (GetConfBool(cParm,nParm,"NATURALREADORDER",&b)) natReadOrder = b;
       if (GetConfBool(cParm,nParm,"NATURALWRITEORDER",&b)) natWriteOrder = b;
+      if (GetConfBool(cParm,nParm,"EXTENDFILENAMES",&b)) extendedFileNames = b;
       if (GetConfInt(cParm,nParm,"MAXTRYOPEN",&i)) {
          maxTry = i;
          if (maxTry<1 || maxTry>25){
@@ -1693,15 +1936,15 @@ ReturnStatus InitShell(int argc, char *argv[], char *ver, char *sccs)
 /* EXPORT->PrintStdOpts: print standard options */
 void PrintStdOpts(char *opt)
 {
-   printf(" -A      Print command line arguments        Off\n");
+   printf(" -A      Print command line arguments         off\n");
    if (strchr(opt,'B'))
-      printf(" -B      Save HMM macro files as binary      Off\n");
-   printf(" -C cf   Set config file to cf             default\n");
-   printf(" -D      Display configuration variables     Off\n");
+      printf(" -B      Save HMMs/transforms as binary       off\n");
+   printf(" -C cf   Set config file to cf                default\n");
+   printf(" -D      Display configuration variables      off\n");
    if (strchr(opt,'F'))
-      printf(" -F fmt  Set source data format to fmt    as config\n");
+      printf(" -F fmt  Set source data format to fmt        as config\n");
    if (strchr(opt,'G'))
-      printf(" -G fmt  Set source label format to fmt   as config\n");
+      printf(" -G fmt  Set source label format to fmt       as config\n");
    if (strchr(opt,'H'))
       printf(" -H mmf  Load HMM macro file mmf\n");
    if (strchr(opt,'I'))
@@ -1711,20 +1954,20 @@ void PrintStdOpts(char *opt)
    if (strchr(opt,'K'))
       printf(" -K tmf  Save transform model file tmf\n");
    if (strchr(opt,'L'))
-      printf(" -L dir  Set input label (or net) dir      current\n");
+      printf(" -L dir  Set input label (or net) dir         current\n");
    if (strchr(opt,'M'))
-      printf(" -M dir  Dir to write HMM macro files      current\n");
+      printf(" -M dir  Dir to write HMM macro files         current\n");
    if (strchr(opt,'O'))
-      printf(" -O      Set target data format to fmt    as config\n");
+      printf(" -O      Set target data format to fmt        as config\n");
    if (strchr(opt,'P'))
-      printf(" -P      Set target label format to fmt   as config\n");
+      printf(" -P      Set target label format to fmt       as config\n");
    if (strchr(opt,'Q'))
       printf(" -Q      Print command summary\n");
-   printf(" -S f    Set script file to f               none\n");
+   printf(" -S f    Set script file to f                 none\n");
    printf(" -T N    Set trace flags to N                 0\n");
-   printf(" -V      Print version information           Off\n");
+   printf(" -V      Print version information            off\n");
    if (strchr(opt,'X'))
-      printf(" -X ext  Set input label (or net) file ext   lab\n");
+      printf(" -X ext  Set input label (or net) file ext    lab\n");
 }
 
 /* -------------------------- End of HShell.c ----------------------------- */

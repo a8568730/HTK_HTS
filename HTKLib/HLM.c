@@ -19,8 +19,8 @@
 /*         File: HLM.c  language model handling                */
 /* ----------------------------------------------------------- */
 
-char *hlm_version = "!HVER!HLM:   3.0 [CUED 05/09/00]";
-char *hlm_vc_id = "$Id: HLM.c,v 1.4 2000/09/08 17:08:45 ge204 Exp $";
+char *hlm_version = "!HVER!HLM:   3.1 [CUED 16/01/02]";
+char *hlm_vc_id = "$Id: HLM.c,v 1.6 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -497,7 +497,7 @@ static void WriteBoNGram(LModel *lm,char *fn,int flags)
    for (i=1;i<=nglm->nsize;i++) {
       k = WriteNGrams(file,nglm,i,1.0/LN10);
       if (k!=nglm->counts[i])
-         HError(-9999,"WriteBoNGram: Counts disagree for %dgram (%d vs %d)",
+         HError(-8190,"WriteBoNGram: Counts disagree for %dgram (%d vs %d)",
                 i, k, nglm->counts[i]);
    }
    fprintf(file,"\n\\end\\\n");

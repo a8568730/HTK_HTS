@@ -19,8 +19,8 @@
 /* File: HSmooth.c: Perform Parameter Smoothing on a HMM Set   */
 /* ----------------------------------------------------------- */
 
-char *hsmooth_version = "!HVER!HSmooth:   3.0 [CUED 05/09/00]";
-char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
+char *hsmooth_version = "!HVER!HSmooth:   3.1 [CUED 16/01/02]";
+char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.7 2002/01/16 18:11:29 ge204 Exp $";
 
 
 #include "HShell.h"     /* HMM ToolKit Modules */
@@ -36,7 +36,7 @@ char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.4 2000/09/11 13:53:34 ge204 Exp $";
 #include "HTrain.h"
 #include "HUtil.h"
 
-#define MAXPHONES  500        /* max number of monophones */
+#define MAXMONOPHONES  500        /* max number of monophones in HMMSet */
 
 /* Trace Flags */
 #define T_TOP   0001    /* Top level tracing */
@@ -120,17 +120,17 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HSmooth [options] hmmList AccFiles...\n\n");
-   printf(" Option                                   Default\n\n");
-   printf(" -b f    set convergence epsilon           0.0001\n");
-   printf(" -c N    max num steps in binary chop        16\n");
-   printf(" -d s    dir to find hmm definitions       current\n");
-   printf(" -m N    set min examples needed per model   3\n");
-   printf(" -o s    extension for new hmm files        as src\n");
-   printf(" -s s    print statistics to file s         off\n"); 
-   printf(" -u tmvw Update t)rans m)eans v)ars w)ghts  tmvw\n");
-   printf(" -v f    Set minimum variance to f          0.0\n");
-   printf(" -w f    Set mix weight floor to f*MINMIX   0.0\n");
-   printf(" -x s    extension for hmm files            none\n");
+   printf(" Option                                       Default\n\n");
+   printf(" -b f    set convergence epsilon              0.0001\n");
+   printf(" -c N    max num steps in binary chop         16\n");
+   printf(" -d s    dir to find hmm definitions          current\n");
+   printf(" -m N    set min examples needed per model    3\n");
+   printf(" -o s    extension for new hmm files          as src\n");
+   printf(" -s s    print statistics to file s           off\n"); 
+   printf(" -u tmvw Update t)rans m)eans v)ars w)ghts    tmvw\n");
+   printf(" -v f    Set minimum variance to f            0.0\n");
+   printf(" -w f    Set mix weight floor to f*MINMIX     0.0\n");
+   printf(" -x s    extension for hmm files              none\n");
    PrintStdOpts("BHMST");
    printf("\n\n");
 }
@@ -505,7 +505,7 @@ void CreateMonoList(void)
 {
    int i,j;
    Boolean found;
-   LabId list[MAXPHONES], id;
+   LabId list[MAXMONOPHONES], id;
    char buf[255];
    MLink q;
 
@@ -522,7 +522,7 @@ void CreateMonoList(void)
                   found = TRUE; break;
                }
             if (!found){
-               if (nPhones>=MAXPHONES)
+               if (nPhones>=MAXMONOPHONES)
                   HError(2422,"CreateMonoList: Too many monophones");
                list[nPhones++] = id;
             }

@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,8 +32,8 @@
 /*       File: HParm.c:  Speech Parameter File Input/Output    */
 /* ----------------------------------------------------------- */
 
-char *hparm_version = "!HVER!HParm:   3.0 [CUED 05/09/00]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.5 2000/09/15 11:54:05 ge204 Exp $";
+char *hparm_version = "!HVER!HParm:   3.1 [CUED 16/01/02]";
+char *hparm_vc_id = "$Id: HParm.c,v 1.9 2002/01/16 18:11:28 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -53,6 +66,12 @@ static int trace = 0;
 static Boolean natWriteOrder = FALSE; /* Preserve natural write byte order*/
 extern Boolean vaxOrder;              /* true if byteswapping needed to 
                                                preserve SUNSO */
+/* varScale stuff: acts as a cache to stop the scaling file being re-read 
+   on each file opening */
+
+static float varScale[100];
+static int varScaleDim=0;
+static char varScaleFN[MAXFNAMELEN] = "\0";
 
 /* ------------------------------------------------------------------- */
 /* 
@@ -97,9 +116,14 @@ typedef struct {
    int numChans;              /* Number of filter bank channels */
    float loFBankFreq;         /* Fbank lo frequency cut-off */
    float hiFBankFreq;         /* Fbank hi frequency cut-off */
+   float warpFreq;            /* Warp freq axis for vocal tract normalisation */
+   float warpLowerCutOff;     /* lower and upper threshold frequencies */
+   float warpUpperCutOff;     /*   for linear frequency warping */  
    int lpcOrder;              /* Order of lpc analysis */
+   float compressFact;        /* Compression factor for PLP */  
    int cepLifter;             /* Cepstral liftering coef */
    int numCepCoef;            /* Number of cepstral coef */
+   float cepScale;            /* Scaling factor to avoid arithmetic problems */
    Boolean rawEnergy;         /* Use raw energy before preEmp and ham */
    Boolean eNormalise;        /* Normalise log energy */
    float eScale;              /* Energy scale factor */
@@ -125,6 +149,14 @@ typedef struct {
    Boolean v1Compat;          /* V1 compatibility mode */
    char *vqTabFN;             /* Name of VQ Table Defn File */
    float addDither;           /* Additional dither added to file */
+   Boolean doubleFFT;         /* use twice the required FFT size */
+  /* side based normalisation */
+   char *varScaleFN;          /* var scale file name */          
+   char* cMeanDN;             /* dir to find cepstral mean files */
+   char* cMeanMask;           /* cepstral mean selection mask */
+   char* varScaleDN ;         /* dir to find variance estimate files */
+   char* varScaleMask;        /* variance estimate file selection mask */
+
    VQTable vqTab;             /* VQ table */
    /* ------- Internally derived parameters ------- */
    /*  These values are allocated in the IOConfigRec but are really */
@@ -152,6 +184,9 @@ typedef struct {
    Vector a,k;        /* lpc and refc vectors */
    Vector fbank;      /* filterbank vector */
    Vector c;          /* cepstral vector */
+   Vector as, ac, lp; /* Auditory, autocorrelation an lp vectors for PLP */ 
+   Vector eql;        /* Equal loundness curve */
+   DMatrix cm;        /* Cosine matrix for IDFT */ 
    FBankInfo fbInfo;  /* FBank info used for filterbank analysis */
    Vector mean;       /* Running mean shared by this config */
    /* Running stuff */
@@ -160,6 +195,9 @@ typedef struct {
    unsigned short crcc; /* Running CRCC */
    Vector A;          /* Parameters for decompressing */
    Vector B;          /*  HTK parameterised files */
+   Vector varScale;   /* var scaling vector  */
+   Vector cMeanVector;   /* vector loaded from cmean dir */
+   Vector varScaleVector; /* vector loaded from varscale dir */
 }IOConfigRec;
 
 typedef IOConfigRec *IOConfig;
@@ -185,11 +223,16 @@ typedef enum {
    NUMCHANS,      /* Num filterbank channels */
    LOFREQ,        /* Lo Fbank frequency */
    HIFREQ,        /* Hi Fbank frequency */
+   WARPFREQ,      /* Vocal tract length compensation by frequency warping */
+   WARPLCUTOFF,   /* VTL warping cutoff frequencies for smoothing */
+   WARPUCUTOFF,
    /* LPC Analysis and Conversion */
    LPCORDER,      /* LPC order */      
+   COMPRESSFACT,  /* Compression Factor fo PLP */
    /* Cepstral Conversion */
    CEPLIFTER,     /* Cepstral liftering coefficient */
    NUMCEPS,       /* Num cepstral coefficients */
+   CEPSCALE,      /* Scale factor to prevent arithmetic errors */
    /* Energy Computation */
    RAWENERGY,     /* Use raw energy */
    ENORMALISE,    /* Normalise log energy */
@@ -218,6 +261,17 @@ typedef enum {
    /* Vector Quantisation */
    VQTABLE,       /* Name of file holding VQ table */
    ADDDITHER,     /* Amount of additional dither added to file */
+   DOUBLEFFT,     /* Use twice the required FFT size */
+
+   /* side based normalisation */
+   /* variance scaling */
+   VARSCALEFN,
+   /* cepstral mean subtraction */
+   CMEANDIR,     /* dir to find the means */
+   CMEANMASK,    /* label mask to idenitfy mean file */
+   VARSCALEDIR,  /* dir to find the variance estimate files */
+   VARSCALEMASK, /* label mask to idenitfy the variance estimate files */
+
    CFGSIZE
 }IOConfParm;
 
@@ -227,15 +281,20 @@ static char * ioConfName[CFGSIZE] = {
    "SAVECOMPRESSED", "SAVEWITHCRC",
    "WINDOWSIZE", "USEHAMMING", "PREEMCOEF", 
    "USEPOWER", "NUMCHANS", "LOFREQ", "HIFREQ",
-   "LPCORDER", 
-   "CEPLIFTER", "NUMCEPS", 
+   "WARPFREQ", "WARPLCUTOFF", "WARPUCUTOFF",
+   "LPCORDER",  "COMPRESSFACT",
+   "CEPLIFTER", "NUMCEPS", "CEPSCALE",
    "RAWENERGY","ENORMALISE", "ESCALE", "SILFLOOR",
    "DELTAWINDOW", "ACCWINDOW", "SIMPLEDIFFS",
    "USESILDET", "SELFCALSILDET", "SPEECHTHRESH", "SILDISCARD", "SILENERGY", 
    "SPCSEQCOUNT", "SPCGLCHCOUNT", "SILGLCHCOUNT", "SILSEQCOUNT", "SILMARGIN", 
    "MEASURESIL", "OUTSILWARN"
    ,"AUDIOSIG", "V1COMPAT", "VQTABLE"
-   ,"ADDDITHER"
+   ,"ADDDITHER",
+   "DOUBLEFFT",
+   "VARSCALEFN", 
+   "CMEANDIR" , "CMEANMASK",
+   "VARSCALEDIR", "VARSCALEMASK" ,
 };
 
 /* -------------------  Default Configuration Values ---------------------- */
@@ -246,8 +305,10 @@ static const IOConfigRec defConf = {
    FALSE, TRUE,           /* SAVECOMPRESSED SAVEWITHCRC */
    256000.0, TRUE, 0.97,  /* WINDOWSIZE USEHAMMING PREEMCOEF */
    FALSE, 20, -1.0, -1.0, /* USEPOWER NUMCHANS LOFREQ HIFREQ */
-   12,                    /* LPCORDER */
-   22, 12,                /* CEPLIFTER NUMCEPS */
+   1.0,                   /* WARPFREQ */
+   0.0, 0.0,              /* WARPLCUTOFF WARPUCUTOFF */
+   12, 0.33,              /* LPCORDER COMPRESSFACT */
+   22, 12, 1.0,           /* CEPLIFTER NUMCEPS CEPSCALE */
    TRUE, TRUE, 0.1, 50.0, /* RAWENERGY ENORMALISE ESCALE SILFLOOR */
    2, 2, FALSE,           /* DELTAWINDOW ACCWINDOW SIMPLEDIFFS */
    FALSE,0,               /* USESILDET SELFCALSILDET */
@@ -258,7 +319,13 @@ static const IOConfigRec defConf = {
    NULLSIG,               /* AUDIOSIG */
    FALSE,NULL,            /* V1COMPAT VQTABLE */
    0.0,                   /* ADDDITHER */
-   NULL
+   FALSE,                 /* DOUBLEFFT */
+   /* side based normalisation */
+   NULL,                  /* VARSCALEFN */
+   NULL,NULL,             /* CMEANDIR CMEANMASK */
+   NULL,NULL,             /* VARSCALEDIR VARSCALEMASK */
+
+   NULL                   /* vqTab */
 };
 
 /* ------------------------- Buffer Definition  ------------------------*/
@@ -446,6 +513,40 @@ static ChannelInfo *curChan=NULL;
 
 /* ----------------------- IO Configuration Handling ------------------ */
 
+
+static void LoadVarScale (MemHeap *x, IOConfig cf)
+{
+   Source varsrc;
+   char buf[MAXSTRLEN];
+   Boolean vbinary=FALSE;
+   int dim,i;
+
+   if (strcmp (cf->varScaleFN, varScaleFN) == 0) { /* already cached */
+      cf->varScale = CreateVector (x, varScaleDim);
+      for (i=1; i<=varScaleDim; i++)
+         cf->varScale[i] = varScale[i];
+   }
+   else {  /* read it in */
+      if (InitSource (cf->varScaleFN, &varsrc, NoFilter) < SUCCESS)
+         HError (6310, "LoadVarScale: Can't open varscale file %s", cf->varScaleFN);
+      SkipComment (&varsrc);
+      ReadString (&varsrc,buf);
+      if  (strcmp (buf, "<VARSCALE>") != 0)
+         HError (6376, "LoadVarScale: <VARSCALE> missing, read: %s", buf);
+      ReadInt (&varsrc, &dim, 1, vbinary);      
+      cf->varScale = CreateVector (x, dim);
+      if (!ReadVector (&varsrc, cf->varScale, vbinary))
+         HError(6376 ,"LoadVarScale: Couldn't read var scale vector from file");
+      CloseSource (&varsrc);
+      for (i=1; i<=dim; i++)        /* store scaling vector in IOConfig */
+         cf->varScale[i] = cf->varScale[i];
+      for (i=1; i<=dim; i++)                    /* cache the vector */
+         varScale[i] = cf->varScale[i];
+      varScaleDim = dim;
+      strcpy (varScaleFN, cf->varScaleFN);
+   }
+}
+
 /* 
    Rather than put this all in InitParm and in InitChannel
    we abstract it into a separate function.
@@ -481,9 +582,14 @@ static IOConfig ReadIOConfig(IOConfig p)
          case PREEMCOEF:      p->preEmph = GF(s); break;
          case USEPOWER:       p->usePower = GB(s); break;
          case NUMCHANS:       p->numChans = GI(s); break;
+         case CEPSCALE:       p->cepScale = GF(s); break;
          case LOFREQ:         p->loFBankFreq = GF(s); break;
          case HIFREQ:         p->hiFBankFreq = GF(s); break;
+         case WARPFREQ:       p->warpFreq = GF(s); break;
+         case WARPLCUTOFF:    p->warpLowerCutOff = GF(s); break;
+         case WARPUCUTOFF:    p->warpUpperCutOff = GF(s); break;
          case LPCORDER:       p->lpcOrder = GI(s); break;
+         case COMPRESSFACT:   p->compressFact = GF(s); break;
          case CEPLIFTER:      p->cepLifter= GI(s); break;
          case NUMCEPS:        p->numCepCoef = GI(s); break;
          case RAWENERGY:      p->rawEnergy = GB(s); break;
@@ -509,6 +615,15 @@ static IOConfig ReadIOConfig(IOConfig p)
          case V1COMPAT:       p->v1Compat = GB(s); break;
          case VQTABLE:        p->vqTabFN = CopyString(&gcheap,GS(s)); break;
          case ADDDITHER:      p->addDither = GF(s); break;
+         case DOUBLEFFT:      p->doubleFFT = GB(s); break;
+           /* side based normalisation */
+         case VARSCALEFN:     p->varScaleFN= CopyString(&gcheap, GS(s)); 
+                              LoadVarScale(&gcheap,p); 
+                              break;
+         case VARSCALEDIR:    p->varScaleDN = CopyString(&gcheap,GS(s)); break;
+         case VARSCALEMASK:   p->varScaleMask = CopyString(&gcheap,GS(s)); break;
+         case CMEANDIR:       p->cMeanDN = CopyString(&gcheap,GS(s)); break;
+         case CMEANMASK:      p->cMeanMask = CopyString(&gcheap,GS(s)); break;
          }
    }
    return p;
@@ -548,9 +663,10 @@ ReturnStatus InitParm(void)
 
    defChan=curChan= (ChannelInfo *) New(&gcheap,sizeof(ChannelInfo));
    defChan->confName=CopyString(&gcheap,"HPARM");
-   defChan->fCnt=defChan->sCnt=0;
+   defChan->fCnt=defChan->sCnt=defChan->oCnt=0;
    defChan->chOffset=defChan->chPeak=-1.0;
    defChan->spDetThresh=defChan->spDetSil=defChan->spDetSNR=-1.0;
+   defChan->spDetSp=0.0;
    defChan->spDetParmsSet=FALSE;
    defChan->next=NULL;
    /* Set up configuration parameters - once only now */
@@ -690,7 +806,7 @@ static void CheckAndFillBuffer(ParmBuf pbuf)
 static char *pmkmap[] = {"WAVEFORM", "LPC", "LPREFC", "LPCEPSTRA", 
                          "LPDELCEP", "IREFC", 
                          "MFCC", "FBANK", "MELSPEC",
-                         "USER", "DISCRETE", 
+                         "USER", "DISCRETE", "PLP",
                          "ANON"};
 
 /* EXPORT-> ParmKind2Str: convert given parm kind to string */
@@ -796,7 +912,7 @@ static void SetCodeStyle(IOConfig cf)
    case LPC: case LPREFC: case LPCEPSTRA:
       cf->style = LPCbased;
       break;
-   case MELSPEC: case FBANK: case MFCC:
+   case MELSPEC: case FBANK: case MFCC: case PLP:
       cf->style = FFTbased;
       break;
    case DISCRETE:
@@ -838,33 +954,62 @@ static void ValidCodeParms(IOConfig cf)
           cf->hiFBankFreq > 0.5E7/cf->srcSampRate)
          HError(6371,"ValidCodeParms: bad band-pass filter freqs %.1f .. %.1f",
                 cf->loFBankFreq,cf->hiFBankFreq);
+      if (btgt == PLP) {
+         order = cf->lpcOrder;
+         if (order < 2 || order > 1000)
+            HError(6371,"ValidCodeParms: unlikely lpc order %d",cf->lpcOrder);
+	 if (!cf->usePower)
+	    HError(-6371,"ValidCodeParms: Using linear spectrum with PLP");
+	 if (cf->compressFact >= 1.0 || cf->compressFact <= 0.0)
+	    HError(6371,"ValidCodeParms: Compression factor (%f) should have a value between 0 and 1\n",cf->compressFact);
+      }
       break;
    default: break;
    }
-   if (btgt == LPCEPSTRA || btgt == MFCC){
+   if (btgt == LPCEPSTRA || btgt == MFCC || btgt == PLP){
       if (cf->numCepCoef < 2 || cf->numCepCoef > order)
          HError(6371,"ValidCodeParms: unlikely num cep coef %d",cf->numCepCoef);
       if (cf->cepLifter < 0 || cf->cepLifter > 1000)
          HError(6371,"ValidCodeParms: unlikely cep lifter %d",cf->cepLifter);
+   }
+
+   if (cf->warpFreq < 0.5 || cf->warpFreq > 2.0)
+      HError (6371, "ValidCodeParms: unlikely warping factor %s\n", cf->warpFreq);
+   if (cf->warpFreq != 1.0) {
+      if (cf->warpLowerCutOff == 0.0 || cf->warpUpperCutOff == 0.0 ||
+          cf->warpLowerCutOff > cf->warpUpperCutOff)
+         HError (6371, "ValidCodeParms: invalid warping cut-off frequencies %f %f \n",
+                 cf->warpLowerCutOff , cf->warpUpperCutOff);
+      if (cf->warpUpperCutOff == 0.0 && cf->warpLowerCutOff != 0.0) {
+         cf->warpUpperCutOff = cf->warpLowerCutOff;
+         HError (-6371, "ValidCodeParms: setting warp cut-off frequencies to %f %f\n",
+                 cf->warpLowerCutOff, cf->warpUpperCutOff);
+      }
+      if (cf->warpLowerCutOff == 0.0 && cf->warpUpperCutOff != 0.0) {
+         cf->warpUpperCutOff = cf->warpLowerCutOff ;
+         HError (-6371, "ValidCodeParms: setting warp cut-off frequencies to %f %f\n",
+                 cf->warpLowerCutOff, cf->warpUpperCutOff);
+      }
    }
 }
 
 /* EXPORT->ValidConversion: checks that src -> tgt conversion is possible */
 Boolean ValidConversion (ParmKind src, ParmKind tgt)
 {
-   static short xmap[12][12] = {
-      { 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0},    /* src = WAVEFORM */
-      { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = LPC */
-      { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = LPREFC */
-      { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = LPCEPSTRA */
-      { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},    /* src = LPDELCEP */
-      { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = IREFC */
-      { 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0},    /* src = MFCC */
-      { 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0},    /* src = FBANK */
-      { 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0},    /* src = MELSPEC */
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},    /* src = USER */
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},    /* src = DISCRETE */
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = ANON */
+   static short xmap[13][13] = {
+      { 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0},    /* src = WAVEFORM */
+      { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = LPC */
+      { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = LPREFC */
+      { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = LPCEPSTRA */
+      { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = LPDELCEP */
+      { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = IREFC */
+      { 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},    /* src = MFCC */
+      { 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0},    /* src = FBANK */
+      { 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0},    /* src = MELSPEC */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},    /* src = USER */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},    /* src = DISCRETE */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},    /* src = PLP */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},    /* src = ANON */
    };
    if (src == tgt) return TRUE;
    if (xmap[src&BASEMASK][tgt&BASEMASK] == 0 ) return FALSE;
@@ -1058,9 +1203,10 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
                           int hdValid, int tlValid)
 {
    char buf[100];
-   int si,ti,d,ds,de;
+   int si,ti,d,ds,de, i, j, step;
    short span[8];
-   
+   float *fp, mean, scale;
+
    if (cf->curPK == cf->tgtPK) return;
    if (trace&T_QUA)
       printf("HParm:  adding Qualifiers to %s ...",ParmKind2Str(cf->curPK,buf));
@@ -1089,18 +1235,63 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
    }
    /* Zero Mean the static coefficients if required */
    if ((cf->tgtPK&HASZEROM) && !(cf->curPK&HASZEROM)) {
-      d = span[1]-span[0]+1;
-      if (cf->tgtPK&HASZEROC && !(cf->curPK&HASNULLE))  /* zero mean c0 too */
-         ++d;  
-      if (trace&T_QUA)
-         printf("\nHParm:  zero-meaning first %d cols from %d rows",d,nRows);
-      FZeroMean(data,d,nRows,cf->nCols);
-
-      cf->curPK |= HASZEROM;
+      /* if a global mean vector is not available  */
+      if (cf->cMeanVector ==  0) {
+         d = span[1]-span[0]+1;
+         if (cf->tgtPK&HASZEROC && !(cf->curPK&HASNULLE))  /* zero mean c0 too */
+            ++d;  
+         if (trace&T_QUA)
+            printf("\nHParm:  zero-meaning first %d cols from %d rows",d,nRows);
+         FZeroMean(data,d,nRows,cf->nCols);
+         
+         cf->curPK |= HASZEROM;
+      }
+      else {
+         /* subtract the mean vector from cf */
+         d = VectorSize(cf->cMeanVector);
+         step = cf->nCols;
+         for ( i=0; i<d ; i++){
+            /* subtract mean from i'th components */
+            fp = data+i;
+            mean = cf->cMeanVector[i+1];
+            for (j=0;j<nRows;j++){
+               *fp -= mean; fp += step;
+            }
+         }
+         cf->curPK |= HASZEROM;
+      }
    }
-   if (trace&T_QUA) printf("\n");
+
+   /*  Scale the variances */
+   if (cf->varScaleFN) {
+      if (VectorSize (cf->varScale) != cf->tgtUsed)
+         HError(6376 ,"AddQualifiers: Mismatch beteen varScale (%d) and target size %d",
+                VectorSize (cf->varScale), cf->tgtUsed);
+      if (trace&T_QUA)
+         printf("\nHParm:  variance normalisation for %d cols from %d rows",
+                cf->tgtUsed, nRows);
+      
+      if (cf->varScaleVector == 0) {
+         HError (6376, "AddQualifiers: no variance scaling vector found");
+      }
+      else {
+         /* use predefined variance estimate */
+         d = VectorSize(cf->varScaleVector);
+         step = cf->nCols;
+         for (i=0; i<d ; i++){
+            scale = sqrt(cf->varScale[i+1] / cf->varScaleVector[i+1]);
+            fp = data+i;
+            for (j=0; j<nRows; j++) {
+               *fp *= scale;
+               fp += step;
+            }
+         }
+      }
+   }
+
    if (trace&T_QUA)
-      printf("HParm:  quals added to give %s\n",ParmKind2Str(cf->curPK,buf));
+      printf("\nHParm:  quals added to give %s\n",
+             ParmKind2Str (cf->curPK, buf));
 }
 
 /* DelQualifiers: delete quals in cf->curPK but not in cf->tgtPK.
@@ -1417,12 +1608,27 @@ static void SetUpForCoding(MemHeap *x, IOConfig cf, int frSize)
          cf->c = CreateVector(x,cf->numCepCoef);
       break;
    case FFTbased:
-      cf->nUsed = (btgt==MFCC)?cf->numCepCoef:cf->numChans;
+      cf->nUsed = (btgt==MFCC || btgt == PLP) ? cf->numCepCoef : cf->numChans;
       cf->fbank = CreateVector(x,cf->numChans);
-      cf->fbInfo = InitFBank(x,frSize,(long) cf->srcSampRate, cf->numChans, cf->loFBankFreq,
-                             cf->hiFBankFreq, cf->usePower,btgt!=MELSPEC);
-      if (btgt == MFCC) 
-         cf->c = CreateVector(x,cf->numCepCoef);
+      cf->fbInfo = InitFBank (x, frSize, (long) cf->srcSampRate, cf->numChans, 
+                              cf->loFBankFreq, cf->hiFBankFreq, cf->usePower, 
+                              (btgt == PLP) ? FALSE : btgt != MELSPEC,
+                              cf->doubleFFT,
+                              cf->warpFreq, cf->warpLowerCutOff, cf->warpUpperCutOff);
+      
+      if (btgt != PLP) {
+         if (btgt == MFCC) 
+            cf->c = CreateVector(x,cf->numCepCoef);
+      }
+      else {            /* initialisation for PLP */
+         cf->c = CreateVector (x, cf->numCepCoef+1);
+         cf->as = CreateVector (x, cf->numChans+2);
+         cf->eql = CreateVector (x, cf->numChans);
+         cf->ac = CreateVector (x, cf->lpcOrder+1);
+         cf->lp = CreateVector (x, cf->lpcOrder+1);
+         cf->cm = CreateDMatrix (x, cf->lpcOrder+1, cf->numChans+2);
+         InitPLP (cf->fbInfo, cf->lpcOrder, cf->eql, cf->cm);
+      }
       break;
    default:
       HError(6321,"SetUpForCoding: target %s is not a parameterised form",
@@ -1446,7 +1652,7 @@ static void SetUpForCoding(MemHeap *x, IOConfig cf, int frSize)
 static int ConvertFrame(IOConfig cf, float *pbuf)
 {
    ParmKind btgt = cf->tgtPK&BASEMASK;
-   float re,rawte,te,*p;
+   float re,rawte,te,*p, cepScale = 1.0;
    int i,bsize;
    Vector v;
    char buf[50];
@@ -1499,15 +1705,33 @@ static int ConvertFrame(IOConfig cf, float *pbuf)
          WeightCepstrum(cf->c, 1, cf->numCepCoef, cf->cepLifter);
       v = cf->c; bsize = cf->numCepCoef;
       break;
+   case PLP:
+      Wave2FBank(cf->s, cf->fbank, rawE ? NULL : &te, cf->fbInfo);
+      FBank2ASpec(cf->fbank, cf->as, cf->eql, cf->compressFact, cf->fbInfo);
+      ASpec2LPCep(cf->as, cf->ac, cf->lp, cf->c, cf->cm);
+      if (cf->cepLifter > 0)
+         WeightCepstrum(cf->c, 1, cf->numCepCoef, cf->cepLifter);
+      v = cf->c; 
+      bsize = cf->numCepCoef;
+      break;
    default:
       HError(6321,"ConvertFrame: target %s is not a parameterised form",
              ParmKind2Str(cf->tgtPK,buf));
    }
-   for (i=1; i<=bsize; i++) *p++ = v[i];
+
+   if (btgt == PLP || btgt == MFCC)
+      cepScale = (cf->v1Compat) ? 1.0 : cf->cepScale;
+   for (i=1; i<=bsize; i++) 
+      *p++ = v[i] * cepScale;
+
    if (cf->tgtPK&HASZEROC){
-      *p = FBank2C0(cf->fbank);
-      if (cf->v1Compat) *p *= cf->eScale;
-      ++p;
+      if (btgt == MFCC) {
+         *p = FBank2C0(cf->fbank) * cepScale;
+         if (cf->v1Compat) *p *= cf->eScale;
+         ++p;
+      }
+      else      /* For PLP include gain as C0 */
+         *p++ = v[bsize+1] * cepScale;
    }
    if (cf->tgtPK&HASENERGY) {
       if (rawE) te = rawte;
@@ -1878,7 +2102,7 @@ static void SetExtSpDetParms(ParmBuf pbuf, float dur, Boolean warn)
       pbuf->ext->fStop(pbuf->ext->xInfo,pbuf->in.i);
    
    if (nFr==0)
-      HError(9999,"SetExtSpDetParms: Cannot calibrate detector without data");
+      HError(6325,"SetExtSpDetParms: Cannot calibrate detector without data");
 
    eFr=CreateVector(&gstack,nFr);
    for (i=1; i<=nFr; i++) eFr[i]=teFr[i];
@@ -1963,7 +2187,7 @@ void RunSilDet(ParmBuf pbuf,Boolean cleared)
    int i;
 
    if (!pbuf->chan->spDetParmsSet)
-      HError(9999,"RunSilDet: Cannot run sil detector without sil estimate");
+      HError(6325,"RunSilDet: Cannot run sil detector without sil estimate");
    
    for (i=pbuf->spDetCur-pbuf->main.stRow;i<=pbuf->qen;i++,pbuf->spDetCur++){
       /* Choose method of Speech/Silence decision */    
@@ -2370,6 +2594,140 @@ void  SetStreamWidths(ParmKind pk, int size, short *swidth, Boolean *eSep)
              ParmKind2Str(pk,buf),swidth[0]);
 }
 
+/* ----- side based normalisation ------------ */
+
+/* load appropriate mean vector into ParmBuf */
+static void LoadCMeanVector( MemHeap* x , IOConfig cf , char* fname )
+{
+   static char mfname_prev[MAXFNAMELEN] = "";
+   static Vector meanVector = NULL;
+
+   char mfname[MAXFNAMELEN]; /* actual mean filename */
+   char buf[MAXSTRLEN];    /* temporary working buffer */
+   Source src;
+   ParmKind pk,tgtMask;
+   int dim;
+
+   /* make filename and open it*/
+   if (cf->cMeanDN == 0 || cf->cMeanMask == 0)
+      HError(6376 , "LoadCMeanVector: mask or dir missing");
+   if (!MaskMatch (cf->cMeanMask, mfname, fname))
+      HError (6376, "LoadCMeanVector: non-matching mask %s", cf->cMeanMask);
+
+   MakeFN(mfname, cf->cMeanDN, 0, buf);
+   
+   /* caching of vector */
+   if (strcmp(buf, mfname_prev) == 0){ /* names match , old vector must be the same */
+      cf->cMeanVector = CreateVector(x,VectorSize(meanVector));
+      CopyVector(meanVector, cf->cMeanVector ); 
+      return;
+   }
+   else
+      strcpy(mfname_prev, buf);
+   
+   /* read file header and ParmKind */
+   if (InitSource (buf, &src, NoFilter) < SUCCESS)
+      HError (6310, "LoadCMeanVector: Can't open cepsmean file %s", buf);
+   SkipComment (&src);
+   ReadString (&src, buf);
+   if (strcmp(buf,"<CEPSNORM>") != 0)
+      HError (6376 , "LoadCMeanVector: <CEPSNORM> missing, read: %s", buf);
+   ReadString (&src, buf);
+   buf[strlen(buf)-1] = 0;
+   pk = Str2ParmKind (buf+1);
+
+   /* check if ParmKind matches with target ParmKind */
+   tgtMask = ~( cf->tgtPK & ( HASDELTA | HASACCS | HASZEROM ) ); /* mask irrelevant target flags */
+   if ((pk & tgtMask) != (cf->tgtPK & tgtMask))
+      HError(6376, "LoadCMeanVector: ParmKind mismatch %s not a subset of %s",
+             ParmKind2Str (pk, mfname), ParmKind2Str (cf->tgtPK, buf));
+
+   /* Load mean vector */
+   while ((strcmp (buf, "<MEAN>") != 0) && !feof (src.f)) {
+      ReadString (&src,buf);
+   }
+   if (strcmp(buf, "<MEAN>") != 0)
+      HError(6376, "LoadCMeanVector: <MEAN> missing, read: %s", buf);
+   ReadInt (&src, &dim, 1, FALSE);
+   
+   /* caching of vector */
+   if (meanVector)
+       Dispose (&gcheap, meanVector);
+   meanVector = CreateVector (&gcheap, dim);
+   if (!ReadVector (&src, meanVector , FALSE))
+      HError(6376, "LoadCMeanVector: Couldn't read mean vector from file");
+
+   cf->cMeanVector = CreateVector (x, dim);
+   CopyVector (meanVector, cf->cMeanVector);
+   CloseSource (&src);
+}
+
+/* load appropriate vscale vector into ParmBuf */
+static void LoadVarScaleVector(MemHeap* x, IOConfig cf, char *fname)
+{
+   static char mfname_prev[MAXFNAMELEN] = "";
+   static Vector varVector = NULL;
+
+   char mfname[MAXFNAMELEN]; /* actual mean filename */
+   char buf[MAXSTRLEN];    /* temporary working buffer */
+   Source src;
+   ParmKind pk;
+   int dim;
+
+   /* make filename and open it*/
+   if (cf->varScaleDN == 0 || cf->varScaleMask == 0)
+      HError(6376, "LoadVarScaleVector: mask or dir missing");
+   if (!MaskMatch (cf->varScaleMask, mfname, fname))
+      HError (6376, "LoadVarScaleVector: non-matching mask %s", cf->varScaleMask);
+
+   MakeFN (mfname, cf->varScaleDN, 0, buf);
+   
+   /* caching of vector */
+   if (strcmp (buf, mfname_prev) == 0 ){ /* names match , old vector must be the same */
+      cf->varScaleVector = CreateVector (x, VectorSize (varVector));
+      CopyVector(varVector, cf->varScaleVector);
+      return;
+   }
+   else
+      strcpy(mfname_prev, buf);
+
+   /* read file header and ParmKind */
+   if (InitSource (buf, &src, NoFilter) < SUCCESS)
+      HError (6310, "LoadVarScaleVector: Can't open varscale file %s", buf);
+   SkipComment (&src);
+   ReadString(&src,buf);
+   if  (strcmp (buf, "<CEPSNORM>") != 0)
+      HError (6376 ,"LoadVarScaleVector: <CEPSNORM> missing, read: %s",buf);
+   ReadString (&src,buf);
+   buf[strlen(buf)-1] = 0;
+   pk = Str2ParmKind(buf+1 );
+
+   /* check if ParmKind matches with target ParmKind */
+
+   if (cf->tgtPK != pk)
+      HError (6376 ,"LoadVarScaleVector: ParmKind mismatch %s != %s ", 
+              ParmKind2Str (pk, mfname), ParmKind2Str (cf->tgtPK, buf));
+
+   /* Load variance vector */
+   while ((strcmp (buf, "<VARIANCE>") != 0) && !feof(src.f)) {
+      ReadString (&src, buf);
+   }
+   if  (strcmp (buf, "<VARIANCE>") != 0)
+      HError (6376, "LoadVarScaleVector: <VARIANCE> missing, read: %s", buf);
+   ReadInt (&src, &dim, 1, FALSE);
+
+   /* caching of vector */
+   if (varVector)
+      Dispose (&gcheap, varVector);
+   varVector = CreateVector (&gcheap, dim);
+   if (!ReadVector (&src, varVector, FALSE))
+      HError(6376,"LoadVarScaleVector: Couldn't read var scale vector from file");
+
+   cf->varScaleVector = CreateVector (x, dim);
+   CopyVector (varVector, cf->varScaleVector);
+   CloseSource (&src);      
+}
+
 /* ---------- Parameter File Channel Operations ----------- */
 
 #define CRCC_NONE 65535
@@ -2590,10 +2948,23 @@ static ReturnStatus OpenParmChannel(ParmBuf pbuf,char *fname, int *ret_val)
    int initRows,i;
    short sampSize,kind;
    char b1[50],b2[50];
-
-   if ((f=FOpen(fname,ParmFilter,&isPipe)) == NULL){
+   Boolean isEXF;
+   char actfname[MAXFNAMELEN];
+   long stIndex, enIndex;
+   long preskip;
+   
+   /* map to logical to actual name */
+   strncpy (actfname, fname, MAXFNAMELEN);
+   isEXF = GetFileNameExt (fname, actfname, &stIndex, &enIndex);
+   
+   if ((f = FOpen (actfname, ParmFilter, &isPipe)) == NULL) {
       HRError(6310,"OpenParmChannel: cannot open Parm File %s",fname);
       return(FAIL);
+   }
+   
+   if (isEXF && isPipe && stIndex >= 0) {  /* allows mapping, but no segmentation on pipes*/
+      HRError (6313, "OpenParmChannel: cannot segment piped input");
+      return (FAIL);
    }
    /* Need to turn off buffering to stream file */
 #ifdef STREAM_PARM_FILES
@@ -2632,6 +3003,24 @@ static ReturnStatus OpenParmChannel(ParmBuf pbuf,char *fname, int *ret_val)
    }
    pbuf->chType = ch_hparm;
    AttachSource(f,&cf->src);cf->src.isPipe=isPipe;
+
+   /* If extended segmented file, modify header and computed skip */
+   preskip = 0;
+   if (isEXF && stIndex >= 0) {
+      if (enIndex < 0) 
+         enIndex = nSamples-1;
+      if (nSamples < enIndex - stIndex + 1) {
+         HRError(6313,"OpenParmChannel: EXF segment bigger than file");
+         return (FAIL);
+      }
+
+      preskip = stIndex * sampSize; 
+
+      nSamples = enIndex - stIndex + 1;
+      if (kind & HASCOMPX)      /* the COMPX code below will subtract 4  for A/B */
+         nSamples += 4;         
+   }
+   
    /* if src kind not set then copy from file, otherwise must be identical */
    if (cf->srcPK == ANON)
       cf->srcPK = kind;
@@ -2706,6 +3095,13 @@ static ReturnStatus OpenParmChannel(ParmBuf pbuf,char *fname, int *ret_val)
    /* Cannot use energy sil det from parameter files */
    cf->useSilDet=FALSE;
 
+   /* for extended files skip here, after the A/B vectors for COMPX have been read */
+   if (preskip > 0)
+      if (fseek (f, preskip, SEEK_CUR) != 0) {
+         HError (6313, "OpenParmChannel: error processinf EXF segment");
+         return (FAIL);
+      }
+
    if (nSamples>MAX_INT) {
       /* Used streamed file */
       pbuf->main.maxRows = MAX_PB_SIZE;
@@ -2720,7 +3116,7 @@ static ReturnStatus OpenParmChannel(ParmBuf pbuf,char *fname, int *ret_val)
    /* initRows = pbuf->main.maxRows = 50; */
 
    /* Indicate whether doing crcc */
-   if ((pbuf->cf->srcPK&HASCRCC)==0) 
+   if (!(pbuf->cf->srcPK & HASCRCC) || (isEXF && stIndex >= 0))
       pbuf->crcc=CRCC_NONE;
    else if (pbuf->lastRow<0)
       pbuf->crcc=CRCC_STREAM;
@@ -3343,11 +3739,23 @@ ParmBuf OpenBuffer(MemHeap *x, char *fn, int maxObs, FileFormat ff,
    if (enSpeechDet!=TRI_UNDEF) pbuf->cf->useSilDet=(Boolean)enSpeechDet;
    if (pbuf->cf->addDither>0.0) RandInit(12345);
 
+   /* side based normalisation -- #### should maybe be in OpenAsChannel? */
+   /* Load mean vector into pbuf->cf */
+   if (HasZerom (pbuf->cf->tgtPK) && !HasZerom (pbuf->cf->srcPK) && 
+       (pbuf->cf->cMeanDN || pbuf->cf->cMeanMask))
+      LoadCMeanVector (pbuf->mem, pbuf->cf, fn);
+   
+   /* Load variance estimate into pbuf->cf */
+   if (pbuf->cf->varScaleDN || pbuf->cf->varScaleMask) {
+      LoadVarScaleVector (pbuf->mem, pbuf->cf, fn);
+   }
+
    if(OpenAsChannel(pbuf,maxObs,fn,ff,silMeasure)<SUCCESS){
       Dispose(x, pbuf);
       HRError(6316,"OpenBuffer: OpenAsChannel failed");   
       return(NULL);
    }
+
    return pbuf;
 }
 

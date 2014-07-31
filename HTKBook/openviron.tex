@@ -7,9 +7,22 @@
 %/*                                                             */
 %/*                                                             */
 %/* ----------------------------------------------------------- */
+%/* developed at:                                               */
+%/*                                                             */
+%/*      Speech Vision and Robotics group                       */
+%/*      Cambridge University Engineering Department            */
+%/*      http://svr-www.eng.cam.ac.uk/                          */
+%/*                                                             */
+%/*      Entropic Cambridge Research Laboratory                 */
+%/*      (now part of Microsoft)                                */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
 %/*         Copyright: Microsoft Corporation                    */
 %/*          1995-2000 Redmond, Washington USA                  */
-%/*                    http://www.microsoft.com                */
+%/*                    http://www.microsoft.com                 */
+%/*                                                             */
+%/*          2001-2002 Cambridge University                     */
+%/*                    Engineering Department                   */
 %/*                                                             */
 %/*   Use of this software is governed by a License Agreement   */
 %/*    ** See the file License for the Conditions of Use  **    */
@@ -132,13 +145,14 @@ file \texttt{s1} must be in the current directory, \texttt{s2} must be in the
 directory \texttt{dir} within the current directory and \texttt{s3} must be in the
 directory \texttt{/users/sjy/speech}.
 
-Some tools allow directories to be specified via configuration parameters and
-command line options.  In all cases, the final path character (eg / in UNIX, 
-: in Mac OS) need not (but may be) included.  For example, both of the following
-are acceptable and have equivalent effect
+Some tools allow directories to be specified via configuration
+parameters and command line options.  In all cases, the final path
+character (eg / in UNIX) need not (but may be)
+included.  For example, both of the following are acceptable and have
+equivalent effect
 \begin{verbatim}
-      HInit -l i: -L mymodels/new/  hmmfile data*
-      HInit -l i: -L mymodels/new  hmmfile data*
+      HInit -L mymodels/new/  hmmfile data*
+      HInit -L mymodels/new   hmmfile data*
 \end{verbatim}  
 where the \texttt{-L} option specifies the directory in which to find the 
 label files associated with the data files. 
@@ -168,6 +182,30 @@ should only be used for storing ellipsed\index{command line!ellipsed arguments}
 file list arguments. Note that shell meta-characters should not be
 used in script files and will not be interpreted by the \HTK\ tools.
 
+Starting with \HTK\ 3.1 the syntax of script fies has been extended.
+In addition to directly specifying the name of a physical file it is
+possible to define aliases and to select a segment from a file. The
+general syntax of an extended filename \index{extended filenames} is
+\begin{verbatim}
+     logfile=physfile[s,e]   
+\end{verbatim}
+where \texttt{logfile} is the logical filename used by the HTK tools
+and will appear in mlf files and similar. \texttt{physfile} is the
+physical name of the actual file on disk that will be accessed and
+\texttt{s} and \texttt{e} are indices that can be used to select only
+a segment of the file. One example of a use of this feature is the
+evaluation of different segmentations of the audio data. A new
+segmentation can be used by creating a new script file without having
+to create multiple copies of the data.
+
+A typical script file might look like:
+\begin{verbatim}
+s23-0001-A_000143_000291.plp=/data/plp/complete/s23-0001-A.plp[143,291]
+s23-0001-A_000291_000500.plp=/data/plp/complete/s23-0001-A.plp[291,500]
+s23-0001-A_000500_000889.plp=/data/plp/complete/s23-0001-A.plp[500,889]
+\end{verbatim}
+
+
 \mysect{Configuration Files}{config}
 
 Configuration files\index{configuration files|(}\index{files!configuration} 
@@ -176,9 +214,9 @@ They consist of a list of parameter-values pairs along with an optional
 prefix which limits the scope of the parameter to a specific module
 or tool.
 
-The name of a configuration
-file can be specified explicitly on the command line using the
-\texttt{-C}\index{standard options!aaac@\texttt{-C}} command.  For example,  when executing
+The name of a configuration file can be specified explicitly on the
+command line using the \texttt{-C}\index{standard
+options!aaac@\texttt{-C}} command.  For example, when executing
 \begin{verbatim}
     HERest ... -C myconfig  s1 s2 s3 s4 ...
 \end{verbatim}
@@ -240,7 +278,7 @@ As an example, the following is a simple configuration file
     HSHELL: TRACE = 02               # octal
     HPARM:  TRACE = 0101
 \end{verbatim}
-The first three lines contain no module name and hence they apply
+The first five lines contain no module name and hence they apply
 globally, that is, any library module or tool which is interested
 in the configuration parameter \texttt{NUMCHANS} will read the given
 parameter value.  In practice, this is not a problem with library modules
@@ -248,7 +286,7 @@ since nearly all configuration parameters have unique
 names.  The final two lines show the same parameter name being given
 different values within different modules.  This is an example of
 a parameter which every module responds to and hence does not have a unique
-name. 
+name.
 
 This example also shows each of the four possible types of value that can
 appear in a configuration file: string\index{string values}, 
@@ -276,51 +314,51 @@ useful in this
 case because trace values are typically interpreted as bit-strings by
 \HTK\ modules and tools.\index{configuration files!types}
 
-If the name of a configuration variable is mis-typed, there will be no warning
-and the variable will simply be ignored.  To help guard against this, the 
-standard option \texttt{-D} can be used.  This displays all of the configuration
-variables before and after the tool runs.  In the latter case, all configuration
-variables which are still unread are marked by a hash character.
-\index{configuration variables!display of}
+If the name of a configuration variable is mis-typed, there will be no
+warning and the variable will simply be ignored.  To help guard
+against this, the standard option \texttt{-D} can be used.  This
+displays all of the configuration variables before and after the tool
+runs.  In the latter case, all configuration variables which are still
+unread are marked by a hash character.  The initial display allows the
+configuration values to be checked before potentially wasting a large
+amount of cpu time through incorrectly set parameters.  The final
+display shows which configuration variables were actually used during
+the execution of the tool.  The form of the output is shown by the
+following example
+\begin{verbatim}
+    HTK Configuration Parameters[3]
+      Module/Tool     Parameter                  Value
+    #                 SAVEBINARY                  TRUE
+      HPARM           TARGETRATE         256000.000000
+                      TARGETKIND                MFCC_0
+\end{verbatim}
+Here three configuration parameters have been set but the hash
+(\verb+#+) indicates that \texttt{SAVEBINARY} has not been used.
+\index{configuration variables!display}
 \index{configuration files|)}
 
 \mysect{Standard Options}{stdopts}
 
-\index{standard options}
-As noted in section~\ref{s:cmdline}, options consisting of a capital
-letter are common across all tools.  Many are specific to particular file
-types and they will be introduced as they arise.  However, five of
-the standard options are actually built-in to \htool{HShell}.  Two of these
-have been mentioned already.  The option \texttt{-C}\index{standard options!aaac@\texttt{-C}} is used to specify
-a configuration file name and the option \texttt{-S}\index{standard options!aaas@\texttt{-S}} is used to specify
-a script file name.  
+\index{standard options} As noted in section~\ref{s:cmdline}, options
+consisting of a capital letter are common across all tools.  Many are
+specific to particular file types and they will be introduced as they
+arise.  However, there are six options that are standard across all
+tools.  Three of these have been mentioned already.  The
+option \texttt{-C}\index{standard options!aaac@\texttt{-C}} is used to
+specify a configuration file name and the option
+\texttt{-S}\index{standard options!aaas@\texttt{-S}} is used to
+specify a script file name, whilst the option
+\texttt{-D}\index{standard options!aaad@\texttt{-D}} is used to
+display configuration settings.
 
-The three remaining standard options provided directly by 
-\htool{HShell} are \texttt{-A}\index{standard options!aaaa@\texttt{-A}}, 
-\texttt{-D} and \texttt{-V}. 
+The two remaining standard options provided directly by 
+\htool{HShell} are \texttt{-A}\index{standard options!aaaa@\texttt{-A}}
+and \texttt{-V}. 
 The option \texttt{-A} causes the current command line arguments to 
 be printed. When running experiments via
 scripts, it is a good idea to use this option to record in a log file the
 precise settings used for each tool.
-The \texttt{-D}\index{standard options!aaad@\texttt{-D}} option causes the 
-current configuration
-parameters set by the user to be displayed both before and after the
-tool has executed.  The initial display allows the configuration values
-to be checked before potentially wasting a large amount of cpu time through
-incorrectly set parameters.    The final display shows which configuration
-variables were actually used during the execution of the tool.  Its form is
-shown by the following example
-\begin{verbatim}
-    HTK Configuration Parameters[3]
-      Module/Tool     Parameter                  Value
-    # HMODEL          SAVEBINARY                  TRUE
-      HPARM           TARGETRATE         256000.000000
-                      TARGETKIND                MFCC_0
-\end{verbatim}
-Here three configuration parameters have been set but the hash (\verb+#+)
-indicates that \texttt{SAVEBINARY} has not been used.
-\index{configuration files!display}
-Finally, the option \texttt{-V}\index{standard options!aaav@\texttt{-V}}
+The option \texttt{-V}\index{standard options!aaav@\texttt{-V}}
 causes version information for the tool and each module used by that
 tool to be listed.  These should always be quoted when making bug reports.
 
@@ -332,9 +370,10 @@ option via the command line overrides any setting for that same trace
 option in a configuration file.  This is a general rule, command line
 options always override defaults set in configuration files.
 
-All of the
-standard options are listed in the final summary section of this
-chapter.
+All of the standard options are listed in the final summary section of
+this chapter. As a general rule, you should consider passing at least
+-A -D -V -T 1 to all tools, which will guarantee that sufficient
+information is available in the tool output.
 
 
 \mysect{Error Reporting}{erep}
@@ -373,14 +412,14 @@ standard error would lose this information.
 The default behaviour of a \HTK\ tool on terminating due to an
 error is to exit normally returning the error number as exit status.
 If, however, the configuration variable 
-\texttt{ABORTONERR}\index{abortonerr@\texttt{ABORTONERR}} is set
-true, then the tool will core dump.  This is a debugging facility which
-should not  concern most users.\index{termination}
+\texttt{ABORTONERR}\index{abortonerr@\texttt{ABORTONERR}} is set to
+true then the tool will core dump.  This is a debugging facility which
+should not concern most users.\index{termination}
 
 \mysect{Strings and Names}{htkstrings}
 
 Many \HTK\  definition files include names of various types of
-objects: for example labels, model names, words in a grammar, etc.
+objects: for example labels, model names, words, etc.
 In order to achieve some uniformity, \HTK\ applies standard
 rules for reading strings which are names.\index{strings!rules for}
 
@@ -465,14 +504,13 @@ Note that under some versions of \texttt{Unix} \HTK\ can support the 8-bit
 character sets used for the representation of various orthographies. In
 such cases the shell environment variable \texttt{\$LANG} usually governs
 which ISO character set is in use.
-% $
 
 \mysect{Memory Management}{memman}
 
 Memory management\index{memory management} is a very low level function and is
 mostly invisible to \HTK\ users.  However, some applications require very large
 amounts of memory.  For example, building the models for a large vocabulary
-continuous speech dictation system might require 150Mb or more.  Clearly, when
+continuous speech dictation system might require 150MB or more.  Clearly, when
 memory demands become this large, a proper understanding of the impact of
 system design decisions on memory usage is important.  The first step in this
 is to have a basic understanding of memory allocation in \HTK.
@@ -590,16 +628,16 @@ natural byte order (byte swapping will never take place). Similarly, setting
 \texttt{NATURALWRITEORDER} to true will instruct the tools to write out data
 using the machine's natural byte order. The default value of these two
 configuration variables is false which is the appropriate setting when using
-\HTK\ in a multiuple machine architecture environment. In an environment
+\HTK\ in a multiple machine architecture environment. In an environment
 comprising entirely of machines with \texttt{VAX} byte order both configuration
 parameters can be set true which will disable the byte swapping procedure
 during reading and writing of data.
 
 \mysect{Summary}{openvsum}
 
-This section summarises the environment variables\index{environment variables}
+This section summarises the globally-used environment variables\index{environment variables}
 and configuration parameters\index{configuration parameters!operating
-environment} recognised by \htool{HShell}, \htool{HMem} and \htool{HMath}. It
+environment}. It
 also provides a list of all the standard command line options used with \HTK.
 
 Table~\href{t:openvcparms} lists all of the configuration parameters along with
@@ -620,6 +658,9 @@ Module & Name  & Description  \\ \hline
 \htool{HShell} & \texttt{HLABELFILTER}   & Filter for Label file input\\
 \htool{HShell} & \texttt{HNETFILTER}     & Filter for Network file input\\
 \htool{HShell} & \texttt{HDICTFILTER}    & Filter for Dictionary file input \\ 
+\htool{HShell} & \texttt{LGRAMFILTER}     & Filter for gram file input\\
+\htool{HShell} & \texttt{LWMAPFILTER}     &  Filter for word map file input\\
+\htool{HShell} & \texttt{LCMAPFILTER}     &  Filter for class map file input\\
 \htool{HShell} & \texttt{HWAVEOFILTER}    & Filter for waveform file output\\
 \htool{HShell} & \texttt{HPARMOFILTER}    & Filter for parameter file output\\
 \htool{HShell} & \texttt{HLANGMODOFILTER} & Filter for language model file output\\
@@ -628,12 +669,20 @@ Module & Name  & Description  \\ \hline
 \htool{HShell} & \texttt{HLABELOFILTER}   & Filter for Label file output\\
 \htool{HShell} & \texttt{HNETOFILTER}     & Filter for Network file output\\
 \htool{HShell} & \texttt{HDICTOFILTER}    & Filter for Dictionary file output \\ 
+\htool{HShell} & \texttt{LGRAMOFILTER}    & Filter for gram file output\\
+\htool{HShell} & \texttt{LWMAPOFILTER}    & Filter for word map file output\\
+\htool{HShell} & \texttt{LCMAPOFILTER}    & Filter for class map file output\\
 \htool{HShell} & \texttt{MAXTRYOPEN}     & number of file open retries \\
 \htool{HShell} & \texttt{NONUMESCAPES}   & prevent string output using \verb+\012+ format \\
- & \texttt{NATURALREADORDER}  & Enable natural read order for HTK binary files \\
- & \texttt{NATURALWRITEORDER} & Enable natural write order for HTK binary files \\
+\htool{HShell} & \texttt{NATURALREADORDER}  & Enable natural read order for HTK binary files \\
+\htool{HShell} & \texttt{NATURALWRITEORDER} & Enable natural write order for HTK binary files \\
 \htool{HMem} & \texttt{PROTECTSTAKS}   & warn if stack is cut-back (debugging) \\
- & \texttt{TRACE}             & trace control (default=0) \\ \hline
+ & \texttt{TRACE}             & trace control (default=0) \\
+ & \texttt{STARTWORD}         & set sentence start symbol ({\tt <s>}) \\
+ & \texttt{ENDWORD}           & set sentence end symbol   ({\tt </s>}) \\
+ & \texttt{UNKNOWNNAME}       & set OOV class symbol      ({\tt !!UNK}) \\
+ & \texttt{RAWMITFORMAT}      & disable \HTK\ escaping for LM tools\\
+\hline
 \end{tabular}
 \tabcap{openvcparms}{Configuration Parameters used in Operating Environment}
 \end{center}

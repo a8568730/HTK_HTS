@@ -7,9 +7,22 @@
 /*                                                             */
 /*                                                             */
 /* ----------------------------------------------------------- */
+/* developed at:                                               */
+/*                                                             */
+/*      Speech Vision and Robotics group                       */
+/*      Cambridge University Engineering Department            */
+/*      http://svr-www.eng.cam.ac.uk/                          */
+/*                                                             */
+/*      Entropic Cambridge Research Laboratory                 */
+/*      (now part of Microsoft)                                */
+/*                                                             */
+/* ----------------------------------------------------------- */
 /*         Copyright: Microsoft Corporation                    */
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
+/*                                                             */
+/*              2001  Cambridge University                     */
+/*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
 /*    ** See the file License for the Conditions of Use  **    */
@@ -19,7 +32,7 @@
 /*         File: HParm.h:   Speech Parameter Input/Output      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HParm:   3.0 [CUED 05/09/00] */
+/* !HVER!HParm:   3.1 [CUED 16/01/02] */
 
 #ifndef _HPARM_H_
 #define _HPARM_H_
@@ -37,6 +50,7 @@ enum _BaseParmKind{
       MELSPEC,                         /* Mel-Freq Spectrum (Linear) */
       USER,                            /* Arbitrary user specified data */
       DISCRETE,                        /* Discrete VQ symbols (shorts) */
+      PLP,                             /* Standard PLP coefficients */
       ANON};
       
 typedef short ParmKind;          /* BaseParmKind + Qualifiers */
