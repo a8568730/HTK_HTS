@@ -21,7 +21,6 @@
 
 /* !HVER!HLabel:   3.2 [CUED 09/12/02] */
 
-
 /* 
    This module allows an internal data structure representing a
    transcription to be constructed by reading labels from an external

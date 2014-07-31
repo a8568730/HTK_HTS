@@ -15,6 +15,7 @@
 #       HTKCC           - name of C compiler (either cc or gcc)
 #       HTKCF           - compiler flags
 #       HTKLF           - linker flags
+#       SPTK            - SPTK directory
 #       HBIN            - the directory containing "bin.$CPU"
 #
 # Suggested settings are
@@ -31,16 +32,19 @@
 # afterwards.
 #
 
+SPTK = /usr/local/SPTK
+SPTKLF = -L$(SPTK)/lib -lSPTK
+
 hlib = ../HTKLib
 
 HLIBS = $(hlib)/HTKLib.$(CPU).a 
 
 CC = $(HTKCC)
-CFLAGS = -I$(hlib) $(HTKCF) 
+CFLAGS = -I$(hlib) $(HTKCF) -I$(SPTK)/include
 
 all:    HEAdapt	HList	HCompV HCopy   HDMan HERest HHEd    HInit  \
         HParse HBuild HQuant  HRest  HResults HSmooth HVite HLEd   \
-	HLRescore HLStats HSGen  HSLab
+	HLRescore HLStats HSGen HMGenS HSLab
 
 HEAdapt :  $(hlib)/HTKLib.$(CPU).a HEAdapt.o
 	$(CC) HEAdapt.o $(HLIBS) -lm $(HTKLF)
@@ -118,6 +122,10 @@ HSGen:  $(hlib)/HTKLib.$(CPU).a HSGen.o
 	$(CC) HSGen.o $(HLIBS) -lm $(HTKLF)
 	mv a.out $(HBIN)/bin.$(CPU)/HSGen
 
+HMGenS: $(hlib)/HTKLib.$(CPU).a HMGenS.o
+	$(CC) HMGenS.o $(HLIBS) -lm $(HTKLF) $(SPTKLF)
+	mv a.out $(HBIN)/bin.$(CPU)/HMGenS
+
 HSLab:  $(hlib)/HTKLib.$(CPU).a HSLab.o
 	$(CC) HSLab.o $(HLIBS) -lm $(HTKLF) -lX11
 	mv a.out $(HBIN)/bin.$(CPU)/HSLab
@@ -149,4 +157,6 @@ removetools:
 	-rm -f $(HBIN)/bin.$(CPU)/HVite
 	-rm -f $(HBIN)/bin.$(CPU)/HLStats
 	-rm -f $(HBIN)/bin.$(CPU)/HSGen
+	-rm -f $(HBIN)/bin.$(CPU)/HMGenS
 	-rm -f $(HBIN)/bin.$(CPU)/HSLab
+

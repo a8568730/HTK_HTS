@@ -32,6 +32,53 @@
 /*         File: HERest.c: Embedded B-W ReEstimation           */
 /* ----------------------------------------------------------- */
 
+
+/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
+/*            HTS Working Group                                     */
+/*                                                                  */
+/*       Department of Computer Science                             */
+/*       Nagoya Institute of Technology                             */
+/*                and                                               */
+/*   Interdisciplinary Graduate School of Science and Engineering   */
+/*       Tokyo Institute of Technology                              */
+/*          Copyright (c) 2001-2002                                 */
+/*            All Rights Reserved.                                  */
+/*                                                                  */
+/* Permission is hereby granted, free of charge, to use and         */
+/* distribute this software in the form of patch code to HTK and    */
+/* its documentation without restriction, including without         */
+/* limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and/or sell copies of this work, and to  */
+/* permit persons to whom this work is furnished to do so, subject  */
+/* to the following conditions:                                     */
+/*                                                                  */
+/*   1. Once you apply the HTS patch to HTK, you must obey the      */
+/*      license of HTK.                                             */
+/*                                                                  */
+/*   2. The code must retain the above copyright notice, this list  */
+/*      of conditions and the following disclaimer.                 */
+/*                                                                  */
+/*   3. Any modifications must be clearly marked as such.           */
+/*                                                                  */
+/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
+/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/* PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                  */
+/* ---------------------------------------------------------------- */ 
+/*     HERest.c modified for HTS-1.0 2002/12/25 by Heiga Zen        */
+/* ---------------------------------------------------------------- */
+
 char *herest_version = "!HVER!HERest:   3.2 [CUED 09/12/02]";
 char *herest_vc_id = "$Id: HERest.c,v 1.10 2002/12/19 16:37:40 ge204 Exp $";
 
@@ -85,9 +132,11 @@ static char * hmmExt = NULL;     /* hmm def file extension */
 static char * newDir = NULL;     /* directory to store new hmm def files */
 static char * newExt = NULL;     /* extension of new reestimated hmm files */
 static char * statFN;            /* stats file, if any */
+static char * durFN;             /* duration model file, if any */
 static float minVar  = 0.0;      /* minimum variance (diagonal only) */
 static float mixWeightFloor=0.0; /* Floor for mixture weights */
 static int minEgs    = 3;        /* min examples to train a model */
+
 static UPDSet uFlags = (UPDSet) (UPMEANS|UPVARS|UPTRANS|UPMIXES); /* update flags */
 static int parMode   = -1;       /* enable one of the // modes */
 static Boolean stats = FALSE;    /* enable statistics reports */
@@ -101,6 +150,7 @@ static FileFormat lff=UNDEFF;       /* label file format */
 static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
 static int nParm = 0;               /* total num params */
 Boolean traceHFB = FALSE;        /* pass to HFB to retain top-level tracing */
+Boolean calcDuration = FALSE;    /* duration modeling */
 
 static Boolean al_hmmUsed = FALSE;   /* Set for 2-model ReEstimation */
 static char al_hmmDir[MAXFNAMELEN];  /* dir to look for alignment hmm defs */
@@ -115,14 +165,14 @@ static LogDouble pruneInc = 0.0;         /* pruning threshold increment */
 static LogDouble pruneLim = NOPRUNE;     /* pruning threshold limit */
 static float minFrwdP = NOPRUNE;         /* mix prune threshold */
 
-
 static Boolean firstTime = TRUE;    /* Flag used to enable creation of ot */
 static Boolean twoDataFiles = FALSE; /* Enables creation of ot2 for FB
                                         training using two data files */
 static int totalT=0;       /* total number of frames in training data */
 static LogDouble totalPr;   /* total log prob upto current utterance */
 static Vector vFloor[SMAX]; /* variance floor - default is all zero */
-
+static float dvFloor = 1.0E-4;    /* variance floor of duration model */
+static DurKind dtype;       /* kind of duration model */
 static MemHeap hmmStack;   /*For Storage of all dynamic structures created...*/
 static MemHeap uttStack;
 static MemHeap fbInfoStack;
@@ -160,10 +210,12 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS ver.1.0\n");
    printf("\nUSAGE: HERest [options] hmmList dataFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -c f    Mixture pruning threshold            10.0\n");
    printf(" -d s    dir to find hmm definitions          current\n");
+   printf(" -g s    output duration model to file s      none\n");
    printf(" -m N    set min examples needed per model    3\n");
    printf(" -o s    extension for new hmm files          as src\n");
    printf(" -p N    set parallel mode to N               off\n");
@@ -288,7 +340,12 @@ int main(int argc, char *argv[])
       case 'd':
          if (NextArg()!=STRINGARG)
             HError(2319,"HERest: HMM definition directory expected");
-         hmmDir = GetStrArg(); break;   
+         hmmDir = GetStrArg(); break;  
+      case 'g':
+         calcDuration = TRUE;
+         if (NextArg()!=STRINGARG)
+            HError(2319,"HERest: duration model file name expected");
+         durFN = GetStrArg(); break;
       case 'm':
          minEgs = GetChkedInt(0,1000,s); break;
       case 'o':
@@ -415,11 +472,13 @@ int main(int argc, char *argv[])
       WriteInt(f,(int*)&totalT,1,ldBinary);
       fclose( f );
    }else {
-      if (stats) {
+      if (stats)
          StatReport(&hset);
-      }
+      if (calcDuration)
+         SaveDuration(fbInfo,durFN,dvFloor,GAUSSD);
       UpdateModels(&hset,utt->pbuf2);
    }
+
    ResetHeap(&uttStack);
    ResetHeap(&fbInfoStack);
    ResetHeap(&hmmStack);
@@ -462,7 +521,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
       printf("\n\n ");
   
       if (parMode>=0) printf("Parallel-Mode[%d] ",parMode);
-
+      
       printf("System is ");
       switch (hsKind){
       case PLAINHS:  printf("PLAIN\n");  break;
@@ -484,57 +543,55 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
    /* initialise and  pass information to the forward backward library */
    InitialiseForBack(fbInfo, x, hset, NULL, uFlags, pruneInit, pruneInc,
                      pruneLim, minFrwdP);
-
    /* 2-model reestimation */
    if (al_hmmUsed){
-       if (trace&T_TOP)
-           printf("2-model re-estimation enabled\n");
-       /* load alignment HMM set */
-       CreateHMMSet(&al_hset,&hmmStack,TRUE);
-       /* load multiple MMFs */
-       if (strlen(al_hmmMMF) > 0 ) {
-           char *p,*q;
-           Boolean eos;
-           p=q=al_hmmMMF;
-           for(;;) {
-               eos = (*p=='\0');
-               if ( ( isspace(*p) || *p == '\0' ) && (q!=p) ) {
-                   *p='\0';
-                   if (trace&T_TOP) { 
-                       printf("Loading alignment HMM set %s\n",q);
-                   }
-                   AddMMF(&al_hset,q);
-                   if (eos)
-                       break;
-                   q=p+1;
-               }
-               p++;
-           }
-       }
-       if (strlen(al_hmmLst) > 0 ) 
-           MakeHMMSet(&al_hset, al_hmmLst );
-       else /* use same hmmList */
-           MakeHMMSet(&al_hset, hmmListFn );
-       if (strlen(al_hmmDir) > 0 )
-           LoadHMMSet(&al_hset,al_hmmDir,al_hmmExt);
-       else
-           LoadHMMSet(&al_hset,NULL,NULL);
+      if (trace&T_TOP)
+         printf("2-model re-estimation enabled\n");
+      /* load alignment HMM set */
+      CreateHMMSet(&al_hset,&hmmStack,TRUE);
+      /* load multiple MMFs */
+      if (strlen(al_hmmMMF) > 0 ) {
+         char *p,*q;
+          Boolean eos;
+          p=q=al_hmmMMF;
+          for (;;) {
+             eos = (*p=='\0');
+             if ( ( isspace(*p) || *p == '\0' ) && (q!=p) ) {
+                *p='\0';
+                if (trace&T_TOP) { 
+                   printf("Loading alignment HMM set %s\n",q);
+                }
+                AddMMF(&al_hset,q);
+                if (eos) break;
+                q=p+1;
+             }
+             p++;
+          }
+      }
+      if (strlen(al_hmmLst) > 0 ) 
+         MakeHMMSet(&al_hset, al_hmmLst );
+      else /* use same hmmList */
+         MakeHMMSet(&al_hset, hmmListFn );
+      if (strlen(al_hmmDir) > 0 )
+         LoadHMMSet(&al_hset,al_hmmDir,al_hmmExt);
+      else
+         LoadHMMSet(&al_hset,NULL,NULL);
 
-       /* switch model set */
-       UseAlignHMMSet(fbInfo,x,&al_hset);
+      /* switch model set */
+      UseAlignHMMSet(fbInfo,x,&al_hset);
 
-       /* and echo status */
-       if (trace&T_TOP) { 
-           if (strlen(al_hmmDir) > 0 )
-               printf(" HMM Dir %s",al_hmmDir);
-           if (strlen(al_hmmExt) > 0 )
-               printf(" Ext %s",al_hmmExt);
-           printf("\n");
-           if (strlen(al_hmmLst) > 0 )
-               printf("HMM List %s\n",al_hmmLst);
-           printf(" %d Logical/%d Physical Models Loaded, VecSize=%d\n",
-                  al_hset.numLogHMM,al_hset.numPhyHMM,al_hset.vecSize);
-       }
+      /* and echo status */
+      if (trace&T_TOP) { 
+         if (strlen(al_hmmDir) > 0 )
+            printf(" HMM Dir %s",al_hmmDir);
+         if (strlen(al_hmmExt) > 0 )
+            printf(" Ext %s",al_hmmExt);
+         printf("\n");
+         if (strlen(al_hmmLst) > 0 )
+            printf("HMM List %s\n",al_hmmLst);
+         printf(" %d Logical/%d Physical Models Loaded, VecSize=%d\n",
+                al_hset.numLogHMM,al_hset.numPhyHMM,al_hset.vecSize);
+      }
    }
 }
 
@@ -553,7 +610,7 @@ void PrintStats(HMMSet *hset,FILE *f, int n, HLink hmm, int numEgs)
    fprintf(f,"%4d %14s %4d ",n,buf,numEgs);
    for (i=2;i<N;i++) {
       si = hmm->svec[i].info;
-      wa = (WtAcc *)((si->pdf+1)->hook);
+      wa = (WtAcc *)((si->pdf+1)->info->hook);
       fprintf(f," %10f",wa->occ);
    }
    fprintf(f,"\n");
@@ -583,7 +640,6 @@ void StatReport(HMMSet *hset)
 }
 
 /* -------------------- Top Level of F-B Updating ---------------- */
-
 
 /* Load data and call FBFile: apply forward-backward to given utterance */
 void DoForwardBackward(FBInfo *fbInfo, UttInfo *utt, char * datafn, char * datafn2)
@@ -723,6 +779,7 @@ void UpdateWeights(HMMSet *hset, int px, HLink hmm)
    WtAcc *wa;
    StateElem *se;
    StreamElem *ste;
+   StreamInfo *sti;
    MixtureElem *me;
    HSetKind hsKind;
 
@@ -733,7 +790,8 @@ void UpdateWeights(HMMSet *hset, int px, HLink hmm)
    for (i=2; i<N; i++,se++){
       ste = se->info->pdf+1;
       for (s=1;s<=S; s++,ste++){
-         wa = (WtAcc *)ste->hook;
+         sti = ste->info;
+         wa = (WtAcc *)sti->hook;
          switch (hsKind){
          case TIEDHS:
             M=hset->tmRecs[s].nMix;
@@ -741,7 +799,7 @@ void UpdateWeights(HMMSet *hset, int px, HLink hmm)
          case DISCRETEHS:
          case PLAINHS:
          case SHAREDHS:
-            M=ste->nMix;
+            M=sti->nMix;
             break;
          }
          if (wa != NULL) {
@@ -757,14 +815,14 @@ void UpdateWeights(HMMSet *hset, int px, HLink hmm)
                   }
                   switch (hsKind){
                   case TIEDHS:
-                     ste->spdf.tpdf[m] = (x>MINMIX) ? x : 0.0;
+                     sti->spdf.tpdf[m] = (x>MINMIX) ? x : 0.0;
                      break;
                   case DISCRETEHS:
-                     ste->spdf.dpdf[m]=(x>MINMIX) ? DProb2Short(x) : DLOGZERO;
+                     sti->spdf.dpdf[m]=(x>MINMIX) ? DProb2Short(x) : DLOGZERO;
                      break;
                   case PLAINHS:
                   case SHAREDHS:
-                     me=ste->spdf.cpdf+m;
+                     me=sti->spdf.cpdf+m;
                      me->weight = (x>MINMIX) ? x : 0.0;
                      break;
                   }
@@ -772,21 +830,21 @@ void UpdateWeights(HMMSet *hset, int px, HLink hmm)
                if (mixWeightFloor>0.0){
                   switch (hsKind){
                   case DISCRETEHS:
-                     FloorDProbs(ste->spdf.dpdf,M,mixWeightFloor);
+                     FloorDProbs(sti->spdf.dpdf,M,mixWeightFloor);
                      break;
                   case TIEDHS:
-                     FloorTMMixes(ste->spdf.tpdf,M,mixWeightFloor);
+                     FloorTMMixes(sti->spdf.tpdf,M,mixWeightFloor);
                      break;
                   case PLAINHS:
                   case SHAREDHS:
-                     FloorMixes(ste->spdf.cpdf+1,M,mixWeightFloor);
+                     FloorMixes(sti->spdf.cpdf+1,M,mixWeightFloor);
                      break;
                   }
                }
             }else
                HError(-2330,"UpdateWeights: Model %d[%s]: no use of mixtures in %d.%d",
                       px,HMMPhysName(hset,hmm),i,s);
-            ste->hook = NULL;
+            sti->hook = NULL;
          }
       }
    }
@@ -800,6 +858,7 @@ void UpdateMeans(HMMSet *hset, int px, HLink hmm)
    MuAcc *ma;
    StateElem *se;
    StreamElem *ste;
+   StreamInfo *sti;
    MixtureElem *me;
    Vector mean;
    
@@ -809,20 +868,21 @@ void UpdateMeans(HMMSet *hset, int px, HLink hmm)
    for (i=2; i<N; i++,se++){
       ste = se->info->pdf+1;
       for (s=1;s<=S;s++,ste++){
-         vSize = hset->swidth[s];
-         me = ste->spdf.cpdf + 1; M = ste->nMix;
+         sti = ste->info; 
+         me = sti->spdf.cpdf + 1; M = sti->nMix;
          for (m=1;m<=M;m++,me++)
             if (me->weight > MINMIX){
                mean = me->mpdf->mean;
+               vSize = VectorSize(mean);
                ma = (MuAcc *) GetHook(mean);
                if (ma != NULL){
                   occim = ma->occ;
                   if (occim > 0.0)
                      for (k=1; k<=vSize; k++)
                         mean[k] += ma->mu[k]/occim;
-                  else
+                  else if (trace&T_UPD)    /* PLAINHS & MSD, this warning often happen */
                      HError(-2330,"UpdateMeans: Model %d[%s]: no use of mean %d.%d.%d",
-                            px,HMMPhysName(hset,hmm),i,s,m);
+                          px,HMMPhysName(hset,hmm),i,s,m);
                   SetHook(mean,NULL);
                }
             }
@@ -870,6 +930,7 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
    MuAcc *ma;
    StateElem *se;
    StreamElem *ste;
+   StreamInfo *sti;
    MixtureElem *me;
    Vector mean;
    Covariance cov;
@@ -881,14 +942,15 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
    for (i=2; i<N; i++,se++){
       ste = se->info->pdf+1;
       for (s=1;s<=S;s++,ste++){
-         vSize = hset->swidth[s];
+         sti = ste->info;
          minV = vFloor[s];
-         me = ste->spdf.cpdf + 1; M = ste->nMix;
+         me = sti->spdf.cpdf + 1; M = sti->nMix;
          for (m=1;m<=M;m++,me++)
             if (me->weight > MINMIX){
                cov = me->mpdf->cov;
                va = (VaAcc *) GetHook(cov.var);
                mean = me->mpdf->mean;
+               vSize = VectorSize(mean);
                ma = (MuAcc *) GetHook(mean);
                if (va != NULL){
                   occim = va->occ;
@@ -924,7 +986,7 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
                         CovInvert(cov.inv,cov.inv);
                      }
                   }
-                  else
+                  else if (trace&T_UPD)    /* PLAINHS & MSD, this warning often happen */
                      HError(-2330,"UpdateVars: Model %d[%s]: no use of variance %d.%d.%d",
                             px,HMMPhysName(hset,hmm),i,s,m);
                   if (mixFloored == TRUE) nFloorVarMix++;
@@ -1072,7 +1134,7 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
    }
    if (trace&T_TOP){
       if (mmfFn == NULL)
-         printf("Saving hmm's to dir %s\n",(newDir==NULL)?"Current":newDir);
+         printf("Saving hmm's to dir %s\n",(newDir==NULL)?"Current":newDir); 
       else
          printf("Saving hmm's to MMF %s\n",mmfFn);
       fflush(stdout);
@@ -1100,8 +1162,3 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
 /* ----------------------------------------------------------- */
 /*                      END:  HERest.c                         */
 /* ----------------------------------------------------------- */
-
-
-
-
-

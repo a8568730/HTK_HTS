@@ -10,6 +10,7 @@
 #       CPU             - set to the machine name
 #       HTKCC           - name of C compiler (either cc or gcc)
 #       HTKCF           - compiler flags
+#       SPTK            - directory of SPTK
 #
 # Suggested settings are
 #		CPU	      HTKCC  HTKCF
@@ -25,12 +26,14 @@
 hlib = .
 HLIBS = $(hlib)/HTKLib.$(CPU).a
 
+SPTK = /usr/local/SPTK
+
 CC = $(HTKCC)
-CFLAGS = $(HTKCF) -D'ARCH="$(CPU)"' -I.
+CFLAGS = $(HTKCF) -D'ARCH="$(CPU)"' -I. -I$(SPTK)/include
 
 modules = HShell.o HMath.o  HSigP.o  HWave.o HAudio.o HParm.o HVQ.o  HGraf.o\
           HLabel.o HModel.o HUtil.o HTrain.o HDict.o  HLM.o   HRec.o HNet.o \
-          HAdapt.o HFB.o HMem.o HLat.o \
+          HAdapt.o HFB.o HMem.o HLat.o HGen.o \
           esignal.o esig_asc.o esig_edr.o esig_nat.o strarr.o
 
 all:    HTKLib.$(CPU).a
@@ -84,6 +87,7 @@ HUtil.o: HShell.h HMem.h HMath.h HSigP.h HAudio.h HWave.h HVQ.h HParm.h
 HUtil.o: HLabel.h HModel.h HUtil.h
 HVQ.o: HShell.h HMem.h HMath.h HVQ.h
 HWave.o: HShell.h HMem.h HMath.h HWave.h esignal.h HAudio.h HParm.h
+HGen.o: HShell.h HMem.h HMath.h
 esig_asc.o: esignal.h
 esig_edr.o: esignal.h
 esig_nat.o: esignal.h

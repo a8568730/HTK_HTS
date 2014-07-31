@@ -19,6 +19,53 @@
 /*         File: HRec.c  Viterbi Recognition Engine Library    */
 /* ----------------------------------------------------------- */
 
+
+/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
+/*            HTS Working Group                                     */
+/*                                                                  */
+/*       Department of Computer Science                             */
+/*       Nagoya Institute of Technology                             */
+/*                and                                               */
+/*   Interdisciplinary Graduate School of Science and Engineering   */
+/*       Tokyo Institute of Technology                              */
+/*          Copyright (c) 2001-2002                                 */
+/*            All Rights Reserved.                                  */
+/*                                                                  */
+/* Permission is hereby granted, free of charge, to use and         */
+/* distribute this software in the form of patch code to HTK and    */
+/* its documentation without restriction, including without         */
+/* limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and/or sell copies of this work, and to  */
+/* permit persons to whom this work is furnished to do so, subject  */
+/* to the following conditions:                                     */
+/*                                                                  */
+/*   1. Once you apply the HTS patch to HTK, you must obey the      */
+/*      license of HTK.                                             */
+/*                                                                  */
+/*   2. The code must retain the above copyright notice, this list  */
+/*      of conditions and the following disclaimer.                 */
+/*                                                                  */
+/*   3. Any modifications must be clearly marked as such.           */
+/*                                                                  */
+/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
+/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/* PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                  */
+/* ---------------------------------------------------------------- */ 
+/*     HRec.c modified for HTS-1.0 2002/12/20 by Heiga Zen          */
+/* ---------------------------------------------------------------- */
+
 char *hrec_version = "!HVER!HRec:   3.2 [CUED 09/12/02]";
 char *hrec_vc_id = "$Id: HRec.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
 
@@ -133,7 +180,7 @@ struct _NetInst
 typedef struct precomp
 {
    int id;                  /* Unique identifier for current frame */
-   LogFloat outp;           /* State/mixture output likelihood */
+   LogFloat outp;           /* State/Stream/Mixture output likelihood */
 }
 PreComp;
 
@@ -144,8 +191,11 @@ struct psetinfo
 
    int max;                 /* Max states in HMM set */
    Boolean mixShared;
+   Boolean streamShared;
    int nsp;
    PreComp *sPre;           /* Array[1..nsp] State PreComps */
+   int npp;
+   PreComp *pPre;           /* Array[1..npp] Stream(pdf) PreComps */
    int nmp;
    PreComp *mPre;           /* Array[1..nmp] Shared mixture PreComps */
    int ntr;
@@ -405,7 +455,7 @@ static void TokSetMerge(TokenSet *res,Token *cmp,TokenSet *src)
 }
 
 /* Caching version of SOutP used when mixPDFs shared */
-static LogFloat cSOutP(HMMSet *hset, int s, Observation *x, StreamElem *se,
+static LogFloat cMOutP(HMMSet *hset, int s, Observation *x, StreamInfo *sti,
                        int id)
 {
    PreComp *pre;
@@ -416,8 +466,8 @@ static LogFloat cSOutP(HMMSet *hset, int s, Observation *x, StreamElem *se,
    
    /* Note hset->kind == SHAREDHS */
    v=x->fv[s];
-   me=se->spdf.cpdf+1;
-   if (se->nMix==1){     /* Single Mixture Case */
+   me=sti->spdf.cpdf+1;
+   if (sti->nMix==1){     /* Single Mixture Case */
       if (me->mpdf->mIdx>0 && me->mpdf->mIdx<=pri->psi->nmp)
          pre=pri->psi->mPre+me->mpdf->mIdx;
       else pre=NULL;
@@ -432,7 +482,7 @@ static LogFloat cSOutP(HMMSet *hset, int s, Observation *x, StreamElem *se,
          bx=pre->outp;
    } else {
       bx=LZERO;                   /* Multi Mixture Case */
-      for (m=1; m<=se->nMix; m++,me++) {
+      for (m=1; m<=sti->nMix; m++,me++) {
          wt = MixLogWeight(hset, me->weight);
          if (wt>LMINMIX) {   
             if (me->mpdf->mIdx>0 && me->mpdf->mIdx<=pri->psi->nmp)
@@ -454,13 +504,38 @@ static LogFloat cSOutP(HMMSet *hset, int s, Observation *x, StreamElem *se,
    return bx;
 }
 
+/* Caching version of SOutP used when streaminfo shared */
+static LogFloat cSOutP(HMMSet *hset, int s, Observation *x, StreamInfo *sti,
+                       int id)
+{
+   PreComp *pre;
+   LogFloat bx;
+   Vector v;
+   
+   /* Note hset->kind == SHAREDHS */
+   v=x->fv[s];
+   if (sti->pIdx>0 && sti->pIdx<=pri->psi->npp)
+      pre= pri->psi->pPre + sti->pIdx;
+   else pre=NULL;
+   if (pre==NULL)
+      bx=SOutP(hset,s,x,sti);
+   else if (pre->id!=id) {
+      bx=SOutP(hset,s,x,sti);
+      pre->id=id;
+      pre->outp=bx;
+   }
+   else
+      bx=pre->outp;
+   
+   return bx;
+}
 
 /* Version of POutP that caches outp values with frame id */
 static LogFloat cPOutP(PSetInfo *psi,Observation *obs,StateInfo *si,int id)
 {
    PreComp *pre;
    LogFloat outp;
-   StreamElem *se;
+   StreamElem *ste;
    Vector w;
    int s,S;
 
@@ -474,20 +549,27 @@ static LogFloat cPOutP(PSetInfo *psi,Observation *obs,StateInfo *si,int id)
 #endif
    
    if (pre->id!=id) {
-      if (psi->mixShared==FALSE){
+      if (!psi->mixShared && !psi->streamShared) {
          outp=POutP(psi->hset,obs,si);
       }
       else {
          S=obs->swidth[0];
-         if (S==1 && si->weights==NULL){
-            outp=cSOutP(psi->hset,1,obs,si->pdf+1,id);
+         if (S==1 && si->weights==NULL) {
+            ste=si->pdf+1;
+            if (psi->streamShared)
+               outp=cSOutP(psi->hset,1,obs,ste->info,id);
+            else 
+               outp=cMOutP(psi->hset,1,obs,ste->info,id);
          }
          else {
             outp=0.0;
-            se=si->pdf+1;
+            ste=si->pdf+1;
             w=si->weights;
-            for (s=1;s<=S;s++,se++){
-               outp+=w[s]*cSOutP(psi->hset,s,obs,se,id);
+            for (s=1;s<=S;s++,ste++) {
+               if (psi->streamShared)
+                  outp+=w[s]*cSOutP(psi->hset,s,obs,ste->info,id);
+               else
+                  outp+=w[s]*cMOutP(psi->hset,s,obs,ste->info,id);
             }
          }
       }
@@ -1350,9 +1432,24 @@ PSetInfo *InitPSetInfo(HMMSet *hset)
             CreateSEIndex(psi,hmm);
          }
       }
+   /* state */
    psi->nsp=hset->numStates;
    psi->sPre=(PreComp*) New(&psi->heap, sizeof(PreComp)*psi->nsp);
    psi->sPre--;
+
+   /* stream */
+   for(i=1,pre=psi->sPre+1;i<=psi->nsp;i++,pre++) pre->id=-1;
+   if (hset->numSharedStreams>0) {
+      psi->streamShared=TRUE;
+      psi->npp=hset->numSharedStreams;
+      psi->pPre=(PreComp*) New(&psi->heap, sizeof(PreComp)*psi->npp);
+      psi->pPre--;
+      for(i=1,pre=psi->pPre+1;i<=psi->npp;i++,pre++) pre->id=-1;
+   }
+   else
+      psi->streamShared=FALSE,psi->npp=0,psi->pPre=NULL;
+
+   /* mixture */
    for(i=1,pre=psi->sPre+1;i<=psi->nsp;i++,pre++) pre->id=-1;
    if (hset->numSharedMix>0) {
       psi->mixShared=TRUE;
@@ -1648,6 +1745,7 @@ VRecInfo *InitVRecInfo(PSetInfo *psi,int nToks,Boolean models,Boolean states)
    pri->psi=psi;
    /* pri->psi->sBuf[1].n=((pri->nToks>1)?1:0);  Needed every observation */
    for(i=1,pre=psi->sPre+1;i<=psi->nsp;i++,pre++) pre->id=-1;
+   for(i=1,pre=psi->pPre+1;i<=psi->npp;i++,pre++) pre->id=-1;
    for(i=1,pre=psi->mPre+1;i<=psi->nmp;i++,pre++) pre->id=-1;
 
    pri->stHeap=(MemHeap *) New(&vri->heap,pri->psi->stHeapNum*sizeof(MemHeap));
@@ -1792,10 +1890,10 @@ void ProcessObservation(VRecInfo *vri,Observation *obs,int id)
    if (obs->swidth[0]!=pri->psi->hset->swidth[0])
       HError(8571,"ProcessObservation: incompatible number of streams (%d vs %d)",
              obs->swidth[0],pri->psi->hset->swidth[0]);
-   if (pri->psi->mixShared)
+   if (pri->psi->mixShared || pri->psi->streamShared)
       for (j=1;j<=obs->swidth[0];j++)
          if (VectorSize(obs->fv[j])!=pri->psi->hset->swidth[j])
-            HError(8571,"ProcessObservatio: incompatible stream widths for %d (%d vs %d)",
+            HError(8571,"ProcessObservation: incompatible stream widths for %d (%d vs %d)",
                    j,VectorSize(obs->fv[j]),pri->psi->hset->swidth[j]);
 
 

@@ -5015,7 +5015,7 @@ int NumNonZeroSpace(StreamInfo *sti)
    int m, n;
 
    for (m=1,n=0;m<=sti->nMix;m++)
-      if (VectorSize(sti->spdf.cpdf[m].mpdf->mean)!=0)
+      if (VectorSize(sti->spdf.cpdf[m]->mpdf->mean)!=0)
          n++;
     
    return n;

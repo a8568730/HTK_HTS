@@ -19,6 +19,53 @@
 /* File: HSmooth.c: Perform Parameter Smoothing on a HMM Set   */
 /* ----------------------------------------------------------- */
 
+
+/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
+/*            HTS Working Group                                     */
+/*                                                                  */
+/*       Department of Computer Science                             */
+/*       Nagoya Institute of Technology                             */
+/*                and                                               */
+/*   Interdisciplinary Graduate School of Science and Engineering   */
+/*       Tokyo Institute of Technology                              */
+/*          Copyright (c) 2001-2002                                 */
+/*            All Rights Reserved.                                  */
+/*                                                                  */
+/* Permission is hereby granted, free of charge, to use and         */
+/* distribute this software in the form of patch code to HTK and    */
+/* its documentation without restriction, including without         */
+/* limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and/or sell copies of this work, and to  */
+/* permit persons to whom this work is furnished to do so, subject  */
+/* to the following conditions:                                     */
+/*                                                                  */
+/*   1. Once you apply the HTS patch to HTK, you must obey the      */
+/*      license of HTK.                                             */
+/*                                                                  */
+/*   2. The code must retain the above copyright notice, this list  */
+/*      of conditions and the following disclaimer.                 */
+/*                                                                  */
+/*   3. Any modifications must be clearly marked as such.           */
+/*                                                                  */
+/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
+/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/* PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                  */
+/* ---------------------------------------------------------------- */ 
+/*     HSmooth.c modified for HTS-1.0 2002/12/20 by Heiga Zen       */
+/* ---------------------------------------------------------------- */
+
 char *hsmooth_version = "!HVER!HSmooth:   3.2 [CUED 09/12/02]";
 char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.9 2002/12/19 16:37:40 ge204 Exp $";
 
@@ -119,6 +166,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS ver.1.0\n");
    printf("\nUSAGE: HSmooth [options] hmmList AccFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -b f    set convergence epsilon              0.0001\n");
@@ -326,6 +374,7 @@ void MakeWtAccLists()
    WALink *w;
    StateElem *se;
    StreamElem *ste;
+   StreamInfo *sti;
    WtAcc *wa;
    
    NewHMMScan(&hset,&hss);
@@ -334,13 +383,14 @@ void MakeWtAccLists()
       hmm = hss.hmm;
       for (i=2,se = hmm->svec+2; i<hmm->numStates;i++,se++)
          for (s=1,ste = se->info->pdf+1; s<=nStreams; s++,ste++){
+	    sti = ste->info;
             w = &(wtStore[ix][i][s]); n = 0;
             while (*w != NULL){
                ++n; w = &((*w)->next);
             }
-            nMix = (hset.hsKind==TIEDHS) ? hset.tmRecs[s].nMix : ste->nMix;
+            nMix = (hset.hsKind==TIEDHS) ? hset.tmRecs[s].nMix : sti->nMix;
             (*w) = CreateChWtAcc(&wtAccStack, nMix);
-            wa = (WtAcc *)ste->hook;
+            wa = (WtAcc *)sti->hook;
             CopyVector(wa->c,(*w)->c);
             (*w)->occ = wa->occ;
             wa->occ = 0;
@@ -366,7 +416,7 @@ void AttachWtAccLists()
       hmm = hss.hmm;
       for (i=2,se = hmm->svec+2; i<hmm->numStates;i++,se++)
          for (s=1,ste = se->info->pdf+1; s<=nStreams; s++,ste++){
-            ste->hook = wtStore[ix][i][s];
+            ste->info->hook = wtStore[ix][i][s];
             /* Note that this is known and tolerable memory leak */
          }
       ix++;
@@ -454,7 +504,7 @@ void PrintStats(FILE *f, int n, HLink hmm, int numEgs)
    fprintf(f,"%4d %14s %4d ",n,buf,numEgs);
    for (i=2;i<N;i++) {
       si = hmm->svec[i].info;
-      wa = (WtAcc *)((si->pdf+1)->hook);
+      wa = (WtAcc *)si->pdf[1].info->hook;
       fprintf(f," %10f",wa->occ);
    }
    fprintf(f,"\n");
@@ -615,7 +665,7 @@ void CalcWBar(Vector wb, int dBlk, int M)
    
    ZeroVector(wb);
    for (i=1; i<=aSize; i++){
-      wa = (WALink)sSet[i]->hook;
+      wa = (WALink)sSet[i]->info->hook;
       occ += SumWtChain(wa,wb,dBlk,M);
    }
    if (occ==0.0)
@@ -626,14 +676,14 @@ void CalcWBar(Vector wb, int dBlk, int M)
 
 /* CalcWCd: store context dependent weights in wc using all blocks
             of stream ste except the deleted block dBlk */
-void CalcWCd(Vector wc, int dBlk, StreamElem *ste, int M)
+void CalcWCd(Vector wc, int dBlk, StreamInfo *sti, int M)
 {
    WALink wa;
    float occ;
    int i;
    
    ZeroVector(wc);
-   wa = (WALink)ste->hook;
+   wa = (WALink)sti->hook;
    occ = SumWtChain(wa,wc,dBlk,M);
    if (occ==0.0)
       ZeroVector(wc);
@@ -642,12 +692,12 @@ void CalcWCd(Vector wc, int dBlk, StreamElem *ste, int M)
 }
 
 /* SmoothWtAcc: change 1st WtAcc to l*wcd[0] + (1.0-l)*wbar[0] */
-void SmoothWtAcc(StreamElem *ste, float l, int M)
+void SmoothWtAcc(StreamInfo *sti, float l, int M)
 {
    int i;
    WALink wa;
    
-   wa = (WALink)ste->hook;
+   wa = (WALink)sti->hook;
    for (i=1; i<=M; i++)
       wa->c[i] = l*wcd[0][i] + (1.0-l)*wbar[0][i];
    wa->occ = 1.0;
@@ -678,13 +728,13 @@ float D(float l, WALink wa, int M)
 }
 
 /* LambdaOpt: perform binary chop optimisation */
-float LambdaOpt(StreamElem *ste, int M)
+float LambdaOpt(StreamInfo *sti, int M)
 {
    float l=0.0, r=1.0, m=0.5, Dm;
    WALink wa;
    int n;
 
-   wa = (WALink)ste->hook;
+   wa = (WALink)sti->hook;
    if (D(0.0,wa,M) <= 0.0) return 0.0;
    if (D(1.0,wa,M) >= 0.0) return 1.0;
    for (n = 1; n<=maxStep; n++) {
@@ -725,7 +775,7 @@ void Interpolate(void)
                M = hset.tmRecs[s].nMix;
                break;
             case DISCRETEHS:
-               M = sSet[1]->nMix;
+               M = sSet[1]->info->nMix;
                break;
             }
             CalcWBar(wbar[0],0,M);
@@ -733,11 +783,11 @@ void Interpolate(void)
                CalcWBar(wbar[b],b,M);
             for (j=1; j<=aSize; j++){
                ste = sSet[j];
-               CalcWCd(wcd[0],0,ste,M);
+               CalcWCd(wcd[0],0,ste->info,M);
                for (b=1; b<=nBlk; b++)
-                  CalcWCd(wcd[b],b,ste,M);
-               l = LambdaOpt(ste,M);
-               SmoothWtAcc(ste,l,M);
+                  CalcWCd(wcd[b],b,ste->info,M);
+               l = LambdaOpt(ste->info,M);
+               SmoothWtAcc(ste->info,l,M);
                if (trace&T_INT)
                   printf("   Model %s lambda = %f\n",HMMPhysName(&hset,aSet[j]),l);
             }
@@ -838,6 +888,7 @@ void UpdateWeights(HLink hmm)
    WALink wa;
    StateElem *se;
    StreamElem *ste;
+   StreamInfo *sti;
    MLink q;
 
    q=FindMacroStruct(&hset,'h',hmm);
@@ -846,14 +897,15 @@ void UpdateWeights(HLink hmm)
    for (i=2; i<N; i++,se++){
       ste = se->info->pdf+1;
       for (s=1;s<=nStreams; s++,ste++){
-         wa = (WALink)ste->hook;
+         sti = ste->info;
+         wa = (WALink)sti->hook;
          if (wa != NULL) {
             switch(hsKind){
             case TIEDHS:
                M = hset.tmRecs[s].nMix;
                break;
             case DISCRETEHS:
-               M = ste->nMix;
+               M = sti->nMix;
                break;
             }
             occi = wa->occ;
@@ -867,26 +919,26 @@ void UpdateWeights(HLink hmm)
                   }
                   switch (hsKind){
                   case TIEDHS:
-                     ste->spdf.tpdf[m] = (x>MINMIX) ? x : 0;
+                     sti->spdf.tpdf[m] = (x>MINMIX) ? x : 0;
                      break;
                   case DISCRETEHS:
-                     ste->spdf.dpdf[m] = (x>MINMIX) ? DProb2Short(x) :DLOGZERO;
+                     sti->spdf.dpdf[m] = (x>MINMIX) ? DProb2Short(x) :DLOGZERO;
                      break;
                   }
                }
                if (mixWeightFloor>0.0){
                   switch (hsKind){
                   case DISCRETEHS:
-                     FloorDProbs(ste->spdf.dpdf,M,mixWeightFloor);
+                     FloorDProbs(sti->spdf.dpdf,M,mixWeightFloor);
                      break;
                   case TIEDHS:
-                     FloorTMMixes(ste->spdf.tpdf,M,mixWeightFloor);
+                     FloorTMMixes(sti->spdf.tpdf,M,mixWeightFloor);
                      break;
                   }
                }
             }else
                HError(-2427,"UpdateWeights: Model [%s]: no use of mixtures in %d.%d",q->id->name,i,s);
-            ste->hook = NULL;
+            sti->hook = NULL;
          }
       }
    }

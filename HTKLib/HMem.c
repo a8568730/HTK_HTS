@@ -19,6 +19,53 @@
 /*         File: HMem.c:   Memory Management Module            */
 /* ----------------------------------------------------------- */
 
+
+/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
+/*            HTS Working Group                                     */
+/*                                                                  */
+/*       Department of Computer Science                             */
+/*       Nagoya Institute of Technology                             */
+/*                and                                               */
+/*   Interdisciplinary Graduate School of Science and Engineering   */
+/*       Tokyo Institute of Technology                              */
+/*          Copyright (c) 2001-2002                                 */
+/*            All Rights Reserved.                                  */
+/*                                                                  */
+/* Permission is hereby granted, free of charge, to use and         */
+/* distribute this software in the form of patch code to HTK and    */
+/* its documentation without restriction, including without         */
+/* limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and/or sell copies of this work, and to  */
+/* permit persons to whom this work is furnished to do so, subject  */
+/* to the following conditions:                                     */
+/*                                                                  */
+/*   1. Once you apply the HTS patch to HTK, you must obey the      */
+/*      license of HTK.                                             */
+/*                                                                  */
+/*   2. The code must retain the above copyright notice, this list  */
+/*      of conditions and the following disclaimer.                 */
+/*                                                                  */
+/*   3. Any modifications must be clearly marked as such.           */
+/*                                                                  */
+/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
+/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/* PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                  */
+/* ---------------------------------------------------------------- */ 
+/*     HMem.c modified for HTS-1.0 2002/12/20 by Heiga Zen          */
+/* ---------------------------------------------------------------- */
+
 char *hmem_version = "!HVER!HMem:   3.2 [CUED 09/12/02]";
 char *hmem_vc_id = "$Id: HMem.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
 
@@ -376,7 +423,7 @@ void *New(MemHeap *x,size_t size)
       if (trace&T_STK)
          printf("HMem: %s[S] %u bytes at %p allocated\n",x->name,size,q);
       if (x->protectStk) {
-         pp = (Ptr *)((long)q + size - sizeof(Ptr)); /* #### fix this! */
+         pp = (Ptr *)((size_t)q + size - sizeof(Ptr)); /* #### fix this! */
          *pp = q;
       }
       return q;
@@ -674,6 +721,10 @@ size_t MatrixElemSize(int nrows,int ncols)
 {
    return VectorElemSize(ncols) * nrows + (nrows+1)*sizeof(Vector);
 }
+size_t IMatrixElemSize(int nrows,int ncols)
+{
+   return IntVecElemSize(ncols) * nrows + (nrows+1)*sizeof(IntVec);
+}
 size_t DMatrixElemSize(int nrows,int ncols)
 {
    return MRound(DVectorElemSize(ncols) * nrows + (nrows+1)*sizeof(DVector));
@@ -709,6 +760,25 @@ Matrix CreateMatrix(MemHeap *x, int nrows, int ncols)
    for (j=1;j<=nrows; j++, p += vsize) {
       i = (int *) p; *i = ncols;
       m[j] = (Vector) p;
+   }
+   return m;
+}
+/* EXPORT->CreateIMatrix:  Allocate space for integer matrix m[1..nrows][1..ncols] */
+IMatrix CreateIMatrix(MemHeap *x, int nrows, int ncols)
+{
+   size_t vsize;
+   int *i,j;
+   IntVec *m;   
+   char *p;
+   
+   p =(char *)  New(x,MatrixElemSize(nrows,ncols)); 
+   i = (int *)p; *i = nrows;
+   vsize = IntVecElemSize(ncols);
+   m = (IntVec *)p;
+   p += (nrows+1)*sizeof(IntVec);
+   for (j=1;j<=nrows; j++, p += vsize) {
+      i = (int *) p; *i = ncols;
+      m[j] = (IntVec) p;
    }
    return m;
 }
@@ -822,6 +892,24 @@ int NumCols(Matrix m)
    return *ncols;
 }
 
+/* EXPORT->NumIRows: number of rows in matrix m */
+int NumIRows(IMatrix m)
+{
+   int *nrows;
+   
+   nrows = (int *) m;
+   return *nrows;
+}
+
+/* EXPORT->NumCols: number of columns in matrix m */
+int NumICols(IMatrix m)
+{
+   int *ncols;
+   
+   ncols = (int *) m[1];
+   return *ncols;
+}
+
 /* EXPORT->NumDRows: number of rows in double matrix m */
 int NumDRows(DMatrix m)
 {
@@ -851,6 +939,12 @@ int TriMatSize(TriMat m)
 
 /* EXPORT->FreeMatrix: Free space allocated for matrix m */
 void FreeMatrix(MemHeap *x, Matrix m)
+{
+   Dispose(x,m);
+}
+
+/* EXPORT->FreeIMatrix: Free space allocated for matrix m */
+void FreeIMatrix(MemHeap *x, IMatrix m)
 {
    Dispose(x,m);
 }

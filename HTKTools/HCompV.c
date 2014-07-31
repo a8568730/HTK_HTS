@@ -32,6 +32,53 @@
 /*  File: HCompV.c: HMM global mean/variance initialisation    */
 /* ----------------------------------------------------------- */
 
+
+/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
+/*            HTS Working Group                                     */
+/*                                                                  */
+/*       Department of Computer Science                             */
+/*       Nagoya Institute of Technology                             */
+/*                and                                               */
+/*   Interdisciplinary Graduate School of Science and Engineering   */
+/*       Tokyo Institute of Technology                              */
+/*          Copyright (c) 2001-2002                                 */
+/*            All Rights Reserved.                                  */
+/*                                                                  */
+/* Permission is hereby granted, free of charge, to use and         */
+/* distribute this software in the form of patch code to HTK and    */
+/* its documentation without restriction, including without         */
+/* limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and/or sell copies of this work, and to  */
+/* permit persons to whom this work is furnished to do so, subject  */
+/* to the following conditions:                                     */
+/*                                                                  */
+/*   1. Once you apply the HTS patch to HTK, you must obey the      */
+/*      license of HTK.                                             */
+/*                                                                  */
+/*   2. The code must retain the above copyright notice, this list  */
+/*      of conditions and the following disclaimer.                 */
+/*                                                                  */
+/*   3. Any modifications must be clearly marked as such.           */
+/*                                                                  */
+/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
+/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/* PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                  */
+/* ---------------------------------------------------------------- */ 
+/*     HCompV.c modified for HTS-1.0 2002/12/20 by Heiga Zen        */
+/* ---------------------------------------------------------------- */
+
 char *hcompv_version = "!HVER!HCompV:   3.2 [CUED 09/12/02]";
 char *hcompv_vc_id = "$Id: HCompV.c,v 1.11 2002/12/19 16:37:40 ge204 Exp $";
 
@@ -154,6 +201,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS ver.1.0\n");
    printf("\nUSAGE: HCompV [options] [hmmFile] trainFiles...\n" );
    printf(" Option                                       Default\n\n");
    printf(" -c dir  Set output directiry for CMV         none\n");
@@ -168,7 +216,6 @@ void ReportUsage(void)
    printf("\n\n");
 }
 
-
 /* ------------------------ Initialisation ----------------------- */
 
 /* CheckVarianceKind: set fullcNeeded[s] for each non-diag stream s */
@@ -177,15 +224,18 @@ void CheckVarianceKind(void)
    int i,s,m;
    StateElem *se;
    StreamElem *ste;
+   StreamInfo *sti;
    MixtureElem *me;
    
    for (s=1;s<=hset.swidth[0];s++)
       fullcNeeded[s]=FALSE;
    for (i=2,se=hmmLink->svec+2; i < hmmLink->numStates; i++,se++)
-      for (s=1,ste=se->info->pdf+1; s <= hset.swidth[0]; s++,ste++)
-         for (m=1,me = ste->spdf.cpdf+1; m<=ste->nMix; m++, me++)
+      for (s=1,ste=se->info->pdf+1; s <= hset.swidth[0]; s++,ste++) {
+         sti = ste->info;
+         for (m=1,me = sti->spdf.cpdf+1; m<=sti->nMix; m++, me++)
             if (me->mpdf->ckind == FULLC) 
                fullcNeeded[s] = TRUE;
+      }
 }
 
 /* Initialise: load HMMs and create accumulators */
@@ -323,6 +373,7 @@ void SetCovs(void)
    int i,s,m;
    StateElem *se;
    StreamElem *ste;
+   StreamInfo *sti;
    MixtureElem *me;
    MixPDF *mp;
 
@@ -333,8 +384,9 @@ void SetCovs(void)
       printf("Covariances\n");
    }
    for (i=2,se=hmmLink->svec+2; i < hmmLink->numStates; i++,se++)
-      for (s=1,ste=se->info->pdf+1; s <= hset.swidth[0]; s++,ste++)
-         for (m=1,me = ste->spdf.cpdf+1; m<=ste->nMix; m++, me++) {
+      for (s=1,ste=se->info->pdf+1; s <= hset.swidth[0]; s++,ste++) {
+         sti = ste->info;
+         for (m=1,me = sti->spdf.cpdf+1; m<=sti->nMix; m++, me++) {
             mp = me->mpdf;
             if (meanUpdate && !IsSeenV(mp->mean)){      /* meanSum now holds mean */
                CopyVector(accs[s].meanSum,mp->mean); 
@@ -349,7 +401,8 @@ void SetCovs(void)
                   CopyVector(accs[s].fixed.var,mp->cov.var);
                TouchV(mp->cov.var);
             }
-         }
+      }
+   }
    ClearSeenFlags(&hset,CLR_ALL);
 }
 

@@ -32,6 +32,53 @@
 /*      File: HVite.c: recognise or align file or audio        */
 /* ----------------------------------------------------------- */
 
+
+/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
+/*            HTS Working Group                                     */
+/*                                                                  */
+/*       Department of Computer Science                             */
+/*       Nagoya Institute of Technology                             */
+/*                and                                               */
+/*   Interdisciplinary Graduate School of Science and Engineering   */
+/*       Tokyo Institute of Technology                              */
+/*          Copyright (c) 2001-2002                                 */
+/*            All Rights Reserved.                                  */
+/*                                                                  */
+/* Permission is hereby granted, free of charge, to use and         */
+/* distribute this software in the form of patch code to HTK and    */
+/* its documentation without restriction, including without         */
+/* limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and/or sell copies of this work, and to  */
+/* permit persons to whom this work is furnished to do so, subject  */
+/* to the following conditions:                                     */
+/*                                                                  */
+/*   1. Once you apply the HTS patch to HTK, you must obey the      */
+/*      license of HTK.                                             */
+/*                                                                  */
+/*   2. The code must retain the above copyright notice, this list  */
+/*      of conditions and the following disclaimer.                 */
+/*                                                                  */
+/*   3. Any modifications must be clearly marked as such.           */
+/*                                                                  */
+/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
+/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/* PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                  */
+/* ---------------------------------------------------------------- */ 
+/*     HVite.c modified for HTS-1.0 2002/12/25 by Heiga Zen         */
+/* ---------------------------------------------------------------- */
+
 char *hvite_version = "!HVER!HVite:   3.2 [CUED 09/12/02]";
 char *hvite_vc_id = "$Id: HVite.c,v 1.12 2002/12/19 16:37:40 ge204 Exp $";
 
@@ -63,6 +110,7 @@ char *hvite_vc_id = "$Id: HVite.c,v 1.12 2002/12/19 16:37:40 ge204 Exp $";
 
 static int trace = 0;
 Boolean traceHFB = FALSE;        /* pass to HFB to retain top-level tracing */
+Boolean calcDuration = FALSE;    /* duration modeling */
 
 /* -------------------------- Global Variables etc ---------------------- */
 
@@ -175,6 +223,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS ver.1.0\n");
    printf("\nUSAGE: HVite [options] VocabFile HMMList DataFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -a      align from label files               off\n");
@@ -720,7 +769,7 @@ Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam,
    lat=CompleteRecognition(vri,pbinfo.tgtSampRate/10000000.0,&ansHeap);
    
    if (lat==NULL) {
-      if ((trace & T_TOP) && fn != NULL){
+      if ((trace & T_TOP) && fn != NULL) {
          if (restartable)
             printf("No tokens survived to final node of network at beam %.1f\n", currGenBeam);
          else

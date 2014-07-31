@@ -32,6 +32,53 @@
 /*         File: HFB.c: Forward Backward routines module       */
 /* ----------------------------------------------------------- */
 
+
+/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
+/*            HTS Working Group                                     */
+/*                                                                  */
+/*       Department of Computer Science                             */
+/*       Nagoya Institute of Technology                             */
+/*                and                                               */
+/*   Interdisciplinary Graduate School of Science and Engineering   */
+/*       Tokyo Institute of Technology                              */
+/*          Copyright (c) 2001-2002                                 */
+/*            All Rights Reserved.                                  */
+/*                                                                  */
+/* Permission is hereby granted, free of charge, to use and         */
+/* distribute this software in the form of patch code to HTK and    */
+/* its documentation without restriction, including without         */
+/* limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and/or sell copies of this work, and to  */
+/* permit persons to whom this work is furnished to do so, subject  */
+/* to the following conditions:                                     */
+/*                                                                  */
+/*   1. Once you apply the HTS patch to HTK, you must obey the      */
+/*      license of HTK.                                             */
+/*                                                                  */
+/*   2. The code must retain the above copyright notice, this list  */
+/*      of conditions and the following disclaimer.                 */
+/*                                                                  */
+/*   3. Any modifications must be clearly marked as such.           */
+/*                                                                  */
+/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
+/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/* PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                  */
+/* ---------------------------------------------------------------- */ 
+/*     HFB.c modified for HTS-1.0 2002/12/20 by Heiga Zen           */
+/* ---------------------------------------------------------------- */
+
 char *hfb_version = "!HVER!HFB:   3.2 [CUED 09/12/02]";
 char *hfb_vc_id = "$Id: HFB.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
 
@@ -67,6 +114,7 @@ char *hfb_vc_id = "$Id: HFB.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
 static int trace         =  0;
 static int skipstartInit = -1;
 static int skipendInit   = -1;
+extern Boolean calcDuration;
 extern Boolean traceHFB;   /* passed in from HERest -T 1 */
 
 static ConfParam *cParm[MAXGLOBS];      /* config parameters */
@@ -183,7 +231,7 @@ static WtAcc *CreateWtAcc(MemHeap *x, int nMix)
 static void AttachWtTrAccs(HMMSet *hset, MemHeap *x)
 {
    HMMScanState hss;
-   StreamElem *ste;
+   StreamInfo *sti;
    HLink hmm;
   
    NewHMMScan(hset,&hss);
@@ -196,8 +244,8 @@ static void AttachWtTrAccs(HMMSet *hset, MemHeap *x)
       }
       while (GoNextState(&hss,TRUE)) {
          while (GoNextStream(&hss,TRUE)) {
-            ste = hss.ste;
-            ste->hook = CreateWtAcc(x,hss.M);
+            sti = hss.sti;
+            sti->hook = CreateWtAcc(x,hss.M);
          }
       }
    } while (GoNextHMM(&hss));
@@ -338,16 +386,20 @@ static void InitPruneStats(AlphaBeta *ab)
 /* CreateTraceOcc: create the array of acc occ counts */
 static void CreateTraceOcc(AlphaBeta *ab, UttInfo *utt)
 {
-   int q;
-   Vector *occa;
+   int t,q;
+   Vector **occa;
 
-   printf("\n");
-   ab->occa=(Vector *)New(&ab->abMem, utt->Q*sizeof(Vector));
-   occa = ab->occa;
+   occa=(Vector **)New(&ab->abMem, utt->T*sizeof(Vector *));
    --occa;
-   for (q=1;q<=utt->Q;q++){
-      occa[q] = CreateVector(&ab->abMem, ab->al_qList[q]->numStates);
-      ZeroVector(occa[q]);
+   ab->occa = occa;
+   for (t=1;t<=utt->T;t++){
+      ab->occa[t]=(Vector *)New(&ab->abMem, utt->Q*sizeof(Vector));
+      occa[t] = ab->occa[t];
+      --occa[t];
+      for (q=1;q<=utt->Q;q++){
+         occa[t][q] = CreateVector(&ab->abMem, ab->al_qList[q]->numStates);
+         ZeroVector(occa[t][q]);
+      }
    }
 }
 
@@ -361,7 +413,7 @@ static void TraceOcc(AlphaBeta *ab, UttInfo *utt, int t)
 
    printf("Accumulated Occ Counts at time %d\n",t);
    for (q=1; q<=utt->Q; q++){
-      occaq = ab->occa[q]; hmm = ab->al_qList[q]; Nq = hmm->numStates;
+      occaq = ab->occa[t][q]; hmm = ab->al_qList[q]; Nq = hmm->numStates;
       max = 0.0;        /* ignore zero vectors */
       for (i=1;i<=Nq;i++)
          if (occaq[i]>max) max = occaq[i];
@@ -378,10 +430,11 @@ static void SetOcct(HLink hmm, int q, Vector occt, Vector *occa,
                     DVector aqt, DVector bqt, DVector bq1t, LogDouble pr)
 {
    int i,N;
-   double x;
+   double x,y;
    Vector occaq;
    
    N=hmm->numStates;
+   y=0;
    for (i=1;i<=N;i++) {
       x = aqt[i]+bqt[i];
       if (i==1 && bq1t != NULL && hmm->transP[1][N] > LSMALL)
@@ -389,7 +442,7 @@ static void SetOcct(HLink hmm, int q, Vector occt, Vector *occa,
       x -= pr;
       occt[i] = (x>MINEARG) ? exp(x) : 0.0;
    }
-   if (trace&T_OCC) {
+   if (trace&T_OCC || calcDuration) {
       occaq = occa[q];
       for (i=1;i<=N;i++) occaq[i] += occt[i];
    }
@@ -487,12 +540,13 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
 {
    int q,qt;
    LLink lab;
-   MLink macroName;
+   MLink macroName,*qLink;
    TrAcc *ta;
+   HLink *qList;
    LabId  *qIds;
    short *qDms;
    HLink *al_qList, *up_qList;
-   HMMSet *al_hset, *up_hset;
+   HMMSet *al_hset, *up_hset;  
 
    al_hset=fbInfo->al_hset; up_hset=fbInfo->up_hset;
    /* init logical hmm list */
@@ -560,11 +614,11 @@ static void CreateAlpha(AlphaBeta *ab, HMMSet *hset, int Q)
    alphat = (DVector *)New(&ab->abMem, Q*sizeof(DVector));
    --alphat;
    for (q=1;q<=Q;q++)
-       alphat[q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
+      alphat[q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
    alphat1=(DVector *)New(&ab->abMem, Q*sizeof(DVector));
    --alphat1;
    for (q=1;q<=Q;q++)
-       alphat1[q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
+      alphat1[q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
 
    ab->occt = CreateVector(&ab->abMem,MaxStatesInSet(hset));
    ab->alphat  = alphat;
@@ -793,7 +847,6 @@ static DVector *CreateBetaQ(MemHeap *x, int qLo,int qHi,int Q)
    return(v);
 }
   
-
 /* CreateOtprob: create T pointer arrays for Otprob */
 static void CreateOtprob(AlphaBeta *ab, int T)
 {
@@ -851,20 +904,20 @@ static LogFloat ShStrP(HMMSet *hset, Vector v, int t, HLink hmm,
                        int state, int stream)
 {
    WtAcc *wa;
-   StreamElem *ste;
+   StreamInfo *sti;
    MixtureElem *me;
    MixPDF *mp;
    int m,M;
    PreComp *pMix;
    LogFloat x,mixp,wt;
    
-   ste = hmm->svec[state].info->pdf+stream;
-   wa = (WtAcc *)ste->hook;
+   sti = hmm->svec[state].info->pdf[stream].info;
+   wa = (WtAcc *)sti->hook;
    if (wa->time==t)           /* seen this state before */
       x = wa->prob;
    else {
-      M = ste->nMix;
-      me = ste->spdf.cpdf+1;
+      M = sti->nMix;
+      me = sti->spdf.cpdf+1;
       if (M==1){                 /* Single Mix Case */
          mp = me->mpdf;
          pMix = (PreComp *)mp->hook;
@@ -904,9 +957,11 @@ static void Setotprob(AlphaBeta *ab, HMMSet *hset, ParmBuf pbuf,
 {
    int q,j,Nq,s;
    float **outprob, *outprobj, ****otprob;
-   StreamElem *ste;
    HLink hmm;
    LogFloat x,sum;
+   StateInfo *si;
+   StreamElem *ste;
+   StreamInfo *sti;
    PruneInfo *p;
 
    p = ab->pInfo;
@@ -926,20 +981,26 @@ static void Setotprob(AlphaBeta *ab, HMMSet *hset, ParmBuf pbuf,
          {
             outprob = otprob[t][q] = NewOtprobVec(&ab->abMem,Nq,S);
             for (j=2;j<Nq;j++){
-               ste=hmm->svec[j].info->pdf+1; sum = 0.0;
+               si=hmm->svec[j].info;
+               ste=si->pdf+1; sum = 0.0;
                outprobj = outprob[j];
                for (s=1;s<=S;s++,ste++){
+                  sti = ste->info;
                   switch (hset->hsKind){
                   case TIEDHS:  /* SOutP deals with tied mix calculation */
                   case DISCRETEHS:
-                  case PLAINHS:  x = SOutP(hset,s,&ot,ste);     break;
-                  case SHAREDHS: x = ShStrP(hset,ot.fv[s],t,hmm,j,s); break;
+                  case PLAINHS:  x = SOutP(hset,s,&ot,sti);     break;
+                  case SHAREDHS: 
+                                 if (hset->msdflag[s])
+                                    x = SOutP(hset,s,&ot,sti);
+                                 else
+                                    x = ShStrP(hset,ot.fv[s],t,hmm,j,s); break;
                   default:       x = LZERO; 
                   }
                   if (S==1)
                      outprobj[0] = x;
                   else{
-                     outprobj[s] = x; sum += x;
+                     outprobj[s] = si->weights[s]*x; sum += outprobj[s];
                   }
                }
                if (S>1){
@@ -1181,8 +1242,8 @@ static void CheckData(HMMSet *hset, char *fn, BufferInfo *info,
              fn,info->tgtVecSize,hset->vecSize);
    if (!twoDataFiles){
       if (info->tgtPK != hset->pkind)
-          HError(7350,"CheckData: Parameterisation in %s is incompatible with hset",
-                 fn);
+         HError(7350,"CheckData: Parameterisation in %s is incompatible with hset",
+                fn);
    }
 }
 
@@ -1315,6 +1376,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
    HSetKind hsKind;
    AlphaBeta *ab;
    StreamElem *ste;
+   StreamInfo *sti;
    MixtureElem *me;
    MixPDF *mp;
    MuAcc *ma;
@@ -1358,6 +1420,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
       ste = hmm->svec[j].info->pdf+1;
       outprob = ab->otprob[t][q][j];
       for (s=1;s<=S;s++,ste++){
+         sti = ste->info;
          /* Get observation vector for this state/stream */
          vSize = hset->swidth[s];
          otvs = ot.fv[s];
@@ -1374,29 +1437,30 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
             break;
          case PLAINHS:
          case SHAREDHS:
-            M = ste->nMix;
+            M = sti->nMix;
             mmix = (M>1);
             break;
          }
          /* update weight occupation count */
-         wa = (WtAcc *) ste->hook; steSumLr = 0.0;
-
-         if (fbInfo->twoModels) { /* component probs of update hmm */
+         wa = (WtAcc *) sti->hook; steSumLr = 0.0;
+      
+        if (fbInfo->twoModels) { /* component probs of update hmm */
              norm = LZERO;
              for (mx=1; mx<=M; mx++) {
-                 me = ste->spdf.cpdf+mx;	mp=me->mpdf;
+                 me = sti->spdf.cpdf+mx; 
+                 mp=me->mpdf;
                  wght = me->weight;
                  comp_prob[mx]=log(wght)+MOutP(otvs,mp);
                  norm = LAdd(norm,comp_prob[mx]);
              }
          }
-      
-         for (mx=1;mx<=M;mx++) { 
+
+         for (mx=1;mx<=M;mx++) {
             /* process mixtures */
             switch (hsKind){    /* Get wght and mpdf */
             case TIEDHS:
                m=tmRec->probs[mx].index;
-               wght=ste->spdf.tpdf[m];
+               wght=sti->spdf.tpdf[m];
           
                mp=tmRec->mixes[m];
                break;
@@ -1411,9 +1475,10 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
             case PLAINHS:
             case SHAREDHS:
                m = mx;
-               me = ste->spdf.cpdf+m;
+               me = sti->spdf.cpdf+m;
                wght = MixWeight(hset,me->weight);
                mp=me->mpdf;
+               if (hset->msdflag[s]) vSize = VectorSize(mp->mean);
                break;
             }
             if (wght>MINMIX){
@@ -1549,7 +1614,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
    }
 
    if (fbInfo->twoModels)
-       FreeVector(&gstack,comp_prob);
+      FreeVector(&gstack,comp_prob);
 }
 
 /* -------------------- Top Level of F-B Updating ---------------- */
@@ -1571,8 +1636,9 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
    ab = fbInfo->ab;
    CreateAlpha(ab,fbInfo->al_hset,utt->Q); /* al_hset may be idential to up_hset */
    InitAlpha(ab,&start,&end,utt->Q,fbInfo->skipstart,fbInfo->skipend);
+
    ab->occa = NULL;
-   if (trace&T_OCC) 
+   if (trace&T_OCC || calcDuration) 
       CreateTraceOcc(ab,utt);
    for (q=1;q<=utt->Q;q++){             /* inc access counters */
       up_hmm = ab->up_qList[q];
@@ -1603,7 +1669,10 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
          bqt1 = (t==utt->T) ? NULL:ab->beta[t+1][q];
          aqt1 = (t==1)      ? NULL:ab->alphat1[q];
          bq1t = (q==utt->Q) ? NULL:ab->beta[t][q+1];
-         SetOcct(al_hmm,q,ab->occt,ab->occa,aqt,bqt,bq1t,utt->pr);
+         if (trace&T_OCC || calcDuration)
+            SetOcct(al_hmm,q,ab->occt,ab->occa[t],aqt,bqt,bq1t,utt->pr);
+         else
+            SetOcct(al_hmm,q,ab->occt,NULL,aqt,bqt,bq1t,utt->pr);
          /* accumulate the statistics */
          if (fbInfo->uFlags&(UPMEANS|UPVARS|UPMIXES|UPADAPT))
             UpMixParms(fbInfo,q,up_hmm,utt->ot,utt->ot2,t,aqt,aqt1,bqt,
@@ -1697,7 +1766,6 @@ void InitUttObservations(UttInfo *utt, HMMSet *al_hset,
    if (utt->twoDataFiles)
       if(SetChannel("HPARM1")<SUCCESS)
          HError(7350,"HFB: Channel parameters invalid");
-
    GetBufferInfo(utt->pbuf,&info);
    if (utt->twoDataFiles){
       if(SetChannel("HPARM2")<SUCCESS)
@@ -1709,30 +1777,152 @@ void InitUttObservations(UttInfo *utt, HMMSet *al_hset,
    utt->ot = MakeObservation(&gstack,al_hset->swidth,info.tgtPK,
                              al_hset->hsKind==DISCRETEHS,eSep);
    if (utt->twoDataFiles)
-       utt->ot2 = MakeObservation(&gstack,al_hset->swidth,info2.tgtPK,
-                                  al_hset->hsKind==DISCRETEHS,eSep);
-   
-   if (al_hset->hsKind==DISCRETEHS){ 
+      utt->ot2 = MakeObservation(&gstack,al_hset->swidth,info2.tgtPK,
+                                 al_hset->hsKind==DISCRETEHS,eSep);
+
+
+   if (al_hset->hsKind==DISCRETEHS){
       for (i=0; i<utt->T; i++){
          ReadAsTable(utt->pbuf,i,&utt->ot);
          for (s=1; s<=utt->S; s++){
-             if( (utt->ot.vq[s] < 1) || (utt->ot.vq[s] > maxMixInS[s]))
-                 HError(7350,"LoadFile: Discrete data value [ %d ] out of range in seam [ %d ] in file %s",
-                        utt->ot.vq[s],s,datafn);
+            if( (utt->ot.vq[s] < 1) || (utt->ot.vq[s] > maxMixInS[s]))
+               HError(7350,"LoadFile: Discrete data value [ %d ] out of range in stream [ %d ] in file %s",
+                      utt->ot.vq[s],s,datafn);
          }
       }
    }
    
 }
 
+/* AccDuration: accumulate factors of duration distributions */
+void AccDuration(FBInfo *fbInfo, UttInfo *utt)
+{
+   int i,j,t,t0,t1,Nq,SumNq = 0;
+   double x,x0,Sumx;
+   DAcc *acc;
+   HLink hmm;
+   MLink mac;
+   AlphaBeta *ab;
+   short *qHi,*qLo;
+   HMMSet *hset;
+   Vector **occa;
+
+   hset = fbInfo->al_hset;
+   ab = fbInfo->ab;
+   occa = ab->occa;
+   qHi = ab->pInfo->qHi;
+   qLo = ab->pInfo->qLo;
+
+   for (i=1;i<=utt->Q;i++) {
+      hmm = ab->al_qList[i];
+      Nq = hmm->numStates;
+      if ((mac=FindMacroStruct(hset,'h',hmm))==NULL)
+         HError(7270,"AccDuration: Cannot find hmm definition");
+
+      if (trace&T_OPT){
+         printf("Now model is %s.\n",mac->id->name);
+         fflush(stdout);
+      }
+        
+      /* Create Starage Space for duration distribution */
+      if (mac->hook==NULL){ 
+         acc = (DAcc *)New(hset->hmem,(Nq-2)*sizeof(DAcc)); 
+         acc -= 2; 
+         for (j=2;j<Nq;j++) 
+            acc[j].sqr = acc[j].sum = acc[j].occ = 0; 
+         mac->hook = acc; 
+      } else acc = mac->hook; 
+
+      for (j=2;j<Nq;j++) { 
+         SumNq++; 
+         for (t0=SumNq;t0<=utt->T;t0++)  
+            if (qLo[t0]<=i && i<=qHi[t0]) { 
+               if (t0 == 1) x0 = 1; 
+               else if (qHi[t0-1]<i) x0 = 0; 
+               else x0 = 1-occa[t0-1][i][j]; 
+
+               Sumx = 1; 
+               for (t1=t0;t1<=utt->T;t1++) { 
+                  if (Sumx<=0) break; 
+                  if (qLo[t1]<=i && i<=qHi[t1]){ 
+                     if (t1==utt->T) x = x0; 
+                     else if(qLo[t1+1] > i) x = 0; 
+                     else x = x0*(1-occa[t1+1][i][j]); 
+                     Sumx *= occa[t1][i][j]; 
+                     x *= Sumx; 
+                     acc[j].sqr += x*(t1-t0+1)*(t1-t0+1); 
+                     acc[j].sum += x*(t1-t0+1); 
+                     acc[j].occ += x; 
+                  } else break; 
+               } 
+            } 
+      } 
+   } 
+} 
+
+/* SaveDuration: save duration distribution */ 
+void SaveDuration(FBInfo *fbInfo, char *durfn, float vfloor, DurKind dkind) 
+{ 
+   int h,i,j,Nq; 
+   double mean,var; 
+   FILE *fp;
+   HMMSet *hset;
+   HLink hmm;
+   MLink mac;
+   DAcc *acc;
+   Boolean init=TRUE;
+
+   hset = fbInfo->al_hset;
+
+   if ((fp=fopen(durfn,"w")) == NULL)
+      HError(7360,"SaveDuration: Can not open duration model file %s.\n", durfn);
+
+   for (h=0;h<MACHASHSIZE;h++)
+      for (mac = hset->mtab[h];mac != NULL;mac = mac->next)
+         if (mac->type=='h'){
+            hmm = mac->structure;
+            acc = mac->hook;                
+            Nq  = hmm->numStates;
+
+            if (init){
+               fprintf(fp,"~o\n<VECSIZE> %d<GEND><DIAGC><USER>\n",Nq-2);
+               fprintf(fp,"~t \"trP_1\"\n<TRANSP> 3\n");
+               fprintf(fp,"0 1 0\n0 0 1\n0 0 0\n");
+               init=FALSE;
+            }
+            if (acc!=NULL){
+               fprintf(fp,"~h %s\n",mac->id->name);
+               fprintf(fp,"<BEGINHMM>\n<NUMSTATES> 3\n<STATE> 2\n");
+               fprintf(fp,"<MEAN> %d\n",Nq-2);
+               for (i=2;i<Nq;i++){
+                  if (acc[i].occ==0) mean = 0;
+                  else mean = acc[i].sum/acc[i].occ;
+                  fprintf(fp,"%e ",mean);
+               }
+               fprintf(fp,"\n<VARIANCE> %d\n",Nq-2);
+               for (i=2;i<Nq;i++){
+                  if (acc[i].occ==0) var = vfloor;
+                  else var = (acc[i].sqr-acc[i].sum*acc[i].sum
+                             /acc[i].occ)/acc[i].occ;
+                  if (var<vfloor) var = vfloor;
+                     fprintf(fp,"%e ",var);
+               }
+               fprintf(fp,"\n~t \"trP_1\"\n<ENDHMM>\n");
+            }
+         }
+
+   fclose(fp);
+}
 
 /* FBFile: apply forward-backward to given utterance */
 Boolean FBFile(FBInfo *fbInfo, UttInfo *utt, char * datafn)
 {
    Boolean success;
 
-   if ((success = StepBack(fbInfo,utt,datafn)))
+   if ((success = StepBack(fbInfo,utt,datafn))) {
       StepForward(fbInfo,utt);
+      if (calcDuration) AccDuration(fbInfo,utt);
+   }
 
    ResetStacks(fbInfo->ab);
 

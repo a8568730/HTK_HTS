@@ -32,6 +32,53 @@
 /*         File: HModel.h  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
+
+/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
+/*            HTS Working Group                                     */
+/*                                                                  */
+/*       Department of Computer Science                             */
+/*       Nagoya Institute of Technology                             */
+/*                and                                               */
+/*   Interdisciplinary Graduate School of Science and Engineering   */
+/*       Tokyo Institute of Technology                              */
+/*          Copyright (c) 2001-2002                                 */
+/*            All Rights Reserved.                                  */
+/*                                                                  */
+/* Permission is hereby granted, free of charge, to use and         */
+/* distribute this software in the form of patch code to HTK and    */
+/* its documentation without restriction, including without         */
+/* limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and/or sell copies of this work, and to  */
+/* permit persons to whom this work is furnished to do so, subject  */
+/* to the following conditions:                                     */
+/*                                                                  */
+/*   1. Once you apply the HTS patch to HTK, you must obey the      */
+/*      license of HTK.                                             */
+/*                                                                  */
+/*   2. The code must retain the above copyright notice, this list  */
+/*      of conditions and the following disclaimer.                 */
+/*                                                                  */
+/*   3. Any modifications must be clearly marked as such.           */
+/*                                                                  */
+/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
+/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/* PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                  */
+/* ---------------------------------------------------------------- */ 
+/*     HModel.h modified for HTS-1.0 2002/12/20 by Heiga Zen        */
+/* ---------------------------------------------------------------- */
+
 /* !HVER!HModel:   3.2 [CUED 09/12/02] */
 
 #ifndef _HMODEL_H_
@@ -75,7 +122,7 @@ typedef struct _MMFInfo{
 /* -------------------- HMM Definition ----------------------- */
 
 
-enum _DurKind {NULLD, POISSOND, GAMMAD, RELD, GEND};
+enum _DurKind {NULLD, POISSOND, GAMMAD, RELD, GEND, GAUSSD};
 typedef enum _DurKind DurKind;
 
 enum _HSetKind {PLAINHS, SHAREDHS, TIEDHS, DISCRETEHS};
@@ -119,9 +166,16 @@ typedef struct {        /* A Tied Mixture "Codebook" */
 
 typedef struct {        /* 1 of these per stream */
    int nMix;            /* num mixtures in this stream */
+   short stream;        /* position of stream of this stream info */
    MixtureVector spdf;  /* Mixture Vector */
+   int pIdx;            /* Strean index */
+   int nUse;            /* usage counter */
    Ptr hook;            /* general hook */
-}StreamElem;
+}StreamInfo;
+
+typedef struct {        /* 1 of these per stream */
+   StreamInfo *info;    /* information for this stream */
+} StreamElem;
 
 typedef struct {
    SVector weights;     /* vector of stream weights */
@@ -192,6 +246,7 @@ typedef struct _MacroDef{
    short fidx;             /* idx of MMF file (0 = SMF) */
    LabId id;               /* name of macro */
    Ptr structure;          /* -> shared structure or HMM Def */
+   Ptr hook;               /* general hook */
 } MacroDef;
 
 typedef struct _PtrMap {   /* used for finding macros via ptr's */
@@ -217,6 +272,7 @@ typedef struct _HMMSet{
    Boolean optSet;         /* true if global options have been set */
    short vecSize;          /* dimension of observation vectors */
    short swidth[SMAX];     /* [0]=num streams,[i]=width of stream i */
+   short msdflag[SMAX];    /* flag for multi-space probability density */
    ParmKind pkind;         /* kind of obs vector components */
    DurKind dkind;          /* kind of duration model (model or state) */
    CovKind ckind;          /* cov kind - only global in V1.X */
@@ -224,12 +280,31 @@ typedef struct _HMMSet{
    TMixRec tmRecs[SMAX];   /* array[1..S]of tied mixture record */
    int numStates;          /* Number of states in HMMSet */
    int numSharedStates;    /* Number of shared states in HMMSet */
+   int numStreams;         /* Number of streams in HMMSet */
+   int numSharedStreams;   /* Number of shared streams in HMMSet */
    int numMix;             /* Number of mixture components in HMMSet */
    int numSharedMix;       /* Number of shared mixtures in HMMSet */
    int numTransP;          /* Number of distinct transition matrices */
    int ckUsage[NUMCKIND];  /* Number of components using given ckind */
    InputXForm *xf;         /* Input transform of HMMSet */
 } HMMSet;
+
+/* ---------------------- MSD Infomation ----------------------- */
+
+/* Multi-Space probability Density information */
+typedef struct _SpaceInfo {
+   int order;                  /* order of space */
+   int count;                  /* number of spaces with same order*/
+   IntVec sindex;              /* space index */
+   struct _SpaceInfo *next;            /* link to next SpaceInfo */
+} SpaceInfo;
+
+typedef struct _MSDInfo {
+   int nSpace;                 /* number of space (= Mixture) */
+   int nKindS;                 /* number of kind of space */
+   IntVec sorder;              /* order of space sorder[1..nSpace] */
+   SpaceInfo *next;            /* link to head SpaceInfo */
+} MSDInfo;
 
 /* --------------------------- Initialisation ---------------------- */
 
@@ -461,7 +536,7 @@ LogFloat POutP(HMMSet *hset, Observation *x, StateInfo *si);
    state of given model
 */
 
-LogFloat SOutP(HMMSet *hset, int s, Observation *x, StreamElem *se);
+LogFloat SOutP(HMMSet *hset, int s, Observation *x, StreamInfo *sti);
 /*
    Return Stream log output prob of stream s of observation x
 */
@@ -502,6 +577,28 @@ void FixAllGConsts(HMMSet *hset);
    Sets all gConst values in all HMMs in set
 */
 
+/* ------------- for Multi-Space probability Density ------------------ */
+
+MSDInfo ***CreateMSDInfo(MemHeap *mem, HLink hmm);
+/*
+   Create MSD infomation of each stream
+*/
+
+int SpaceOrder(Vector vec);
+/*
+   Count order of Vector which is excepted ignVal
+*/
+
+int IncludeSpace(MSDInfo *msdInfo, int order);
+/*
+   Search space in MSD information
+*/
+
+int NumNonZeroSpace(StreamInfo *sti);
+/*
+   NumNonZeroSpace: Return the number of space which order is not zero 
+*/
+ 
 #ifdef __cplusplus
 }
 #endif

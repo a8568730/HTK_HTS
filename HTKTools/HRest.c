@@ -32,6 +32,53 @@
 /*         File: HRest.c: HMM initialisation program           */
 /* ----------------------------------------------------------- */
 
+
+/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
+/*            HTS Working Group                                     */
+/*                                                                  */
+/*       Department of Computer Science                             */
+/*       Nagoya Institute of Technology                             */
+/*                and                                               */
+/*   Interdisciplinary Graduate School of Science and Engineering   */
+/*       Tokyo Institute of Technology                              */
+/*          Copyright (c) 2001-2002                                 */
+/*            All Rights Reserved.                                  */
+/*                                                                  */
+/* Permission is hereby granted, free of charge, to use and         */
+/* distribute this software in the form of patch code to HTK and    */
+/* its documentation without restriction, including without         */
+/* limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and/or sell copies of this work, and to  */
+/* permit persons to whom this work is furnished to do so, subject  */
+/* to the following conditions:                                     */
+/*                                                                  */
+/*   1. Once you apply the HTS patch to HTK, you must obey the      */
+/*      license of HTK.                                             */
+/*                                                                  */
+/*   2. The code must retain the above copyright notice, this list  */
+/*      of conditions and the following disclaimer.                 */
+/*                                                                  */
+/*   3. Any modifications must be clearly marked as such.           */
+/*                                                                  */
+/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
+/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/* PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                  */
+/* ---------------------------------------------------------------- */ 
+/*     HRest.c modified for HTS-1.0 2002/12/20 by Heiga Zen         */
+/* ---------------------------------------------------------------- */
+
 char *hrest_version = "!HVER!HRest:   3.2 [CUED 09/12/02]";
 char *hrest_vc_id = "$Id: HRest.c,v 1.9 2002/12/19 16:37:40 ge204 Exp $";
 
@@ -154,6 +201,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS ver.1.0\n");
    printf("\nUSAGE: HRest [options] hmmFile trainFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -e f    Set convergence factor epsilon       1.0E-4\n");
@@ -499,8 +547,7 @@ void LoadFile(char *fn)
             segEnIdx  = (long) (p->end/info.tgtSampRate);
             if (segEnIdx >= ObsInBuffer(pbuf)) 
                segEnIdx = ObsInBuffer(pbuf)-1;
-            if (((segEnIdx - segStIdx + 1 >= nStates-2) || !segReject) 
-		&& (segStIdx <= segEnIdx)) {	/* skip short segments */
+            if ((segEnIdx - segStIdx + 1 >= nStates-2) || !segReject) {
                LoadSegment(segStore, p->start, p->end, pbuf);
                if (trace&T_LD1)
                   printf("  loading seg %s %f[%ld]->%f[%ld]\n",segId->name,
@@ -558,7 +605,8 @@ void ShowSegNum(int seg)
 void SetOutP(int seg)
 {
    int i,t,m,mx,s,nMix;
-   StreamElem *se;
+   StreamElem *ste;
+   StreamInfo *sti;
    MixtureElem *me;
    StateInfo *si;
    Matrix mixp;
@@ -578,10 +626,11 @@ void SetOutP(int seg)
          for (i=2;i<nStates;i++) {
             prob = 0.0;
             si = hmm->svec[i].info;
-            se = si->pdf+1; 
+            ste = si->pdf+1; 
             mixp = mixoutp[i][t];
             if (nStreams>1) strp = stroutp[t][i];
-            for (s=1;s<=nStreams;s++,se++){
+            for (s=1;s<=nStreams;s++,ste++){
+               sti = ste->info;
                switch (hsKind){         /* Get nMix */
                case TIEDHS:
                   tmRec = &(hset.tmRecs[s]);
@@ -589,7 +638,7 @@ void SetOutP(int seg)
                   break;
                case PLAINHS:
                case SHAREDHS:
-                  nMix = se->nMix;
+                  nMix = sti->nMix;
                   break;
                }
                streamP = LZERO;
@@ -597,12 +646,12 @@ void SetOutP(int seg)
                   m=(hsKind==TIEDHS)?tmRec->probs[mx].index:mx;
                   switch (hsKind){      /* Get wght and mpdf */
                   case TIEDHS:
-                     wght=se->spdf.tpdf[m];
+                     wght=sti->spdf.tpdf[m];
                      mpdf=tmRec->mixes[m];
                      break;
                   case PLAINHS:
                   case SHAREDHS:
-                     me = se->spdf.cpdf+m;
+                     me = sti->spdf.cpdf+m;
                      wght=me->weight;
                      mpdf=me->mpdf;
                      break;
@@ -635,8 +684,8 @@ void SetOutP(int seg)
                      mixp[s][m]=LZERO;
                }               
                if (nStreams>1)
-                  strp[s]=streamP;
-               prob += streamP; /* note stream weights ignored */
+                  strp[s]=si->weights[s]*streamP;
+               prob += si->weights[s]*streamP; /* note stream weights ignored */
             }   
             outprob[i][t]=prob;
          }
@@ -645,21 +694,22 @@ void SetOutP(int seg)
             for (i=2;i<nStates;i++) {
                prob = 0.0;
                si = hmm->svec[i].info;
-               se = si->pdf+1;
+               ste = si->pdf+1;
                strp = stroutp[t][i];
-               for (s=1;s<=nStreams;s++,se++){
-                  streamP = SOutP(&hset,s,&obs,se);
-                  strp[s] = streamP;
-                  prob += streamP; /* note stream weights ignored */
+               for (s=1;s<=nStreams;s++,ste++){
+                  sti = ste->info;
+                  streamP = SOutP(&hset,s,&obs,sti);
+                  strp[s] = si->weights[s]*streamP;
+                  prob += si->weights[s]*streamP; /* note stream weights ignored */
                }
                outprob[i][t]=prob;
             }
          } else                 /* Single Mixture - Single Stream */
             for (i=2;i<nStates;i++){
                si = hmm->svec[i].info;
-               se = si->pdf+1;
+               ste = si->pdf+1;
                if (hsKind==DISCRETEHS)
-                  outprob[i][t]=SOutP(&hset,1,&obs,se);
+                  outprob[i][t]=SOutP(&hset,1,&obs,ste->info);
                else
                   outprob[i][t]=OutP(&obs,hmm,i);
             }
@@ -840,7 +890,7 @@ void UpTranCounts(LogDouble pr,int seg)
 }
 
 /* UpStreamCounts: update mean, cov & mixweight counts for given stream */
-void UpStreamCounts(int j, int s, StreamElem *se, int vSize, LogDouble pr, int seg,
+void UpStreamCounts(int j, int s, StreamInfo *sti, int vSize, LogDouble pr, int seg,
                     DVector alphj, DVector betaj)
 {
    int i,m,nMix,k,l,t,ss,idx;
@@ -858,7 +908,7 @@ void UpStreamCounts(int j, int s, StreamElem *se, int vSize, LogDouble pr, int s
    TMixRec *tmRec = NULL;
    float wght;
    
-   wa = (WtAcc *)se->hook;
+   wa = (WtAcc *)sti->hook;
    switch (hsKind){       /* Get nMix */
    case TIEDHS:
       tmRec = &(hset.tmRecs[s]);
@@ -866,7 +916,7 @@ void UpStreamCounts(int j, int s, StreamElem *se, int vSize, LogDouble pr, int s
       break;
    case PLAINHS:
    case SHAREDHS:
-      nMix = se->nMix;
+      nMix = sti->nMix;
       break;      
    case DISCRETEHS:
       nMix = 1;                /* Only one code selected per observation */
@@ -876,7 +926,7 @@ void UpStreamCounts(int j, int s, StreamElem *se, int vSize, LogDouble pr, int s
    for (m=1; m<=nMix; m++) {
       switch (hsKind){            /* Get mpdf, wght */
       case TIEDHS:               
-         wght=se->spdf.tpdf[m];
+         wght=sti->spdf.tpdf[m];
          mpdf=tmRec->mixes[m];
          break;
       case DISCRETEHS:
@@ -885,9 +935,10 @@ void UpStreamCounts(int j, int s, StreamElem *se, int vSize, LogDouble pr, int s
          break;
       case PLAINHS:
       case SHAREDHS:
-         me = se->spdf.cpdf+m;
+         me = sti->spdf.cpdf+m;
          wght=me->weight;
          mpdf=me->mpdf;
+	 if(hset.msdflag[s]) vSize = VectorSize(mpdf->mean);
          break;
       }
       if (hsKind!=DISCRETEHS){
@@ -990,14 +1041,14 @@ void UpPDFCounts(LogDouble pr, int seg)
 {
    int j,s;
    StateInfo *si;
-   StreamElem *se;
+   StreamElem *ste;
    DVector alj,betj;
 
    for (j=2; j<nStates; j++) {
       si = hmm->svec[j].info;
       alj = alpha[j]; betj = beta[j];
-      for (s=1,se = si->pdf+1; s<=nStreams; s++,se++)
-         UpStreamCounts(j,s,se,hset.swidth[s],pr,seg,alj,betj);
+      for (s=1,ste = si->pdf+1; s<=nStreams; s++,ste++)
+         UpStreamCounts(j,s,ste->info,hset.swidth[s],pr,seg,alj,betj);
    }
 }
 
@@ -1123,14 +1174,14 @@ void FloorDProbs(ShortVec mixes, int M, float floor)
 }
 
 /* RestMixWeights: reestimate the mixture weights */
-void RestMixWeights(int state, int s, StreamElem *se)
+void RestMixWeights(int state, int s, StreamInfo *sti)
 {
    WtAcc *wa;
    int m,M;
    float x;
    MixtureElem *me;
    
-   wa = (WtAcc *)se->hook;
+   wa = (WtAcc *)sti->hook;
    if (wa->occ == 0.0)
       HError(2222,"RestMixWeights: Zero weight occupation count");
    switch (hsKind){
@@ -1140,7 +1191,7 @@ void RestMixWeights(int state, int s, StreamElem *se)
    case PLAINHS:
    case SHAREDHS:
    case DISCRETEHS:
-      M=se->nMix;
+      M=sti->nMix;
       break;
    }
    for (m=1; m<=M; m++){
@@ -1149,14 +1200,14 @@ void RestMixWeights(int state, int s, StreamElem *se)
          HError(2290,"RestMixWeights: Mix wt>1 in %d.%d.%d",state,s,m);
       switch (hsKind){
       case DISCRETEHS:
-         se->spdf.dpdf[m] = (x>MINMIX) ? DProb2Short(x) : DLOGZERO;
+         sti->spdf.dpdf[m] = (x>MINMIX) ? DProb2Short(x) : DLOGZERO;
          break;
       case TIEDHS:
-         se->spdf.tpdf[m] = (x>MINMIX) ? x : 0.0;
+         sti->spdf.tpdf[m] = (x>MINMIX) ? x : 0.0;
          break;
       case PLAINHS:
       case SHAREDHS:
-         me=se->spdf.cpdf+m;
+         me=sti->spdf.cpdf+m;
          me->weight = (x>MINMIX) ? x : 0.0;
          break;
       }      
@@ -1226,7 +1277,7 @@ Boolean RestCoVar(MixPDF *mp, int vSize, Vector minV,
 }
 
 /* RestStream: reestimate stream parameters */
-void RestStream(int state, int s, StreamElem *se, int vSize)
+void RestStream(int state, int s, StreamInfo *sti, int vSize)
 {
    int m,M;
    MixtureElem *me;
@@ -1238,13 +1289,14 @@ void RestStream(int state, int s, StreamElem *se, int vSize)
    if (trace&(T_WRE|T_MRE|T_VRE))
       printf("State %d, Stream %d\n",state,s);
    if (uFlags&UPMIXES)
-      RestMixWeights(state,s,se);
+      RestMixWeights(state,s,sti);
    if ((hsKind != DISCRETEHS)&&(hsKind != TIEDHS)){ /*wts only DI'ETE & TIED*/
-      M=se->nMix;
+      M=sti->nMix;
       for (m=1; m<=M; m++){
-         me = se->spdf.cpdf+m;
+         me = sti->spdf.cpdf+m;
          wght=me->weight;
          mp=me->mpdf;
+	 if(hset.msdflag[s]) vSize = VectorSize(mp->mean);
          if (wght > MINMIX) {
             if (trace&(T_MRE|T_VRE) && M>1)
                printf("Mixture %d\n",m);
@@ -1268,18 +1320,18 @@ void RestStream(int state, int s, StreamElem *se, int vSize)
    if (hsKind == TIEDHS)
       M=hset.tmRecs[s].nMix;
    else
-      M=se->nMix;
+      M=sti->nMix;
    if (M>1){
       switch (hsKind){
       case DISCRETEHS:
-         FloorDProbs(se->spdf.dpdf,M,mixWeightFloor);
+         FloorDProbs(sti->spdf.dpdf,M,mixWeightFloor);
          break;
       case TIEDHS:
-         FloorTMMixes(se->spdf.tpdf,M,mixWeightFloor);
+         FloorTMMixes(sti->spdf.tpdf,M,mixWeightFloor);
          break;
       case PLAINHS:
       case SHAREDHS:
-         FloorMixes(se->spdf.cpdf+1,M,mixWeightFloor);
+         FloorMixes(sti->spdf.cpdf+1,M,mixWeightFloor);
          break;
       }     
    }
@@ -1290,15 +1342,15 @@ void UpdateTheModel(void)
 {
    int j,s;
    StateInfo *si;
-   StreamElem *se;
+   StreamElem *ste;
 
    if (uFlags&UPTRANS)
       RestTransP();
    if (uFlags&(UPMEANS|UPVARS|UPMIXES))
       for (j=2; j<nStates; j++) {
          si = hmm->svec[j].info;
-         for (s=1,se = si->pdf+1; s<=nStreams; s++,se++)
-            RestStream(j,s,se,hset.swidth[s]);
+         for (s=1,ste = si->pdf+1; s<=nStreams; s++,ste++)
+            RestStream(j,s,ste->info,hset.swidth[s]);
       }
    if (uFlags&UPVARS)
       FixAllGConsts(&hset);

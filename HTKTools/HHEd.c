@@ -32,6 +32,53 @@
 /*         File: HHEd:  HMM Source Definition Editor           */
 /* ----------------------------------------------------------- */
 
+
+/* *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.0     */
+/*            HTS Working Group                                     */
+/*                                                                  */
+/*       Department of Computer Science                             */
+/*       Nagoya Institute of Technology                             */
+/*                and                                               */
+/*   Interdisciplinary Graduate School of Science and Engineering   */
+/*        Tokyo Institute of Technology                             */
+/*           Copyright (c) 2001-2002                                */
+/*             All Rights Reserved.                                 */
+/*                                                                  */
+/* Permission is hereby granted, free of charge, to use and         */
+/* distribute this software in the form of patch code to HTK and    */
+/* its documentation without restriction, including without         */
+/* limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and/or sell copies of this work, and to  */
+/* permit persons to whom this work is furnished to do so, subject  */
+/* to the following conditions:                                     */
+/*                                                                  */
+/*   1. Once you apply the HTS patch to HTK, you must obey the      */
+/*      license of HTK.                                             */
+/*                                                                  */
+/*   2. The code must retain the above copyright notice, this list  */
+/*      of conditions and the following disclaimer.                 */
+/*                                                                  */
+/*   3. Any modifications must be clearly marked as such.           */
+/*                                                                  */
+/* NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/* HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/* ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/* SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/* TECHNOLOGY, SPTK WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE   */
+/* FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/* DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/* WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/* ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/* PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                  */
+/* ---------------------------------------------------------------- */ 
+/*     HHEd.c modified for HTS-1.0 2002/12/20 by Heiga Zen          */
+/* ---------------------------------------------------------------- */
+
 char *hhed_version = "!HVER!HHEd:   3.2 [CUED 09/12/02]";
 char *hhed_vc_id = "$Id: HHEd.c,v 1.12 2002/12/19 16:37:40 ge204 Exp $";
 
@@ -121,6 +168,7 @@ static Boolean badGC = FALSE;          /* set TRUE if gConst out of date */
 static float meanGC,stdGC;             /* mean and stdev of GConst */
 static Boolean occStatsLoaded = FALSE; /* set when RO/LS has loaded occ stats */
 static float outlierThresh = -1.0;     /* outlier threshold set by RO cmd */
+static IntSet streams;                 /* information for tree-based clustering */
 
 static int thisCommand;                /* index of current command */
 static int lastCommand=0;              /* index of previous command */
@@ -135,12 +183,17 @@ static Boolean treeMerge = TRUE; /* After tree spltting merge leaves */
 static char tiedMixName[MAXSTRLEN] = "TM"; /* Tied mixture base name */
 static Boolean useLeafStats = TRUE; /* Use leaf stats to init macros */
 static Boolean applyVFloor = TRUE; /* apply modfied varFloors to vars in model set */ 
+static Boolean singleTree = FALSE;     /* construct single tree */
+static Boolean applyMDL = FALSE;       /* apply MDL principle for clustering */
+static Boolean ignoreStrW = FALSE;     /* ignore stream weight */
+static float minVar = 1.0E-6;          /* minimum variance for clusterd item */
 
 /* ------------------ Process Command Line -------------------------- */
 
 void SetConfParms(void)
 {
    Boolean b;
+   double f;
    int i;
 
    nParm = GetConfig("HHED", TRUE, cParm, MAXGLOBS);
@@ -149,12 +202,17 @@ void SetConfParms(void)
       if (GetConfBool(cParm,nParm,"TREEMERGE",&b)) treeMerge = b;
       if (GetConfBool(cParm,nParm,"USELEAFSTATS",&b)) useLeafStats = b;
       if (GetConfBool(cParm,nParm,"APPLYVFLOOR",&b)) applyVFloor = b;
+      if (GetConfBool(cParm,nParm,"SINGLETREE",&b)) singleTree = b;
+      if (GetConfBool(cParm,nParm,"APPLYMDL",&b)) applyMDL = b;
+      if (GetConfBool(cParm,nParm,"IGNORESTRW",&b)) ignoreStrW = b;
+      if (GetConfFlt(cParm,nParm,"MINVAR",&f)) minVar = f;
       GetConfStr(cParm,nParm,"TIEDMIXNAME",tiedMixName);
    }
 }
 
 void Summary(void)
 {
+   printf("\nModified for HTS ver.1.0\n");
    printf("\nHHEd Command Summary\n\n");
    printf("AT i j prob itemlist - Add Transition from i to j in given mats\n");
    printf("AU hmmlist           - Add Unseen triphones in given hmmlist to\n");
@@ -208,10 +266,15 @@ void Summary(void)
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS ver.1.0\n");
    printf("\nUSAGE: HHEd [options] editF hmmList\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -d s    dir to find hmm definitions          current\n");
+   printf(" -i      ignore stream weight                 off\n");
+   printf(" -m      apply MDL principle for clustering   off\n");
    printf(" -o s    extension for new hmm files          as source\n");
+   printf(" -s      construct single tree                off\n");
+   printf(" -v f    Set minimum variance to f            1.0E-6\n");
    printf(" -w mmf  Save all HMMs to macro file mmf s    as source\n");
    printf(" -x s    extension for hmm files              none\n");
    printf(" -z      zap aliases in hmmList\n");
@@ -234,12 +297,12 @@ int main(int argc, char *argv[])
    if(InitParm()<SUCCESS)  
       HError(2600,"HHEd: InitParm failed");
    InitUtil();
-
+   
    if (!InfoPrinted() && NumArgs() == 0)
       ReportUsage();
    if (NumArgs() == 0) Exit(0);
    SetConfParms();
- 
+   
    CreateHeap(&hmmHeap,"Model Heap",MSTAK,1,1.0,40000,400000);
    CreateHMMSet(&hSet,&hmmHeap,TRUE);hset=&hSet;fidx=0;
 
@@ -252,10 +315,18 @@ int main(int argc, char *argv[])
          if (NextArg()!=STRINGARG)
             HError(2619,"HHEd: Input HMM definition directory expected");
          hmmDir = GetStrArg(); break;  
+      case 'i':
+         ignoreStrW = TRUE; break;
+      case 'm':
+         applyMDL = TRUE; break;
       case 'o':
          if (NextArg()!=STRINGARG)
             HError(2619,"HHEd: Output HMM file extension expected");
          newExt = GetStrArg(); break;
+      case 's':
+         singleTree = TRUE; break;
+      case 'v':
+         minVar = GetChkedFlt(0.0,100.0,s); break;
       case 'w':
          if (NextArg()!=STRINGARG)
             HError(2619,"HHEd: Output MMF file name expected");
@@ -299,6 +370,7 @@ int main(int argc, char *argv[])
    DoEdit(editFn);
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
+      
 }
 
 /* ----------------------- Lexical Routines --------------------- */
@@ -471,7 +543,7 @@ HLink FindBaseModel(HMMSet *hset,LabId id,baseType type)
    }
    if (type==baseMono || type==baseLeft) { /* strip Right context */
       strcpy(buf,baseName);
-      if ((p = strrchr(buf,'+')) != NULL) {
+      if ((p = strchr(buf,'+')) != NULL) {
          *p = '\0';
          strcpy(baseName,buf);
       }
@@ -523,6 +595,7 @@ void ShowMacros(HMMDef *hmm)
    StateInfo *si;
    MixtureElem *me;
    StreamElem *ste;
+   StreamInfo *sti;
    MixPDF *mp;
    Ptr strct;
    int i,j,s;
@@ -551,9 +624,10 @@ void ShowMacros(HMMDef *hmm)
 
       if (hset->hsKind==PLAINHS || hset->hsKind==SHAREDHS)
          for (s=1; s<=hset->swidth[0]; s++,ste++) {
-            me = ste->spdf.cpdf + 1;
-            for (j=1; j<=ste->nMix;j++,me++) {
-               if (me->weight > MINMIX) {
+            sti = ste->info;
+            me = sti->spdf.cpdf + 1;
+            for (j=1; j<=sti->nMix;j++,me++) {
+               if (me->weight > MINMIX || hset->msdflag[s]) {
                   mp = me->mpdf;
                   if (mp->nUse>0) {
                      ShowWhere(i,s,j); OutMacro('m',mp);
@@ -563,7 +637,7 @@ void ShowMacros(HMMDef *hmm)
                   }
                   switch(mp->ckind) {
                   case FULLC:
-                     strct=mp->cov.inv; type='i'; break;
+                      strct=mp->cov.inv; type='i'; break;
                   case LLTC:
                      strct=mp->cov.inv; type='c'; break;
                   case XFORMC:
@@ -633,7 +707,7 @@ Boolean EquivMix(MixPDF *a, MixPDF *b)
 }
 
 /* EquivStream: return TRUE if both streams are identical */
-Boolean EquivStream(StreamElem *a, StreamElem *b)
+Boolean EquivStream(StreamInfo *a, StreamInfo *b)
 {
    int m,M;
    MixtureElem *mea,*meb;
@@ -661,7 +735,8 @@ Boolean EquivState(StateInfo *a, StateInfo *b, int S)
    
    stea = a->pdf+1; steb = b->pdf+1;
    for (s=1; s<=S; s++,stea++,steb++) {
-      if ((stea->nMix!=steb->nMix) || !EquivStream(stea,steb))
+      if ((stea->info->nMix!=steb->info->nMix) || 
+          !EquivStream(stea->info,steb->info))
          return FALSE;
    }
    return TRUE;
@@ -885,6 +960,7 @@ void SplitStreams(HMMSet *hset,StateInfo *si,Boolean simple,Boolean first)
 {
    int j,s,S,m,M,width,V,next;
    StreamElem *ste,*oldste;
+   StreamInfo *sti,*oldsti;
    MixtureElem *me,*oldme;
    MixPDF *mp, *oldmp;
    Boolean hasN;
@@ -900,12 +976,15 @@ void SplitStreams(HMMSet *hset,StateInfo *si,Boolean simple,Boolean first)
    eposIdx = 0;
    for (j=0; j<3; j++) epos[j] = 0;
    for (s=1;s<=S;s++,ste++) {
+      ste->info = (StreamInfo *)New(hset->hmem,S*sizeof(StreamInfo));
+      sti = ste->info;
+      oldsti = oldste->info;
       width = hset->swidth[s];
-      M = ste->nMix = oldste->nMix;
-      ste->hook = NULL;
+      M = sti->nMix = oldsti->nMix;
+      sti->hook = NULL;
       me = (MixtureElem *) New(hset->hmem,M*sizeof(MixtureElem));
-      ste->spdf.cpdf = me-1;
-      oldme=oldste->spdf.cpdf+1;
+      sti->spdf.cpdf = me-1;
+      oldme=oldsti->spdf.cpdf+1;
       for (m=1; m<=M; m++, me++,oldme++) {
          oldmp = oldme->mpdf;
          if (oldmp->nUse>0)
@@ -965,7 +1044,6 @@ void SplitStreams(HMMSet *hset,StateInfo *si,Boolean simple,Boolean first)
       si->weights[s] = 1.0;
 }
 
-
 /* -------------------- Tying Operations --------------------- */
 
 /*
@@ -979,17 +1057,17 @@ ILink TypicalState(ILink ilist, LabId macId)
    LogFloat gsum,gmax;
    int m,M;
    StateInfo *si;
-   StreamElem *ste;
+   StreamInfo *sti;
    
    gmax = LZERO; imax = NULL;
    for (i=ilist; i!=NULL; i=i->next) {
       si = ((StateElem *)(i->item))->info;
-      ste = si->pdf+1;
-      M = ste->nMix;
+      sti = si->pdf[1].info;
+      M = sti->nMix;
       gsum = 0;
       for (m=1; m<=M; m++)
-         if (ste->spdf.cpdf[m].weight>MINMIX)
-            gsum += ste->spdf.cpdf[m].mpdf->gConst;
+         if (sti->spdf.cpdf[m].weight>MINMIX)
+            gsum += sti->spdf.cpdf[m].mpdf->gConst;
          else
             gsum -= 200.0;      /* arbitrary penaltly */
       if (gsum>gmax) {
@@ -1028,6 +1106,24 @@ void TieState(ILink ilist, LabId macId)
          se->info = tsi;
          ++tsi->nUse;
       }
+   }
+}
+
+void TieLeafStream(ILink ilist, LabId macId, int stream)
+{
+   ILink i;
+   StreamInfo *sti,*tsti;
+   
+   if (badGC) {
+      FixAllGConsts(hset);         /* in case any bad gConsts around */
+      badGC=FALSE;
+   }
+   sti = ((StateElem *)ilist->item)->info->pdf[stream].info;
+   sti->nUse = 1;
+   NewMacro(hset,fidx,'p',macId,sti);
+   for (i=ilist->next; i!=NULL; i=i->next) {
+      ((StateElem *)i->item)->info->pdf[stream].info = sti;
+      ++sti->nUse;
    }
 }
 
@@ -1329,7 +1425,7 @@ void SplitMix(MixtureElem *mi,MixtureElem *m01,MixtureElem *m02,int vSize)
 }
 
 /* FixWeights: Fix the weights of me using the old stream info */
-void FixWeights(MixtureElem *me, HMMDef *owner, StreamElem *ste)
+void FixWeights(MixtureElem *me, HMMDef *owner, StreamInfo *sti)
 {
    MixtureElem *sme;
    double w,p,wSum,fSum,maxW,floor,lFloor;
@@ -1340,7 +1436,7 @@ void FixWeights(MixtureElem *me, HMMDef *owner, StreamElem *ste)
    maxW = LZERO;
    for (m=1;m<=joinSize;m++) {  /* set weights to SOutP(owner) */
       w=LZERO;
-      for (sm=1,sme=ste->spdf.cpdf+1;sm<=ste->nMix;sm++,sme++) {
+      for (sm=1,sme=sti->spdf.cpdf+1;sm<=sti->nMix;sm++,sme++) {
          Untouch(&me[m].mpdf->nUse);
          p = MOutP(me[m].mpdf->mean,sme->mpdf);
          w = LAdd(w,log(sme->weight)+p);
@@ -1407,6 +1503,7 @@ void TiePDF(ILink ilist, LabId macId)
    ILink i;
    int m,nSplit,vs,vSize=0;
    StreamElem *ste;
+   StreamInfo *sti;
    MixtureElem *me, mix,mix1,mix2;
    
    if (badGC) {
@@ -1418,13 +1515,14 @@ void TiePDF(ILink ilist, LabId macId)
    nJoins = 0; joinSet = CreateJMixSet();
    for (i=ilist; i!=NULL; i=i->next) {
       ste = (StreamElem *) i->item;
-      vs = VectorSize(ste->spdf.cpdf[1].mpdf->mean);
+      sti = ste->info;
+      vs = VectorSize(sti->spdf.cpdf[1].mpdf->mean);
       if (vSize==0)
          vSize = vs;
       else if (vs != vSize)
          HError(2630,"TiePDF: incompatible vector sizes %d vs %d",vs,vSize);
-      for (m=1;m<=ste->nMix;m++) {
-         me = ste->spdf.cpdf+m;
+      for (m=1;m<=sti->nMix;m++) {
+         me = sti->spdf.cpdf+m;
          if (IsSeen(me->mpdf->nUse)) continue;
          Touch(&me->mpdf->nUse); /* Make sure we don't add twice */
          AddJMix(me);
@@ -1449,19 +1547,21 @@ void TiePDF(ILink ilist, LabId macId)
    CreateJMacros(macId);
    for (i=ilist; i!=NULL; i=i->next) { /* replace pdfs */
       ste = (StreamElem *) i->item;
-      if (IsSeen(ste->nMix)) continue;
+      sti = ste->info;
+      if (IsSeen(sti->nUse)) continue;
       me = CreateJMixSet();
       for (m=1;m<=joinSize;m++) {
          me[m].mpdf = joinSet[m].mpdf;
          ++(joinSet[m].mpdf->nUse);
       }
-      FixWeights(me,i->owner,ste);
-      ste->spdf.cpdf = me; ste->nMix = joinSize;
-      Touch(&ste->nMix);
+      FixWeights(me,i->owner,sti);
+      sti->spdf.cpdf = me; sti->nMix = joinSize;
+      Touch(&sti->nUse);
    }
    for (i=ilist; i!=NULL; i=i->next) { /* reset nMix flags */
       ste = (StreamElem *) i->item;
-      Untouch(&ste->nMix);
+      sti = ste->info;
+      Untouch(&sti->nUse);
    }
    if (joinSize>maxMixes) maxMixes=joinSize;
 }
@@ -1550,6 +1650,29 @@ void UntieState(ILink ilist)
       else if (nu>1) {
          se->info = CloneState(hset,si,FALSE);
          si->nUse = nu-1;
+      }
+   }
+}
+
+/* UntiePDF: untie (ie clone) all items in ilist */
+void UntiePDF(ILink ilist)
+{
+   ILink i;
+   StreamElem *ste;
+   StreamInfo *sti;
+   int nu,s;
+   
+   for (i=ilist; i!=NULL; i=i->next) {
+      ste = (StreamElem *)i->item;
+      sti = ste->info;
+      s = ste->info->stream;
+      nu = sti->nUse; 
+      sti->nUse = 0;
+      if (nu==1)
+         DeleteMacroStruct(hset,'p',sti);
+      else if (nu>1) {
+         ste->info = ClonePDF(hset,s,sti,FALSE);
+         sti->nUse = nu-1;
       }
    }
 }
@@ -1700,14 +1823,14 @@ typedef struct _CRec{
 }CRec;
 
 /* TDistance: return mean sq diff between Tied Mix weights */
-float TDistance(StreamElem *s1, StreamElem *s2)
+float TDistance(StreamInfo *sti1, StreamInfo *sti2)
 {
    int m,M;
    float *mw1,*mw2;
    float x,sum=0.0;
    
-   mw1 = s1->spdf.tpdf+1; mw2 = s2->spdf.tpdf+1; 
-   M = s1->nMix;
+   mw1 = sti1->spdf.tpdf+1; mw2 = sti2->spdf.tpdf+1; 
+   M = sti1->nMix;
    for (m=1; m<=M; m++, mw1++, mw2++) {
       x = (*mw1 - *mw2);
       sum += x*x;
@@ -1716,14 +1839,14 @@ float TDistance(StreamElem *s1, StreamElem *s2)
 }
 
 /* DDistance: return mean sq log diff between Discrete Probabilities */
-float DDistance(StreamElem *s1, StreamElem *s2)
+float DDistance(StreamInfo *sti1, StreamInfo *sti2)
 {
    int m,M;
    short *mw1,*mw2;
    float x,sum=0.0;
    
-   mw1 = s1->spdf.dpdf+1; mw2 = s2->spdf.dpdf+1; 
-   M = s1->nMix;
+   mw1 = sti1->spdf.dpdf+1; mw2 = sti2->spdf.dpdf+1; 
+   M = sti1->nMix;
    for (m=1; m<=M; m++, mw1++, mw2++) {
       x = (*mw1 - *mw2);
       sum += x*x;
@@ -1732,13 +1855,13 @@ float DDistance(StreamElem *s1, StreamElem *s2)
 }
 
 /* Divergence: return divergence between two Gaussians */
-float Divergence(StreamElem *s1, StreamElem *s2)
+float Divergence(StreamInfo *sti1, StreamInfo *sti2)
 {
    int k,V;
    MixPDF *m1,*m2;
    float x,v1,v2,sum=0.0;
    
-   m1 = (s1->spdf.cpdf+1)->mpdf; m2 = (s2->spdf.cpdf+1)->mpdf;
+   m1 = (sti1->spdf.cpdf+1)->mpdf; m2 = (sti2->spdf.cpdf+1)->mpdf;
    V = VectorSize(m1->mean);
    for (k=1; k<=V; k++) {
       x = m1->mean[k] - m2->mean[k];
@@ -1754,22 +1877,22 @@ float Divergence(StreamElem *s1, StreamElem *s2)
 /* GDistance: return general distance between two arbitrary pdfs
    by summing the log probabilities of each mixture mean with
    respect to the other pdf  */
-float GDistance(int s, StreamElem *s1, StreamElem *s2)
+float GDistance(int s, StreamInfo *sti1, StreamInfo *sti2)
 {
    int m,M;
    MixtureElem *me;
    Observation dummy;
    float sum=0.0;
    
-   M = s1->nMix;
-   for (m=1,me = s1->spdf.cpdf+1; m<=M; m++, me++) {
+   M = sti1->nMix;
+   for (m=1,me = sti1->spdf.cpdf+1; m<=M; m++, me++) {
       dummy.fv[s]=me->mpdf->mean;
-      sum += SOutP(hset,s,&dummy,s2);
+      sum += SOutP(hset,s,&dummy,sti2);
    }
-   M = s2->nMix;
-   for (m=1,me = s2->spdf.cpdf+1; m<=M; m++, me++) {
+   M = sti2->nMix;
+   for (m=1,me = sti2->spdf.cpdf+1; m<=M; m++, me++) {
       dummy.fv[s]=me->mpdf->mean;
-      sum += SOutP(hset,s,&dummy,s1);
+      sum += SOutP(hset,s,&dummy,sti1);
    }
    return -(sum/M);
 }
@@ -1780,6 +1903,7 @@ float StateDistance(ILink i1, ILink i2)
    StateElem *se1, *se2;
    StateInfo *si1, *si2;
    StreamElem *ste1,*ste2;
+   StreamInfo *sti1,*sti2;
    float x = 0.0;
    int s,S;
    
@@ -1787,16 +1911,19 @@ float StateDistance(ILink i1, ILink i2)
    se2 = (StateElem *)i2->item; si2 = se2->info;
    S = hset->swidth[0];
    ste1 = si1->pdf+1; ste2 = si2->pdf+1;
-   for (s=1;s<=S;s++,ste1++,ste2++)
+   for (s=1;s<=S;s++,ste1++,ste2++) {
+      sti1 = ste1->info;
+      sti2 = ste2->info;
       if (hset->hsKind == TIEDHS)
-         x += TDistance(ste1,ste2);
+         x += TDistance(sti1,sti2);
       else if (hset->hsKind==DISCRETEHS)
-         x += DDistance(ste1,ste2);
-      else if (maxMixes == 1 && ste1->spdf.cpdf[1].mpdf->ckind==DIAGC && 
-               ste2->spdf.cpdf[1].mpdf->ckind==DIAGC) 
-         x += Divergence(ste1,ste2);
+         x += DDistance(sti1,sti2);
+      else if (maxMixes == 1 && sti1->spdf.cpdf[1].mpdf->ckind==DIAGC && 
+               sti2->spdf.cpdf[1].mpdf->ckind==DIAGC) 
+         x += Divergence(sti1,sti2);
       else
-         x += GDistance(s,ste1,ste2);
+         x += GDistance(s,sti1,sti2);
+   }
    return x/S;
 }
 
@@ -2132,16 +2259,16 @@ int HeaviestMix(char *hname, MixtureElem *me, int M)
 }
 
 /* UpMix: increase number of mixes in stream from oldM to newM */
-void UpMix(char *hname, StreamElem *ste, int oldM, int newM)
+void UpMix(char *hname, StreamInfo *sti, int oldM, int newM)
 {
    MixtureElem *me,m1,m2;
    int m,count,vSize;
    
    me = (MixtureElem*) New(&hmmHeap,sizeof(MixtureElem)*newM);
    --me;
-   vSize = VectorSize(ste->spdf.cpdf[1].mpdf->mean);
+   vSize = VectorSize(sti->spdf.cpdf[1].mpdf->mean);
    for (m=1;m<=oldM;m++)
-      me[m] = ste->spdf.cpdf[m];
+      me[m] = sti->spdf.cpdf[m];
    count=oldM;
    while (count<newM) {
       m = HeaviestMix(hname,me,count);
@@ -2149,27 +2276,27 @@ void UpMix(char *hname, StreamElem *ste, int oldM, int newM)
       SplitMix(me+m,&m1,&m2,vSize);
       me[m] = m1; me[count] = m2;
    }
-   ste->spdf.cpdf = me; ste->nMix = newM;
+   sti->spdf.cpdf = me; sti->nMix = newM;
 }
 
 /* CountDefunctMix: return number of defunct mixtures in given stream */
-int CountDefunctMix(StreamElem *ste)
+int CountDefunctMix(StreamInfo *sti)
 {
    int m,defunct;
    
-   for (m=1,defunct=0; m<=ste->nMix; m++)
-      if (ste->spdf.cpdf[m].weight <= MINMIX)
+   for (m=1,defunct=0; m<=sti->nMix; m++)
+      if (sti->spdf.cpdf[m].weight <= MINMIX)
          ++defunct;
    return defunct;
 }
 
-/* FixDefunctMix: restore n defunct mixtures by successive mixture splitting */
-void FixDefunctMix(char *hname,StreamElem *ste, int n)
+/* FixDefunctMix: restore n defunct mixtures */
+void FixDefunctMix(char *hname,StreamInfo *sti, int n)
 {
    MixtureElem *me,m1,m2;
    int m,M,l,count,vSize;
 
-   me = ste->spdf.cpdf; M = ste->nMix;
+   me = sti->spdf.cpdf; M = sti->nMix;
    vSize = VectorSize(me[1].mpdf->mean);
    for (count = 0; count<n; ++count) {
       for (l=1; l<=M; l++)
@@ -2211,26 +2338,26 @@ float MixMergeCost(MixtureElem *me1,MixtureElem *me2)
    
 /* MergeMix: merge components p and q from given stream elem.  If inPlace
    overwrite existing components, otherwise create new mix component */
-void MergeMix(StreamElem *ste,int p,int q, Boolean inPlace)
+void MergeMix(StreamInfo *sti,int p,int q, Boolean inPlace)
 {
    float w1,w2,m,v,p0,p1,p2,v1k,v2k;
    int vs,k;
    Vector m1,m2,v1,v2,mt,vt;
    MixtureElem me, *meq, *mep;
 
-   if (q!=ste->nMix) {
-      if (p==ste->nMix) {
-         p=q; q=ste->nMix;
+   if (q!=sti->nMix) {
+      if (p==sti->nMix) {
+         p=q; q=sti->nMix;
       }
       else {
-         me=ste->spdf.cpdf[q];
-         ste->spdf.cpdf[q]=ste->spdf.cpdf[ste->nMix];
-         ste->spdf.cpdf[ste->nMix]=me;
-         q=ste->nMix;
+         me=sti->spdf.cpdf[q];
+         sti->spdf.cpdf[q]=sti->spdf.cpdf[sti->nMix];
+         sti->spdf.cpdf[sti->nMix]=me;
+         q=sti->nMix;
       }
    }
    /* the mixuture components */ 
-   meq = ste->spdf.cpdf + q;                   mep = ste->spdf.cpdf + p;
+   meq = sti->spdf.cpdf + q;                   mep = sti->spdf.cpdf + p;
    w1=mep->weight/(mep->weight+meq->weight);   w2=meq->weight/(mep->weight+meq->weight);
    m1=mep->mpdf->mean;                         m2=meq->mpdf->mean;
    v1=mep->mpdf->cov.var;                      v2=meq->mpdf->cov.var;
@@ -2267,7 +2394,7 @@ void MergeMix(StreamElem *ste,int p,int q, Boolean inPlace)
 /* DownMixSingle
    replace the mixture with a single Gaussian
  */
-void DownMixSingle(StreamElem *ste,Boolean inPlace)
+void DownMixSingle(StreamInfo *sti,Boolean inPlace)
 {
     int k,i,vs;
     float w;
@@ -2275,14 +2402,14 @@ void DownMixSingle(StreamElem *ste,Boolean inPlace)
     MixPDF *m;
     MixtureElem *me;
     
-    me = ste->spdf.cpdf; m=(me+1)->mpdf;
+    me = sti->spdf.cpdf; m=(me+1)->mpdf;
     vs=VectorSize(m->mean);
     mt=CreateSVector(&hmmHeap,vs);
     vt=CreateSVector(&hmmHeap,vs);
     for (k=1;k<=vs;k++) {
        /* mean */
        mt[k] = 0.0; 
-       for (i=1; i<=ste->nMix; i++) {
+       for (i=1; i<=sti->nMix; i++) {
           m=(me+i)->mpdf;w=(me+i)->weight;
           if ( m->ckind != DIAGC ) /* only support DIAGC */
              HError(2640,"DownMix: covariance type not supported");
@@ -2290,13 +2417,13 @@ void DownMixSingle(StreamElem *ste,Boolean inPlace)
        }
        /* variance */
        vt[k] = 0.0;
-       for (i=1; i<=ste->nMix; i++) { 
+       for (i=1; i<=sti->nMix; i++) { 
           m=(me+i)->mpdf; w=(me+i)->weight;
           vt[k] +=w*m->cov.var[k]-w*m->mean[k]*(mt[k]-m->mean[k]);
        }
     }
     /* decrement use of mean and var */
-    for(i=2;i<=ste->nMix;i++) {
+    for(i=2;i<=sti->nMix;i++) {
        m=(me+i)->mpdf;
        DecUse(m->mean); DecUse(m->cov.var);
     }
@@ -2314,41 +2441,41 @@ void DownMixSingle(StreamElem *ste,Boolean inPlace)
        m->mean = mt; m->cov.var = vt; 
     }
     (me+1)->weight=1.0;
-    ste->nMix=1;
+    sti->nMix=1;
 }
 
 /* DownMix: merge mixtures in stream to maxMix. If inPlace then existing
    mean and variance vectors will be overwritten.  Otherwise, new vectors
    are created for changed components */
-void DownMix(char *hname, StreamElem *ste, int maxMix, Boolean inPlace)
+void DownMix(char *hname, StreamInfo *sti, int maxMix, Boolean inPlace)
 {
    int i,j,m,p,q,oldM,k,V;
    float bc,mc;
    MixPDF *m1,*m2;
    float x,v1,v2,sum=0.0;
     
-   oldM=m=ste->nMix;
+   oldM=m=sti->nMix;
    if (trace & T_IND)
       printf("   Mix Down for %s\n",hname);
 
    /* special case mixdown to single Gaussian */
    if (maxMix==1)
-      DownMixSingle(ste,inPlace);
+      DownMixSingle(sti,inPlace);
 
-   while(ste->nMix>maxMix) { /* merge pairs until maxMix */
+   while(sti->nMix>maxMix) { /* merge pairs until maxMix */
       p=q=0;
       bc = LZERO;
       /* find paur with lowest cost */ 
-      for (i=1; i<=ste->nMix; i++) {
+      for (i=1; i<=sti->nMix; i++) {
          /* only support for CovKind  DIAGC */
-         if ( (MixtureElem*)(ste->spdf.cpdf+i)->mpdf->ckind != DIAGC )
+         if ( (MixtureElem*)(sti->spdf.cpdf+i)->mpdf->ckind != DIAGC )
             HError(2640,"DownMix: covariance type not supported");
-         for (j=i+1; j<=ste->nMix; j++) {
-            mc=MixMergeCost(ste->spdf.cpdf+i,ste->spdf.cpdf+j);
+         for (j=i+1; j<=sti->nMix; j++) {
+            mc=MixMergeCost(sti->spdf.cpdf+i,sti->spdf.cpdf+j);
             if (trace & T_MD) {
                printf("Could merge %d (%.2f) with %d (%.2f) for %f\n",
-                      i,ste->spdf.cpdf[i].weight,j,ste->spdf.cpdf[j].weight,mc);
-               m1 = (ste->spdf.cpdf+i)->mpdf; m2 = (ste->spdf.cpdf+j)->mpdf;
+                      i,sti->spdf.cpdf[i].weight,j,sti->spdf.cpdf[j].weight,mc);
+               m1 = (sti->spdf.cpdf+i)->mpdf; m2 = (sti->spdf.cpdf+j)->mpdf;
                V = VectorSize(m1->mean);
                for (k=1; k<=V; k++){
                   x = m1->mean[k] - m2->mean[k];
@@ -2364,19 +2491,34 @@ void DownMix(char *hname, StreamElem *ste, int maxMix, Boolean inPlace)
       }
       if (trace & T_DET)
          printf("    Merging %d with %d for %f\n",p,q,bc);
-      MergeMix(ste,p,q,inPlace);
-      ste->nMix--;
+      MergeMix(sti,p,q,inPlace);
+      sti->nMix--;
    }
-   if ((trace & T_DET) && (ste->nMix!=oldM))
-      printf("    %s: mixdown %d -> %d\n",hname,oldM,ste->nMix);
+   if ((trace & T_DET) && (sti->nMix!=oldM))
+      printf("    %s: mixdown %d -> %d\n",hname,oldM,sti->nMix);
 }
 
 /* ------------------- Tree Building Routines ------------------- */
 
+typedef struct _AccSumMixE {
+   DVector sum;
+   DVector sqr;
+   float occ;
+   int vSize;
+} AccSumMixE;
+
+typedef struct _AccSumStrE {
+   int nMix;
+   float weight;
+   AccSumMixE *accme;
+} AccSumStrE;
+
 typedef struct _AccSum {        /* Accumulator Record for storing */
-   Vector sum;                  /* the sum, sqr and occupation  */
-   Vector sqr;                  /* count statistics             */
+   DVector sum;                 /* the sum, sqr and occupation  */
+   DVector sqr;                 /* count statistics             */
    float  occ;
+   int nStream;
+   AccSumStrE *accse;
 } AccSum;
 
 typedef struct _Node {          /* Tree Node */
@@ -2386,8 +2528,9 @@ typedef struct _Node {          /* Tree Node */
    float sProb;                 /* likelihood of split cluster */
    QLink quest;                 /* question used to do split */
    Boolean ans;                 /* TRUE = yes, FALSE = no */
-   short snum;
-   MLink macro;                 /* macro used for tie */
+   int snum;
+   MLink *macro;                /* macro used for tie */
+   LabId id;                    /* name of this node */
    struct _Node *parent;        /* parent of this node */
    struct _Node *yes;           /* yes subtree */
    struct _Node *no;            /* no subtree */
@@ -2402,6 +2545,8 @@ typedef struct _Tree{           /* A tree */
    Node *root;                  /* root of tree */
    Node *leaf;                  /* chain of leaf nodes */
    struct _Tree *next;          /* next tree in list */
+   IntSet streams;              /* active stream */
+   int nActiveStr;              /* number of Active Streams of this tree */
 }Tree;
 
 static Tree *treeList = NULL;   /* list of trees */
@@ -2411,10 +2556,11 @@ static float  cprob;            /* complete likelihood at current node */
 static int numTreeClust;        /* number of clusters in tree */
 
 /* CreateTree: create a new tree */
-Tree *CreateTree(ILink ilist,LabId baseId,int state)
+Tree *CreateTree(ILink ilist, LabId baseId, int state)
 {
    Tree *tree,*t;
    char buf[256];
+   int j;
    LabId id;
    HMMDef *hmm;
    ILink i;
@@ -2429,13 +2575,25 @@ Tree *CreateTree(ILink ilist,LabId baseId,int state)
    else treeList=tree;
    tree->baseId = baseId;
    tree->state = state;
+
+   /* set active stream of this tree */
+   tree->streams = CreateSet(SMAX);
+   tree->nActiveStr = 0;
+   for (j=1;j<=hset->swidth[0];j++) {
+      if (streams.set[j]) {
+         tree->nActiveStr++;
+         tree->streams.set[j] = TRUE;
+      }
+   }
+
+   /* check model pattern of this tree */
    if (ilist!=NULL) {
       hmm = ilist->owner;
       n=hmm->numStates;
       for (i=ilist; i!=NULL; i=i->next) {
          hmm = i->owner; strcpy(buf,HMMPhysName(hset,hmm)); TriStrip(buf);
          id = GetLabId(buf,FALSE);
-         if (tree->baseId != id)
+         if (!singleTree && tree->baseId != id)
             HError(-2663,"CreateTree: different base phone %s in item list",
                    buf);
          if (state>0) {
@@ -2466,65 +2624,137 @@ Node *CreateTreeNode(CLink clist, Node *parent)
    return n;
 }
 
+/* MakeAccSum: make AccSum structure referring to item */
+void MakeAccSum(AccSum *acc, ILink obj)
+{
+   int s,m;
+   HMMDef *hmm;
+   StateElem *se;
+   StateInfo *si;
+   StreamInfo *sti;
+   AccSumStrE *astr;
+   AccSumMixE *amix;
+
+   if ((hmm = obj->owner)==NULL)
+      HError(2690,"MakeAccSum: null hmm owner");
+
+   acc->nStream = hmm->owner->swidth[0];
+   acc->accse = (AccSumStrE *)New(&tmpHeap,acc->nStream*sizeof(AccSumStrE));
+   --acc->accse;
+   se = (obj->item == obj->owner)? hmm->svec+2:(StateElem *)obj->item;
+   if (se == NULL)
+      HError(2690,"MakeAccSum: null state elem ptr");
+   si = se->info;
+
+   for(s = 1;s <= acc->nStream;s++){
+      if (streams.set[s]){
+         sti = si->pdf[s].info;
+         astr = acc->accse+s;
+         astr->nMix = sti->nMix;
+         astr->weight = (si->weights!=NULL)?si->weights[s]:1.0;
+         astr->accme = (AccSumMixE *)New(&tmpHeap,sti->nMix*sizeof(AccSumMixE));
+         --astr->accme;
+         for(m = 1;m <= astr->nMix;m++){
+            amix = astr->accme+m;
+            amix->vSize = VectorSize(sti->spdf.cpdf[m].mpdf->mean);
+            amix->occ = 0.0;
+            amix->sum = CreateDVector(&tmpHeap, amix->vSize);
+            amix->sqr = CreateDVector(&tmpHeap, amix->vSize);
+            ZeroDVector(amix->sum);
+            ZeroDVector(amix->sqr);
+         }
+      }
+   }
+}
+
 /* ChkTreeObject: check that item is a valid state or hmm, 
    and make sure that MixPDF hooks are NULL */
-void ChkTreeObject(ILink obj)
+void ChkTreeObject(ILink obj,AccSum *acc)
 {
    HMMDef *hmm;
    StateElem *se;
-   int j;
+   int j,s,m,vSize;
 
    hmm = obj->owner;
    if (hmm==NULL)
       HError(2690,"ChkTreeObject: null hmm owner");
+   if (hmm->owner->swidth[0] != acc->nStream)
+      HError(2663,"ChkTreeObject: Number of stream is differ");
    if (obj->item == obj->owner) {
       for (j=2;j<hmm->numStates;j++) {
          se = hmm->svec+j;
-         if (se->info->pdf[1].nMix!=1 || 
-             se->info->pdf[1].spdf.cpdf[1].mpdf->ckind!=DIAGC)
-            HError(2663,"ChkTreeObject: TB only valid for 1 mix diagonal covar models");
-         se->info->pdf[1].spdf.cpdf[1].mpdf->hook = NULL;
+         for (s=1;s<=acc->nStream;s++) {
+            if (streams.set[s]) {
+               if (se->info->pdf[s].info->nMix != acc->accse[s].nMix)
+                  HError(2663,"ChkTreeObject: Number of mixture is differ");
+               for(m=1;m<=acc->accse[s].nMix;m++) {
+                  if (se->info->pdf[1].info->spdf.cpdf[1].mpdf->ckind!=DIAGC)
+                     HError(2663,"ChkTreeObject: TB only valid for diagonal covariace");
+                  se->info->pdf[s].info->spdf.cpdf[m].mpdf->hook = NULL;
+                  vSize = VectorSize(se->info->pdf[s].info->spdf.cpdf[m].mpdf->mean);
+                  if(vSize != acc->accse[s].accme[m].vSize)
+                     HError(2663,"ChkTreeObject: Vector Size is differ");
+               }
+            }
+         }
       }
    }
    else {
       se = (StateElem *)obj->item;
       if (se == NULL)
          HError(2690,"ChkTreeObject: null state elem ptr");
-      if (se->info->pdf[1].nMix!=1 || 
-          se->info->pdf[1].spdf.cpdf[1].mpdf->ckind!=DIAGC)
-         HError(2663,"ChkTreeObject: TB only valid for 1 mix diagonal covar models");
-      se->info->pdf[1].spdf.cpdf[1].mpdf->hook = NULL;
+      for (s=1;s<=acc->nStream;s++) {
+         if (streams.set[s]) {
+            if (se->info->pdf[s].info->nMix != acc->accse[s].nMix)
+               HError(2663,"ChkTreeObject: Number of mixture is differ");
+            for(m=1;m<=acc->accse[s].nMix;m++) {
+               if (se->info->pdf[1].info->spdf.cpdf[1].mpdf->ckind!=DIAGC)
+                  HError(2663,"ChkTreeObject: TB only valid for diagonal covariace");
+               se->info->pdf[s].info->spdf.cpdf[m].mpdf->hook = NULL;
+               vSize = VectorSize(se->info->pdf[s].info->spdf.cpdf[m].mpdf->mean);
+               if(vSize != acc->accse[s].accme[m].vSize)
+                  HError(2663,"ChkTreeObject: Vector Size is differ %d/%d",
+               acc->accse[s].accme[m].vSize,vSize);
+            }
+         }
+      }
    }
 }
 
 /* InitTreeAccs:  attach and AccSum record to the MixPDF hook and
    initialise with sum and sqr calculated from the 
    occupation counts deposited in the StateInfo hook */
-void InitTreeAccs(StateElem *se, int l)
+void InitTreeAccs(StateElem *se)
 {
    StateInfo *si;
    MixPDF *mp;
-   int j, k;
+   int j, k, s, vSize;
    short nMix;
    float x, w;
    AccSum *acc;
 
-   si=se->info ;
-   nMix = si->pdf[1].nMix ;
-   for (j = 1; j <= nMix; j++) {
-      mp=si->pdf[1].spdf.cpdf[j].mpdf;
-      w = si->pdf[1].spdf.cpdf[j].weight;
-      memcpy(&x,&(si->hook),sizeof(float));
-      if (mp->hook==NULL && x>0.0) {
-         acc=(AccSum*) New(&tmpHeap,sizeof(AccSum));
-         mp->hook=acc;
-         acc->sum=CreateVector(&tmpHeap,l);
-         acc->sqr=CreateVector(&tmpHeap,l);
-         x *= w;
-         acc->occ=x;
-         for (k=1;k<=l;k++) {
-            acc->sum[k]=mp->mean[k]*x;
-            acc->sqr[k]=(mp->cov.var[k]+mp->mean[k]*mp->mean[k])*x;
+   si=se->info;
+   for(s = 1;s <= hset->swidth[0];s++){
+      if (streams.set[s]) {
+         nMix = si->pdf[s].info->nMix ;
+         for (j = 1; j <= nMix; j++) {
+            mp=si->pdf[s].info->spdf.cpdf[j].mpdf;
+            w =si->pdf[s].info->spdf.cpdf[j].weight;
+            vSize=VectorSize(mp->mean);
+            memcpy(&x,&(si->hook),sizeof(float));
+            if (mp->hook==NULL && x>0.0) {
+               acc=(AccSum*) New(&tmpHeap,sizeof(AccSum));
+               mp->hook=acc;
+               acc->sum=CreateDVector(&tmpHeap,vSize);
+               acc->sqr=CreateDVector(&tmpHeap,vSize);
+               x *= w;
+               acc->occ=x;
+               acc->accse=NULL;
+               for (k=1;k<=vSize;k++) {
+                  acc->sum[k]=(double)mp->mean[k]*x;
+                  acc->sqr[k]=(double)(mp->cov.var[k]+mp->mean[k]*mp->mean[k])*x;
+               }
+            }
          }
       }
    }
@@ -2533,24 +2763,83 @@ void InitTreeAccs(StateElem *se, int l)
 /* ZeroAccSum: zero given accumulator */
 void ZeroAccSum(AccSum *acc)
 {
-   ZeroVector(acc->sum);
-   ZeroVector(acc->sqr);
+   int s,m;
+   AccSumStrE *astr;
+   AccSumMixE *amix;
+
+   ZeroDVector(acc->sum);
+   ZeroDVector(acc->sqr);
    acc->occ=0.0;
+
+   if(acc->accse != NULL) {
+      for(s=1;s<=acc->nStream;s++) {
+         if (streams.set[s]) {
+            astr = acc->accse+s;
+            for(m=1;m<=astr->nMix;m++) {
+               amix = astr->accme+m;
+               ZeroDVector(amix->sum);
+               ZeroDVector(amix->sqr);
+               amix->occ=0.0;
+            } 
+         }
+      }
+   }
+}
+
+/* DisposeAccSum: dispose AccSum */
+void DisposeAccSum(MemHeap *mem,AccSum *acc)
+{
+   int s,m;
+   AccSumStrE *astr;
+   AccSumMixE *amix;
+
+   if(acc->sum != NULL)
+      Dispose(mem,acc->sum);
+
+   if(acc->accse != NULL) {
+      for(s=1;s<=acc->nStream;s++) {
+         if (streams.set[s]) {
+            astr = acc->accse+s;
+            for(m=1;m<=astr->nMix;m++) {
+               amix = astr->accme+m;
+               Dispose(mem,amix->sum);
+            }
+         }
+      }
+   }
 }
 
 /* AccSumProb: return log likelihood for given statistics */
 float AccSumProb(AccSum *acc)
 {
-   double variance,prob;
-   int k,l;
+   double variance,prob,x;
+   int s,m,k,vSize;
+   DVector sqr,sum;
+   float occ, weight;
+   AccSumStrE *astr;
+   AccSumMixE *amix;
 
    prob=0.0;
-   if (acc->occ > 0.0) {
-      l=VectorSize(acc->sum);
-      for (k=1;k<=l;k++) {
-         variance=(acc->sqr[k]-(acc->sum[k]*acc->sum[k]/acc->occ))/acc->occ;
-         if (variance<=MINLARG) return(LZERO);
-         prob+=-0.5*acc->occ*(1.0+log(TPI*variance));
+   for(s=1;s<=acc->nStream;s++){
+      if (streams.set[s]) {
+         astr = acc->accse+s;
+         for(m=1;m<=astr->nMix;m++){
+            amix = astr->accme+m;
+            weight = (ignoreStrW)?1:astr->weight;
+            vSize = amix->vSize;
+            sum = amix->sum;
+            sqr = amix->sqr;
+            occ = amix->occ;
+            if (occ > 0.0) {
+               x = 0;
+               for (k=1;k<=vSize;k++) {
+                  variance=(sqr[k]-(sum[k]*sum[k]/occ))/occ;
+                  if (variance<=MINLARG) return(LZERO);
+                  x+=-0.5*occ*(1.0+log(TPI*variance));
+               }
+               prob+=weight*(x+occ*log(occ/acc->occ));
+            }
+         }
       }
    }
    return(prob);
@@ -2558,19 +2847,28 @@ float AccSumProb(AccSum *acc)
 
 /* IncSumSqr: add sums and sqrs from given state into yes or no depending
    on value of ans */
-void IncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes, int l)
+void IncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes)
 {
    AccSum *acc,*tacc;
-   int k;
+   int s,m,k,vSize,first;
    
-   acc = (AccSum *) si->pdf[1].spdf.cpdf[1].mpdf->hook;
-   if (!acc) return;
-   tacc =  (ans && yes != NULL) ? yes : no;
-   tacc->occ+=acc->occ;
-   for (k=1;k<=l;k++) {
-      tacc->sum[k] += acc->sum[k];
-      tacc->sqr[k] += acc->sqr[k];
-   }   
+   for(s=1,first=1;s<=no->nStream;s++){
+      if (streams.set[s]) {
+         for(m=1;m<=no->accse[s].nMix;m++){
+            acc = (AccSum *) si->pdf[s].info->spdf.cpdf[m].mpdf->hook;
+            if (!acc) return;
+            tacc =  (ans && yes != NULL) ? yes : no;
+            if(first>0) tacc->occ+=acc->occ;
+            tacc->accse[s].accme[m].occ+=acc->occ;
+            vSize = tacc->accse[s].accme[m].vSize;
+            for (k=1;k<=vSize;k++) {
+               tacc->accse[s].accme[m].sum[k] += acc->sum[k];
+               tacc->accse[s].accme[m].sqr[k] += acc->sqr[k];
+            }
+         }
+         first--;
+      }
+   }
 }
 
 /* ClusterLogL: return log likelihood of given cluster, this is used for both
@@ -2581,9 +2879,8 @@ float ClusterLogL(CLink clist,AccSum *no,AccSum *yes,float *occs)
    CLink p;
    float prob;
    StateElem *se;
-   int l,i;
+   int i;
 
-   l=VectorSize(no->sum);
    if (clist->item->item == clist->item->owner) {
       prob=0.0;
       occs[FALSE]=0.0;occs[TRUE]=0.0;
@@ -2591,7 +2888,7 @@ float ClusterLogL(CLink clist,AccSum *no,AccSum *yes,float *occs)
          ZeroAccSum(no);
          if (yes != NULL) ZeroAccSum(yes);
          for(p=clist;p!=NULL;p=p->next) {
-            IncSumSqr(p->item->owner->svec[i].info,p->ans,no,yes,l);
+            IncSumSqr(p->item->owner->svec[i].info,p->ans,no,yes);
          }
          prob += AccSumProb(no);
          if (yes != NULL) prob += AccSumProb(yes);
@@ -2607,7 +2904,7 @@ float ClusterLogL(CLink clist,AccSum *no,AccSum *yes,float *occs)
       if (yes != NULL) ZeroAccSum(yes);
       for(p=clist;p!=NULL;p=p->next) {
          se=(StateElem*)p->item->item;
-         IncSumSqr(se->info,p->ans,no,yes,l);
+         IncSumSqr(se->info,p->ans,no,yes);
       }
       prob = AccSumProb(no);
       if (yes != NULL) prob += AccSumProb(yes);
@@ -2640,11 +2937,11 @@ void ValidProbNode(Node *node,float thresh)
 {
    QLink q,qbest;
    float best,sProb;
+   char buf[20];
    
    node->tProb = ClusterLogL(node->clist,&no,NULL,occs);
    node->occ = occs[FALSE];
    if (trace & T_TREE_BESTQ) {
-      char buf[20];
       if (node->parent==NULL)
          sprintf(buf," ROOT ");
       else
@@ -2654,7 +2951,7 @@ void ValidProbNode(Node *node,float thresh)
       printf("    Node %s:                  LogL=%5.3f (%.1f)\n",
              buf,node->tProb/node->occ,node->occ);
       fflush(stdout);
-   }
+   } 
    qbest = NULL;
    best = node->tProb;
    for (q=qHead;q!=NULL;q=q->next) {
@@ -2662,15 +2959,15 @@ void ValidProbNode(Node *node,float thresh)
       sProb = ClusterLogL(node->clist,&no,&yes,occs);
       if (node->occ<=0.0 || (outlierThresh >= 0.0 &&  
                              (occs[FALSE]<outlierThresh || occs[TRUE]<outlierThresh)))
-         sProb=node->tProb;
 
-      if (trace & T_TREE_ALLQ || 
-          ((trace & T_TREE_OKQ) && (sProb-node->tProb)>thresh)) {
-         printf("       Q %20s    LogL=%-7.3f  Imp = %8.2f (%.1f,%.1f)\n",
-                q->qName->name,sProb/node->occ,sProb-node->tProb,
-                occs[0],occs[1]);
-         fflush(stdout);
-      }
+         if (trace & T_TREE_ALLQ || 
+             ((trace & T_TREE_OKQ) && (sProb-node->tProb)>thresh)) {
+            printf("       Q %20s    LogL=%-7.3f  Imp = %8.2f (%.1f,%.1f)\n",
+                   q->qName->name,sProb/node->occ,sProb-node->tProb,
+                   occs[0],occs[1]);
+            fflush(stdout);
+         }
+
       if (sProb>best) {
          best=sProb;
          qbest=q;
@@ -2678,7 +2975,7 @@ void ValidProbNode(Node *node,float thresh)
    }
    if (trace & T_TREE_BESTQ) {
       if (qbest != NULL)
-         printf("    BestQ %20s    q LogL %6.3f Imp %8.2f\n",
+         printf("    BestQ %20s   LogL %6.3f Imp %8.2f\n",
                 qbest->qName->name,best/node->occ,best-node->tProb);
       else
          printf("    BestQ [ NULL ]\n");
@@ -2741,7 +3038,7 @@ Node *FindBestSplit(Node *first, float threshold)
    best=NULL;imp=0.0;
    for (node=first;node!=NULL;node=node->next) {
       sProb = node->sProb - node->tProb;
-      if (sProb>imp && sProb>threshold) { 
+      if (sProb>imp && sProb>threshold){ 
          best=node;imp=sProb;
       }
    }
@@ -2835,6 +3132,51 @@ void MergeLeaves(Tree *tree, float threshold)
       MergeNode(node,threshold);
 }
 
+/* GetCentroid: set centroid of given statistics */
+void GetCentroid(MLink macro, AccSum *acc, int stream)
+{
+   double v;
+   int s,m,k,vSize;
+   StateInfo *si;
+   StreamInfo *sti;
+   MixPDF *mp;
+   DVector sum,sqr;
+   float occ;
+   AccSumStrE *astr;
+   AccSumMixE *amix;
+
+   si = (StateInfo *)macro->structure;
+   for (s=(stream==0)?1:stream;s<=acc->nStream;s++) {
+      if (streams.set[s]) {
+         sti = (stream==0)?si->pdf[s].info:(StreamInfo *)macro->structure;
+         astr = acc->accse+s;
+         for (m=1;m<=astr->nMix;m++){
+            mp = sti->spdf.cpdf[m].mpdf;
+            amix = astr->accme+m;
+            sum = amix->sum;
+            sqr = amix->sqr;
+            occ = amix->occ;
+            vSize = amix->vSize;
+
+            if (occ > 0.0) {
+               for (k=1;k<=vSize; k++) {
+                  mp->mean[k] = sum[k]/occ;
+                  v = (sqr[k]-(sum[k]*sum[k]/occ))/occ;
+                  if (v < minVar){
+                     if (trace & T_DET)
+                        HError(-2636, "GetCentroid: variance is floored from %e to %e for %s dim=%d",v,minVar,macro->id->name,k);
+                     v = minVar;
+                  }
+                  mp->cov.var[k] = v;
+               }
+            }
+            sti->spdf.cpdf[m].weight = occ/acc->occ;
+         }
+      }
+      if (stream!=0) break;
+   }
+}
+
 /* TieLeafNodes: tie all items in the leaf nodes of given tree */
 void TieLeafNodes(Tree *tree, char *macRoot)
 {
@@ -2842,32 +3184,19 @@ void TieLeafNodes(Tree *tree, char *macRoot)
    ILink ilist,i;
    CLink cl;
    char clnum[20];              /* cluster number */
-   int clidx;                   /* cluster index */
-   char buf[255];               /* construct mac name in this */
+   int clidx;                   /* cluster index  */
+   char buf[255],str[255];      /* construct mac name in this */
    Node *node;
-   int numItems = 0;
+   int s,j,numItems = 0;
    LabId id;
-   SVector vf[SMAX];
-   SVector mean, var;
-   int l;
-   Boolean vfSet; 
 
    if (trace & T_CLUSTERS) printf("\n Nodes for %s\n",macRoot);
-   if (useLeafStats) { 
-      int k;
-      /* get vFloor vectors and flag if present in hset */
-      SetVFloor(hset,vf,-1.0);
-      vfSet=TRUE;
-      l=VectorSize(vf[1]);
-      for (k=1;k<=l;k++)
-         if (vf[1][k]<0.0)
-            vfSet = FALSE;
-   }
    cprob=0.0; occ=0.0;
    clidx = numTreeClust;
    for (node=tree->leaf;node!=NULL;node=node->next) {
       cprob += ClusterLogL(node->clist,&no,NULL,occs); /*==node->tProb;*/
       occ += occs[FALSE];
+      node->macro = (MLink *) New(&hmmHeap,tree->nActiveStr*sizeof(MLink));
       sprintf(clnum,"%d",clidx--); /* construct macro name */
       strcpy(buf,macRoot);
       strcat(buf,clnum);
@@ -2890,33 +3219,36 @@ void TieLeafNodes(Tree *tree, char *macRoot)
       }
       numItems += NumItems(ilist);
       if (trace & T_CLUSTERS)
-          printf("\n");
-      if ((ilist->item != ilist->owner) && useLeafStats) {
-         /* get cluster stats */
-         l = VectorSize(no.sum);
-         ZeroAccSum(&no);
-         for(cl=node->clist;cl!=NULL;cl=cl->next) 
-            IncSumSqr(((StateElem*)cl->item->item)->info,FALSE,&no,NULL,l);
+         printf("\n");
+      if (hset->swidth[0] == tree->nActiveStr) {  /* not stream clustering */
+         ApplyTie(ilist,buf,(ilist->item==ilist->owner?'h':'s'));
+         id=GetLabId(buf,FALSE);
+         node->macro[0] = FindMacroName(hset,((ilist->item==ilist->owner)?'h':'s'),id);
+         if (useLeafStats)
+            GetCentroid(node->macro[0], &no, 0);
       }
-      ApplyTie(ilist,buf,(ilist->item==ilist->owner?'h':'s'));
-      id=GetLabId(buf,FALSE);
-      node->macro = FindMacroName(hset,((ilist->item==ilist->owner)?'h':'s'),id);
-      if ((ilist->item != ilist->owner) && useLeafStats) {
-         int k;
-         StreamElem *ste;
-         MixPDF *mp;
-         ste = (((StateElem *)ilist->item)->info->pdf)+1;
-         mp = ste->spdf.cpdf[1].mpdf;
-         mean = mp->mean;
-         var  = mp->cov.var;
-         for (k=1;k<=l;k++) {
-            mean[k] = no.sum[k]/no.occ;
-            var[k] = no.sqr[k]/no.occ - mean[k]*mean[k];
-            /* floor variances */
-            if (vfSet && (var[k] < vf[1][k]) )
-               var[k] = vf[1][k];
+      else {
+         for (s=1,j=0;s<=hset->swidth[0];s++) {
+            if (tree->streams.set[s]) {
+               strcpy(str,buf);
+               if (tree->nActiveStr>1) {
+                  sprintf(clnum,"%d",s);   /* construct macro name for each stream */
+                  strcat(str,"-");
+                  strcat(str,clnum);
+               }
+               id=GetLabId(str,TRUE);
+               TieLeafStream(ilist,id,s);
+               node->macro[j] = FindMacroName(hset,'p',id);
+               if (useLeafStats)
+                  GetCentroid(node->macro[j],&no,s);
+               j++;
+            }
          }
+         if (tree->nActiveStr>1)
+            id=GetLabId(buf,TRUE);
       }
+      node->id = id;
+
       FreeItems(&ilist);        /* free items at this node */
       node->clist=NULL;
    }
@@ -2928,7 +3260,7 @@ void TieLeafNodes(Tree *tree, char *macRoot)
    macRoot is the root prefix of the name to use in the tie  */
 void BuildTree(ILink ilist,float threshold, char *macRoot)
 {
-   int i,j,l,N,snum,state,numItems;
+   int i,j,l,s,m,N,snum,state,numItems,numParam;
    char buf[256];
    HMMDef *hmm;
    CLink clHead,cl;
@@ -2942,19 +3274,22 @@ void BuildTree(ILink ilist,float threshold, char *macRoot)
    
    l = hset->swidth[1];
    /* Initialise Global AccSums for yes - no branches */
-   yes.sum=CreateVector(&tmpHeap,l);  yes.sqr=CreateVector(&tmpHeap,l);
-   no.sum=CreateVector(&tmpHeap,l);   no.sqr=CreateVector(&tmpHeap,l);
+   yes.sum=CreateDVector(&tmpHeap,l);  yes.sqr=CreateDVector(&tmpHeap,l);
+   no.sum=CreateDVector(&tmpHeap,l);   no.sqr=CreateDVector(&tmpHeap,l);
+   MakeAccSum(&yes,ilist);
+   MakeAccSum(&no,ilist);
 
    /* Check object consistency */
    hmm = ilist->owner;          /* any HMM will do */
    N = hmm->numStates;
    for(p=ilist;p!=NULL;p=p->next) 
-      ChkTreeObject(p);
+      ChkTreeObject(p,&no);
 
    /* Create a new tree in tree list */
    /* Find base name and state if any */
    hmm = ilist->owner;
-   strcpy(buf,HMMPhysName(hset,hmm)); TriStrip(buf);
+   strcpy(buf,HMMPhysName(hset,hmm)); 
+   TriStrip(buf);
    labid = GetLabId(buf,TRUE);
 
    if (ilist->owner==ilist->item)
@@ -2973,16 +3308,16 @@ void BuildTree(ILink ilist,float threshold, char *macRoot)
    for (p=ilist;p!=NULL;p=p->next,i++) {
       if (p->owner == p->item)
          for (j=2;j<p->owner->numStates;j++)
-            InitTreeAccs(p->owner->svec+j, l);
+            InitTreeAccs(p->owner->svec+j);
       else
-         InitTreeAccs((StateElem*)p->item, l);
+         InitTreeAccs((StateElem*)p->item);
       cl=(CLink) New(&tmpHeap,sizeof(CRec));
       p->owner->hook = cl; /* HMM hook links to CRec */
       cl->item = p;  cl->ans = FALSE;
       cl->idx = i; cl->next = clHead;
       clHead = cl;
    }
-   
+
    /* For each question make each hmm (item) point to its */
    /*  corresponding cluster member (CREC) via hmm->hook */
    for (q=qHead; q!=NULL; q=q->next)
@@ -2996,6 +3331,20 @@ void BuildTree(ILink ilist,float threshold, char *macRoot)
    cprob = node->tProb = ClusterLogL(node->clist,&no,NULL,occs);
    node->occ = occs[FALSE];
    numTreeClust=1; numItems=NumItems(ilist);
+
+   if (applyMDL) {
+      numParam=0;
+      for (s=1;s<=hset->swidth[0];s++) 
+         if (streams.set[s]) {
+            for (m=1;m<=no.accse[s].nMix;m++)
+               numParam += 2 * no.accse[s].accme[m].vSize;
+            numParam += no.accse[s].nMix-1;
+         }
+      threshold = 0.5 * numParam * log(node->occ);
+      if (state<0)
+         threshold *= N-2;
+   }
+
    if (trace & T_IND) {
       if (state<0) 
          printf(" Start  %4s : %d  have LogL=%6.3f occ=%4.1f\n",
@@ -3033,12 +3382,13 @@ void BuildTree(ILink ilist,float threshold, char *macRoot)
          printf("   Node %-3d  [Y] LogL %.3f (%.1f)    [N] LogL %.3f (%.1f)\n",
                 node->snum,node->yes->tProb/node->yes->occ,node->yes->occ,
                 node->no->tProb/node->no->occ,node->no->occ);
+      fflush(stdout);
       node=FindBestSplit(tree->leaf,threshold);
    }
    tree->size=snum;
    
    /* Merge any similar leaf nodes */
-   if (treeMerge) {
+   if (!applyMDL && treeMerge) {
       if (trace & T_IND) {
          if (state<0) 
             printf("\n Via    %4s : %d gives LogL=%6.3f occ=%4.1f\n",
@@ -3075,48 +3425,74 @@ void BuildTree(ILink ilist,float threshold, char *macRoot)
       fflush(stdout);
    }
 }
-
 /* AssignState: find shared state info for given id and state idx */
 Ptr AssignStructure(LabId id, int state)
 {
-   int len=0;
+   int len=0,stream,nTree,s,j;
    char buf[256];
    LabId tid;
    Tree *tree;
    Node *node;
    Boolean isYes;
+   ILink tlist=NULL,i;
    MLink m;
+   StateInfo *si;
+   StreamElem *ste;
    
    /* First find Tree to use */
    strcpy(buf,id->name); TriStrip(buf); tid = GetLabId(buf,FALSE);
-   for (tree=treeList;tree!=NULL;tree=tree->next) {
-      if (tree->baseId == tid && tree->state == state) break;
+   for (tree=treeList,stream=0;tree!=NULL;tree=tree->next) {
+      if ( (singleTree || (!singleTree && tree->baseId == tid))
+           && tree->state == state) {
+         AddItem(NULL,tree,&tlist);
+         stream += tree->nActiveStr;
+      }
    }
-   if (tree==NULL && state<0) return(NULL);
-   if (tree==NULL)
+   if (tlist==NULL && state<0) return(NULL);
+   if (tlist==NULL)
       HError(2662,"AssignStructure: cannot find tree for %s state %d",
              id->name,state);
-      
-   /* Then move down tree until state is found */
-   node = tree->root;
-   if (trace & T_DET) {
-      if (trace & T_TREE_ANS) printf("\n     ");
-      if (state>0)
-         printf(" [%d] ",state);
-      fflush(stdout);
+   if (stream!=hset->swidth[0]) 
+      HError(9999,"AssignStructure: incompatible tree");
+
+   nTree = NumItems(tlist);
+   if (nTree>1) {
+      si  = (StateInfo  *) New(&hmmHeap,sizeof(StateInfo));
+      ste = (StreamElem *) New(&hmmHeap,hset->swidth[0]*sizeof(StreamElem));
+      ste--;
+      si->nUse=0;si->hook=NULL;si->stateCounter=0;
+      si->pdf = ste;
    }
-   while (node->yes != NULL) {
-      isYes = QMatch(id->name,node->quest);
-      if (trace & T_TREE_ANS) printf("%s ",isYes?"yes":" no"),len+=4;
-      node = (isYes)?node->yes:node->no;
+
+   for (i=tlist;i!=NULL;i=i->next) {
+      tree = (Tree *)i->item;
+      /* Then move down tree until state is found */
+      node = tree->root;
+      if (trace & T_DET) {
+         if (trace & T_TREE_ANS) printf("\n     ");
+            if (state>0)
+               printf(" [%d] ",state);
+         fflush(stdout);
+      }
+      while (node->yes != NULL) {
+         isYes = QMatch(id->name,node->quest);
+         if (trace & T_TREE_ANS) printf("%s ",isYes?"yes":" no"),len+=4;
+         node = (isYes)?node->yes:node->no;
+      }
+      if (nTree==1)   /* state-based clustering */
+         m = (MLink)node->macro[0];
+      else            /* stream-based clustering */
+         for (s=1,j=0;s<=hset->swidth[0];s++)
+            if (tree->streams.set[s])
+               si->pdf[s].info = (StreamInfo *)node->macro[j++]->structure;
+
+      if (trace & T_DET) {
+         if (trace & T_TREE_ANS) printf("%*s",48-len," ");
+            printf("=~%c %-10s ",(state>0?((nTree>1)?'p':'s'):'h'),node->id->name);
+               fflush(stdout);
+         }
    }
-   m = (MLink)node->macro;
-   if (trace & T_DET) {
-      if (trace & T_TREE_ANS) printf("%*s",48-len," ");
-      printf("=~%c %-10s ",(state>0?'s':'h'),node->macro->id->name);
-      fflush(stdout);
-   }
-   return(m->structure);
+   return((nTree>1)?si:m->structure);
 }
 
 /* FindProtoModel: find an allophone of given model in hList */
@@ -3133,7 +3509,8 @@ HLink FindProtoModel(LabId model)
          if (q->type=='h') {
             strcpy(buf,q->id->name);
             TriStrip(buf);
-            if (strcmp(phone,buf)==0) return ((HLink) q->structure);
+            if (singleTree || strcmp(phone,buf)==0)
+	      return ((HLink) q->structure);
          }
    HError(2662,"FindProtoModel: no proto for %s in hSet",model->name);
    return NULL;
@@ -3164,9 +3541,9 @@ HMMDef *SynthModel(LabId id)
       hmm->svec = se - 2;
       for (i=2; i<N; i++,se++) {
          se->info = (StateInfo *) AssignStructure(id,i);
-         if (se->info->nUse==0)
+         /* if (se->info->nUse==0)
             HError(2695,"SynthModel: untied state found for state %d",i);
-         se->info->nUse++;
+			se->info->nUse++; */
       }
       NewMacro(hset,fidx,'h',id,hmm);
    }
@@ -3229,7 +3606,7 @@ void ShowTreesCommand(void)
    Node *node,**array;
    QLink q;
    IPat *p;
-   int i;
+   int i,s;
    FILE *file;
    char fn[256];
   
@@ -3241,7 +3618,7 @@ void ShowTreesCommand(void)
    if ((file=fopen(fn,"w"))==NULL)
       HError(2611,"ShowTreesCommand: Cannot open trees file %s",fn);
    for (q=qHead;q;q=q->next) {
-      fprintf(file,"QS %s ",ReWriteString(q->qName->name,NULL,SING_QUOTE));
+      fprintf(file,"QS %s ",q->qName->name);
       fprintf(file,"{ %s",ReWriteString(q->patList->pat,NULL,DBL_QUOTE));
       for (p=q->patList->next;p;p=p->next)
          fprintf(file,",%s",ReWriteString(p->pat,NULL,DBL_QUOTE));
@@ -3249,15 +3626,24 @@ void ShowTreesCommand(void)
    }
    fprintf(file,"\n");
    for (tree=treeList;tree!=NULL;tree=tree->next) {
-      if (tree->state>0)
-         fprintf(file,"%s[%d]\n",
+      if (tree->state>0)                       
+         fprintf(file,"%s[%d]",
                  ReWriteString(tree->baseId->name,NULL,ESCAPE_CHAR),
                  tree->state);
       else
-         fprintf(file,"%s\n",tree->baseId->name);
+         fprintf(file,"%s",tree->baseId->name);
+      if (tree->nActiveStr == hset->swidth[0])
+         fprintf(file,"\n");
+      else {
+         fprintf(file,".stream[");         /* output active stream of current tree */
+         for (s=1,i=1;s<=hset->swidth[0];s++)
+            if (tree->streams.set[s])
+                fprintf(file,"%d%s",s,(i++<tree->nActiveStr)?",":"]\n");
+      }
+			  
       if (tree->size==0) {
-         fprintf(file,"   %s\n\n",
-                 ReWriteString(tree->root->macro->id->name,NULL,DBL_QUOTE));
+         fprintf(file,"   %-45s\n\n",
+                 ReWriteString(tree->root->id->name,NULL,DBL_QUOTE));
       }
       else {
          array=(Node**) New(&tmpHeap,sizeof(Node*)*tree->size);
@@ -3270,14 +3656,14 @@ void ShowTreesCommand(void)
                HError(2695,"ShowTreesCommand: Cannot find node %d",i);
             if (node->yes==NULL || node->no==NULL) 
                HError(2695,"ShowTreesCommand: Node %d has no children",i);
-            fprintf(file," %3d %24s ",-i,
-                    ReWriteString(node->quest->qName->name,NULL,SING_QUOTE));
-            if (node->no->yes) fprintf(file,"  %5d    ",-node->no->snum);
-            else fprintf(file," %9s ",
-                         ReWriteString(node->no->macro->id->name,NULL,DBL_QUOTE));
-            if (node->yes->yes) fprintf(file,"  %5d    ",-node->yes->snum);
-            else fprintf(file," %9s ",
-                         ReWriteString(node->yes->macro->id->name,NULL,DBL_QUOTE));
+            fprintf(file," %3d %-45s ",-i,
+                    node->quest->qName->name);
+            if (node->no->yes) fprintf(file,"      %5d      ",-node->no->snum);
+            else fprintf(file," %15s ",
+                         ReWriteString(node->no->id->name,NULL,DBL_QUOTE));
+            if (node->yes->yes) fprintf(file,"      %5d      ",-node->yes->snum);
+            else fprintf(file," %15s ",
+                         ReWriteString(node->yes->id->name,NULL,DBL_QUOTE));
             fprintf(file,"\n");
          }
          fprintf(file,"}\n\n");
@@ -3308,14 +3694,21 @@ static Node *GetNode(Node *node,int n)
 
 Tree *LoadTree(char *name,Source *src)
 {
-   int n,nt,num_no,num_yes;
+   int n,nt,num_no,num_yes,s,nStream=1;
    char type;
    LabId lab_no,lab_yes,qname;
    Tree *tree;
    Node *node;
-   char buf[256],bname[64],*p;
-  
+   char buf[256],bname[64],index[64],mname[256],*p;
+   Boolean strTree=FALSE;
+
    strcpy(bname,name);
+   if (strstr(bname,"stream")!=NULL) {
+      strcpy(index,bname);
+      *(strstr(bname,"stream")-1)='\0';
+      strTree = TRUE;
+   }
+
    if (name[strlen(bname)-1]==']' && strrchr(bname,'[')!=NULL) {
       p=strchr(bname,'[');
       *p++=0;
@@ -3325,6 +3718,7 @@ Tree *LoadTree(char *name,Source *src)
    }
    else
       n=-1,type='h';
+
    if (GetLabId(bname,TRUE)==NULL)
       HError(2660,"LoadTree: Cannot parse tree name %s (base-phone)",name);
 
@@ -3332,10 +3726,52 @@ Tree *LoadTree(char *name,Source *src)
    nt=0;tree->size=0;
    tree->root=CreateTreeNode(NULL,NULL);
    tree->root->snum=0;
+
+   if (strTree) {
+     p = strrchr(index,'[')+1;
+
+     while (*p==' ') p++;
+     s = atoi(p);
+     if (s<=0 || s>hset->swidth[0])
+       HError(9999,"LoadTree: stream index out of range");
+     tree->streams.set[s] = TRUE;
+     p++;
+     while (*p==' ') p++;
+
+     while (*p==',') {
+        p++;
+        s = atoi(p);
+	if (s<=0 || s>hset->swidth[0])
+	   HError(9999,"LoadTree: stream index out of range");
+	tree->streams.set[s] = TRUE;
+	nStream++;
+	p++;
+	while (*p==' ') p++;
+     }
+     type = 'p';
+     if (*p != ']')
+       HError(9999,"LoadTree: stream index ] expected");
+   }
+   tree->nActiveStr=nStream;
+
    ReadString(src,buf);
    if (strcmp(buf,"{")) {
-      if ((tree->root->macro=FindMacroName(hset,type,GetLabId(buf,FALSE)))==NULL)
-         HError(2661,"LoadTree: Macro %s not recognised",buf);
+      tree->root->macro = (MLink *) New(&hmmHeap,nStream*sizeof(MLink));
+      if (strTree && nStream>1) {
+         for (s=1,n=0;s<=hset->swidth[0];s++)
+            if (tree->streams.set[s]) {
+               strcpy(mname,buf);
+               sprintf(index,"%d",s);   /* construct macro name for each stream */
+               strcat(mname,"-");
+               strcat(mname,index);
+               if ((tree->root->macro[n++]=FindMacroName(hset,type,GetLabId(mname,FALSE)))==NULL)
+                  HError(2661,"LoadTree: Macro %s not recognised",buf);
+            }       
+      }
+      else{
+         if ((tree->root->macro[0]=FindMacroName(hset,type,GetLabId(buf,FALSE)))==NULL)
+            HError(2661,"LoadTree: Macro %s not recognised",buf);
+      }
    }
    else {
       while (ReadString(src,buf),strcmp("}",buf)!=0) {
@@ -3359,32 +3795,67 @@ Tree *LoadTree(char *name,Source *src)
          ReadString(src,buf);
          if (sscanf(buf,"%d",&num_no)==1)
             lab_no=NULL;
-         else
-            if ((lab_no=GetLabId(buf,FALSE))==NULL)
-               HError(2661,"LoadTree: Macro %s not recognised",buf);
+         else {
+            lab_no=GetLabId(buf,TRUE);
+            node->id = lab_no;
+         }
+
          ReadString(src,buf);
          if (sscanf(buf,"%d",&num_yes)==1)
             lab_yes=NULL;
-         else
-            if ((lab_yes=GetLabId(buf,FALSE))==NULL)
-               HError(2661,"LoadTree: Macro %s not recognised",buf);
+         else {
+            lab_yes=GetLabId(buf,TRUE);
+            node->id = lab_yes;
+         }
+
          if (lab_no) {
-            node->no->macro=FindMacroName(hset,type,lab_no);
+            node->no->macro = (MLink *) New(&hmmHeap,nStream*sizeof(MLink));
+            if (strTree && nStream>1) {   /* stream share */
+               for (s=1,n=0;s<=hset->swidth[0];s++)
+                  if (tree->streams.set[s]) {
+                     strcpy(mname,lab_no->name);
+                     sprintf(index,"%d",s);   /* construct macro name for each stream */
+                     strcat(mname,"-");
+                     strcat(mname,index);
+                     if ((node->no->macro[n++]=FindMacroName(hset,type,GetLabId(mname,FALSE)))==NULL)
+                        HError(2661,"LoadTree: Macro %s not recognised",buf);
+                  }
+            }             
+            else{
+               if ((node->no->macro[0]=FindMacroName(hset,type,lab_no))==NULL) 
+                  HError(2661,"LoadTree: Macro %s not recognised",buf);
+            }
             node->no->snum=--nt;
             node->no->next=tree->leaf;
-            if (tree->leaf) tree->leaf->prev=node;
+            if (tree->leaf) tree->leaf->prev=node->no;
             node->no->prev=NULL;
-            tree->leaf=node;
+            tree->leaf=node->no;
          }
          else 
             node->no->snum=-num_no,node->no->macro=NULL;
+
          if (lab_yes) {
-            node->yes->macro=FindMacroName(hset,type,lab_yes);
+            node->yes->macro = (MLink *) New(&hmmHeap,nStream*sizeof(MLink));
+            if (strTree && nStream>1) {   /* stream share */
+               for (s=1,n=0;s<=hset->swidth[0];s++)
+                  if (tree->streams.set[s]) {
+                     strcpy(mname,lab_yes->name);
+                     sprintf(index,"%d",s);   /* construct macro name for each stream */
+                     strcat(mname,"-");
+                     strcat(mname,index);
+                    if ((node->yes->macro[n++]=FindMacroName(hset,type,GetLabId(mname,FALSE)))==NULL)
+                       HError(2661,"LoadTree: Macro %s not recognised",buf);
+                  }
+            }             
+            else {
+               if ((node->yes->macro[0]=FindMacroName(hset,type,lab_yes))==NULL) 
+                  HError(2661,"LoadTree: Macro %s not recognised",buf);
+            }
             node->yes->snum=--nt;
             node->yes->next=tree->leaf;
-            if (tree->leaf) tree->leaf->prev=node;
+            if (tree->leaf) tree->leaf->prev=node->yes;
             node->yes->prev=NULL;
-            tree->leaf=node;
+            tree->leaf=node->yes;
          }
          else
             node->yes->snum=-num_yes,node->yes->macro=NULL;
@@ -3494,6 +3965,7 @@ void CloneCommand(void)
    CreateHMMSet(tmpSet,&hmmHeap,TRUE);
    if(MakeHMMSet(tmpSet,buf)<SUCCESS)
       HError(2628,"CloneCommand: MakeHMMSet failed");
+
    
    for (h=0; h<MACHASHSIZE; h++)
       for (q=tmpSet->mtab[h]; q!=NULL; q=q->next) 
@@ -3587,15 +4059,25 @@ MixPDF *DupMixPDF(MixPDF *s, Boolean frc)
 }
 
 /* DupStream: return a Dup of given stream */
-MixtureElem *DupStream(StreamElem *ste)
+StreamInfo *DupStream(StreamInfo *sti, Boolean frc)
 {
    int m,M;
-   MixtureElem *sme,*tme,*t;
+   StreamInfo *t;
+   MixtureElem *sme,*tme;
 
-   M = ste->nMix;
+   if (sti->nUse>0 && !frc) {     /* shared struct so just return ptr to it */
+      if ((t=(StreamInfo *) sti->hook)==NULL)
+	 HError(2692,"DupStream: could not find dup streamInfo macro");
+      ++t->nUse;
+      return t;
+   }
+   M = sti->nMix;
+   t = (StreamInfo *) New(&hmmHeap,sizeof(StreamInfo));
+   t->nUse = 0; t->hook = NULL;
+
    tme = (MixtureElem*) New(&hmmHeap,sizeof(MixtureElem)*M);
-   t = tme-1;
-   sme = ste->spdf.cpdf + 1;
+   t->spdf.cpdf = tme-1;
+   sme = sti->spdf.cpdf + 1;
    for (m=1; m<=M; m++,sme++,tme++) {
       tme->weight = sme->weight;
       if (tme->weight > MINMIX)
@@ -3611,6 +4093,7 @@ StateInfo *DupState(StateInfo *si, Boolean frc)
 {
    StateInfo *t;                /* the target */
    StreamElem *tste,*sste;
+   StreamInfo *tsti,*ssti;
    int s;
    
    if (si->nUse>0 && !frc) {    /* shared struct so just return ptr to it */
@@ -3624,9 +4107,12 @@ StateInfo *DupState(StateInfo *si, Boolean frc)
    tste = (StreamElem*) New(&hmmHeap,sizeof(StreamElem)*hset->swidth[0]);
    t->pdf = tste-1; sste = si->pdf + 1;
    for (s=1; s<=hset->swidth[0]; s++,tste++,sste++) {
-      tste->nMix = sste->nMix; 
-      tste->hook = NULL;
-      tste->spdf.cpdf = DupStream(sste);
+      tste->info = (StreamInfo *) New(&hmmHeap,sizeof(StreamInfo));
+      tsti = tste->info;
+      ssti = sste->info;
+      tsti->nMix = ssti->nMix; 
+      tsti->hook = NULL;
+      tsti = DupStream(ssti,FALSE);
    }
    t->dur = DupSVector(si->dur);
    t->weights = DupSVector(si->weights);
@@ -3667,6 +4153,7 @@ void DupMacro(MLink ml,LabId labid)
    Matrix im,om;
    MixPDF *imp,*omp;
    StateInfo *isi,*osi;
+   StreamInfo *isti,*osti;
    Ptr ostct=NULL;
     
    switch(ml->type) {
@@ -3675,6 +4162,12 @@ void DupMacro(MLink ml,LabId labid)
       osi=DupState(isi,TRUE);
       ostct=osi;
       isi->hook=osi;
+      break;
+   case 'p':
+      isti=(StreamInfo *) ml->structure;
+      osti=DupStream(isti,TRUE);
+      ostct=osti;
+      isti->hook=osti;
       break;
    case 'm':
       imp=(MixPDF *) ml->structure;
@@ -3760,6 +4253,14 @@ void DuplicateCommand(void)
          for (h=0; h<MACHASHSIZE; h++)
             for (ml=hset->mtab[h]; ml!=NULL; ml=ml->next) {
                if (ml->type!='m') continue;
+               strcpy(buf,ml->id->name);
+               strcat(buf,id);
+               DupMacro(ml,GetLabId(buf,TRUE));
+            }
+      if (strchr(what,'p'))
+         for (h=0; h<MACHASHSIZE; h++)
+            for (ml=hset->mtab[h]; ml!=NULL; ml=ml->next) {
+               if (ml->type!='p') continue;
                strcpy(buf,ml->id->name);
                strcat(buf,id);
                DupMacro(ml,GetLabId(buf,TRUE));
@@ -3933,7 +4434,7 @@ void EditTransMat(Boolean adding)
          printf("\nRT %d %d {}\n Removing transitions from transP\n",i,j);
       fflush(stdout);
    }
-   PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+   PItemList(&ilist,&type,hset,&source,NULL,trace&T_ITM);
    if (ilist == NULL) {
       HError(-2631,"EditTransMat: No trans mats to edit!");
       return;
@@ -3986,6 +4487,7 @@ void MixUpCommand(void)
    char type = 'p';             /* type of items must be p */
    int ch,j,m,trg,M,mDefunct,n2fix,totm=0,totM=0;
    StreamElem *ste;
+   StreamInfo *sti;
    HMMDef *hmm;
    char *hname;
    
@@ -3998,6 +4500,7 @@ void MixUpCommand(void)
       UnGetCh(ch,&source);
       trg = ChkedInt("Mix target",1,INT_MAX);
    }
+
    if (trace & T_BID) {
       if (trg>0)
          printf("\nMU %d {}\n Mixup to %d components per stream\n",trg,trg);
@@ -4007,7 +4510,7 @@ void MixUpCommand(void)
    }
    if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
       HError(2640,"MixUpCommand: MixUp only possible for continuous models");
-   PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+   PItemList(&ilist,&type,hset,&source,NULL,trace&T_ITM);
    if (ilist == NULL) {
       HError(-2631,"MixUpCommand: No mixtures to increase!");
       return;
@@ -4015,25 +4518,26 @@ void MixUpCommand(void)
    SetGCStats();
    for (i=ilist; i!=NULL; i=i->next) {
       ste = (StreamElem *)i->item;
-      M = ste->nMix;
-      if (M>0) ste->nMix=-M;
+      sti = ste->info;
+      M = sti->nMix;
+      if (M>0) sti->nMix=-M;
    }
    for (i=ilist; i!=NULL; i=i->next) {
       hmm = i->owner; 
-      ste = (StreamElem *)i->item; M = ste->nMix;
+      ste = (StreamElem *)i->item;  sti = ste->info;  M = sti->nMix;
       if (M<0) {
-         M = ste->nMix = -M;
+         M = sti->nMix = -M;
          hname = HMMPhysName(hset,hmm);
          for (j=1; j<=M; j++)   /* reset the split counters */
-            ste->spdf.cpdf[j].mpdf->hook = (void *) 0;
-         mDefunct = CountDefunctMix(ste);
+            sti->spdf.cpdf[j].mpdf->hook = (void *) 0;
+         mDefunct = CountDefunctMix(sti);
          if (trg<0) m=M-trg;
          else m=trg;
          if (m > M-mDefunct) {
             n2fix = m-M+mDefunct;
             if (n2fix>mDefunct) n2fix = mDefunct;
             if (n2fix>0) {
-               FixDefunctMix(hname,ste,n2fix);
+               FixDefunctMix(hname,sti,n2fix);
             }
          }
          else n2fix=0;
@@ -4045,10 +4549,10 @@ void MixUpCommand(void)
                printf("  %12s : mixup %d -> %d\n",hname,M,m);
          }
          if (m>maxMixes) maxMixes = m;
-         if (m>M) UpMix(hname,ste,M,m);
+         if (m>M) UpMix(hname,sti,M,m);
          totm+=m;totM+=M;
-         for (j=1; j<=ste->nMix; j++) /* restore the hooks */
-            ste->spdf.cpdf[j].mpdf->hook = NULL;
+         for (j=1; j<=sti->nMix; j++) /* restore the hooks */
+            sti->spdf.cpdf[j].mpdf->hook = NULL;
       }
    }
    FreeItems(&ilist);
@@ -4071,7 +4575,7 @@ void TieCommand(void)
    ChkedAlpha("TI macro name",macName);
    if (strlen(macName) > 20 )
       HError(-2639,"TieCommand: %s is rather long for a macro name!",macName);
-   PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+   PItemList(&ilist,&type,hset,&source,NULL,trace&T_ITM);
    if (trace & (T_BID | T_MAC)) {
       printf("\nTI %s {}\n Tie items\n",macName);
       fflush(stdout);
@@ -4102,7 +4606,7 @@ void MakeIntoMacrosCommand(void)
    }
    if (strlen(macName) > 20 )
       HError(-2639,"MakeIntoMacrosCommand: %s is rather long for a macro name!",macName);
-   PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+   PItemList(&ilist,&type,hset,&source,NULL,trace&T_ITM);
    if (type=='p' || type=='h')
       HError(2640,"MakeIntoMacros: Cannot convert PDFs or HMMs into macro");
    for (i=ilist;i;i=i->next) {
@@ -4149,13 +4653,14 @@ void UntieCommand(void)
       printf("\nUT {}\n Untie previously tied structures\n");
       fflush(stdout);
    }
-   PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+   PItemList(&ilist,&type,hset,&source,NULL,trace&T_ITM);
    if (ilist==NULL) {
       HError(-2631,"UntieCommand: No items to untie");
       return;
    }
    switch (type) {
    case 's': UntieState(ilist); break;
+   case 'p': UntiePDF(ilist);   break;
    case 'm': UntieMix(ilist);   break;
    case 't': UntieTrans(ilist); break;
    case 'u': UntieMean(ilist);  break;
@@ -4164,8 +4669,6 @@ void UntieCommand(void)
    case 'x': UntieXform(ilist); break;
    case 'h':
       HError(2640,"UntieCommand: Joined HMMs cannot be untied");
-   case 'p':
-      HError(2640,"UntieCommand: Joined PDF's cannot be untied");
    default:
       HError(2640,"UntieCommand: Cannot untie %c's",type);
    }
@@ -4226,7 +4729,7 @@ void ClusterCommand(Boolean nCluster)
    if (strlen(macName) > 20 )
       HError(-2639,"ClusterCommand: %s is rather long for a macro name",
              macName);
-   PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+   PItemList(&ilist,&type,hset,&source,NULL,trace&T_ITM);
    if (ilist==NULL) {
       HError(-2631,"ClusterCommand: No items to cluster for %s\n",macName);
       return;
@@ -4591,11 +5094,6 @@ void SetStreamWidthCommand(void)
    }
    badGC = TRUE;
    hset->swidth[s]=n;
-
-   size=0;
-   for (i = 1; i <= hset->swidth[0]; i++)
-      size += hset->swidth[i];
-   hset->vecSize = size;
    
    if (trace & (T_BID | T_SIZ)) {
       printf(" SW: Stream width changed for %d mixes\n",nedit);
@@ -4685,7 +5183,7 @@ void CreateTMRecs(void)
 }
 
 /* CalcTMWeights: Fix the weights of me using the old stream info */
-Vector CalcTMWeights(int s, StreamElem *ste, double tFloor)
+Vector CalcTMWeights(int s, StreamInfo *sti, double tFloor)
 {
    DVector v;
    Vector tpdf;
@@ -4699,11 +5197,11 @@ Vector CalcTMWeights(int s, StreamElem *ste, double tFloor)
    tpdf = CreateVector(hset->hmem,M);
 
    maxW = LZERO;
-   if (M==ste->nMix) {
+   if (M==sti->nMix) {
       for (m=1;m<=M;m++) {  /* copy weights */
-         for (sm=1,sme=ste->spdf.cpdf+1;sm<=ste->nMix;sm++,sme++)
+         for (sm=1,sme=sti->spdf.cpdf+1;sm<=sti->nMix;sm++,sme++)
             if (sme->mpdf==hset->tmRecs[s].mixes[m]) break;
-         if (sm>ste->nMix)
+         if (sm>sti->nMix)
             HError(2693,"CalcTMWeights: Cannot find matching mixture");
          if (sme->weight>MINMIX)
             w = v[m] = log(sme->weight);
@@ -4715,8 +5213,8 @@ Vector CalcTMWeights(int s, StreamElem *ste, double tFloor)
    else {
       for (m=1;m<=M;m++) {  /* set weights to SOutP(owner) */
          w=LZERO;
-         for (sm=1,sme=ste->spdf.cpdf+1;sm<=ste->nMix;sm++,sme++) {
-            if (sme->weight>MINMIX) {
+         for (sm=1,sme=sti->spdf.cpdf+1;sm<=sti->nMix;sm++,sme++) {
+            if (sme->weight>MINMIX || hset->msdflag[s]) {
                p = MOutP(hset->tmRecs[s].mixes[m]->mean,sme->mpdf);
                w = LAdd(w,log(sme->weight)+p);
             }
@@ -4766,7 +5264,7 @@ void ConvertCont2Tied(void)
 {
    Vector tpdf;
    MLink q;
-   StreamElem *ste;
+   StreamInfo *sti;
    HLink hmm;
    LabId labid;
    char buf[80];
@@ -4783,16 +5281,16 @@ void ConvertCont2Tied(void)
             hmm=(HLink) q->structure;
             for (j=2;j<hmm->numStates;j++) {
                for (s=1;s<=hset->swidth[0];s++) {
-                  ste=hmm->svec[j].info->pdf+s;
-                  if (IsSeen(ste->nMix)) continue;
+                  sti=hmm->svec[j].info->pdf[s].info;
+                  if (IsSeen(sti->nUse)) continue;
                   if (trace & T_DET)
                      printf("   For  %-12s[%d].stream[%d]:  ",
                             HMMPhysName(hset,hmm),j,s);
                   M = hset->tmRecs[s].nMix;
-                  tpdf=CalcTMWeights(s,ste,joinFloor);
-                  ste->spdf.tpdf=tpdf;
-                  ste->nMix=M;
-                  Touch(&ste->nMix);
+                  tpdf=CalcTMWeights(s,sti,joinFloor);
+                  sti->spdf.tpdf=tpdf;
+                  sti->nMix=M;
+                  Touch(&sti->nUse);
                }
             }
          }
@@ -4802,8 +5300,8 @@ void ConvertCont2Tied(void)
             hmm=(HLink) q->structure;
             for (j=2;j<hmm->numStates;j++)
                for (s=1;s<=hset->swidth[0];s++) {
-                  ste=hmm->svec[j].info->pdf+s;
-                  Untouch(&ste->nMix);
+                  sti=hmm->svec[j].info->pdf[s].info;
+                  Untouch(&sti->nUse);
                }
          }
                                   
@@ -4958,7 +5456,7 @@ void RemMeansCommand(void)
    for (s=1; s<=hset->swidth[0]; s++) {
       if (hset->swidth[s] != tmpSet.swidth[s])
          HError(2630,"RemMeansCommand: stream %d different size",s);
-      sv[s] = hmm->svec[2].info->pdf[s].spdf.cpdf[1].mpdf->mean;
+      sv[s] = hmm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->mean;
    }
    NewHMMScan(hset,&hss);
    while(GoNextMix(&hss,FALSE)) {
@@ -4984,12 +5482,12 @@ void QuestionCommand(void)
 
    ChkedAlpha("QS question name",qName);
    /* get copy of original item list whilst parsing it */
-   pattern=PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+   pattern=PItemList(&ilist,&type,hset,&source,NULL,trace&T_ITM);
    if (trace & T_QST) {
       printf("\nQS %s %s Define question\n",qName,pattern);
       fflush(stdout);
    }
-   if (ilist==NULL)
+   if (ilist==NULL && (trace & T_BAS))
       HError(-2631,"QuestionCommand: No items for question %s\n",qName);
    else {
       LoadQuestion(qName,ilist,pattern);
@@ -5010,6 +5508,9 @@ void TreeBuildCommand(void)
    char type = ' ';             /* type of items to tie */
    char macName[255];           /* name of macro to use */
    float thresh = 0.0;
+   int s;
+
+   ClearSet(streams);
    
    thresh = ChkedFloat("Tree build threshold",0.0,FLOAT_MAX);
    ChkedAlpha("TB macro name",macName);
@@ -5025,13 +5526,20 @@ void TreeBuildCommand(void)
    if (strlen(macName) > 20 )
       HError(-2639,"TreeBuildCommand: %s is rather long for a macro name",
              macName);
-   PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+
+   PItemList(&ilist,&type,hset,&source,&streams,trace&T_ITM);
+
    if (ilist==NULL) {
       HError(-2631,"TreeBuildCommand: No items to cluster for %s\n",macName);
       return;
    }
-   if (type!='h' && type!='s')
+
+   if (type!='h' && type!='s' && type!='p')
       HError(2640,"TreeBuildCommand: Type %c not implemented",type);
+
+   if (type=='h' || type=='s')
+      for (s=1;s<=hset->swidth[0];s++)
+         streams.set[s] = TRUE;
 
    /* Do Tree based clustering */
    BuildTree(ilist,thresh,macName);
@@ -5089,7 +5597,7 @@ void FloorAverageCommand(void)
 {
    HMMScanState hss;
    StateInfo *si   ;
-   StreamElem *ste;
+   StreamInfo *sti;
    SVector var , mean;
    DVector *varAcc;
    double occAcc;
@@ -5106,7 +5614,7 @@ void FloorAverageCommand(void)
       HError(2640,"FloorAverageCommand: Only possible for continuous models");
    if (hset->ckind != DIAGC)
       HError(2640,"FloorAverageCommand: Only implemented for DIAGC models");
-   S= hset->swidth[0];
+   S = hset->swidth[0];
 
    /* allocate accumulators */
    varAcc = (DVector*)New(&gstack,S*sizeof(DVector));
@@ -5123,16 +5631,16 @@ void FloorAverageCommand(void)
       s=0;
       while (GoNextStream(&hss,TRUE)) {
          l=hset->swidth[hss.s];
-         ste = hss.ste;
+         sti = hss.sti;
          s++;
-         if ( ste->nMix > 1 ) { 
+         if ( sti->nMix > 1 ) { 
             for (k=1;k<=l;k++) { /* loop over k-th dimension */
                double    rvar  = 0.0;
                double    rmean = 0.0;
-               for (i=1; i<= ste->nMix; i++) {
-                  weight = ste->spdf.cpdf[i].weight;
-                  var  = ste->spdf.cpdf[i].mpdf->cov.var;
-                  mean = ste->spdf.cpdf[i].mpdf->mean;
+               for (i=1; i<= sti->nMix; i++) {
+                  weight = sti->spdf.cpdf[i].weight;
+                  var  = sti->spdf.cpdf[i].mpdf->cov.var;
+                  mean = sti->spdf.cpdf[i].mpdf->mean;
                   
                   rvar  += weight * ( var[k] + mean[k] * mean[k] );
                   rmean += weight * mean[k];
@@ -5142,7 +5650,7 @@ void FloorAverageCommand(void)
             }
          }
          else { /* single mix */
-            var  = ste->spdf.cpdf[1].mpdf->cov.var;
+            var  = sti->spdf.cpdf[1].mpdf->cov.var;
             for (k=1;k<=l;k++) 
                varAcc[s][k] += var[k]*occ;
          }
@@ -5280,6 +5788,7 @@ void MixDownCommand(void)
    int m,M;
    int totm=0,totM=0;
    StreamElem *ste;
+   StreamInfo *sti;
    HMMDef *hmm;
    char *hname;
    int nDefunct,nDefunctMix;
@@ -5294,7 +5803,7 @@ void MixDownCommand(void)
       HError(2640,"MixDownCommand: MixDown only possible for continuous models");
 
    /* get itemlist */
-   PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+   PItemList(&ilist,&type,hset,&source,NULL,trace&T_ITM);
    if (ilist == NULL) {
       HError(-2631,"MixDownCommand: No mixtures to decrease!");
       return;
@@ -5303,37 +5812,39 @@ void MixDownCommand(void)
    nDefunct = nDefunctMix= 0; 
    for (i=ilist; i!=NULL; i=i->next) {
       ste = (StreamElem *)i->item;
-      M = ste->nMix;
-      if (M>0) ste->nMix=-M;
+      sti = ste->info;
+      M = sti->nMix;
+      if (M>0) sti->nMix=-M;
    }
 
    /* mix down all pdf's */
    nDefunct = nDefunctMix= 0; 
    for (i=ilist; i!=NULL; i=i->next){
       hmm = i->owner;
-      ste = (StreamElem *)i->item; 
-      M = ste->nMix;
+      ste = (StreamElem *)i->item;
+      sti = ste->info; 
+      M = sti->nMix;
       if (M<0) { 
          /* mix not yet processed */
-         M = ste->nMix = -M;
+         M = sti->nMix = -M;
          hname = HMMPhysName(hset,hmm);
          /* remove defunct mixture compoonents */
          for (m=1; m<=M; m++)
-            if (ste->spdf.cpdf[m].weight <= MINMIX) {
-               MixPDF *mp=ste->spdf.cpdf[m].mpdf;
+            if (sti->spdf.cpdf[m].weight <= MINMIX) {
+               MixPDF *mp=sti->spdf.cpdf[m].mpdf;
                if (mp->nUse) mp->nUse--; /* decrement MixPDF use */
-               ste->spdf.cpdf[m] = ste->spdf.cpdf[M]; M--; 
+               sti->spdf.cpdf[m] = sti->spdf.cpdf[M]; M--; 
                nDefunct++;
             }
-         if(ste->nMix>M) {
+         if(sti->nMix>M) {
             if ( trace & T_DET) 
-               printf("MD %12s : %d out of %d mixes defunct\n",hname,ste->nMix-M,ste->nMix);
+               printf("MD %12s : %d out of %d mixes defunct\n",hname,sti->nMix-M,sti->nMix);
             nDefunctMix++;
-            ste->nMix = M;
+            sti->nMix = M;
          }
          /* downmix if necessary */
          if (trg<M) {
-            DownMix(hname,ste,trg,TRUE);
+            DownMix(hname,sti,trg,TRUE);
             totm+=trg;
          }
          else 
@@ -5570,7 +6081,7 @@ RegTree *InitRegTree(HMMSet *hset, int *vSize, ILink ilist)
    CoList *listSp=NULL,*listNonSp=NULL,*cs, *cn;
    RNode *r1=NULL, *r2=NULL, *rNode=NULL;
    RegTree *rTree;
-   int nComponentsSp = 0, nComponentsNonSp = 0;
+   int s, nComponentsSp = 0, nComponentsNonSp = 0,i;
    StreamElem *ste;
    ILink p=NULL;
 
@@ -5582,11 +6093,14 @@ RegTree *InitRegTree(HMMSet *hset, int *vSize, ILink ilist)
    if (*vSize <= 0)
       HError(2673, "InitRegTree: Problem with vector Size = %d", vSize);
 
+   for (s=1;s<=hset->swidth[0];s++)
+      streams.set[s] = TRUE;
+
    NewHMMScan(hset,&hss);
 
    do {
       while (GoNextState(&hss,TRUE)) {
-         InitTreeAccs(hss.se, *vSize);
+         InitTreeAccs(hss.se);
          while (GoNextStream(&hss,TRUE)) {
             /* go through item list to see if non-speech sound */
             if (ilist != NULL)
@@ -6027,7 +6541,7 @@ void RegClassesCommand(void) {
    while(ch!=EOF && isspace(ch));
    UnGetCh(ch,&source);
    if (ch != '\n')
-      PItemList(&ilist,&type,hset,&source,trace&T_ITM);
+      PItemList(&ilist,&type,hset,&source,NULL,trace&T_ITM);
 
    regTree = InitRegTree(hset, &vSize, ilist);
    if (ilist != NULL) 
@@ -6098,6 +6612,8 @@ void Initialise(char *hmmListFn)
    maxStates = MaxStatesInSet(hset);
    maxMixes = MaxMixInSet(hset);
 
+   streams = CreateSet(SMAX);
+
    if (trace != 0) {
       printf("HHEd\n");
       printf(" %d/%d Models Loaded [%d states max, %d mixes max]\n",
@@ -6124,7 +6640,7 @@ typedef enum           { AT=1, RT , SS , CL , CO , JO , MU , TI , UF , NC ,
                          RC ,
                          RO , RM , RN ,
                          LS , QS , TB , TR , AU , GQ , MD , ST , LT ,
-                         MM , DP , HK , FC , FA , FV, XF }
+                         MM , DP , HK , FC , FA , FV, XF}
 cmdNum;
 
 /* CmdIndex: return index 1..N of given command */
