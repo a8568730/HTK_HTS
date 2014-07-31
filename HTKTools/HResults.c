@@ -19,8 +19,8 @@
 /*    File: HResults.c: gather statistics on results           */
 /* ----------------------------------------------------------- */
 
-char *hresults_version = "!HVER!HResults:   3.2 [CUED 09/12/02]";
-char *hresults_vc_id = "$Id: HResults.c,v 1.8 2002/12/19 16:37:40 ge204 Exp $";
+char *hresults_version = "!HVER!HResults:   3.2.1 [CUED 15/10/03]";
+char *hresults_vc_id = "$Id: HResults.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

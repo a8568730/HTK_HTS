@@ -1,5 +1,5 @@
 /*  ---------------------------------------------------------------  */
-/*      The HMM-Based Speech Synthesis System (HTS): version 1.1b    */
+/*      The HMM-Based Speech Synthesis System (HTS): version 1.1.1   */
 /*                        HTS Working Group                          */
 /*                                                                   */
 /*                   Department of Computer Science                  */
@@ -21,7 +21,7 @@
 /*       of conditions and the following disclaimer.                 */
 /*                                                                   */
 /*    2. Any modifications must be clearly marked as such.           */
-/*                                                                   */    
+/*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSITITUTE OF TECHNOLOGY,  */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
 /*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
@@ -34,32 +34,42 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
+/*  ---------------------------------------------------------------  */
 /*     HGen.h : parameter generation from pdf sequence based on      */
 /*              Maximum Likelihood criterion with dynamic feature    */
 /*              window constraints                                   */
 /*                                                                   */
-/*                                    2003/06/07 by Heiga Zen        */
+/*                                    2003/12/26 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
-#define	WLEFT    0
-#define	WRIGHT   1
-#define	MAXDNUM 20   /* maximum number of static + deltas */
+
+/* !HVER!HGen:   1.1.1 [NIT 26/12/03] */
+
+#ifndef _HGEN_H_
+#define _HGEN_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define WLEFT    0
+#define WRIGHT   1
+#define MAXDNUM 20   /* maximum number of static + deltas */
 
 typedef struct {
+   char *fn[MAXDNUM];  /* delta window coefficient file */
    int num;            /* number of static + deltas */
-   char	*fn[MAXDNUM];  /* delta window coefficient file */
-   int   **width;      /* width [0..num-1][0(left) 1(right)] */
-   double **coef;      /* coefficient [1..num][length[1]..length[2]] */
-   int maxw[2];	       /* max width [0(left) 1(right)] */
    int max_L;
+   int maxw[2];        /* max width [0(left) 1(right)] */
+   int  **width;       /* width [0..num-1][0(left) 1(right)] */
+   double **coef;      /* coefficient [1..num][length[1]..length[2]] */
 } DWin;
 
 typedef struct {
    SVector *mseq;     /* sequence of mean vector */
    SVector *ivseq;    /* sequence of invarsed variance vector */
    Matrix C;          /* generated parameter c */
-   DVector g;			
+   DVector g;
    DMatrix WUW;
    DVector WUM;
 } SMatrices;
@@ -73,11 +83,27 @@ typedef struct {
    SMatrices sm;
 } PStream;
 
+/* ---------------- parameter generation from pdf sequence ------------------- */
+
 void InitPStream(MemHeap *x, PStream *);
+/*
+   Initialise PStream for parameter generation
+*/
+
 void pdf2par(PStream *);
+/*
+   parameter generation from pdf sequence 
+*/
+
 void FreePStream(MemHeap *x, PStream *);
+/*
+   free memory for parameter generation 
+*/
+   
+#ifdef __cplusplus
+}
+#endif
 
-/* ----------------------------------------------------------- */
-/*                        END:  HGen.h                         */
-/* ----------------------------------------------------------- */
+#endif  /* _HGEN_H_ */
 
+/* ------------------------- End of HGen.h --------------------------- */

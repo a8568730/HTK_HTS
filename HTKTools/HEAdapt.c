@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,12 +75,12 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HEAdapt.c modified for HTS-1.1b 2003/06/07 by Heiga Zen      */
+/*      HEAdapt.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen     */
 /*  ---------------------------------------------------------------  */
 
 
-char *headapt_version = "!HVER!HEAdapt:   3.2 [CUED 09/12/02]";
-char *headapt_vc_id = "$Id: HEAdapt.c,v 1.10 2002/12/19 16:37:40 ge204 Exp $";
+char *headapt_version = "!HVER!HEAdapt:   3.2.1 [CUED 15/10/03]";
+char *headapt_vc_id = "$Id: HEAdapt.c,v 1.11 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -175,7 +175,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.1b\n");
+   printf("\nModified for HTS ver.1.1.1\n");
    printf("\nUSAGE: HEAdapt [options] hmmList dataFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -b N    set no. of blocks for transform      1\n");

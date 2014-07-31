@@ -21,8 +21,8 @@
 
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
-/*  ---------------------------------------------------------------  */    
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*  ---------------------------------------------------------------  */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -32,7 +32,7 @@
 /*                  Tokyo Institute of Technology                    */
 /*                     Copyright (c) 2001-2003                       */
 /*                       All Rights Reserved.                        */
-/*                                                                   */              
+/*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
 /*  distribute this software in the form of patch code to HTK and    */
 /*  its documentation without restriction, including without         */
@@ -61,12 +61,13 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*     HAdapt.c modified for HTS-1.1b 2003/06/07 by Heiga Zen        */
+/*  ---------------------------------------------------------------  */
+/*     HAdapt.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen       */
 /*  ---------------------------------------------------------------  */
 
-char *hadapt_version = "!HVER!HAdapt:   3.2 [CUED 09/12/02]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.9 2002/12/19 16:37:11 ge204 Exp $";
+char *hadapt_version = "!HVER!HAdapt:   3.2.1 [CUED 15/10/03]";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.10 2003/10/15 08:10:12 ge204 Exp $";
+
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>

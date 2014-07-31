@@ -1,5 +1,5 @@
 /*  ---------------------------------------------------------------  */
-/*      The HMM-Based Speech Synthesis System (HTS): version 1.1b    */
+/*      The HMM-Based Speech Synthesis System (HTS): version 1.1,1   */
 /*                        HTS Working Group                          */
 /*                                                                   */
 /*                   Department of Computer Science                  */
@@ -21,7 +21,7 @@
 /*       of conditions and the following disclaimer.                 */
 /*                                                                   */
 /*    2. Any modifications must be clearly marked as such.           */
-/*                                                                   */    
+/*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSITITUTE OF TECHNOLOGY,  */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
 /*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
@@ -34,23 +34,25 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
+/*  ---------------------------------------------------------------  */
 /*     HGen.c : parameter generation from pdf sequence based on      */
 /*              Maximum Likelihood criterion with dynamic feature    */
 /*              window constraints                                   */
 /*                                                                   */
-/*                                   2003/06/07 by Heiga Zen         */
+/*                                   2003/12/26 by Heiga Zen         */
 /* ----------------------------------------------------------------  */
+
+char *hgen_version = "!HVER!HGen:   1.1.1 [NIT 26/12/03]";
+char *hgen_vc_id = "$Id: HGen.c,v 1.1.1 2003/12/26 15:40:13 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
 #include "HMath.h"
 #include "HGen.h"
-
 #include "SPTK.h"
 
 /* InitDWin: Initialise window coefficients used for calcuration of delta parameter */
-static void InitDWin(MemHeap *x,PStream *pst)
+static void InitDWin(MemHeap *x, PStream *pst)
 {
    int i;
    int fsize, leng;
@@ -61,7 +63,7 @@ static void InitDWin(MemHeap *x,PStream *pst)
       HError(9905, "InitDWin: Cannot Allocate Memory\n");
       exit(1);
    }
-   for (i=0;i<pst->dw.num;i++)
+   for (i=0; i<pst->dw.num; i++)
       if ( (pst->dw.width[i] = (int *) New(x,2*sizeof(int))) == NULL) {
          HError(9905, "InitDWin: Cannot Allocate Memory\n");
          exit(1);
@@ -116,11 +118,12 @@ static void InitDWin(MemHeap *x,PStream *pst)
       pst->dw.max_L = pst->dw.maxw[WLEFT];
    else
       pst->dw.max_L = pst->dw.maxw[WRIGHT];
-   
+  
+   return;
 }
 
 /* EXPORT->InitPStream: Initialize PStream which contain all parameter for ML parameter generation */
-void InitPStream(MemHeap *x,PStream *pst)
+void InitPStream(MemHeap *x, PStream *pst)
 {
    InitDWin(x,pst);
    
@@ -135,12 +138,14 @@ void InitPStream(MemHeap *x,PStream *pst)
    pst->sm.WUW = CreateDMatrix(x,pst->T,pst->width);    /* W^{T}U^{-1}M */
 
    pst->sm.mseq--; pst->sm.ivseq--;
+   
+   return;
 }
 
 /* calc_WUM_and_WUW: calcurate W'* U^-1 * M and W'* U^-1 * W */
-static void calc_WUM_and_WUW(PStream *pst, int m)
+static void calc_WUM_and_WUW(PStream *pst, const int m)
 {
-   register int t, i, j, k, l, n;
+   register int t, i, j, k;
    double WU;
    
    for (t=1;t<=pst->T;t++) {
@@ -153,20 +158,22 @@ static void calc_WUM_and_WUW(PStream *pst, int m)
       for (i=1;i<pst->dw.num;i++)
          for (j=pst->dw.width[i][0];j<=pst->dw.width[i][1];j++)
             if ((t+j>0) && (t+j<=pst->T) && (pst->dw.coef[i][-j]!=0.0)) {
-			   WU = pst->dw.coef[i][-j]*pst->sm.ivseq[t+j][i*pst->order+m];
+               WU = pst->dw.coef[i][-j]*pst->sm.ivseq[t+j][i*pst->order+m];
                pst->sm.WUM[t] += WU*pst->sm.mseq[t+j][i*pst->order+m];
                
                for (k=0;k<pst->width;k++)
                   if ((k-j<=pst->dw.width[i][1]) && (t+k<=pst->T) && (pst->dw.coef[i][k-j]!=0.0))
                      pst->sm.WUW[t][k+1] += WU*pst->dw.coef[i][k-j];
-			}	
+            }
    }
+   
+   return;
 }
 
 /* Cholesky: Cholesky factorization for band matrix W'* U^-1 * W */
 static void Cholesky(PStream *pst)
 {
-   int t,i,j,k;
+   int t,i,j;
    
    pst->sm.WUW[1][1] = sqrt(pst->sm.WUW[1][1]);
 
@@ -188,6 +195,8 @@ static void Cholesky(PStream *pst)
          pst->sm.WUW[t][i] /= pst->sm.WUW[t][1];
       }
    }
+   
+   return;
 }
 
 /* Cholesky_forward : forward substitution */
@@ -205,10 +214,12 @@ static void Cholesky_forward(PStream *pst)
             hold += pst->sm.WUW[t-i][i+1] * pst->sm.g[t-i];
       pst->sm.g[t] = (pst->sm.WUM[t]-hold)/pst->sm.WUW[t][1];
    }
+   
+   return;
 }
 
 /* Cholesky_backward : backward substitution */
-static void Cholesky_backward(PStream *pst,int m)
+static void Cholesky_backward(PStream *pst, const int m)
 {
    int t,i;
    double hold;
@@ -222,6 +233,8 @@ static void Cholesky_backward(PStream *pst,int m)
             hold += pst->sm.WUW[t][i+1]*pst->sm.C[t+i][m];
       pst->sm.C[t][m] = (pst->sm.g[t]-hold)/pst->sm.WUW[t][1];
    }
+   
+   return;
 }
 
 /* EXPORT->pdf2par: ML parameter generation */
@@ -235,24 +248,30 @@ void pdf2par(PStream *pst)
       Cholesky_forward(pst);    /* forward substitution */
       Cholesky_backward(pst,m); /* backward substitution */
    }
+   
+   return;
 }
 
 /* FreeDWin: Free delta window coefficients */
-static void FreeDWin(MemHeap *x,PStream *pst)
+static void FreeDWin(MemHeap *x, PStream *pst)
 {
    int i;
     
-   for (i=0;i<pst->dw.num;i++) {
-      Dispose(x,pst->dw.width[i]);
+   /* free pst->dw.coef */
+   for (i=pst->dw.num-1; i>=0; i--)
       Dispose(x,pst->dw.coef[i]);
-   }
-
-   Dispose(x,pst->dw.width);
    Dispose(x,pst->dw.coef);
+   
+   /* free pst->dw.width */
+   for (i=pst->dw.num-1; i>=0; i--)
+      Dispose(x,pst->dw.width[i]);
+   Dispose(x,pst->dw.width);
+   
+   return;
 }
 
 /* EXPORT->FreePStream: Free PStream */
-void FreePStream(MemHeap *x,PStream *pst)
+void FreePStream(MemHeap *x, PStream *pst)
 {
    FreeDMatrix(x,pst->sm.WUW); 
    FreeDVector(x,pst->sm.WUM);
@@ -266,9 +285,9 @@ void FreePStream(MemHeap *x,PStream *pst)
    Dispose(x,pst->sm.mseq);
    
    FreeDWin(x,pst);
+   
+   return;
 }
 
-/* ----------------------------------------------------------- */
-/*                        END:  HGen.c                         */
-/* ----------------------------------------------------------- */
+/* ---------------------------- End of HGen.c --------------------------- */
 

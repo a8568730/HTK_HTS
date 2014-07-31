@@ -22,7 +22,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -61,11 +61,11 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*      HFB.h modified for HTS-1.1b 2003/06/07 by Heiga Zen          */
+/*  ---------------------------------------------------------------  */
+/*      HFB.h modified for HTS-1.1.1 2003/12/26 by Heiga Zen         */
 /*  ---------------------------------------------------------------  */
 
-/* !HVER!HFB:   3.2 [CUED 09/12/02] */
+/* !HVER!HFB:   3.2.1 [CUED 15/10/03] */
 
 #ifndef _HFB_H_
 #define _HFB_H_
@@ -76,6 +76,10 @@ extern "C" {
 
 #define NOPRUNE 1.0E20
 
+#define NDURARRAY  10
+#define DURMAX     50.0
+#define DURMIN    -50.0
+   
 enum _UPDSet{UPMEANS=1,UPVARS=2,UPTRANS=4,UPMIXES=8,UPADAPT=16};
 typedef enum _UPDSet UPDSet;
 
@@ -150,8 +154,8 @@ typedef struct {
   int maxM;           /* maximum number of mixtures in hmmset */
   int maxMixInS[SMAX];/* array[1..swidth[0]] of max mixes */
   AlphaBeta *ab;      /* Alpha-beta structure for this model */
-  RegTransInfo *rt;  /* Adaptation regression transform info 
-			 only used if adaptation is being performed */
+  RegTransInfo *rt;   /* Adaptation regression transform info 
+                       only used if adaptation is being performed */
 } FBInfo;
 
 /* structure for duraiton modeling */
@@ -181,19 +185,19 @@ void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset);
 void InitUttInfo(UttInfo *utt, Boolean twoFiles );
 
 /* GetInputObs: Get input Observations for t */
-void GetInputObs( UttInfo *utt, int t, HSetKind hsKind );
+void GetInputObs(UttInfo *utt, int t, HSetKind hsKind );
 
 /* load the labels into the UttInfo structure from file */
 void LoadLabs(UttInfo *utt, FileFormat lff, char * datafn,
-	      char *labDir, char *labExt);
+              char *labDir, char *labExt);
 
 /* load the data file(s) into the UttInfo structure */
 void LoadData(HMMSet *hset, UttInfo *utt, FileFormat dff, 
-	      char * datafn, char * datafn2);
+              char * datafn, char * datafn2);
 
 /* Initialise the observation structures within UttInfo */
 void InitUttObservations(UttInfo *utt, HMMSet *hset,
-			 char * datafn, int * maxmixInS);
+                         char * datafn, int * maxmixInS);
 
 /* FBFile: apply forward-backward to given utterance */
 Boolean FBFile(FBInfo *fbInfo, UttInfo *utt, char * datafn);
@@ -205,7 +209,7 @@ void PrLog(LogDouble x);
 void AccDuration(FBInfo *fbInfo, UttInfo *utt);
  
 /* SaveDuration: save duration distribution */
-void SaveDuration(FBInfo *fbInfo, char *durfn, float vfloor, DurKind dkind);
+void SaveDuration(FBInfo *fbInfo, char *durfn, DurKind dkind);
 
 #ifdef __cplusplus
 }

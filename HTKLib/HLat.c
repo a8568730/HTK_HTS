@@ -34,8 +34,8 @@
 */
 
 
-char *hlat_version = "!HVER!HLat:   3.2 [CUED 09/12/02]";
-char *hlat_vc_id = "$Id: HLat.c,v 1.3 2002/12/19 16:37:11 ge204 Exp $";
+char *hlat_version = "!HVER!HLat:   3.2.1 [CUED 15/10/03]";
+char *hlat_vc_id = "$Id: HLat.c,v 1.4 2003/10/15 08:10:12 ge204 Exp $";
 
 
 #include "HShell.h"

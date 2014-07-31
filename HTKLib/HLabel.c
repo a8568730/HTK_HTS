@@ -21,7 +21,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -61,11 +61,11 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HLabel.c modified for HTS-1.1b 2003/06/07 by Heiga Zen       */
+/*      HLabel.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen      */
 /*  ---------------------------------------------------------------  */
 
-char *hlabel_version = "!HVER!HLabel:   3.2 [CUED 09/12/02]";
-char *hlabel_vc_id = "$Id: HLabel.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
+char *hlabel_version = "!HVER!HLabel:   3.2.1 [CUED 15/10/03]";
+char *hlabel_vc_id = "$Id: HLabel.c,v 1.11 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -763,10 +763,10 @@ static void ExtendAux(MemHeap *x, LabList *ll, int n)
    LabId *id;
    float *s;
    LLink p;
-   
+
    if (n>=99)
       HError(6570, "ExtendAux: Too many auxiliary fields in label file");
-
+   
    oldn = ll->maxAuxLab; ll->maxAuxLab = n;
    for (p=ll->head->succ; p->succ!=NULL; p=p->succ){
       id = (LabId *)New(x,sizeof(LabId)*n) - 1; 
@@ -1060,7 +1060,7 @@ static void LoadSCRIBELabels(MemHeap *x, Transcription *t, Source *src)
 /* EXPORT->TriStrip: Remove contexts of form A- and +B from s */
 void TriStrip(char *s)
 {
-   char buf[200],*p;
+   char buf[MAXSTRLEN],*p;
    
    if ((p = strchr(s,'-')) == NULL) p = s; else ++p;
    strcpy(buf,p);

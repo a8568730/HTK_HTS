@@ -32,7 +32,7 @@
 /*         File: HLM.h language model handling                 */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HLM:   3.2 [CUED 09/12/02] */
+/* !HVER!HLM:   3.2.1 [CUED 15/10/03] */
 
 #ifndef _HLM_H_
 #define _HLM_H_

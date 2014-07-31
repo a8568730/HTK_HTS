@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -74,12 +74,12 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*      HUtil.c modified for HTS-1.1b 2003/06/07 by Heiga Zen        */
+/*  ---------------------------------------------------------------  */
+/*      HUtil.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen       */
 /*  ---------------------------------------------------------------  */
 
-char *hutil_version = "!HVER!HUtil:   3.2 [CUED 09/12/02]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.9 2002/12/19 16:37:11 ge204 Exp $";
+char *hutil_version = "!HVER!HUtil:   3.2.1 [CUED 15/10/03]";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -116,7 +116,7 @@ void InitUtil(void)
 
    Register(hutil_version,hutil_vc_id);
    nParm = GetConfig("HUTIL", TRUE, cParm, MAXGLOBS);
-   if (nParm>0){
+   if (nParm>0) {
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
    }
    CreateHeap(&itemHeap,"HUtil: ItemList Heap",MHEAP,sizeof(ItemRec),
@@ -184,7 +184,7 @@ MixPDF *CloneMixPDF(HMMSet *hset, MixPDF *s, Boolean sharing)
    t->nUse = 0; t->hook = NULL; t->gConst = s->gConst;
    t->mean = CloneSVector(hset->hmem,s->mean,sharing);
    t->ckind = s->ckind;
-   switch(s->ckind) {
+   switch (s->ckind) {
    case DIAGC: 
    case INVDIAGC: 
       t->cov.var = CloneSVector(hset->hmem,s->cov.var,sharing);
@@ -202,16 +202,15 @@ MixPDF *CloneMixPDF(HMMSet *hset, MixPDF *s, Boolean sharing)
 
 /* ClonePDF: return a clone of given stream (PDF) */
 StreamInfo *ClonePDF(HMMSet *hset, int s, 
-			  StreamInfo *ssti, Boolean sharing)
+                     StreamInfo *ssti, Boolean sharing)
 {
    int m,M;
    StreamInfo *tsti;
    MixtureElem *sme,*tme;
-   MixtureVector mv;
 
    if (ssti->nUse>0 && sharing) {
-	   ++ssti->nUse;
-       return ssti;
+      ++ssti->nUse;
+      return ssti;
    }
    M = ssti->nMix;
    tsti = (StreamInfo *)New(hset->hmem,sizeof(StreamInfo));
@@ -220,12 +219,12 @@ StreamInfo *ClonePDF(HMMSet *hset, int s,
    tme = (MixtureElem *)New(hset->hmem,M*sizeof(MixtureElem));
    tsti->spdf.cpdf = tme-1; sme = ssti->spdf.cpdf + 1;
    
-   for (m=1; m<=M; m++,sme++,tme++){
+   for (m=1; m<=M; m++,sme++,tme++) {
       tme->weight = sme->weight;
-	  if (tme->weight > MINMIX || hset->msdflag[s])
-	     tme->mpdf = CloneMixPDF(hset,sme->mpdf,sharing);
-	  else 
-	     tme->mpdf = NULL;
+      if (tme->weight > MINMIX || hset->msdflag[s])
+         tme->mpdf = CloneMixPDF(hset,sme->mpdf,sharing);
+      else 
+         tme->mpdf = NULL;
    }
 
    return tsti;
@@ -316,7 +315,7 @@ Boolean GoNextHMM(HMMScanState *hss)
             hss->sti = hss->ste->info;
             M = hss->sti->nMix;
             hss->M = (M<0)?-M:M; hss->m=1;
-            if (hss->isCont){
+            if (hss->isCont) {
                hss->me = hss->sti->spdf.cpdf+1;
                hss->mp = hss->me->mpdf;
             }
@@ -333,7 +332,7 @@ Boolean GoNextState(HMMScanState *hss, Boolean noSkip)
    Boolean stepping = FALSE, ok = TRUE;
    int M;
    
-   while (IsSeen(hss->si->nUse) && ok){
+   while (IsSeen(hss->si->nUse) && ok) {
       if (hss->i < hss->N-1) {
          ++hss->i; ++hss->se; stepping = TRUE;
          hss->si = hss->se->info;
@@ -346,12 +345,12 @@ Boolean GoNextState(HMMScanState *hss, Boolean noSkip)
    }
    if (ok) {
       Touch(&hss->si->nUse);
-      if (stepping){
+      if (stepping) {
          hss->ste = hss->si->pdf+1; hss->sti=hss->ste->info;
          hss->s=1;
          M = hss->sti->nMix;
          hss->M = (M<0)?-M:M; hss->m=1;
-         if (hss->isCont){
+         if (hss->isCont) {
             hss->me = hss->sti->spdf.cpdf+1;
             hss->mp = hss->me->mpdf;
          }
@@ -368,7 +367,7 @@ Boolean GoNextStream(HMMScanState *hss, Boolean noSkip)
    Boolean stepping = FALSE, ok = TRUE;
    int M;
    
-   while (IsSeen(hss->sti->nUse) && ok){
+   while (IsSeen(hss->sti->nUse) && ok) {
       if (hss->s < hss->S) {
          ++hss->s; ++hss->ste; stepping = TRUE;
          hss->sti = hss->ste->info;
@@ -384,7 +383,7 @@ Boolean GoNextStream(HMMScanState *hss, Boolean noSkip)
       if (stepping) {
          M = hss->sti->nMix;
          hss->M = (M<0)?-M:M; hss->m=1;
-         if (hss->isCont){
+         if (hss->isCont) {
             hss->me = hss->sti->spdf.cpdf+1;
             hss->mp = hss->me->mpdf;
          }
@@ -400,8 +399,8 @@ Boolean GoNextMix(HMMScanState *hss, Boolean noSkip)
 {
    Boolean ok = TRUE;
    
-   if (hss->isCont){
-      while (IsSeen(hss->mp->nUse) && ok){
+   if (hss->isCont) {
+      while (IsSeen(hss->mp->nUse) && ok) {
          if (hss->m < hss->M) {
             ++hss->m; ++hss->me; 
             hss->mp = hss->me->mpdf;
@@ -448,9 +447,9 @@ void ConvDiagC(HMMSet *hset, Boolean convData)
       return;
    NewHMMScan(hset, &hss);
    while (GoNextMix(&hss,FALSE)) {
-      if (hss.mp->ckind == DIAGC || hss.mp->ckind == INVDIAGC){
+      if (hss.mp->ckind == DIAGC || hss.mp->ckind == INVDIAGC) {
          hss.mp->ckind = (hss.mp->ckind == DIAGC)?INVDIAGC:DIAGC;
-         if (convData){
+         if (convData) {
             v = hss.mp->cov.var;
             if (! IsSeenV(v)) {
                for (k=1; k<=VectorSize(v); k++) {
@@ -499,7 +498,7 @@ int NumItems(ILink list)
 {
    int n=0;
    
-   while(list!=NULL) {
+   while (list!=NULL) {
       n++;
       list=list->next;
    }
@@ -595,8 +594,6 @@ void DupSet(IntSet oldSet, IntSet newSet)
 
 /* -------------------- Item List Parser -------------------- */
 
-#define PAT_LEN 2048
-
 static Source *source;         /* Current source for item list */
 static int ch;                 /* Current character from source */
 static char pattern[PAT_LEN];  /* A copy of the last pattern parsed */
@@ -644,19 +641,19 @@ static char *GetAlpha(char *s)
 
    wasQuoted=FALSE;
    SkipSpaces();
-   if (ch == DBL_QUOTE || ch == SING_QUOTE){
+   if (ch == DBL_QUOTE || ch == SING_QUOTE) {
       wasQuoted = TRUE; q = ch;
       ReadCh();
    }
-   for (i=0; i<MAXSTRLEN ; i++){
-      if (wasQuoted){
+   for (i=0; i<MAXSTRLEN ; i++) {
+      if (wasQuoted) {
          if (ch == q) {
             ReadCh();
             s[i] = '\0';
             return s;
          }
       } else {
-         if (isspace(ch) || strchr(term,ch)){
+         if (isspace(ch) || strchr(term,ch)) {
             s[i] = '\0';
             return s;
          }
@@ -810,7 +807,7 @@ static void PMix(ILink models, ILink *ilist, char *type,
    what = TMIX;
    if (ch == '.') {
       ReadCh();
-      switch(GetKey()) {
+      switch (GetKey()) {
       case MEAN_KEY:
          what = TMEAN; ChkType('u',type); break;
       case COV_KEY:
@@ -864,10 +861,10 @@ static void PMix(ILink models, ILink *ilist, char *type,
                            AddItem(hmm,me->mpdf,ilist); 
                            break;
                         }
-		     }
-	       }
-	    }
-	 }
+               }
+            }
+         }
+      }
    }
    FreeSet(mixes);
 }
@@ -882,7 +879,7 @@ static void PStatecomp(ILink models, ILink *ilist, char *type,
    Keyword kw;
    IntSet str;
    
-   switch(kw=GetKey()) {
+   switch (kw=GetKey()) {
    case MIX_KEY:
    case STREAM_KEY:
       if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
@@ -1034,7 +1031,7 @@ static void PHName(ILink *models,HMMSet *hset)
       ReadCh();
       PHIdent(models,hset);
       SkipSpaces();
-      while(ch == ',') {
+      while (ch == ',') {
          ReadCh();
          PHIdent(models,hset);
          SkipSpaces();
@@ -1129,7 +1126,7 @@ Ptr GetMacroHook(MLink ml)
 {
    Ptr hook;
 
-   switch(ml->type) {
+   switch (ml->type) {
    case 'l': /* HLink */
    case 'h': /* HLink */
       hook=((HLink)(ml->structure))->hook; break;
@@ -1161,7 +1158,7 @@ Ptr GetMacroHook(MLink ml)
 /* EXPORT->SetMacroHook: Set value of hook field for any macro */
 void SetMacroHook(MLink ml,Ptr hook)
 {
-   switch(ml->type) {
+   switch (ml->type) {
    case 'l': /* HLink */
    case 'h': /* HLink */
       ((HLink)(ml->structure))->hook=hook; break;
@@ -1196,7 +1193,7 @@ int GetMacroUse(MLink ml)
 {
    int use;
 
-   switch(ml->type) {
+   switch (ml->type) {
    case 'l': /* HLink */
    case 'h': /* HLink */
       use=((HLink)(ml->structure))->nUse; break;
@@ -1231,7 +1228,7 @@ int GetMacroUse(MLink ml)
 /* EXPORT->SetMacroUse: Set value of use field for any macro */
 void SetMacroUse(MLink ml,int use)
 {
-   switch(ml->type) {
+   switch (ml->type) {
    case 'l': /* HLink */
    case 'h': /* HLink */
       ((HLink)(ml->structure))->nUse=use; break;

@@ -32,8 +32,8 @@
 /*       File: HParm.c:  Speech Parameter File Input/Output    */
 /* ----------------------------------------------------------- */
 
-char *hparm_version = "!HVER!HParm:   3.2 [CUED 09/12/02]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.12 2002/12/19 16:37:11 ge204 Exp $";
+char *hparm_version = "!HVER!HParm:   3.2.1 [CUED 15/10/03]";
+char *hparm_vc_id = "$Id: HParm.c,v 1.15 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -75,7 +75,7 @@ static int varScaleDim=0;
 static char varScaleFN[MAXFNAMELEN] = "\0";
 
 static Boolean highDiff = FALSE;   /* compute higher oder differentials, only up to fourth */
-static Boolean BrokenCVN = FALSE;  /* this allows us to go back to the old version with broken CVN */
+static Boolean UseOldXFormCVN = FALSE;  /* this allows us to go back to the old version with broken CVN */
 static ParmKind ForcePKind = ANON; /* force to output a customized parm kind to make older versions
                                     happy for all the parm kind types supported here */
 
@@ -570,7 +570,7 @@ static void LoadVarScale (MemHeap *x, IOConfig cf)
       CloseSource (&varsrc);
       
       /* Apply a linear transform to the global variance */
-      if (cf->MatTran != NULL){
+      if ((cf->MatTran != NULL) && (UseOldXFormCVN)) {
 
          FDim = NumCols(cf->MatTran);
          NewFDim = NumRows(cf->MatTran);
@@ -842,7 +842,7 @@ ReturnStatus InitParm(void)
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
       if (GetConfBool(cParm,nParm,"NATURALWRITEORDER",&b)) natWriteOrder = b;
       if (GetConfBool(cParm,nParm,"HIGHDIFF",&b)) highDiff = b;
-      if (GetConfBool(cParm,nParm,"BROKENCVN",&b)) BrokenCVN = b;
+      if (GetConfBool(cParm,nParm,"USEOLDXFORMCVN",&b)) UseOldXFormCVN = b;
       if (GetConfStr(cParm,nParm,"FORCEPKIND",buf))
          ForcePKind = Str2ParmKind(buf);      
    }
@@ -1539,21 +1539,25 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
    float *fp, mean, scale;
    ParmKind tgtBase;
 
+   if (highDiff && ((cf->curPK&HASDELTA) || (cf->curPK&HASACCS) || (cf->curPK&HASTHIRD)))
+       HError (6371, "AddQualifiers: HIGHDIFF=T not supported with source features that contain derivatives already");
+
+
    if ((cf->curPK == cf->tgtPK) && (cf->MatTranFN == NULL)) return;
    if (trace&T_QUA)
       printf("HParm:  adding Qualifiers to %s ...",ParmKind2Str(cf->curPK,buf));
    if (cf->MatTranFN != NULL) { /* Do the generic checks that the matrix is appropriate */
       if (((cf->matPK&BASEMASK)&(cf->curPK&BASEMASK)) != (cf->matPK&BASEMASK))
-         HError(999,"Incorrect source parameter type (%s %s)",ParmKind2Str(cf->curPK,buff1),
+         HError(6371, "AddQualifiers: Incorrect source parameter type (%s %s)",ParmKind2Str(cf->curPK,buff1),
                 ParmKind2Str(cf->matPK,buff2));
       if ((HasEnergy(cf->matPK) && !(HasEnergy(cf->curPK))) || (!(HasEnergy(cf->matPK)) && (HasEnergy(cf->curPK))) ||
           (HasZeroc(cf->matPK) && !(HasZeroc(cf->curPK))) || (HasZeroc(cf->curPK) && !(HasZeroc(cf->matPK))))
-         HError(999,"Incorrect qualifiers in parameter type (%s %s)",ParmKind2Str(cf->curPK,buff1),ParmKind2Str(cf->matPK,buff2));
+         HError(6371,"AddQualifiers: Incorrect qualifiers in parameter type (%s %s)",ParmKind2Str(cf->curPK,buff1),ParmKind2Str(cf->matPK,buff2));
    }
 
    if ((cf->MatTranFN != NULL) && (cf->preQual)) {
       if ((HasZerom(cf->matPK) && !(HasZerom(cf->curPK))) || (HasZerom(cf->curPK) && !(HasZerom(cf->matPK))))
-         HError(999,"Incorrect qualifiers in parameter type (%s %s)",ParmKind2Str(cf->curPK,buff1),ParmKind2Str(cf->matPK,buff2));
+         HError(6371, "AddQualifiers: Incorrect qualifiers in parameter type (%s %s)",ParmKind2Str(cf->curPK,buff1),ParmKind2Str(cf->matPK,buff2));
       ApplyStaticMat(cf,data,cf->MatTran,cf->nCols,nRows,0,0);
       pbuf->main.nRows -= (cf->postFrames + cf->preFrames);
       nRows = pbuf->main.nRows;
@@ -1645,7 +1649,7 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
       }
    }
 
-   if (BrokenCVN != TRUE){
+   if (UseOldXFormCVN){
       
       if ((cf->MatTranFN != NULL) && (!cf->preQual)) {      
          if (cf->matPK != cf->curPK) {
@@ -1695,27 +1699,23 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
    else {
       /*  Scale the variances */
       if (cf->varScaleFN) {
-         if ((VectorSize (cf->varScale) != cf->tgtUsed) && (highDiff != TRUE))
-            HError(6376 ,"AddQualifiers: Mismatch beteen varScale (%d) and target size %d",
-                   VectorSize (cf->varScale), cf->tgtUsed);
-         if (trace&T_QUA)
-            printf("\nHParm:  variance normalisation for %d cols from %d rows",
-                   cf->tgtUsed, nRows);
-         
          if (cf->varScaleVector == 0) {
             HError (6376, "AddQualifiers: no variance scaling vector found");
          }
-         else {
-            /* use predefined variance estimate */
-            d = VectorSize(cf->varScaleVector);
-            step = cf->nCols;
-            for (i=0; i<d ; i++){
-               scale = sqrt(cf->varScale[i+1] / cf->varScaleVector[i+1]);
-               fp = data+i;
-               for (j=0; j<nRows; j++) {
-                  *fp *= scale;
-                  fp += step;
-               }
+         d = VectorSize(cf->varScaleVector);
+         if (VectorSize (cf->varScale) != d)
+            HError(6376 ,"AddQualifiers: Mismatch beteen varScale (%d) and target size %d",
+                   VectorSize (cf->varScale), d);
+         if (trace&T_QUA)
+            printf("\nHParm:  variance normalisation for %d cols from %d rows",
+                   cf->tgtUsed, nRows);
+         step = cf->nCols;
+         for (i=0; i<d ; i++){
+            scale = sqrt(cf->varScale[i+1] / cf->varScaleVector[i+1]);
+            fp = data+i;
+            for (j=0; j<nRows; j++) {
+               *fp *= scale;
+               fp += step;
             }
          }
       }
@@ -3183,7 +3183,7 @@ static void LoadVarScaleVector(MemHeap* x, IOConfig cf, char *fname)
       HError(6376,"LoadVarScaleVector: Couldn't read var scale vector from file");
    
    /* Apply the linear transform to the cepstral variance normalizer if needed */
-   if (cf->MatTranFN != NULL) {
+   if ((cf->MatTranFN != NULL) && (UseOldXFormCVN)){
       
       FDim = NumCols(cf->MatTran);
       NewFDim = NumRows(cf->MatTran);
@@ -3501,7 +3501,10 @@ static ReturnStatus OpenParmChannel(ParmBuf pbuf,char *fname, int *ret_val)
          HRError(6313,"OpenParmChannel: EXF segment bigger than file");
          return (FAIL);
       }
-
+      if (nSamples < enIndex + 1) {
+         HRError(6313,"OpenParmChannel: EXF segment bigger than file");
+         return (FAIL);
+      }
       preskip = stIndex * sampSize; 
 
       nSamples = enIndex - stIndex + 1;
@@ -4600,6 +4603,7 @@ ParmBuf EmptyBuffer(MemHeap *x, int size, Observation o, BufferInfo info)
    dBytes = cf->nCols * size * (pbuf->dShort?sizeof(short):sizeof(float));
    pbuf->main.data = New(pbuf->mem,dBytes); 
    pbuf->main.stRow=0; pbuf->main.nRows=0; pbuf->main.maxRows=size;
+   pbuf->chType = 0;
    return pbuf;
 }
 

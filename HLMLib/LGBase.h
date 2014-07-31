@@ -29,7 +29,7 @@
 /*         File: LGBase: Gram File Database Routines           */
 /* ----------------------------------------------------------- */
 
-/* !HVER!lgbase:   3.2 [CUED 09/12/02] */
+/* !HVER!lgbase:   3.2.1 [CUED 15/10/03] */
 
 #ifndef _LGBASE_H_
 #define _LGBASE_H_
@@ -41,7 +41,7 @@ extern "C" {
 #define SQUASH       3     /* #bytes per word id */
 #define GSIZE        32    /* max bytes per N-gram */
 #define MAXNG        7     /* max value of N */
-#define MAXINF       64    /* max number of open source files */
+#define MAXINF       128   /* max number of open source files */
 
 #ifndef LM_TYPES_DEFINED
 typedef unsigned short UShort;

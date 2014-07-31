@@ -22,7 +22,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -61,11 +61,11 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*     HMath.h modified for HTS-1.1b 2003/06/07 by Heiga Zen         */
+/*  ---------------------------------------------------------------  */
+/*     HMath.h modified for HTS-1.1.1 2003/12/26 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
-/* !HVER!HMath:   3.2 [CUED 09/12/02] */
+/* !HVER!HMath:   3.2.1 [CUED 15/10/03] */
 
 #ifndef _HMATH_H_
 #define _HMATH_H_

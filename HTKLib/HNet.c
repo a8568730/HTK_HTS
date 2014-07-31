@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,12 +75,12 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */ 
-/*      HNet.c modified for HTS-1.1b 2003/06/07 by Heiga Zen         */
+/*      HNet.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
 
-char *hnet_version = "!HVER!HNet:   3.2 [CUED 09/12/02]";
-char *hnet_vc_id = "$Id: HNet.c,v 1.14 2002/12/19 16:37:11 ge204 Exp $";
+char *hnet_version = "!HVER!HNet:   3.2.1 [CUED 15/10/03]";
+char *hnet_vc_id = "$Id: HNet.c,v 1.15 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1861,7 +1861,7 @@ int AddHCIContext(HMMSetCxtInfo *hci,LabId labid)
 int GetHCIContext(HMMSetCxtInfo *hci,LabId labid)
 {
    LabId cxt;
-   char buf[250];
+   char buf[MAXSTRLEN];
    int c;
 
    if (hci->nc==0) return(0);
@@ -1937,7 +1937,7 @@ static int DefineContexts(HMMSetCxtInfo *hci)
 {
    MLink ml,il;
    LabId labid;
-   char buf[250],*ptr;
+   char buf[MAXSTRLEN],*ptr;
    int h,c,*temp;
 
    hci->nc=0; hci->sLeft=hci->sRight=FALSE;
@@ -2097,7 +2097,7 @@ static HLink FindModel(HMMSetCxtInfo *hci,int lc,LabId name,int rc)
 {
    LabId labid;
    MLink ml;
-   char buf[250];
+   char buf[MAXSTRLEN];
 
    /* Word internal hack */
    /* Cross word will need proper specification of context */

@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,12 +75,12 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HHEd.c modified for HTS-1.1b 2003/06/11 by Heiga Zen         */
+/*      HHEd.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
 
-char *hhed_version = "!HVER!HHEd:   3.2 [CUED 09/12/02]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.12 2002/12/19 16:37:40 ge204 Exp $";
+char *hhed_version = "!HVER!HHEd:   3.2.1 [CUED 15/10/03]";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.14 2003/10/15 08:10:13 ge204 Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -214,7 +214,7 @@ void SetConfParms(void)
 
 void Summary(void)
 {
-   printf("\nModified for HTS ver.1.1b\n");
+   printf("\nModified for HTS ver.1.1.1\n");
    printf("\nHHEd Command Summary\n\n");
    printf("AT i j prob itemlist - Add Transition from i to j in given mats\n");
    printf("AU hmmlist           - Add Unseen triphones in given hmmlist to\n");
@@ -270,7 +270,7 @@ void Summary(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.0\n");
+   printf("\nModified for HTS ver.1.1.1\n");
    printf("\nUSAGE: HHEd [options] editF hmmList\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -a f    MDL criterion control factor         1.0\n");
@@ -424,6 +424,7 @@ typedef struct _QEnt{           /* each question stored as both pattern and  */
    IPat *patList;               
    ILink ilist;
    QLink next;
+   char pattern[PAT_LEN];
    Boolean used;
 }QEnt;
 
@@ -466,9 +467,10 @@ char *ParseAlpha(char *src, char *s)
       if (*src==ESCAPE_CHAR) {
          src++;
          if (src[0]>='0' && src[1]>='0' && src[2]>='0' &&
-             src[0]<='7' && src[1]<='7' && src[2]<='7')
+             src[0]<='7' && src[1]<='7' && src[2]<='7') {
             c = 64*(src[0] - '0') + 8*(src[1] - '0') + (src[2] - '0');
-         else
+            src+=2;
+         } else
             c = *src;
       }
       else c = *src;
@@ -487,19 +489,27 @@ void LoadQuestion(char *qName, ILink ilist, char *pattern)
    IPat *ip;
    char *p,*r,buf[MAXSTRLEN];
    
-   q=(QLink) New(&questHeap,sizeof(QEnt));
-   q->ilist=ilist; q->used=FALSE;
    labid=GetLabId(qName,TRUE);
    for (c=qHead;c!=NULL;c=c->next) if (c->qName==labid) break;
-   if (c!=NULL)
-      HError(2661,"LoadQuestion: Question name %s invalid",qName);
-   q->qName=labid; labid->aux=q;
+   if (c!=NULL) {
+      if (strcmp(c->pattern,pattern)!=0)
+         HError(2661,"LoadQuestion: Question name %s invalid",qName);
+      else
+         return;
+   }
+   
+   q=(QLink) New(&questHeap,sizeof(QEnt));
+   q->ilist=ilist; q->used=FALSE;   
+   q->qName=labid; labid->aux=q; 
    q->next = NULL; q->patList = NULL;
+   strcpy(q->pattern, pattern);
+   
    if (qHead==NULL) {
       qHead = q; qTail = q;
    } else {
       qTail->next = q; qTail = q;
    }
+   
    for (p=pattern;*p && isspace(*p);p++);
    if (*p!='{')
       if (p==NULL) HError(2660,"LoadQuestion: no { in itemlist");
@@ -1120,7 +1130,7 @@ void TieState(ILink ilist, LabId macId)
 void TieLeafStream(ILink ilist, LabId macId, int stream)
 {
    ILink i;
-   StreamInfo *sti,*tsti;
+   StreamInfo *sti;
    
    if (badGC) {
       FixAllGConsts(hset);         /* in case any bad gConsts around */
@@ -2797,7 +2807,7 @@ void ZeroAccSum(AccSum *acc)
 }
 
 /* DisposeAccSum: dispose AccSum */
-void DisposeAccSum(MemHeap *mem,AccSum *acc)
+void DisposeAccSum(MemHeap *mem, AccSum *acc)
 {
    int s,m;
    AccSumStrE *astr;
@@ -3533,7 +3543,7 @@ HLink FindProtoModel(LabId model)
             strcpy(buf,q->id->name);
             TriStrip(buf);
             if (singleTree || strcmp(phone,buf)==0)
-	      return ((HLink) q->structure);
+               return ((HLink) q->structure);
          }
    HError(2662,"FindProtoModel: no proto for %s in hSet",model->name);
    return NULL;
@@ -3566,7 +3576,7 @@ HMMDef *SynthModel(LabId id)
          se->info = (StateInfo *) AssignStructure(id,i);
          /* if (se->info->nUse==0)
             HError(2695,"SynthModel: untied state found for state %d",i);
-			se->info->nUse++; */
+            se->info->nUse++; */
       }
       NewMacro(hset,fidx,'h',id,hmm);
    }
@@ -3670,6 +3680,7 @@ void PrintTree(Tree *tree, FILE *file)
          else fprintf(file," %15s ",
                       ReWriteString(node->yes->id->name,NULL,DBL_QUOTE));
          fprintf(file,"\n");
+         fflush(file);
       }
       fprintf(file,"}\n\n");
       Dispose(&tmpHeap,array);
@@ -3965,10 +3976,9 @@ void ConvertModelsCommand(void)
    float weight;
    Tree *tree;
    FILE *file;
-   char dn[256], fn[256], head[256], ext[256];
+   char dn[MAXSTRLEN], fn[MAXSTRLEN], head[MAXSTRLEN], ext[MAXSTRLEN];
    Node *leaf, **array;
    StreamInfo *sti;
-   StateInfo  *si;
    
    ChkedAlpha("CM output directory name", dn);
    if (trace & T_BID) {
@@ -3986,11 +3996,6 @@ void ConvertModelsCommand(void)
    
    for (s=1;s<=hset->swidth[0];s++) {
       if (!out[s]) {
-         sprintf(ext,"%d",s);
-         MakeFN(head,dn,ext,fn);
-         if ((file=fopen(fn,"w"))==NULL)
-            HError(2611,"ConvertModelsCommand: Cannot open file %s",fn);
-
          /* output vector size and number of pdfs for each tree */
          first=TRUE; vSize=0;
          for (i=2; i<=MaxStatesInSet(hset)+1; i++) {
@@ -4002,10 +4007,15 @@ void ConvertModelsCommand(void)
                         vSize += hset->swidth[j];
                      }
                   if (first) {
-                     fwrite(&vSize, sizeof(int), 1, file);
+                     sprintf(ext,"%d",s);
+                     MakeFN(head,dn,ext,fn);
+                     if ((file=fopen(fn,"w"))==NULL)
+                        HError(2611,"ConvertModelsCommand: Cannot open file %s",fn);
+
+                     WriteInt(file, &vSize, 1, TRUE); 
                      first=FALSE;
                   }
-                  fwrite(&tree->nLeaves, sizeof(int), 1, file);
+                  WriteInt(file, &tree->nLeaves, 1, TRUE);
                }
             }
          }
@@ -4030,14 +4040,20 @@ void ConvertModelsCommand(void)
                            sti = ((StateInfo *)array[j]->macro[0]->structure)->pdf[k+1].info; /* state tying */
                         else
                            sti = (StreamInfo *)array[j]->macro[k]->structure;                 /* stream tying */
+                        
+                        /* current hts supports only single mixture HMM */
+                        if ( (sti->nMix>1 && !hset->msdflag[s])||(sti->nMix>2 && hset->msdflag[s]) )
+                           HError(2699,"ConvertModel: model structure invalid");
+                        
                         vSize = VectorSize(sti->spdf.cpdf[1].mpdf->mean);
-                        fwrite(&sti->spdf.cpdf[1].mpdf->mean[1], sizeof(float), vSize, file);
-                        fwrite(&sti->spdf.cpdf[1].mpdf->cov.var[1], sizeof(float), vSize,file);
-                        if (sti->nMix>1) {  /* multi space (f0) */
+                        WriteVector(file, sti->spdf.cpdf[1].mpdf->mean, TRUE);
+                        WriteVector(file, sti->spdf.cpdf[1].mpdf->cov.var, TRUE);
+                        if (sti->nMix>1) {  /* for multi space probability distribution (f0) */
                            weight = sti->spdf.cpdf[1].weight;
-                           fwrite(&weight, sizeof(float), 1,file);
+                           WriteFloat(file, &weight, 1, TRUE);
+                           
                            weight = 1-weight;
-                           fwrite(&weight, sizeof(float), 1,file);
+                           WriteFloat(file, &weight, 1, TRUE);
                         }
                      }
                   }
@@ -4046,7 +4062,8 @@ void ConvertModelsCommand(void)
                }
             }
          }
-         fclose(file);
+         if (!first)
+            fclose(file);
       }
    }
 }
@@ -4054,7 +4071,7 @@ void ConvertModelsCommand(void)
 /* ----------------- CT - Convert Trees for synthesizer module --------------- */
 void ConvertTreesCommand(void)
 {
-   Boolean out[SMAX];
+   Boolean out[SMAX], first=TRUE;
    int i, j, s;
    Tree *tree;
    FILE *file;
@@ -4074,16 +4091,18 @@ void ConvertTreesCommand(void)
       out[s]=FALSE;
    
    for (s=1;s<=hset->swidth[0];s++) {
-      if (!out[s]) {
-         sprintf(ext,"%d",s);
-         MakeFN(head,dn,ext,fn);
-         if ((file=fopen(fn,"w"))==NULL)
-            HError(2611,"ConvertTreessCommand: Cannot open file %s",fn);
-         PrintQuestions(file);
-      
+      if (!out[s]) {      
          for (i=2;i<=MaxStatesInSet(hset)+1;i++) {
             for (tree=treeList;tree!=NULL;tree=tree->next) {
                if (tree->state==i && tree->streams.set[s] ) {
+                  if (first) {
+                     sprintf(ext,"%d",s);
+                     MakeFN(head,dn,ext,fn);
+                     if ((file=fopen(fn,"w"))==NULL)
+                        HError(2611,"ConvertTreessCommand: Cannot open file %s",fn);
+                     PrintQuestions(file);
+                     first = FALSE;
+                  }
                   fprintf(file,"%s[%d]\n",
                           ReWriteString(tree->baseId->name,NULL,ESCAPE_CHAR),
                           tree->state);
@@ -4096,7 +4115,8 @@ void ConvertTreesCommand(void)
                }
             }
          }
-         fclose(file);
+         if (!first)
+            fclose(file);
       }
    }
 }
@@ -4272,7 +4292,7 @@ StreamInfo *DupStream(StreamInfo *sti, Boolean frc)
 
    if (sti->nUse>0 && !frc) {     /* shared struct so just return ptr to it */
       if ((t=(StreamInfo *) sti->hook)==NULL)
-	 HError(2692,"DupStream: could not find dup streamInfo macro");
+         HError(2692,"DupStream: could not find dup streamInfo macro");
       ++t->nUse;
       return t;
    }
@@ -5249,7 +5269,7 @@ void SplitStreamCommand(Boolean userWidths)
 /* SetStreamWidthCommand: change width of stream s to n */
 void SetStreamWidthCommand(void)
 {
-   int i, size, s, n, nedit=0;
+   int s, n, nedit=0;
    char c=' ';
    HMMScanState hss;
    HLink hmm=NULL;
@@ -5677,7 +5697,7 @@ void RemMeansCommand(void)
 
 /* --------------- QS - Load Question Set Commands ------------ */
 
-/* LoadQuestionCommand: question is an item list of model names */
+/* QuestionCommand: question is an item list of model names */
 void QuestionCommand(void)
 {
    ILink ilist=NULL;
@@ -5712,15 +5732,15 @@ void TreeBuildCommand(void)
    ILink ilist = NULL;          /* list of items to tie */
    char type = ' ';             /* type of items to tie */
    char macName[255];           /* name of macro to use */
-   double thresh = 0.0;
+   float thresh = 0.0;
    int s;
 
    ClearSet(streams);
    
-   thresh = (double) ChkedFloat("Tree build threshold",0.0,FLOAT_MAX);
+   thresh = ChkedFloat("Tree build threshold",0.0,FLOAT_MAX);
    ChkedAlpha("TB macro name",macName);
    if (trace & (T_BID | T_MAC | T_CLUSTERS | T_TREE)) {
-      printf("\nTB %.2lf %s {}\n Tree based clustering ",thresh,macName);
+      printf("\nTB %.2f %s {}\n Tree based clustering ",thresh,macName);
       fflush(stdout);
    }
    
@@ -5747,7 +5767,7 @@ void TreeBuildCommand(void)
          streams.set[s] = TRUE;
 
    /* Do Tree based clustering */
-   BuildTree(ilist, thresh, macName);
+   BuildTree(ilist, (double)thresh, macName);
 }
 
 /* ------------- AU - Add Unseen Triphones Command --------- */
@@ -5987,8 +6007,8 @@ void FloorVectorCommand(void)
 
 void MixDownCommand(void)
 {
-   ILink i,ilist = NULL;		/* list of items to mixdown */
-   char type = 'p';		        /* type of items must be p */
+   ILink i,ilist = NULL;        /* list of items to mixdown */
+   char type = 'p';             /* type of items must be p */
    int trg;
    int m,M;
    int totm=0,totM=0;
@@ -6286,7 +6306,7 @@ RegTree *InitRegTree(HMMSet *hset, int *vSize, ILink ilist)
    CoList *listSp=NULL,*listNonSp=NULL,*cs, *cn;
    RNode *r1=NULL, *r2=NULL, *rNode=NULL;
    RegTree *rTree;
-   int s, nComponentsSp = 0, nComponentsNonSp = 0,i;
+   int s, nComponentsSp = 0, nComponentsNonSp = 0;
    StreamElem *ste;
    ILink p=NULL;
 
@@ -6831,7 +6851,7 @@ void Initialise(char *hmmListFn)
 /* -------------------- Top Level of Editing ---------------- */
 
 
-static int  nCmds = 37;
+static int  nCmds = 40;
 
 static char *cmdmap[] = {"AT","RT","SS","CL","CM","CO","CT","JO","MU","TI","UF","NC",
                          "TC","UT","MT","SH","SU","SW","SK",
@@ -6927,19 +6947,22 @@ void DoEdit(char * editFn)
       prevCommand = thisCommand;
    }
    CloseSource(&source);
-   
-   /* Save the Edited HMM Files */
-   if (trace & T_BID) {
-      printf("\nSaving new HMM files ...\n");
-      fflush(stdout);
+
+   if (mmfFn!=NULL || newDir!=NULL) {
+      /* Save the Edited HMM Files */
+      if (trace & T_BID) {
+         printf("\nSaving new HMM files ...\n");
+         fflush(stdout);
+      }
+      FixAllGConsts(hset);         /* in case any bad gConsts around */
+      badGC=FALSE;
+      PurgeMacros(hset);
+
+      if (mmfFn!=NULL)
+         SaveInOneFile(hset,mmfFn);
+      if(SaveHMMSet(&hSet,newDir,newExt,inBinary)<SUCCESS)
+         HError(2611,"DoEdit: SaveHMMSet failed");
    }
-   FixAllGConsts(hset);         /* in case any bad gConsts around */
-   badGC=FALSE;
-   PurgeMacros(hset);
-   if (mmfFn!=NULL)
-      SaveInOneFile(hset,mmfFn);
-   if(SaveHMMSet(&hSet,newDir,newExt,inBinary)<SUCCESS)
-      HError(2611,"DoEdit: SaveHMMSet failed");
    if (trace & T_BID) {
       printf("Edit Complete\n");
       fflush(stdout);

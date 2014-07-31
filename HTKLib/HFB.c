@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -74,12 +74,12 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*      HFB.c modified for HTS-1.1b 2003/06/07 by Heiga Zen          */
+/*  ---------------------------------------------------------------  */
+/*      HFB.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen         */
 /*  ---------------------------------------------------------------  */
 
-char *hfb_version = "!HVER!HFB:   3.2 [CUED 09/12/02]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
+char *hfb_version = "!HVER!HFB:   3.2.1 [CUED 15/10/03]";
+char *hfb_vc_id = "$Id: HFB.c,v 1.11 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -127,6 +127,14 @@ static struct {
    float minFrwdP;           /* mix prune threshold */
 
 } pruneSetting = { NOPRUNE, 0.0, NOPRUNE, 10.0 };
+
+
+/* for duration model variance flooring */
+
+static DAcc *global[NDURARRAY];         /* for global variance accumulation */
+static float durvFloor      = 1.0E-4;   /* variance floor */
+static float durvFloorScale = 0.0;      /* variance flooring factor */
+static Boolean applydurvFloor = FALSE;  /* apply variance flooring */
 
 /* ------------------------- Min HMM Duration -------------------------- */
 
@@ -270,6 +278,8 @@ void InitFB(void)
          if (GetConfFlt(cParm,nParm,"PRUNEINC", &d)) pruneSetting.pruneInc = d;
          if (GetConfFlt(cParm,nParm,"PRUNELIM", &d)) pruneSetting.pruneLim = d;
          if (GetConfFlt(cParm,nParm,"MINFORPROB", &d)) pruneSetting.minFrwdP = d;
+         if (GetConfFlt(cParm,nParm,"DURFLOOR",&d)) durvFloor = d;
+         if (GetConfFlt(cParm,nParm,"DVFLOORSCALE",&d)) { durvFloorScale = d; applydurvFloor = TRUE; }
       }
    }
 }
@@ -539,13 +549,12 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
 {
    int q,qt;
    LLink lab;
-   MLink macroName,*qLink;
+   MLink macroName;
    TrAcc *ta;
-   HLink *qList;
    LabId  *qIds;
    short *qDms;
    HLink *al_qList, *up_qList;
-   HMMSet *al_hset, *up_hset;  
+   HMMSet *al_hset, *up_hset;
 
    al_hset=fbInfo->al_hset; up_hset=fbInfo->up_hset;
    /* init logical hmm list */
@@ -625,7 +634,7 @@ static void CreateAlpha(AlphaBeta *ab, HMMSet *hset, int Q, int T)
       alpha = (DVector **)New(&ab->abMem, T*sizeof(DVector *));
       --alpha;
       for (t=1;t<=T;t++){
-         alpha[t] = (DVector *)New(&ab->abMem, T*sizeof(DVector));
+         alpha[t] = (DVector *)New(&ab->abMem, Q*sizeof(DVector));
          alpha[t]--;
          for (q=1;q<=Q;q++) 
             alpha[t][q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
@@ -686,6 +695,9 @@ static void InitAlpha(AlphaBeta *ab, int *start, int *end,
       }
       aq[Nq] = x;
       a1N = hmm->transP[1][Nq];
+      
+      if (calcDuration)
+         CopyDVector(aq, ab->alpha[1][q]);
    }
    ZeroAlpha(ab,eq+1,Q);
    if (trace&T_PRU && p->pruneThresh < NOPRUNE)
@@ -1462,7 +1474,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm,
          /* update weight occupation count */
          wa = (WtAcc *) sti->hook; steSumLr = 0.0;
       
-        if (fbInfo->twoModels) { /* component probs of update hmm */
+         if (fbInfo->twoModels) { /* component probs of update hmm */
              norm = LZERO;
              for (mx=1; mx<=M; mx++) {
                  me = sti->spdf.cpdf+mx; 
@@ -1654,7 +1666,6 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
    ab = fbInfo->ab;
    CreateAlpha(ab,fbInfo->al_hset,utt->Q, utt->T); /* al_hset may be idential to up_hset */
    InitAlpha(ab,&start,&end,utt->Q,fbInfo->skipstart,fbInfo->skipend);
-
    ab->occa = NULL;
    if (trace&T_OCC) 
       CreateTraceOcc(ab,utt);
@@ -1708,7 +1719,7 @@ void LoadLabs(UttInfo *utt, FileFormat lff, char * datafn,
               char *labDir, char *labExt)
 {
 
-   char labfn[255],buf1[255],buf2[255];
+   char labfn[MAXSTRLEN], buf1[MAXSTRLEN], buf2[MAXSTRLEN];
 
    /* reset the heap for a new transcription */
    ResetHeap(&utt->transStack);
@@ -1812,19 +1823,34 @@ void InitUttObservations(UttInfo *utt, HMMSet *al_hset,
    
 }
 
+/* SelectArray */
+int SelectArray(LogDouble x)
+{
+   int i;
+   LogDouble region, step;
+   
+   region = (LogDouble)DURMAX - (LogDouble)DURMIN;
+   step = region / (LogDouble)NDURARRAY;
+   
+   for (i=NDURARRAY-1; i>0; i--)
+      if (x>step*i+(LogDouble)DURMIN)
+         break;
+   
+   return i;
+}
+
 /* AccDuration: accumulate factors of duration distributions */
 void AccDuration(FBInfo *fbInfo, UttInfo *utt)
 {
-   int i,j,k,m,n,t,t0,t1,Nq,SumNq = 0;
+   int i,j,k,t0,t1,Nq,maxS,SumNq = 0;
    LogDouble x,x0,Sumx;
-   LogDouble sqr, sum, occ;
+   LogDouble sqr[NDURARRAY], sum[NDURARRAY], occ[NDURARRAY];
    DAcc *acc;
    HLink hmm, hmm2;
    MLink mac;
    AlphaBeta *ab;
    short *qHi,*qLo;
    HMMSet *hset;
-   Vector **occa;
    DVector **alpha, **beta;
 
    hset = fbInfo->al_hset;
@@ -1833,14 +1859,17 @@ void AccDuration(FBInfo *fbInfo, UttInfo *utt)
    beta  = ab->beta;
    qHi = ab->pInfo->qHi;
    qLo = ab->pInfo->qLo;
-
-   /* initialise alpha[1] */
-   for (i=1; i<=utt->Q; i++)
-      for (j=1; j<=ab->al_qList[i]->numStates; j++)
-         alpha[1][i][j] = LZERO;
-   for (j=2; j<ab->al_qList[1]->numStates; j++)
-      alpha[1][1][j] = ab->otprob[1][1][j][0] + ab->al_qList[1]->transP[1][j];
   
+   if (global[0]==NULL && applydurvFloor) {
+      maxS = MaxStatesInSet(hset);
+      for (i=0; i<NDURARRAY; i++) {
+         global[i]  = (DAcc *) New(hset->hmem, (maxS-2)*sizeof(DAcc));
+         global[i] -=2;
+         for (j=2; j<maxS; j++)
+            global[i][j].sqr = global[i][j].sum = global[i][j].occ = LZERO;
+      }
+   }
+   
    /* Accumurate Statistics for Duration Modeling */
    for (i=1; i<=utt->Q; i++) {
       hmm = ab->al_qList[i];
@@ -1863,121 +1892,173 @@ void AccDuration(FBInfo *fbInfo, UttInfo *utt)
       } else acc = mac->hook; 
 
       for (j=2;j<Nq;j++) { 
-         SumNq++; 
-         for (t0=SumNq; t0<=utt->T; t0++)  
+         SumNq++;
+         
+         for (k=0; k<NDURARRAY; k++)
+            sqr[k] = sum[k] = occ[k] = LZERO;
+         
+         for (t0=SumNq; t0<=utt->T; t0++) {
             if (qLo[t0]<=i && i<=qHi[t0]) {
                if (t0 == 1) x0 = 0; 
                else if (qHi[t0-1]<i) x0 = LZERO; 
                else {
                   x0 = LZERO;
-                  if (i!=1) {
+                  if (i!=1 && hmm->transP[1][j]>LSMALL) {
                      hmm2 = ab->al_qList[i-1];
                      for (k=2; k<hmm2->numStates; k++)
-                        x0 = LAdd(x0, alpha[t0-1][i-1][k]+(double)hmm2->transP[k][hmm2->numStates]);
+                        if (hmm2->transP[k][hmm2->numStates]>LSMALL)
+                           x0 = LAdd(x0, alpha[t0-1][i-1][k]+(double)hmm2->transP[k][hmm2->numStates]);
                      x0 += (double)hmm->transP[1][j];
                   }
                   for (k=2; k<Nq; k++)
-                     if (k!=j)
+                     if (k!=j && hmm->transP[k][j]>LSMALL)
                         x0 = LAdd(x0, alpha[t0-1][i][k]+(double)hmm->transP[k][j]);
                }
                
                Sumx = x0;
-               sqr = sum = occ = LZERO;
                
-               for (t1=t0; t1<=utt->T; t1++) { 
-                  if (Sumx<=LZERO) break; 
-                  if (qLo[t1]<=i && i<=qHi[t1]){
+               for (t1=t0; t1<=utt->T; t1++) {  
+                  if (Sumx>LSMALL && qLo[t1]<=i && i<=qHi[t1]){
                      Sumx += (double)ab->otprob[t1][i][j][0];
-                     if (t1-t0 > 0) 
+                     if (t1!=t0) 
                         Sumx += (double)hmm->transP[j][j];
 
                      if (t1==utt->T) { 
-                        x = 0;
+                        x = hmm->transP[j][hmm->numStates];
                      }
                      else if(qLo[t1+1] > i) {
                         Sumx = x = LZERO;
                      }
                      else {
                         x = LZERO;
-                        if (i<qHi[t1]) {
+                        if (i<qHi[t1] && hmm->transP[j][Nq]>LSMALL) {
                            hmm2 = ab->al_qList[i+1];
                            for (k=2; k<hmm2->numStates; k++)
-                              x = LAdd(x, (double)hmm2->transP[1][k]+(double)ab->otprob[t1+1][i+1][k][0]+beta[t1+1][i+1][k]);
+                              if (hmm2->transP[1][k]>LSMALL)
+                                 x = LAdd(x, (double)hmm2->transP[1][k]+(double)ab->otprob[t1+1][i+1][k][0]+beta[t1+1][i+1][k]);
                            x += hmm->transP[j][Nq];
                         }
                         for (k=2; k<Nq; k++)
-                           if (k!=j)
+                           if (k!=j && hmm->transP[j][k]>LSMALL)
                               x = LAdd(x, (double)hmm->transP[j][k]+(double)ab->otprob[t1+1][i][k][0]+beta[t1+1][i][k]);
-                     }
+                     } 
                      
                      x = x+Sumx-utt->pr;
                      
-                     sqr = LAdd(sqr, x+2*log(t1-t0+1)); 
-                     sum = LAdd(sum, x+log(t1-t0+1)); 
-                     occ = LAdd(occ, x);
-                     
+                     if (x>LSMALL) {
+                        k = SelectArray(x);
+                        sqr[k] = LAdd(sqr[k], x+2*log(t1-t0+1)); 
+                        sum[k] = LAdd(sum[k], x+log(t1-t0+1)); 
+                        occ[k] = LAdd(occ[k], x);
+                        
+                        if (applydurvFloor) {
+                           global[k][j].sqr = LAdd(global[k][j].sqr, x+2*log(t1-t0+1));
+                           global[k][j].sum = LAdd(global[k][j].sum, x+log(t1-t0+1));
+                           global[k][j].occ = LAdd(global[k][j].occ, x);
+                        }
+                     }      
                   } else break; 
                }
-               
-               acc[j].sqr = LAdd(acc[j].sqr, sqr);
-               acc[j].sum = LAdd(acc[j].sum, sum);
-               acc[j].occ = LAdd(acc[j].occ, occ);
             } 
+         }
+         
+         for (k=1; k<NDURARRAY; k++) {
+            sqr[0] = LAdd(sqr[0], sqr[k]);
+            sum[0] = LAdd(sum[0], sum[k]);
+            occ[0] = LAdd(occ[0], occ[k]);
+         }
+               
+         acc[j].sqr = LAdd(acc[j].sqr, sqr[0]);
+         acc[j].sum = LAdd(acc[j].sum, sum[0]);
+         acc[j].occ = LAdd(acc[j].occ, occ[0]);
       } 
    } 
 } 
-
+ 
 /* SaveDuration: save duration distribution */ 
-void SaveDuration(FBInfo *fbInfo, char *durfn, float vfloor, DurKind dkind) 
+void SaveDuration(FBInfo *fbInfo, char *durfn, DurKind dkind) 
 { 
-   int h,i,j,Nq; 
+   int h,i,j,Nq,MaxS; 
    double mean,var; 
    FILE *fp;
    HMMSet *hset;
    HLink hmm;
    MLink mac;
    DAcc *acc;
-   Boolean init=TRUE;
+   Vector floor;
 
    hset = fbInfo->al_hset;
 
    if ((fp=fopen(durfn,"w")) == NULL)
       HError(7360,"SaveDuration: Can not open duration model file %s.\n", durfn);
 
+   MaxS = MaxStatesInSet(hset);
+   floor = CreateVector(hset->hmem,MaxS-2);
+   /* set floor */
+   for (i=2;i<MaxS;i++) {
+      if (applydurvFloor) {
+         for (j=1; j<NDURARRAY; j++) {
+            global[0][i].sqr = LAdd(global[0][i].sqr, global[j][i].sqr);
+            global[0][i].sum = LAdd(global[0][i].sum, global[j][i].sum);
+            global[0][i].occ = LAdd(global[0][i].occ, global[j][i].occ);
+         }
+         
+         floor[i-1] = LSub(global[0][i].sqr-global[0][i].occ, 2*(global[0][i].sum-global[0][i].occ));
+         floor[i-1] = durvFloorScale*L2F(floor[i-1]);
+         if (floor[i-1] == 0.0)
+            floor[i-1] = durvFloor;
+      }
+      else
+         floor[i-1] = durvFloor;
+   }
+
+   /* ---- Output duration model ---- */
+   /* output model definition and dummy state-transition matrix */
+   fprintf(fp,"~o\n<VECSIZE> %d<GEND><DIAGC><USER>\n",MaxS-2);
+   fprintf(fp,"~t \"trP_1\"\n<TRANSP> 3\n");
+   fprintf(fp,"0 1 0\n0 0 1\n0 0 0\n");
+
+   /* output vfloor macro */
+   if (applydurvFloor) {
+      fprintf(fp,"~v \"varFloor1\" \n");
+      fprintf(fp,"<VARIANCE> %d \n",MaxS-2);
+      for (i=1;i<=MaxS-2;i++)
+         fprintf(fp,"%e ",floor[i]);
+      fprintf(fp,"\n");
+   }
+
+   /* output state duration distribution */
    for (h=0;h<MACHASHSIZE;h++)
       for (mac = hset->mtab[h];mac != NULL;mac = mac->next)
          if (mac->type=='h'){
             hmm = mac->structure;
             acc = mac->hook;                
             Nq  = hmm->numStates;
+            if (Nq != MaxS)
+               HError(9999,"SaveDuration: model %s  %d  %d",mac->id->name,Nq,MaxS);
 
-            if (init){
-               fprintf(fp,"~o\n<VECSIZE> %d<GEND><DIAGC><USER>\n",Nq-2);
-               fprintf(fp,"~t \"trP_1\"\n<TRANSP> 3\n");
-               fprintf(fp,"0 1 0\n0 0 1\n0 0 0\n");
-               init=FALSE;
-            }
             if (acc!=NULL){
-               fprintf(fp,"~h %s\n",mac->id->name);
+               fprintf(fp,"~h \"%s\"\n",mac->id->name);
                fprintf(fp,"<BEGINHMM>\n<NUMSTATES> 3\n<STATE> 2\n");
                fprintf(fp,"<MEAN> %d\n",Nq-2);
                for (i=2;i<Nq;i++){
-                  if (acc[i].occ==LZERO) mean = 0;
+                  if (acc[i].occ<=LSMALL) mean = 0;
                   else mean = L2F(acc[i].sum-acc[i].occ);
                   fprintf(fp,"%e ",mean);
                }
                fprintf(fp,"\n<VARIANCE> %d\n",Nq-2);
                for (i=2;i<Nq;i++){
-                  if (acc[i].occ<=LZERO) var = vfloor;
+                  if (acc[i].occ<=LSMALL) 
+                     var = floor[i-1];
                   else {
-                     if ( acc[i].sqr-acc[i].occ < 2*(acc[i].sum-acc[i].occ) )
-                        var = vfloor;
+                     if (acc[i].sqr-acc[i].occ<2*(acc[i].sum-acc[i].occ))
+                        var = floor[i-1];
                      else {
                         var = LSub(acc[i].sqr-acc[i].occ, 2*(acc[i].sum-acc[i].occ));
                         var = L2F(var);
                      }
                   }
-                  if (var<vfloor) var = vfloor;
+                  if (var<floor[i-1]) var = floor[i-1];
                      fprintf(fp,"%e ",var);
                }
                fprintf(fp,"\n~t \"trP_1\"\n<ENDHMM>\n");
@@ -1985,6 +2066,7 @@ void SaveDuration(FBInfo *fbInfo, char *durfn, float vfloor, DurKind dkind)
          }
 
    fclose(fp);
+          
 }
 
 /* FBFile: apply forward-backward to given utterance */

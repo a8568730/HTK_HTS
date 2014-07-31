@@ -32,8 +32,8 @@
 /*         File: HShell.c:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-char *hshell_version = "!HVER!HShell:   3.2 [CUED 09/12/02]";
-char *hshell_vc_id = "$Id: HShell.c,v 1.12 2002/12/19 16:37:11 ge204 Exp $";
+char *hshell_version = "!HVER!HShell:   3.2.1 [CUED 15/10/03]";
+char *hshell_vc_id = "$Id: HShell.c,v 1.14 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 
@@ -1136,9 +1136,10 @@ char *ParseString(char *src, char *s)
       if (*src==ESCAPE_CHAR) {
          src++;
          if (src[0]>='0' && src[1]>='0' && src[2]>='0' &&
-             src[0]<='7' && src[1]<='7' && src[2]<='7')
+             src[0]<='7' && src[1]<='7' && src[2]<='7') {
             c = 64*(src[0] - '0') + 8*(src[1] - '0') + (src[2] - '0');
-         else
+            src+=2;
+         } else
             c = *src;
       }
       else c = *src;
@@ -1977,12 +1978,14 @@ ReturnStatus InitShell(int argc, char *argv[], char *ver, char *sccs)
    return(SUCCESS);
 }
 
+#ifndef WIN32
 void SetTime(TimeStruct *t)
 {
    if(gettimeofday(&(t->time),NULL)) 
       HError(1, "Error getting time of day.");
    t->clock_time = clock();
 }
+
 
 char *GiveTime(TimeStruct *t)
 {
@@ -1998,7 +2001,7 @@ char *GiveTime(TimeStruct *t)
    sprintf(t->timestr, "%d.%04d/clock %d.%04d", tenth_millisecs/10000, tenth_millisecs % 10000, clock_tenth_millisecs/10000, clock_tenth_millisecs % 10000);
    return t->timestr;
 }
-
+#endif
 
 /* EXPORT->PrintStdOpts: print standard options */
 void PrintStdOpts(char *opt)

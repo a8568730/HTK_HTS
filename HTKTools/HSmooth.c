@@ -22,7 +22,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -62,12 +62,12 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HSmooth.c modified for HTS-1.1b 2003/06/07 by Heiga Zen      */
+/*      HSmooth.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen     */
 /*  ---------------------------------------------------------------  */
 
-char *hsmooth_version = "!HVER!HSmooth:   3.2 [CUED 09/12/02]";
-char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.9 2002/12/19 16:37:40 ge204 Exp $";
 
+char *hsmooth_version = "!HVER!HSmooth:   3.2.1 [CUED 15/10/03]";
+char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -165,7 +165,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.1b\n");
+   printf("\nModified for HTS ver.1.1.1\n");
    printf("\nUSAGE: HSmooth [options] hmmList AccFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -b f    set convergence epsilon              0.0001\n");
@@ -382,7 +382,7 @@ void MakeWtAccLists()
       hmm = hss.hmm;
       for (i=2,se = hmm->svec+2; i<hmm->numStates;i++,se++)
          for (s=1,ste = se->info->pdf+1; s<=nStreams; s++,ste++){
-	    sti = ste->info;
+            sti = ste->info;
             w = &(wtStore[ix][i][s]); n = 0;
             while (*w != NULL){
                ++n; w = &((*w)->next);

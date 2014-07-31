@@ -22,7 +22,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -61,12 +61,12 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*      HMem.c modified for HTS-1.1b 2003/06/07 by Heiga Zen         */
+/*  ---------------------------------------------------------------  */
+/*      HMem.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
-char *hmem_version = "!HVER!HMem:   3.2 [CUED 09/12/02]";
-char *hmem_vc_id = "$Id: HMem.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
+char *hmem_version = "!HVER!HMem:   3.2.1 [CUED 15/10/03]";
+char *hmem_vc_id = "$Id: HMem.c,v 1.11 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -310,7 +310,8 @@ void ResetHeap(MemHeap *x)
          while (cur->next != NULL) { 
             next = cur->next;
             x->totAlloc -= cur->numElem;
-            free(cur->data); free(cur);
+            free(cur->data); 
+            free(cur);
             cur = next;
          }
          x->heap = cur;
@@ -592,7 +593,7 @@ size_t ShortVecElemSize(int size) { return (size+1)*sizeof(short); }
 size_t IntVecElemSize(int size) { return (size+1)*sizeof(int); }
 size_t VectorElemSize(int size) { return (size+1)*sizeof(float); }
 size_t DVectorElemSize(int size){ return (size+1)*sizeof(double);}
-size_t SVectorElemSize(int size){ return (size+1)*sizeof(float)+2*sizeof(Ptr); }
+size_t SVectorElemSize(int size){ return (size+1)*sizeof(float)+4*sizeof(Ptr); }
 
 /* EXPORT->CreateShortVec:  Allocate space for short array v[1..size] */
 ShortVec CreateShortVec(MemHeap *x,int size)
@@ -646,7 +647,7 @@ Vector CreateSVector(MemHeap *x, int size)
    int *i;
    
    p = (Ptr *)New(x,SVectorElemSize(size));
-   v = (SVector) (p+2);
+   v = (SVector) (p+4);
    i = (int *) v; *i = size;
    SetHook(v,NULL);
    SetUse(v,0);

@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,12 +75,12 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HRest.c modified for HTS-1.1b 2003/06/07 by Heiga Zen        */
+/*      HRest.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen       */
 /*  ---------------------------------------------------------------  */
 
 
-char *hrest_version = "!HVER!HRest:   3.2 [CUED 09/12/02]";
-char *hrest_vc_id = "$Id: HRest.c,v 1.9 2002/12/19 16:37:40 ge204 Exp $";
+char *hrest_version = "!HVER!HRest:   3.2.1 [CUED 15/10/03]";
+char *hrest_vc_id = "$Id: HRest.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
 
 /*
    This program is used to estimate the transition parameters,
@@ -201,7 +201,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.1b\n");
+   printf("\nModified for HTS ver.1.1.1\n");
    printf("\nUSAGE: HRest [options] hmmFile trainFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -e f    Set convergence factor epsilon       1.0E-4\n");
@@ -508,7 +508,7 @@ void InitSegStore(BufferInfo *info)
 void LoadFile(char *fn)
 {
    BufferInfo info;
-   char labfn[80];
+   char labfn[MAXSTRLEN];
    Transcription *trans;
    long segStIdx,segEnIdx;
    static int segIdx=1;  /* Between call handle on latest seg in segStore */  
@@ -683,9 +683,13 @@ void SetOutP(int seg)
                   } else
                      mixp[s][m]=LZERO;
                }               
-               if (nStreams>1)
+               if (nStreams>1) {
                   strp[s]=si->weights[s]*streamP;
-               prob += si->weights[s]*streamP; /* note stream weights ignored */
+                  prob += si->weights[s]*streamP;
+               }
+               else {
+                  prob += streamP;
+               }
             }   
             outprob[i][t]=prob;
          }

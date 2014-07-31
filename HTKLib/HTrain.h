@@ -32,13 +32,18 @@
 /*         File: HTrain.h   HMM Training Support Routines      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HTrain:   3.2 [CUED 09/12/02] */
+/* !HVER!HTrain:   3.2.1 [CUED 15/10/03] */
 
 #ifndef _HTRAIN_H_
 #define _HTRAIN_H_
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+/* Win32 modification */
+#ifdef WIN32
+#define finite _finite
 #endif
 
 void InitTrain(void);

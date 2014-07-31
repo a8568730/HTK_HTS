@@ -9,13 +9,13 @@
 	$(CC) /nologo /c $(CFLAGS) $<
 
 .obj.exe:
-	$(CL) $(SYSLF) /OUT:$(HBIN)/$@ $< $(libs)
+	$(CL) $(SYSLF) /OUT:$(HBIN)\$@ $< $(libs)
 
 CC=cl
 CL=link
 CPU=win32
 
-HBIN  = ../bin.win32
+HBIN  = ..\bin.win32
 
 # use the following for full optimisation
 SYSCF = /ML /W0 /GX /O2 /G5 /Ob2 /D "NDEBUG" /D "WIN32" /D "_CONSOLE"
@@ -30,9 +30,9 @@ SYSLF = /nologo /subsystem:console /incremental:no
 #SYSLF = /DEBUG /DEBUGTYPE:BOTH /nologo /subsystem:console /incremental:no
 
 # the following is for HTK tools linked with HTKLib
-HTKCF = /I "../HTKLib" /I "."
+HTKCF = /I "..\HTKLib" /I "."
 
-htklib = ../HTKLib/HTKLib.$(CPU).lib 
+htklib = ..\HTKLib\HTKLib.$(CPU).lib 
 
 CFLAGS = $(SYSCF) $(HTKCF)
 
@@ -43,7 +43,7 @@ libs = $(syslib) $(htklib)
 
 tools = HSLab.exe HInit.exe HRest.exe HERest.exe HVite.exe HResults.exe \
 	HList.exe HCopy.exe HLEd.exe HDMan.exe HHEd.exe HParse.exe \
-	HBuild.exe HSmooth.exe HCompV.exe HQuant.exe HSGen.exe HLStats.exe HEAdapt.exe
+	HBuild.exe HSmooth.exe HCompV.exe HQuant.exe HSGen.exe HLStats.exe HEAdapt.exe HLRescore.exe HMGenS.exe 
 
 HEAdapt.exe: HEAdapt.obj
 
@@ -82,6 +82,10 @@ HVite.exe:	HVite.obj
 HERest.exe:	HERest.obj
 
 HRest.exe:	HRest.obj
+
+HLRescore.exe:	HLRescore.obj
+
+HMGenS.exe: HMGenS.obj
 
 all:	$(tools)
 	echo done

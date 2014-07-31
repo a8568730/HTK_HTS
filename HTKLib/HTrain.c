@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -74,13 +74,13 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*      HTrain.c modified for HTS-1.1b 2003/06/07 by Heiga Zen       */
+/*  ---------------------------------------------------------------  */
+/*      HTrain.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen      */
 /*  ---------------------------------------------------------------  */
 
 
-char *htrain_version = "!HVER!HTrain:   3.2 [CUED 09/12/02]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.8 2002/12/19 16:37:11 ge204 Exp $";
+char *htrain_version = "!HVER!HTrain:   3.2.1 [CUED 15/10/03]";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -127,7 +127,7 @@ void InitTrain(void)
 
    Register(htrain_version,htrain_vc_id);
    nParm = GetConfig("HTRAIN", TRUE, cParm, MAXGLOBS);
-   if (nParm>0){
+   if (nParm>0) {
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
       if (GetConfInt(cParm,nParm,"MAXCLUSTITER",&i)) maxIter = i;
       if (GetConfInt(cParm,nParm,"MINCLUSTSIZE",&i)) minClustSize = i;
@@ -176,7 +176,7 @@ void StoreItem(Sequence seq, Ptr item)
 {
    IBLink b;
 
-   if (seq->nFree==0){     /* add a block */
+   if (seq->nFree==0) {     /* add a block */
       b = NewItemBlock(seq->mem,seq->blkSize);
       seq->tl->next = b; seq->tl = b;
       seq->nFree = seq->blkSize;
@@ -202,7 +202,7 @@ static IBLink FindItemBlock(Sequence seq, int i, int *j)
       HError(7171,"FindItemBlock: %d'th item from %d requested",
              i,seq->nItems);
    b = seq->hd;
-   while (i>b->used){
+   while (i>b->used) {
       i -= b->used; b = b->next;
    }
    *j = i-1;
@@ -258,8 +258,8 @@ void LoadSegment(SegStore ss, HTime start, HTime end, ParmBuf pbuf)
    BufferInfo info;
    long i,st,en,len;
    int s,S = ss->o.swidth[0];
-   short *vqItem;
-   Vector *fvItem;
+   short *vqItem, *ovq;
+   Vector *fvItem, *ofv;
    
    GetBufferInfo(pbuf,&info);
    st = (long)(start/info.tgtSampRate);
@@ -280,14 +280,16 @@ void LoadSegment(SegStore ss, HTime start, HTime end, ParmBuf pbuf)
       ReadAsTable(pbuf,i,&(ss->o));
       if (ss->hasvq) {
          vqItem = (short *)New(ss->mem,sizeof(short)*(S+1));
+         ovq = ss->o.vq;
          for (s=1; s<=S; s++) 
-            vqItem[s] = ss->o.vq[s];
+            vqItem[s] = ovq[s];
          StoreItem(vq, (Ptr) vqItem);
       }
       if (ss->hasfv) {
          fvItem = (Vector *)New(ss->mem,sizeof(Vector)*(S+1));
+         ofv = ss->o.fv;
          for (s=1; s<=S; s++) 
-            fvItem[s] = ss->o.fv[s];
+            fvItem[s] = ofv[s];
          StoreItem(fv, (Ptr) fvItem);
       }
    }
@@ -327,20 +329,22 @@ Observation GetSegObs(SegStore ss, int i, int j)
    Sequence vq;
    Sequence fv;
    int s,S = ss->o.swidth[0];
-   short *vqItem;
-   Vector *fvItem;
+   short *vqItem, *ovq;
+   Vector *fvItem, *ofv;
    
    if (ss->hasvq) {
       vq = (Sequence) GetItem(ss->vqSegs,i);
       vqItem = (short *) GetItem(vq,j);
+      ovq = ss->o.vq;
       for (s=1; s<=S; s++) 
-         ss->o.vq[s] = vqItem[s];
+         ovq[s] = vqItem[s];
    }     
    if (ss->hasfv) {
       fv = (Sequence) GetItem(ss->fvSegs,i);
       fvItem = (Vector *) GetItem(fv,j);
+      ofv = ss->o.fv;
       for (s=1; s<=S; s++) 
-         ss->o.fv[s] = fvItem[s];
+         ofv[s] = fvItem[s];
    }     
    return ss->o;
 }
@@ -377,7 +381,7 @@ void SequenceCov(Sequence ss, CovKind ck, Covariance cov, Vector mean)
    DVector sqsum;
    DMatrix xsum;
    
-   switch(ck){
+   switch (ck) {
    case DIAGC:       /* diagonal covariance matrix */
    case INVDIAGC:    /* inverse diag covariance matrix */
       size = VectorSize(cov.var);
@@ -386,7 +390,7 @@ void SequenceCov(Sequence ss, CovKind ck, Covariance cov, Vector mean)
       n = ss->nItems;
       for (i=1; i<=ss->nItems; i++) {
          v = (Vector) GetItem(ss,i);
-         for (j=1; j<=size; j++){
+         for (j=1; j<=size; j++) {
             x = v[j]-mean[j];
             sqsum[j] += x*x;
          }
@@ -403,7 +407,7 @@ void SequenceCov(Sequence ss, CovKind ck, Covariance cov, Vector mean)
       for (i=1; i<=ss->nItems; i++) {
          v = (Vector) GetItem(ss,i);
          for (j=1; j<=size; j++)
-            for (k=1; k<=j; k++){
+            for (k=1; k<=j; k++) {
                x = v[j]-mean[j];
                y = v[k]-mean[k];
                xsum[j][k] += x*y;
@@ -472,24 +476,24 @@ static float Distance(Vector v1, Vector v2)
    double sum,x;
    int i,j;
 
-   switch(dck){
+   switch (dck) {
    case NULLC:
       sum = 0.0;
-      for (i=1; i<=vSize; i++){
+      for (i=1; i<=vSize; i++) {
          x = v1[i]-v2[i]; sum += x*x;
       }
       break;
    case DIAGC:
       iv = dcov.var;  /* covkind == DIAGC */
       sum = 0.0;
-      for (i=1; i<=vSize; i++){
+      for (i=1; i<=vSize; i++) {
          x = v1[i]-v2[i]; sum += x*x/iv[i];
       }
       break;
    case INVDIAGC:
       iv = dcov.var;  /* covkind == INVDIAGC */
       sum = 0.0;
-      for (i=1; i<=vSize; i++){
+      for (i=1; i<=vSize; i++) {
          x = v1[i]-v2[i]; sum += x*x*iv[i];
       }
       break;
@@ -533,7 +537,7 @@ static int AllocateVectors(float *totalCost)
       printf("  allocating pool amongst %d clusters\n",curNumCl);
    /* zero all clusters */
    *totalCost=0.0;
-   for (n=1; n<=curNumCl; n++){
+   for (n=1; n<=curNumCl; n++) {
       ccs->cl[n].aveCost = 0.0;
       ccs->cl[n].csize = 0;
    }
@@ -613,14 +617,14 @@ static void FindCentres(int a, int b)
       ZeroVector(ccs->cl[n].vCtr);
    for (i=1; i<=nItems; i++) {
       cidx = cmap[i];
-      if (cidx>=a && cidx<=b){
+      if (cidx>=a && cidx<=b) {
          v = (Vector)GetItem(cvp,i);
          ctr = ccs->cl[cidx].vCtr;
          for (j=1; j<=vSize; j++)
             ctr[j] += v[j];
       }
    }
-   for (n=a; n<=b; n++){
+   for (n=a; n<=b; n++) {
       ctr = ccs->cl[n].vCtr;
       cs = ccs->cl[n].csize;
       for (j=1; j<=vSize; j++) ctr[j] /= cs;
@@ -640,7 +644,7 @@ static void FindCovariance(int n)
    
    nx = ccs->cl[n].csize;
    mean = ccs->cl[n].vCtr;
-   switch(ccs->ck){
+   switch (ccs->ck) {
    case NULLC:
       ccs->cl[n].cov.var = NULL;
       break;
@@ -651,7 +655,7 @@ static void FindCovariance(int n)
       for (i=1; i<=nItems; i++) {
          if (cmap[i] == n) {
             v = (Vector) GetItem(cvp,i);
-            for (j=1; j<=vSize; j++){
+            for (j=1; j<=vSize; j++) {
                x = v[j]-mean[j];
                sqsum[j] += x*x;
             }
@@ -670,7 +674,7 @@ static void FindCovariance(int n)
          if (cmap[i] == n) {
             v = (Vector) GetItem(cvp,i);
             for (j=1; j<=vSize; j++)
-               for (k=1; k<=j; k++){
+               for (k=1; k<=j; k++) {
                   x = v[j]-mean[j];
                   y = v[k]-mean[k];
                   xsum[j][k] += x*y;
@@ -699,7 +703,7 @@ static int BiggestCluster(void)
    for (n=2; n<=curNumCl; n++)
       if (ccs->cl[n].aveCost > maxCost) {
          maxCost=ccs->cl[n].aveCost;
-         if( ccs->cl[n].csize >= minClustSize )
+         if ( ccs->cl[n].csize >= minClustSize )
             biggest=n;
       }
    return biggest;
@@ -778,11 +782,11 @@ static void InitClustering(MemHeap *x, Sequence vpool, int nc,
    v = (Vector)GetItem(cvp,1); vSize = VectorSize(v);
    vTmp = CreateVector(&gstack,vSize);
    dck = distck; dcov = distcov;
-   for (i=1; i<=numClust; i++){
+   for (i=1; i<=numClust; i++) {
       ccs->cl[i].csize = 0;
       ccs->cl[i].vCtr = CreateVector(x,vSize);
       ccs->cl[i].aveCost = 0.0;
-      switch (clusck){
+      switch (clusck) {
       case NULLC:
          cov.var = NULL;
          break;
@@ -823,15 +827,15 @@ ClusterSet *FlatCluster(MemHeap *x, Sequence vpool, int nc,
       Perturb(cc,cc,c); curNumCl = c;
       oldCost = 1e10;
       /* reallocate vectors until cost stabilises */
-      for (iter=0,converged=FALSE; !converged; iter++){
+      for (iter=0,converged=FALSE; !converged; iter++) {
          repairCount = 0; /* try to fill empty clusters by splitting fullest */
-         while ((ce=AllocateVectors(&newCost)) != 0  && ++repairCount <=c){
+         while ((ce=AllocateVectors(&newCost)) != 0  && ++repairCount <=c) {
             cc = FullestCluster();
             Perturb(cc,cc,ce);      /* ce = empty cluster */
          }
          if (ce != 0)
             HError(7120,"FlatCluster: Failed to make %d clusters at iter %d\n",c,iter);
-         if (trace & T_CLC){
+         if (trace & T_CLC) {
             printf("   c=%d, iter=%d, cost = %e\n",c,iter,newCost);
             fflush(stdout);
          }
@@ -858,8 +862,8 @@ ClusterSet *TreeCluster(MemHeap *x, Sequence vpool, int nc,
              ccs->cl[1].csize,nc,ccs->numClust);
    FindCovariance(1);
    c = 1; rowsize = 1;
-   while (rowsize < nc){
-      for (i=c,j=c+rowsize; i<c+rowsize; i++, j+=2){
+   while (rowsize < nc) {
+      for (i=c,j=c+rowsize; i<c+rowsize; i++, j+=2) {
          Perturb(i,j,j+1);
          SplitVectors(i,j,j+1);
          FindCentres(j,j+1);
@@ -892,7 +896,7 @@ void ShowClusterSet(ClusterSet *cs)
       if (!cs->isTree) printf(" cost=%.3f",c->aveCost);
       printf("\n");
       ShowVector("  mean",c->vCtr,20);
-      switch(cs->ck){
+      switch (cs->ck) {
       case NULLC: 
          break;
       case INVDIAGC: 
@@ -918,7 +922,7 @@ static MuAcc *CreateMuAcc(MemHeap *x, int vSize, int nPara)
    MuAcc *ma;
    int count;
    ma = (MuAcc *)New(x,sizeof(MuAcc)*nPara);
-   for(count=0;count<nPara;count++){
+   for (count=0;count<nPara;count++) {
      ma[count].mu = CreateVector(x,vSize);
      ZeroVector(ma[count].mu);
      ma[count].occ = 0.0;
@@ -933,8 +937,8 @@ static VaAcc *CreateVaAcc(MemHeap *x, int vSize, CovKind ck, int nPara)
    VaAcc *va;
    int count;
    va = (VaAcc *) New(x,sizeof(VaAcc)*nPara);
-   for(count=0;count<nPara;count++){
-     switch(ck){
+   for (count=0;count<nPara;count++) {
+     switch (ck) {
      case DIAGC:
      case INVDIAGC:
        va[count].cov.var = CreateVector(x,vSize);
@@ -959,7 +963,7 @@ static TrAcc *CreateTrAcc(MemHeap *x, int numStates, int nPara)
    TrAcc *ta;
    int count;
    ta = (TrAcc *) New(x,sizeof(TrAcc)*nPara);
-   for(count=0;count<nPara;count++){
+   for (count=0;count<nPara;count++) {
      ta[count].tran = CreateMatrix(x,numStates,numStates);
      ZeroMatrix(ta[count].tran);
      ta[count].occ = CreateVector(x,numStates);
@@ -975,7 +979,7 @@ static WtAcc *CreateWtAcc(MemHeap *x, int nMix, int nPara)
    WtAcc *wa;
    int count;
    wa = (WtAcc *) New(x,sizeof(WtAcc)*nPara);
-   for(count=0;count<nPara;count++){
+   for (count=0;count<nPara;count++) {
      wa[count].c = CreateVector(x,nMix);
      ZeroVector(wa[count].c);
      wa[count].occ = 0.0;
@@ -1004,10 +1008,10 @@ void TMAttachAccs(HMMSet *hset, MemHeap *x, int nPara)
    MixPDF *mp;
    
    nStreams = hset->swidth[0];
-   for (s=1;s<=nStreams;s++){
+   for (s=1;s<=nStreams;s++) {
       size = hset->swidth[s];
       tmRec = hset->tmRecs[s];
-      for (m=1;m<=tmRec.nMix;m++){
+      for (m=1;m<=tmRec.nMix;m++) {
          mp = tmRec.mixes[m];
          SetHook(mp->mean,CreateMuAcc(x,size,nPara));
          SetHook(mp->cov.var,CreateVaAcc(x,size,mp->ckind,nPara));
@@ -1016,7 +1020,7 @@ void TMAttachAccs(HMMSet *hset, MemHeap *x, int nPara)
 }
 
 /* EXPORT->AttachAccs: attach accumulators to hset */
-void AttachAccs(HMMSet *hset, MemHeap *x){ AttachAccsParallel(hset,x,1); }
+void AttachAccs(HMMSet *hset, MemHeap *x) { AttachAccsParallel(hset,x,1); }
 void AttachAccsParallel(HMMSet *hset, MemHeap *x, int nPara)
 {
    HMMScanState hss;
@@ -1074,15 +1078,15 @@ void TMZeroAccs(HMMSet *hset, int start, int end)
    VaAcc *va;
       
    nStreams = hset->swidth[0];
-   for (s=1;s<=nStreams;s++){
+   for (s=1;s<=nStreams;s++) {
       tmRec = hset->tmRecs[s];
-      for (m=1;m<=tmRec.nMix;m++){
+      for (m=1;m<=tmRec.nMix;m++) {
          mp = tmRec.mixes[m];
          ma = (MuAcc *)GetHook(mp->mean);
          va = (VaAcc *)GetHook(mp->cov.var);
-         for(i=start;i<=end;i++){ 
-	        ZeroVector(ma[i].mu); ma[i].occ = 0.0; 
-            switch(mp->ckind){
+         for (i=start;i<=end;i++) { 
+            ZeroVector(ma[i].mu); ma[i].occ = 0.0; 
+            switch (mp->ckind) {
             case DIAGC:
             case INVDIAGC:
                ZeroVector(va[i].cov.var);
@@ -1100,7 +1104,7 @@ void TMZeroAccs(HMMSet *hset, int start, int end)
    }
 }
 /*  EXPORT->ZeroAccs: zero all accumulators in given HMM set */
-void ZeroAccs(HMMSet *hset){ ZeroAccsParallel(hset,1); }
+void ZeroAccs(HMMSet *hset) { ZeroAccsParallel(hset,1); }
 void ZeroAccsParallel(HMMSet *hset, int nPara)
 {
    HMMScanState hss;
@@ -1112,7 +1116,7 @@ void ZeroAccsParallel(HMMSet *hset, int nPara)
    VaAcc *va;
    PreComp *p;
    int i,start,end;
-   if(nPara>0){start=0;end=nPara-1;}else{start=end=-nPara;}
+   if (nPara>0) {start=0;end=nPara-1;}else{start=end=-nPara;}
    NewHMMScan(hset,&hss);
    do {
       hmm = hss.hmm;
@@ -1121,13 +1125,13 @@ void ZeroAccsParallel(HMMSet *hset, int nPara)
          while (GoNextStream(&hss,TRUE)) {
             sti = hss.sti;
             wa = (WtAcc *)sti->hook;
-            for(i=start;i<=end;i++){
+            for (i=start;i<=end;i++) {
                ZeroVector(wa[i].c); wa[i].occ = 0.0;
                wa[i].time = -1; wa[i].prob = LZERO;
             }
             if (hss.isCont)
                while (GoNextMix(&hss,TRUE)) {
-                  if (DoPreComps(hset->hsKind)){
+                  if (DoPreComps(hset->hsKind)) {
                      p = (PreComp *)hss.mp->hook;  
                      p->time = -1; p->prob = LZERO;
                   }
@@ -1141,7 +1145,7 @@ void ZeroAccsParallel(HMMSet *hset, int nPara)
                   if (!IsSeenV(hss.mp->cov.var)) {
                      va = (VaAcc *)GetHook(hss.mp->cov.var);
                      for (i=start;i<=end;i++) {
-                        switch(hss.mp->ckind){
+                        switch (hss.mp->ckind) {
                         case DIAGC:
                         case INVDIAGC:
                            ZeroVector(va[i].cov.var);
@@ -1186,10 +1190,10 @@ void TMShowAccs(HMMSet *hset, int index)
    VaAcc *va;
    
    nStreams = hset->swidth[0];
-   for (s=1;s<=nStreams;s++){
+   for (s=1;s<=nStreams;s++) {
       tmRec = hset->tmRecs[s];
       printf("Tied Mixtures for Stream %d\n",s);
-      for (m=1;m<=tmRec.nMix;m++){
+      for (m=1;m<=tmRec.nMix;m++) {
          mp = tmRec.mixes[m];
          printf("   mix %d\n",m);
          ma = (MuAcc *)GetHook(mp->mean);
@@ -1198,7 +1202,7 @@ void TMShowAccs(HMMSet *hset, int index)
 
          va = (VaAcc *)GetHook(mp->cov.var);
          printf("    var occ=%f\n",va[index].occ);
-         switch(mp->ckind){
+         switch (mp->ckind) {
          case DIAGC:
          case INVDIAGC:
             ShowVector("    vars=",va[index].cov.var,mw);
@@ -1215,7 +1219,7 @@ void TMShowAccs(HMMSet *hset, int index)
 }
 
 /* EXPORT->ShowAccs: show accs attached to hset */
-void ShowAccs(HMMSet *hset){ ShowAccsParallel(hset, 0); }
+void ShowAccs(HMMSet *hset) { ShowAccsParallel(hset, 0); }
 void ShowAccsParallel(HMMSet *hset, int index)
 {
    const int mw=12;
@@ -1253,7 +1257,7 @@ void ShowAccsParallel(HMMSet *hset, int index)
                   if (!IsSeenV(hss.mp->cov.var)) {
                      va = (VaAcc *)GetHook(hss.mp->cov.var);
                      printf("    var occ=%f\n",va[index].occ);
-                     switch(hss.mp->ckind){
+                     switch (hss.mp->ckind) {
                      case DIAGC:
                      case INVDIAGC:
                         ShowVector("    vars=",va[index].cov.var,mw);
@@ -1394,7 +1398,7 @@ static void DumpMuAcc(FILE *f, MuAcc *ma)
 /* DumpVaAcc: dump variance acc to file f */
 static void DumpVaAcc(FILE *f, VaAcc *va, CovKind ck)
 {
-   switch(ck){
+   switch (ck) {
    case DIAGC:
    case INVDIAGC:
       WriteVector(f,va->cov.var,ldBinary);
@@ -1455,7 +1459,7 @@ static FILE * GetDumpFile(char *name, int n)
 /* EXPORT->DumpAccs: Dump a copy of the accs in hset to fname.
        Any occurrence of the $ symbol in fname is replaced by n.
        The file is left open and returned */
-FILE * DumpAccs(HMMSet *hset, char *fname, int n){ return DumpAccsParallel(hset,fname,n,0); }
+FILE * DumpAccs(HMMSet *hset, char *fname, int n) { return DumpAccsParallel(hset,fname,n,0); }
 FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, int index)
 {
    FILE *f;
@@ -1473,7 +1477,7 @@ FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, int index)
       while (GoNextState(&hss,TRUE)) {
          while (GoNextStream(&hss,TRUE)) {
             DumpWtAcc(f,((WtAcc *)hss.sti->hook)+index);
-            if (hss.isCont){
+            if (hss.isCont) {
                while (GoNextMix(&hss,TRUE)) {
                   if (!IsSeenV(hss.mp->mean)) {
                      DumpMuAcc(f,((MuAcc *)GetHook(hss.mp->mean)+index));
@@ -1487,16 +1491,16 @@ FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, int index)
             }
          }
       }     
-      if (!IsSeenV(hmm->transP)){
+      if (!IsSeenV(hmm->transP)) {
          DumpTrAcc(f, ((TrAcc *) GetHook(hmm->transP))+index);
          TouchV(hmm->transP);
       }
       DumpMarker(f);
    } while (GoNextHMM(&hss));   
    EndHMMScan(&hss);
-   if (hset->hsKind == TIEDHS){
-      for (s=1; s<=hset->swidth[0]; s++){
-         for (m=1; m<=hset->tmRecs[s].nMix; m++){
+   if (hset->hsKind == TIEDHS) {
+      for (s=1; s<=hset->swidth[0]; s++) {
+         for (m=1; m<=hset->tmRecs[s].nMix; m++) {
             mp = hset->tmRecs[s].mixes[m];
             DumpMuAcc(f,((MuAcc *)GetHook(mp->mean))+index);
             DumpVaAcc(f,((VaAcc *)GetHook(mp->cov.var))+index,mp->ckind);
@@ -1552,7 +1556,7 @@ static void LoadVaAcc(Source *src, VaAcc *va, int vSize, CovKind ck)
    TriMat mTemp;
    float f;
    
-   switch(ck){
+   switch (ck) {
    case DIAGC:
    case INVDIAGC:
       vTemp = CreateVector(&gstack, vSize);
@@ -1623,7 +1627,7 @@ static void CheckMarker(Source *src)
 }
 
 /* EXPORT->LoadAccs: inc accumulators in hset by vals in fname */
-Source LoadAccs(HMMSet *hset, char *fname){ return LoadAccsParallel(hset,fname,0); }
+Source LoadAccs(HMMSet *hset, char *fname) { return LoadAccsParallel(hset,fname,0); }
 Source LoadAccsParallel(HMMSet *hset, char *fname, int index)
 {
    Source src;
@@ -1635,7 +1639,7 @@ Source LoadAccsParallel(HMMSet *hset, char *fname, int index)
    if (trace & T_ALD)
       printf("Loading accumulators from file %s\n",fname);
 
-   if(InitSource(fname,&src,NoFilter)<SUCCESS)
+   if (InitSource(fname,&src,NoFilter)<SUCCESS)
       HError(7110,"LoadAccs: Can't open file %s", fname);
    NewHMMScan(hset, &hss);
    do {
@@ -1647,7 +1651,7 @@ Source LoadAccsParallel(HMMSet *hset, char *fname, int index)
          while (GoNextStream(&hss,TRUE)) {
             size = hset->swidth[hss.s];
             LoadWtAcc(&src,((WtAcc *)hss.sti->hook)+index,hss.M);
-            if (hss.isCont){
+            if (hss.isCont) {
                while (GoNextMix(&hss,TRUE)) {
                   if (!IsSeenV(hss.mp->mean)) {
                      LoadMuAcc(&src,((MuAcc *)GetHook(hss.mp->mean))+index,size);
@@ -1662,17 +1666,17 @@ Source LoadAccsParallel(HMMSet *hset, char *fname, int index)
             }
          }
       }     
-      if (!IsSeenV(hmm->transP)){
+      if (!IsSeenV(hmm->transP)) {
          LoadTrAcc(&src, ((TrAcc *) GetHook(hmm->transP))+index,hss.N);
          TouchV(hmm->transP);
       }
       CheckMarker(&src);
    } while (GoNextHMM(&hss));
    EndHMMScan(&hss);
-   if (hset->hsKind == TIEDHS){
-      for (s=1; s<=hset->swidth[0]; s++){
+   if (hset->hsKind == TIEDHS) {
+      for (s=1; s<=hset->swidth[0]; s++) {
          size = hset->swidth[s];
-         for (m=1;m<=hset->tmRecs[s].nMix; m++){
+         for (m=1;m<=hset->tmRecs[s].nMix; m++) {
             mp = hset->tmRecs[s].mixes[m];
             LoadMuAcc(&src,((MuAcc *)GetHook(mp->mean))+index,size);
             LoadVaAcc(&src,((VaAcc *)GetHook(mp->cov.var))+index,size,mp->ckind);
@@ -1692,7 +1696,7 @@ void RestorePDF(MixPDF *mp, int index)
    for (i=1;i<=size;i++) 
       ma->mu[i] += ma->occ * mp->mean[i];
 
-   switch(mp->ckind){
+   switch (mp->ckind) {
    case DIAGC: 
    case INVDIAGC:
       for (i=1;i<=size;i++)
@@ -1710,14 +1714,14 @@ void RestorePDF(MixPDF *mp, int index)
 }
 
 
-void RestoreAccs(HMMSet *hset){ RestoreAccsParallel(hset,0); }
+void RestoreAccs(HMMSet *hset) { RestoreAccsParallel(hset,0); }
 void RestoreAccsParallel(HMMSet *hset, int index)
 {
    HMMScanState hss;
    int s,m,size;
 
-   if(hset->hsKind==TIEDHS){
-      for (s=1; s<=hset->swidth[0]; s++){
+   if (hset->hsKind==TIEDHS) {
+      for (s=1; s<=hset->swidth[0]; s++) {
          size = hset->swidth[s];
          for (m=1;m<=hset->tmRecs[s].nMix; m++)
             RestorePDF(hset->tmRecs[s].mixes[m], index);
@@ -1739,14 +1743,14 @@ double ScalePDF(MixPDF *mpdf, int vSize, int index, float wt)
    {/*Scale the mu.*/
       int x;
       ma->occ *= wt;
-      for(x=1;x<=vSize;x++)
+      for (x=1;x<=vSize;x++)
          ma->mu[x] *= wt;
    }
    {/*Scale the var.*/
       int x;
       ans = va->occ;
       va->occ *= wt;
-      for(x=1;x<=vSize;x++)
+      for (x=1;x<=vSize;x++)
          va->cov.var[x] *= wt;
    }
    return ans;
@@ -1791,17 +1795,17 @@ double ScaleAccsParallel(HMMSet *hset, float wt, int index)
       while (GoNextStream(&hss,TRUE)) { /*Don't skip over state boundaries.*/
          StreamInfo *sti = hss.sti; int m, nMix;
          WtAcc *wa = ((WtAcc*) hss.sti->hook)+index;
-         switch(hset->hsKind){
+         switch (hset->hsKind) {
          case PLAINHS: case SHAREDHS:
             nMix = (sti->nMix>0?sti->nMix:-sti->nMix);
             wa->occ*=wt; /*take the value wa->occ to the desired value.*/
-            for(m=1;m<=nMix;m++){
+            for (m=1;m<=nMix;m++) {
                wa->c[m] *= wt; /*scale the WtAcc->c[]*/
             }
             break;
          case TIEDHS:
             nMix = hset->tmRecs[hss.s].nMix;
-            for(m=1;m<=nMix;m++){
+            for (m=1;m<=nMix;m++) {
                wa->c[m] *= wt; /*scale the WtAcc->c[]*/
             }
             break;
@@ -1818,7 +1822,7 @@ double ScaleAccsParallel(HMMSet *hset, float wt, int index)
       int i,j,N; /*This code taken from UpdateTransP*/
       TrAcc *ta;
     
-      if (!IsSeenV(hmm->transP)){
+      if (!IsSeenV(hmm->transP)) {
          TouchV(hmm->transP);
          ta = ((TrAcc*)GetHook(hmm->transP))+index;
          if (ta==NULL) HError(1, "HTrain.c: ScaleAccs: null TransP.");
@@ -1830,7 +1834,7 @@ double ScaleAccsParallel(HMMSet *hset, float wt, int index)
             }
          }
       }
-   } while(GoNextHMM(&hss));
+   } while (GoNextHMM(&hss));
    EndHMMScan(&hss);
    return ans;
 }

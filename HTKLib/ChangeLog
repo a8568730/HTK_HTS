@@ -1,3 +1,59 @@
+2003-10-14  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HModel.h: Redfine XFORM -- ugly hack to make HTK compile on
+	Windows.
+
+	* HMath.c (minab): Rename min() macro to avoid potential conflict
+	with definition from stdlib.h.
+	(InvSVD): Rename variable small to isSmall to fix compilation
+	problem in Visual C++.
+
+2003-10-03  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HModel.c (CheckDiscrete): Ensure that in discrete HMM Sets all
+	streams have width of 1.
+
+	* HParm.c (AddQualifiers): Ensure tht HIGHDIFF=T is only used when
+	the source feature file does not contain derivatives.
+
+2003-10-02  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HShell.h: Remove C++ type alias for Booleans.
+
+2003-09-23  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+        * HParm.c (EmptyBuffer): Initialise chType;
+
+2003-09-10  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+        * HShell.c (ParseString): Fix parsing of octal charcter codes.
+        From Tanel Alumäe <tanel.alumae@aqris.com>
+
+2003-07-28  Anna Langley <jal58@eng.cam.ac.uk>
+        * htk_htklib_nt.mkf: applied changed supplied by Arlindo Veiga
+        which compile the HLat library.
+
+2003-07-24  M. J. F. Gales  <mjfg@eng.cam.ac.uk>
+ 
+ 	* HParm.c (AddQualifiers): modified code so that the combination
+ 	of a linear transform and variance normalisation is correct. For
+ 	backward compatibility a config option USEOLDXFORMCVN is included -
+ 	this config defaults to FALSE.
+ 
+2003-07-21  S.E. Tranter  <sej28@ceres>
+       * HParm.c (OpenParmChannel): check that the end index in the
+       scp file doesnt overrun the end of the coded data file
+        
+2003-07-09  Anna Langley <jal58@eng.cam.ac.uk>
+        * HShell.c:
+        * HShell.h:
+        * HTrain.h: Minor modifications to allow compilation on win32
+
+2003-10-02  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HModel.c (SetCovKindUsage): Only count covKinds for PLAIN and
+	SHARED HMM sets.
+
 2002-12-19  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
 	* *.[hc]: Bump version to 3.2.

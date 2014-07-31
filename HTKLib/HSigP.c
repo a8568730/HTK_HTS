@@ -32,8 +32,8 @@
 /*      File: HSigP.c:   Signal Processing Routines            */
 /* ----------------------------------------------------------- */
 
-char *hsigp_version = "!HVER!HSigP:   3.2 [CUED 09/12/02]";
-char *hsigp_vc_id = "$Id: HSigP.c,v 1.11 2002/12/19 16:37:11 ge204 Exp $";
+char *hsigp_version = "!HVER!HSigP:   3.2.1 [CUED 15/10/03]";
+char *hsigp_vc_id = "$Id: HSigP.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"

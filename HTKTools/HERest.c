@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,12 +75,12 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HERest.c modified for HTS-1.1b 2003/06/07 by Heiga Zen       */
+/*      HERest.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen      */
 /*  ---------------------------------------------------------------  */
 
 
-char *herest_version = "!HVER!HERest:   3.2 [CUED 09/12/02]";
-char *herest_vc_id = "$Id: HERest.c,v 1.10 2002/12/19 16:37:40 ge204 Exp $";
+char *herest_version = "!HVER!HERest:   3.2.1 [CUED 15/10/03]";
+char *herest_vc_id = "$Id: HERest.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -142,22 +142,22 @@ static int parMode   = -1;       /* enable one of the // modes */
 static Boolean stats = FALSE;    /* enable statistics reports */
 static char * mmfFn  = NULL;     /* output MMF file, if any */
 static int trace     = 0;        /* Trace level */
-static Boolean saveBinary = FALSE;  /* save output in binary  */
-static Boolean ldBinary = TRUE;        /* load/dump in binary */
-static FileFormat dff=UNDEFF;       /* data file format */
-static FileFormat lff=UNDEFF;       /* label file format */
+static Boolean saveBinary  = FALSE;  /* save output in binary  */
+static Boolean ldBinary    = TRUE;   /* load/dump in binary */
+static FileFormat dff=UNDEFF;        /* data file format */
+static FileFormat lff=UNDEFF;        /* label file format */
 
 static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
-static int nParm = 0;               /* total num params */
-Boolean traceHFB = FALSE;        /* pass to HFB to retain top-level tracing */
-Boolean calcDuration = FALSE;    /* duration modeling */
+static int nParm = 0;                /* total num params */
+Boolean traceHFB = FALSE;            /* pass to HFB to retain top-level tracing */
+Boolean calcDuration = FALSE;        /* duration modeling */
 
 static Boolean al_hmmUsed = FALSE;   /* Set for 2-model ReEstimation */
 static char al_hmmDir[MAXFNAMELEN];  /* dir to look for alignment hmm defs */
-static char al_hmmExt[MAXSTRLEN];  	 /* alignment hmm def file extension */
+static char al_hmmExt[MAXSTRLEN];    /* alignment hmm def file extension */
 static char al_hmmMMF[MAXFNAMELEN];  /* alignment hmm MMF */
 static char al_hmmLst[MAXFNAMELEN];  /* alignment hmm list */
-static HMMSet al_hset ;      	 /* Option 2nd set of models for alignment */
+static HMMSet al_hset ;              /* Option 2nd set of models for alignment */
 
 /* Global Data Structures - valid for all training utterances */
 static LogDouble pruneInit = NOPRUNE;    /* pruning threshold initially */
@@ -171,8 +171,6 @@ static Boolean twoDataFiles = FALSE; /* Enables creation of ot2 for FB
 static int totalT=0;       /* total number of frames in training data */
 static LogDouble totalPr;   /* total log prob upto current utterance */
 static Vector vFloor[SMAX]; /* variance floor - default is all zero */
-static float dvFloor = 1.0E-4;    /* variance floor of duration model */
-static DurKind dtype;       /* kind of duration model */
 static MemHeap hmmStack;   /*For Storage of all dynamic structures created...*/
 static MemHeap uttStack;
 static MemHeap fbInfoStack;
@@ -210,7 +208,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.1b\n");
+   printf("\nModified for HTS ver.1.1.1\n");
    printf("\nUSAGE: HERest [options] hmmList dataFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -c f    Mixture pruning threshold            10.0\n");
@@ -475,7 +473,7 @@ int main(int argc, char *argv[])
       if (stats)
          StatReport(&hset);
       if (calcDuration)
-         SaveDuration(fbInfo,durFN,dvFloor,GAUSSD);
+         SaveDuration(fbInfo,durFN,GAUSSD);
       UpdateModels(&hset,utt->pbuf2);
    }
 
@@ -860,7 +858,7 @@ void UpdateMeans(HMMSet *hset, int px, HLink hmm)
    StreamElem *ste;
    StreamInfo *sti;
    MixtureElem *me;
-   Vector mean;
+   Vector mean, mu;
    
    N = hmm->numStates;
    se = hmm->svec+2;
@@ -877,9 +875,11 @@ void UpdateMeans(HMMSet *hset, int px, HLink hmm)
                ma = (MuAcc *) GetHook(mean);
                if (ma != NULL){
                   occim = ma->occ;
+                  mu    = ma->mu;
                   if (occim > 0.0)
+                     /* if you use Intel C compiler, following loop will be vectorized */
                      for (k=1; k<=vSize; k++)
-                        mean[k] += ma->mu[k]/occim;
+                        mean[k] += mu[k]/occim;
                   else if (trace&T_UPD)    /* PLAINHS & MSD, this warning often happen */
                      HError(-2330,"UpdateMeans: Model %d[%s]: no use of mean %d.%d.%d",
                           px,HMMPhysName(hset,hmm),i,s,m);
@@ -1144,13 +1144,14 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
       if (parMode == 0){
          SetChannel("HPARM2");
          nParm = GetConfig("HPARM2", TRUE, cParm, MAXGLOBS);
-         GetConfStr(cParm,nParm,"TARGETKIND",str);
-         hset->pkind = Str2ParmKind(str);
+         if (GetConfStr(cParm,nParm,"TARGETKIND",str))
+            hset->pkind = Str2ParmKind(str);
       }else{
          GetBufferInfo(pbuf2,&info2);
          hset->pkind = info2.tgtPK;
       }
    }
+   
    SaveHMMSet(hset,newDir,newExt,saveBinary);
    if (trace&T_TOP) {
       printf("Reestimation complete - average log prob per frame = %e\n",

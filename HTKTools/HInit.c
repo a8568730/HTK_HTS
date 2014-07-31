@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,12 +75,12 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HInit.c modified for HTS-1.1b 2003/06/07 by Heiga Zen         */
+/*      HInit.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen       */
 /*  ---------------------------------------------------------------  */
 
 
-char *hinit_version = "!HVER!HInit:   3.2 [CUED 09/12/02]";
-char *hinit_vc_id = "$Id: HInit.c,v 1.8 2002/12/19 16:37:40 ge204 Exp $";
+char *hinit_version = "!HVER!HInit:   3.2.1 [CUED 15/10/03]";
+char *hinit_vc_id = "$Id: HInit.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
 
 /*
    This program is used to initialise (or tune) a single hidden
@@ -140,7 +140,7 @@ static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
 static int nParm = 0;               /* total num params */
 static Vector vFloor[SMAX];         /* variance floor - default is all zero */
 
-/* Major Data Structures plus related global vars*/
+/* Major Data Structures plus related global vars */
 static HMMSet hset;              /* The current unitary hmm set */
 static MLink macroLink;          /* Access to macro in HMMSet */
 static HLink hmmLink;            /* link to the hmm itself */
@@ -180,7 +180,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.1b\n");
+   printf("\nModified for HTS ver.1.1.1\n");
    printf("\nUSAGE: HInit [options] hmmFile trainFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -e f    Set convergence factor epsilon       1.0E-4\n");
@@ -457,7 +457,7 @@ void CheckData(char *fn, BufferInfo info)
 void LoadFile(char *fn)
 {
    BufferInfo info;
-   char labfn[80];
+   char labfn[MAXSTRLEN];
    Transcription *trans;
    long segStIdx,segEnIdx;
    static int segIdx=1;  /* Between call handle on latest seg in segStore */  

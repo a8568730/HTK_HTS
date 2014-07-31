@@ -22,7 +22,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -61,12 +61,12 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*      HUtil.h modified for HTS-1.1b 2003/06/07 by Heiga Zen        */
+/*  ---------------------------------------------------------------  */
+/*      HUtil.h modified for HTS-1.1.1 2003/12/26 by Heiga Zen       */
 /*  ---------------------------------------------------------------  */
 
 
-/* !HVER!HUtil:   3.2 [CUED 09/12/02] */
+/* !HVER!HUtil:   3.2.1 [CUED 15/10/03] */
 
 #ifndef _HUTIL_H_
 #define _HUTIL_H_
@@ -75,6 +75,8 @@
 extern "C" {
 #endif
 
+#define PAT_LEN 2048
+   
 typedef struct{   /* HMMSet Scan State */
    HMMSet *hset;     /* HMM set */
    Boolean isCont;   /* true PLAINHS or SHAREDHS */
@@ -220,9 +222,9 @@ void FreeItems(ILink *list);
    in the order in which they were created.
 */
 
-typedef struct {		/* Defines a set of integers */
-   int nMembers;		/* cardinality of set */
-   Boolean *set;		/* array[1..nMembers] of Boolean */
+typedef struct {     /* Defines a set of integers */
+   int nMembers;     /* cardinality of set */
+   Boolean *set;     /* array[1..nMembers] of Boolean */
 }IntSet;
 
 IntSet CreateSet(int size);
@@ -276,7 +278,7 @@ void DupSet(IntSet oldSet, IntSet newSet);
 */
 
 char *PItemList(ILink *ilist, char *type, HMMSet *h,
-		Source *s, IntSet *streams, Boolean itrace);
+                Source *s, IntSet *streams, Boolean itrace);
 
 /* 
    Parse source s and convert into itemlist ilist and type holding

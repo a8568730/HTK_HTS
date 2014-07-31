@@ -22,7 +22,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -62,11 +62,11 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HMem.h modified for HTS-1.1b 2003/06/07 by Heiga Zen         */
+/*      HMem.h modified for HTS-1.1.1 2003/12/26 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
 
-/* !HVER!HMem:   3.2 [CUED 09/12/02] */
+/* !HVER!HMem:   3.2.1 [CUED 15/10/03] */
 
 /*
    This module provides a type MemHeap which once initialised

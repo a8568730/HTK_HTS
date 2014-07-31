@@ -29,8 +29,8 @@
 /*      File: LSubset.c: produce a subset map                  */
 /* ----------------------------------------------------------- */
 
-char *lsubset_version = "!HVER!LSubset:   3.2 [CUED 09/12/02]";
-char *lsubset_vc_id = "$Id: LSubset.c,v 1.1 2002/12/19 16:36:27 ge204 Exp $";
+char *lsubset_version = "!HVER!LSubset:   3.2.1 [CUED 15/10/03]";
+char *lsubset_vc_id = "$Id: LSubset.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 
    if (!InfoPrinted() && NumArgs() == 0)
       ReportUsage();
-   if (NumArgs() == 0) Exit(0);
+   if (NumArgs() == 0) Exit(EXIT_SUCCESS);
 
    SetConfParms();
 
@@ -126,7 +126,8 @@ int main(int argc, char *argv[])
    omap = BuildOutputMap(&gstack,&cmap);
    SaveWordMap(omapFN,omap,FALSE);
 
-   return EXIT_SUCCESS;
+   Exit(EXIT_SUCCESS);
+   return EXIT_SUCCESS; /* never reached -- make compiler happy */
 } 
 
 /* BuildMap: create new map with both word and class IDs */

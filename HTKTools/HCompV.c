@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -75,12 +75,11 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HCompV.c modified for HTS-1.1b 2003/06/07 by Heiga Zen       */
+/*      HCompV.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen      */
 /*  ---------------------------------------------------------------  */
 
-char *hcompv_version = "!HVER!HCompV:   3.2 [CUED 09/12/02]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.11 2002/12/19 16:37:40 ge204 Exp $";
-
+char *hcompv_version = "!HVER!HCompV:   3.2.1 [CUED 15/10/03]";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
 
 /* 
    This program calculates a single overall variance vector from a
@@ -200,7 +199,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.1b\n");
+   printf("\nModified for HTS ver.1.1.1\n");
    printf("\nUSAGE: HCompV [options] [hmmFile] trainFiles...\n" );
    printf(" Option                                       Default\n\n");
    printf(" -c dir  Set output directiry for CMV         none\n");
@@ -388,7 +387,8 @@ void SetCovs(void)
          for (m=1,me = sti->spdf.cpdf+1; m<=sti->nMix; m++, me++) {
             mp = me->mpdf;
             if (meanUpdate && !IsSeenV(mp->mean)){      /* meanSum now holds mean */
-               CopyVector(accs[s].meanSum,mp->mean); 
+               if ( VectorSize(mp->mean)==VectorSize(accs[s].meanSum) )
+                  CopyVector(accs[s].meanSum,mp->mean); 
                TouchV(mp->mean);
             }
             if (!IsSeenV(mp->cov.var)){
@@ -396,8 +396,10 @@ void SetCovs(void)
                   CopyMatrix(accs[s].fixed.inv,mp->cov.inv);
                else if (fullcNeeded[s])  /* dont need full cov, but its all we have */                
                   TriDiag2Vector(accs[s].fixed.inv,mp->cov.var);
-               else
-                  CopyVector(accs[s].fixed.var,mp->cov.var);
+               else {
+                  if ( VectorSize(mp->cov.var)==VectorSize(accs[s].fixed.var) )
+                     CopyVector(accs[s].fixed.var,mp->cov.var);
+               }
                TouchV(mp->cov.var);
             }
       }
@@ -448,16 +450,17 @@ void AccVar(Observation obs)
    totalCount++;
    for (s=1; s<=hset.swidth[0]; s++){
       v = obs.fv[s]; V = hset.swidth[s];
-      for (x=1;x<=V;x++) { 
-         val=v[x];            
-         accs[s].meanSum[x] += val;     /* accumulate mean */                             
-         if (fullcNeeded[s]) {          /* accumulate covar */ 
-            accs[s].squareSum.inv[x][x] += val*val;
-            for (y=1;y<x;y++) 
-               accs[s].squareSum.inv[x][y] += val*v[y];
-         } else                         /* accumulate var */
-            accs[s].squareSum.var[x] += val*val;
-      }
+      if (SpaceOrder(v)==V) 
+         for (x=1;x<=V;x++) { 
+            val=v[x];            
+            accs[s].meanSum[x] += val;     /* accumulate mean */                             
+            if (fullcNeeded[s]) {          /* accumulate covar */ 
+               accs[s].squareSum.inv[x][x] += val*val;
+               for (y=1;y<x;y++) 
+                  accs[s].squareSum.inv[x][y] += val*v[y];
+            } else                         /* accumulate var */
+               accs[s].squareSum.var[x] += val*val;
+         }
    }
 }
 
@@ -477,7 +480,7 @@ void LoadFile(char *fn)
 {
    ParmBuf pbuf;
    BufferInfo info;
-   char labfn[80];
+   char labfn[MAXSTRLEN];
    Transcription *trans;
    long segStIdx,segEnIdx;  
    int i,j,ncas,nObs;

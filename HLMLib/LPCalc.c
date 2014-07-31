@@ -29,8 +29,8 @@
 /*      File: LPCalc: probability calculation                  */
 /* ----------------------------------------------------------- */
 
-char *lpcalc_version = "!HVER!LPCalc:   3.2 [CUED 09/12/02]";
-char *lpcalc_vc_id = "$Id: LPCalc.c,v 1.1 2002/12/19 16:35:33 ge204 Exp $";
+char *lpcalc_version = "!HVER!LPCalc:   3.2.1 [CUED 15/10/03]";
+char *lpcalc_vc_id = "$Id: LPCalc.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -98,11 +98,11 @@ void InitBuildInfo(BuildInfo *bi)
    if (GetConfInt(cParm,nParm, "UNIFLOOR",&i)) bi->uniFloor = i;
    if (GetConfInt(cParm,nParm, "KRANGE",&i))   bi->kRange = i;
    if (GetConfStr(cParm,nParm, "DCTYPE",s)) {
-     if (strcmp(s,"TG")) 
+     if (!strcmp(s,"TG")) 
        bi->dctype = DC_KATZ;
-     else if (strcmp(s,"ABS")) 
+     else if (!strcmp(s,"ABS")) 
        bi->dctype = DC_ABSOLUTE;
-     else if (strcmp(s,"LIN")) 
+     else if (!strcmp(s,"LIN")) 
        bi->dctype = DC_LINEAR;
    }
 

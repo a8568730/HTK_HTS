@@ -1,5 +1,5 @@
 /*  ---------------------------------------------------------------  */
-/*      The HMM-Based Speech Synthesis System (HTS): version 1.1b    */
+/*      The HMM-Based Speech Synthesis System (HTS): version 1.1.1   */
 /*                        HTS Working Group                          */
 /*                                                                   */
 /*                   Department of Computer Science                  */
@@ -21,7 +21,7 @@
 /*       of conditions and the following disclaimer.                 */
 /*                                                                   */
 /*    2. Any modifications must be clearly marked as such.           */
-/*                                                                   */    
+/*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSITITUTE OF TECHNOLOGY,  */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
 /*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
@@ -34,39 +34,35 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
+/*  ---------------------------------------------------------------  */
 /*  HMGenS.c : generate speech parameters (spectrum and f0 ) from    */
 /*             HMMs based on Maximum Likelihood criterion with       */
 /*             dynamic feature window constraints                    */
 /*                                                                   */
-/*                                   2003/06/07 by Heiga Zen         */
+/*                                   2003/12/26 by Heiga Zen         */
 /*  ---------------------------------------------------------------  */
 
-char *hgens_version = "!HVER!HMGenS:   1.1b [zen 06/07/03]";
-char *hgens_sccs_id = "@(#)HMGenS.c    1.1b 06/07/03 JST";
+char *hgens_version = "!HVER!HMGenS:   1.1.1 [zen 12/26/03]";
+char *hgens_sccs_id = "@(#)HMGenS.c    1.1.1 12/26/03 JST";
 
 /* ------------------- HMM ToolKit Modules ------------------- */
 
-#include <HShell.h>
-#include <HMem.h>
-#include <HMath.h>
-#include <HSigP.h>
-#include <HAudio.h>
-#include <HWave.h>
-#include <HVQ.h>
-#include <HParm.h>
-#include <HLabel.h>
-#include <HModel.h>
-#include <HTrain.h>
-#include <HUtil.h>
-#include <HGen.h>
+#include "HShell.h"
+#include "HMem.h"
+#include "HMath.h"
+#include "HSigP.h"
+#include "HAudio.h"
+#include "HWave.h"
+#include "HParm.h"
+#include "HLabel.h"
+#include "HModel.h"
+#include "HUtil.h"
+#include "HGen.h"
 
 /* ----------------------- Trace Flags ----------------------- */
 
+#define T_TOP 0001      /* Top level tracing              */
 #define T_DUR 0002      /* show duration of each state    */
-#define T_GEN 0004      /* trace parameter generation     */
-#define T_DMC 0010      /* show sum mean and sum variance */
-                        /* of duration distribution       */
 
 /* ---------------- Global Data Structures --------------------- */
 
@@ -113,14 +109,14 @@ void SetConfParms(void)
 {
    Boolean b;
    double d;
+   int i;
    
    nParm = GetConfig("HMGENS", TRUE, cParm, MAXGLOBS);
    if (nParm>0) {
+      if (GetConfInt (cParm,nParm,"TRACE",&i))     trace = i;
       if (GetConfBool(cParm,nParm,"OUTMEAN",&b))   outMean = TRUE;
       if (GetConfBool(cParm,nParm,"OUTPDF",&b))    outPDF = TRUE;
       if (GetConfBool(cParm,nParm,"PHNDUR",&b))    phnDur = TRUE;
-      if (GetConfFlt (cParm,nParm,"FRMSHIFT",&d))  frmShift = (float)d;
-      if (GetConfFlt (cParm,nParm,"TMPFACTOR",&d)) tmpFactor = (float)d;
    }
 }
 
@@ -145,10 +141,10 @@ void ReportUsage(void)
    printf(" -p      output mean and inversed covariance sequence  off\n");
    printf(" -m      output mean sequence (static coefficients)    off\n");
    printf(" -g      use phone duration from label                 off\n");
-   printf(" -f f    frame shift [100ns]                           50000\n");
+   printf(" -f f    frame shift [second]                          0.005\n");
    printf(" -r f    tempo factor( f < 0 : fast   f > 0 : slow )   0.0\n");  
    printf(" -v f    voiced / unvoiced threshold                   0.5\n");
-   PrintStdOpts("Q");
+   PrintStdOpts("QT");
    printf("\n");
    Exit(0);
 }
@@ -167,8 +163,6 @@ int main(int argc,char *argv[])
    InitParm();
    InitLabel();
    InitModel();
-   InitTrain();
-   InitUtil();
 
    SetConfParms();
 
@@ -182,12 +176,13 @@ int main(int argc,char *argv[])
       if (strlen(s)!=1)
          HError(9919,"HMGenS: Bad switch %s; must be single letter",s);
       switch (s[0]) {
-      case 'p': outPDF = TRUE;  break;
-      case 'g': phnDur = TRUE;  break;
+      case 'p': outPDF  = TRUE; break;
+      case 'g': phnDur  = TRUE; break;
       case 'm': outMean = TRUE; break;
-      case 'f': frmShift = GetChkedFlt(0.0,100000.0,s); break;
-      case 'r': tmpFactor = GetChkedFlt(-10.0,10.0,s); break;
-      case 'v': UVthresh  = GetChkedFlt(0.0,1.0,s); break;
+      case 'f': frmShift  = 1.0e+7*GetChkedFlt(0.0,1.0,s); break;
+      case 'r': tmpFactor = GetChkedFlt(-10.0,10.0,s);     break;
+      case 'v': UVthresh  = GetChkedFlt(0.0,1.0,s);        break;
+      case 'T': trace = GetChkedInt(0,0002,s);             break;
       case 'Q': Summary();      break;
       default : HError(9919,"HMGenS: Unknown switch %s",s);
       }
@@ -204,9 +199,9 @@ int main(int argc,char *argv[])
 
    DoGen(GetStrArg());
    
-   if (trace)
-      printf("total %d frames generated.\n", total_frame);
-
+   if (trace & T_TOP)
+      printf("total %d frames were generated.\n", total_frame);
+   
    ResetHeap(&tmpHeap);
    ResetHeap(&hmmHeap);
 
@@ -218,6 +213,8 @@ int main(int argc,char *argv[])
 void Initialise(void)
 {
    ceppst.dw.num = f0pst.dw.num = 1;
+   
+   return;
 }
  
 /* ----------------------- Lexical Routines --------------------- */
@@ -227,22 +224,25 @@ int ChkedInt(char *what,int min,int max)
    int ans;
 
    if (!ReadInt(&source,&ans,1,FALSE))
-     HError(9999,"ChkedInt: Integer read error - %s",what);
+     HError(9950,"ChkedInt: Integer read error - %s",what);
    if (ans<min || ans>max)
-     HError(9999,"ChkedInt: Integer out of range - %s",what);
+     HError(9951,"ChkedInt: Integer out of range - %s",what);
+   
    return(ans);
 }
 
 char *ChkedAlpha(char *what,char *buf)
 {
    if (!ReadString(&source,buf))
-     HError(9999,"ChkedAlpha: String read error - %s",what);
+     HError(9950,"ChkedAlpha: String read error - %s",what);
+   
    return(buf);
 }
 
 /* ------------ Generate Speech Parameters from HMMs ----------- */
 
-/* ChkBoundary : check current frame is on voiced/unvoiced boundary according to regression window */
+/* ChkBoundary : check current frame is on voiced/unvoiced boundary 
+                 according to regression window */
 Boolean ChkBoundary(IntVec voiced, int t) 
 {
    int i,j; 
@@ -258,17 +258,16 @@ Boolean ChkBoundary(IntVec voiced, int t)
 /* Generator : Generate speech parameter (spectrum and f0 ) and output */   
 void Generator(char *labfn)
 {
-   char labFn[256];
-   char cepfn[256],f0fn[256],durfn[256];
-   char mcpfn[256],mptfn[256];
-   char cpffn[256],fpffn[256];
-   int i,j,k,l,m,n,s,t,pt;
+   char labFn[MAXSTRLEN];
+   char cepfn[MAXSTRLEN],f0fn[MAXSTRLEN],durfn[MAXSTRLEN];
+   char mcpfn[MAXSTRLEN],mptfn[MAXSTRLEN];
+   char cpffn[MAXSTRLEN],fpffn[MAXSTRLEN];
+   int i,j,k,s,t,pt;
    int nframe,tframe,phoneme_duration,vframe;
    int labseqlen,numstates;
-   int lw,rw,nobound;
    IntVec voiced;
    int **durseq;
-   float diffdur,dsum,dsqr,rho,bunbo;
+   float diffdur,dsum,dsqr,rho;
    FILE *cepfp,*f0fp,*durfp;
    FILE *mcpfp,*mf0fp;
    FILE *cpffp,*fpffp;
@@ -281,7 +280,7 @@ void Generator(char *labfn)
    Boolean bound;
    
    if (ceppst.vSize>hmset.swidth[1] || f0pst.vSize>hmset.swidth[0]-1)
-      HError(9999,"Number of delta window is invalid");
+      HError(9999,"Generator: Number of delta window is invalid");
    
    /* open output_files for cepstrum, f0 and duration */
    MakeFN(labfn,outDir,cepExt,cepfn);
@@ -329,7 +328,7 @@ void Generator(char *labfn)
 
       /* find duration model */
       if ((dmacro = FindMacroName(&dmset,'l',label->labid)) == NULL)
-         HError(9999,"Generator: Cannot find duration model for '%s'",
+         HError(9935,"Generator: Cannot find duration model %s in current list",
                 label->labid->name);
       dmm = dmacro->structure;
       numstates = VectorSize(dmm->svec[2].info
@@ -391,15 +390,15 @@ void Generator(char *labfn)
       label = GetLabN(lablist,i);
       /* find hmm */
       if ((hmacro = FindMacroName(&hmset,'l',label->labid)) == NULL)
-         HError(9999,"Generator: Cannot find HMM for '%s'",label->labid->name);
+         HError(9935,"Generator: Cannot find HMM %s in current list",label->labid->name);
       hmm = hmacro->structure;
 
       for (j=2;j<=hmm->numStates-1;j++) {
          for (s=1;s<=hmset.swidth[0];s++) {
             if ( NumNonZeroSpace(hmm->svec[j].info->pdf[s].info)>1 )
-               HError(9999, "Generator: More than 2 non-zero order distribution are exist at %s.state[%d].stream[%d]", label->labid->name, j, s);
+               HError(9963, "Generator: More than 2 non-zero order distribution are exist at %s.state[%d].stream[%d]", label->labid->name, j, s);
             if (hmm->svec[j].info->pdf[s].info->spdf.cpdf[1].mpdf->ckind==FULLC)
-               HError(9999, "Generator: parameter generation only currently available for diagonal covariance matrix");
+               HError(9963, "Generator: Currently parameter generation only valid for diagonal covariance");
          }
          for (k=1;k<=durseq[i][j];k++) {
             if (hmm->svec[j].info->pdf[2].info->spdf.cpdf[1].weight>=UVthresh){
@@ -411,7 +410,8 @@ void Generator(char *labfn)
          }
       }
    }
-   if (trace) printf("  frame [voiced frame] : %d[%d]\n",tframe,vframe);
+   if (trace & T_TOP) 
+      printf("  frame [voiced frame] : %d[%d]\n",tframe,vframe);
                
    ceppst.T = tframe;
    f0pst.T = vframe;   
@@ -424,7 +424,7 @@ void Generator(char *labfn)
       label = GetLabN(lablist,i);
       /* find hmm */
       if ((hmacro = FindMacroName(&hmset,'l',label->labid)) == NULL)
-         HError(9999,"Generator: Cannot find HMM for '%s'",label->labid->name);
+         HError(9935,"Generator: Cannot find HMM %s in current list",label->labid->name);
       hmm = hmacro->structure;
       for (j=2;j<hmm->numStates;j++)
          for(k=1;k<=durseq[i][j];k++) {
@@ -512,9 +512,28 @@ void Generator(char *labfn)
    }
    
    /* free memory */
+   for (t=ceppst.T,pt=f0pst.T; t>0; t--) {
+      if (voiced[t]) {
+         FreeSVector(&tmpHeap,f0pst.sm.ivseq[pt]);
+         FreeSVector(&tmpHeap,f0pst.sm.mseq[pt]);
+         pt--;
+      }
+   }
+   
    FreePStream(&tmpHeap, &f0pst);
    FreePStream(&tmpHeap, &ceppst);
 
+   FreeVector(&tmpHeap,zero);
+   FreeVector(&tmpHeap,f0);
+   FreeIntVec(&tmpHeap,voiced);
+
+   for (i=labseqlen;i>=1;i--) {
+      durseq[i]+=2;
+      Dispose(&tmpHeap,durseq[i]);
+   }
+   durseq++;
+   Dispose(&tmpHeap,durseq);
+   
    return;
 }
 
@@ -522,16 +541,19 @@ void Generator(char *labfn)
 
 void ChkModel(void)
 {  
-   printf("\tlogical  model          : %d\n",hmset.numLogHMM);
-   printf("\tphysical model          : %d\n",hmset.numPhyHMM);
-   printf("\tlogical  duration model : %d\n",dmset.numLogHMM);
-   printf("\tphysical duration model : %d\n",dmset.numPhyHMM);
+   printf("\tlogical  model          : %d\n", hmset.numLogHMM);
+   printf("\tphysical model          : %d\n", hmset.numPhyHMM);
+   printf("\tlogical  duration model : %d\n", dmset.numLogHMM);
+   printf("\tphysical duration model : %d\n", dmset.numPhyHMM);
    fflush(stdout);
+   
+   return;
 }
 
+/* LoadMMFCommand : Load macro model file */
 void LoadMMFCommand(void)
 {
-   char listfn[256],hmmfn[256],dlistfn[256],dmmfn[256];
+   char listfn[MAXSTRLEN],hmmfn[MAXSTRLEN],dlistfn[MAXSTRLEN],dmmfn[MAXSTRLEN];
    int ch;
 
    ChkedAlpha("hmmlist file name",listfn);
@@ -547,7 +569,7 @@ void LoadMMFCommand(void)
    ChkedAlpha("duration model list file name",dlistfn);
    ChkedAlpha("duration mmf file name",dmmfn);
    
-   if (trace) {
+   if (trace & T_TOP) {
       printf("Load hmmlist\t: %s\n",listfn);
       printf("Load mmffile\t: %s\n",hmmfn);
       printf("Load dmmlist\t: %s\n",dlistfn);
@@ -555,21 +577,23 @@ void LoadMMFCommand(void)
       fflush(stdout);
    }
 
+   /* load HMMSet for spectrum & f0 */
    CreateHMMSet(&hmset,&hmmHeap,TRUE);
    AddMMF(&hmset,hmmfn);
    if (MakeHMMSet(&hmset, listfn )<SUCCESS)
-      HError(9999,"LoadMMF: MakeHMMSet failed");
+      HError(9928,"LoadMMF: MakeHMMSet failed");
    if (LoadHMMSet(&hmset,NULL, hmmExt)<SUCCESS)
-      HError(9999,"LoadMMF: LoadHMMSet failed");
+      HError(9928,"LoadMMF: LoadHMMSet failed");
    
+   /* load HMMSet for duration */
    CreateHMMSet(&dmset,&hmmHeap,TRUE);
    AddMMF(&dmset,dmmfn);
    if (MakeHMMSet(&dmset, dlistfn )<SUCCESS)
-      HError(9999,"LoadMMF: MakeHMMSet failed");
+      HError(9928,"LoadMMF: MakeHMMSet failed");
    if (LoadHMMSet(&dmset,NULL, hmmExt)<SUCCESS)
-      HError(9999,"LoadMMF: LoadHMMSet failed");
+      HError(9928,"LoadMMF: LoadHMMSet failed");
 
-   if (trace)
+   if (trace & T_TOP)
       ChkModel();
 
    LoadModel = TRUE;
@@ -577,7 +601,7 @@ void LoadMMFCommand(void)
    return;
 }
 
-/* ---- Load Regression Window for Dynamic Feature Constraints ---- */  
+/* LoadWindowCommand :  Load regression window for dynamic feature constraints */  
 void LoadWindowCommand(void)
 {
    char *winfn;
@@ -586,10 +610,10 @@ void LoadWindowCommand(void)
    j = ceppst.dw.num;
    ceppst.dw.num += ChkedInt("number of delta window for spectrum",0,3);
    for (i=j;i<ceppst.dw.num;i++){
-      winfn = (char *)malloc(256*sizeof(char));
+      winfn = (char *)malloc(MAXSTRLEN*sizeof(char));
       ChkedAlpha("window file",winfn);
       ceppst.dw.fn[i] = winfn;
-      if (trace){
+      if (trace & T_TOP){
          printf("Set window file for spectrum <%d>\t: %s\n",i,winfn);
       }  
    }
@@ -597,87 +621,107 @@ void LoadWindowCommand(void)
    j = f0pst.dw.num;
    f0pst.dw.num += ChkedInt("number of delta window for f0 ",0,3);
    for (i=j;i<f0pst.dw.num;i++){
-      winfn = (char *)malloc(256*sizeof(char));
+      winfn = (char *)malloc(MAXSTRLEN*sizeof(char));
       ChkedAlpha("window file",winfn);
       f0pst.dw.fn[i] = winfn;
-      if (trace){
+      if (trace & T_TOP){
          printf("Set window file for f0 <%d>\t: %s\n",i,winfn);
       }
    }
+   
+   return;
 }
 
-/* ---------- Set Output Directory ----------- */
+/* SetOutputDirCommand : Set output directory */
 void SetOutputDirCommand(void)
 {
-   if(outDir==NULL && (outDir=(char *)malloc(256*sizeof(char)))== NULL)
+   if(outDir==NULL && (outDir=(char *)malloc(MAXSTRLEN*sizeof(char)))== NULL)
       HError(9905,"SetOutputDir: Cannot allocate memory for Directory name");
    
    ChkedAlpha("directory to store results",outDir);
 
-   if(trace){
+   if(trace & T_TOP){
       printf("Set output dirctory\t: %s\n",outDir);
       fflush(stdout);
    }
+   
+   return;
 }
 
-/* ---------- Set Order of 1st stream (spectrum) --------- */
+/* SetInfoCommand : Set order of 1st stream 
+  (for spectrum in the default setting of HMM-based speech synthesis demonstration) */
 void SetInfoCommand(void)
 {
    ceppst.order = ChkedInt("order of cepstrum",0,50)+1;
    f0pst.order = 1;
    SetOrder = TRUE;
+   
+   if(trace & T_TOP){
+      printf("Set order of spectrum to %d\n",ceppst.order);
+      fflush(stdout);
+   }
+   
+   return;
 }
 
-/* ---------- Set Label Directory ---------- */
+/* SetLabelDirCommand : Set label directory */
 void SetLabelDirCommand(void)
 {
-   if (labDir==NULL && (labDir=(char *)malloc(256*sizeof(char)))== NULL)
+   if (labDir==NULL && (labDir=(char *)malloc(MAXSTRLEN*sizeof(char)))== NULL)
    HError(9905,"SetLabelDir: Cannot allocate memory for directory name");
    
    ChkedAlpha("label file directry",labDir);
 
-   if (trace){
+   if (trace & T_TOP){
       printf("Set label file dirctory\t: %s\n",labDir);
       fflush(stdout);
    }
+   
+   return;
 }
 
-/* --------- Generate Speech Parameters --------- */
+/* GenerateCommand : Generate speech parameters from HMMs */
 void GenerateCommand()
 {
-   char  labfn[256][256];
-   int   i,number,max_T = 0;
+   char  labfn[2048][MAXSTRLEN];
+   int   i,number;
    
    if (!LoadModel)
-	   HError(9999, "Generate: Load HMM set before parameter generation");
+      HError(9999, "Generate: Any HMMs haven't been loaded");
    if (!SetOrder)
-       HError(9999, "Generate: Set order before parameter generation");
+      HError(9999, "Generate: Order of spectrum is not set");
  
-   number = ChkedInt("label file number",0,256);
+   number = ChkedInt("label file number",0,2048);
    ConvDiagC(&hmset, TRUE);
  
+   /* generate speech */
    for (i=0;i<number;i++){
       ChkedAlpha("label file name",labfn[i]);
-      if (trace) {
+      if (trace & T_TOP) {
          printf("Generating speech parameter\t: %s\n",labfn[i]);
          fflush(stdout);
       }
       Generator(labfn[i]);
    }
+   
    ConvDiagC(&hmset, TRUE);
+   
+   return;
 }
 
-/* ---------- Set Trace Level ----------- */
+/* SetTraceCommand : Set trace level */
 void SetTraceCommand(void)
 {
    int m;
 
    m = ChkedInt("Trace level",0,31);
-   if (trace) {
+   if (trace & T_TOP) {
       printf("Adjusting trace level\t: %d\n",m);
       fflush(stdout);
    }
    trace = m&0xf;
+   
+   return;
 }
 
 /* ----------------- Top Level of Generator ------------------ */
@@ -693,12 +737,14 @@ int CmdIndex(char *s)
    int i;
    
    for (i=1; i<=nCmds; i++)
-     if (strcmp(cmdmap[i-1],s) == 0) return i;
+      if (strcmp(cmdmap[i-1],s) == 0) 
+         return i;
+      
    return 0;
 }
 
 /* DoGen: Generate parameter using given command file */
-void DoGen(char *scriptFn)
+void DoGen (char *scriptFn)
 {
    int thisCommand = 0,c1,c2;
    char cmds[] = "  ";
@@ -708,26 +754,28 @@ void DoGen(char *scriptFn)
      
    /* Apply each Command */
    for (;;) {
-     SkipWhiteSpace(&source);
-     if ( (c1 = GetCh(&source)) == EOF) break;
-     if ( (c2 = GetCh(&source)) == EOF) break;
-     cmds[0] = c1; cmds[1] = c2;
-     if (!isspace(GetCh(&source))) 
-        HError(9999,"DoGen: White space expected after command %s",cmds);
-     thisCommand = CmdIndex(cmds);
-     switch (thisCommand) {
-     case LM: LoadMMFCommand();break;
-     case LW: LoadWindowCommand();break;
-     case SD: SetOutputDirCommand();break;
-     case SI: SetInfoCommand();break;
-     case SL: SetLabelDirCommand();break;
-     case GE: GenerateCommand();break;
-     case TR: SetTraceCommand();break;          
-     default: 
-        HError(9999,"DoGen: Command %s not recognised",cmds);
-     }
+      SkipWhiteSpace(&source);
+      if ( (c1 = GetCh(&source)) == EOF) break;
+      if ( (c2 = GetCh(&source)) == EOF) break;
+      cmds[0] = c1; cmds[1] = c2;
+      if (!isspace(GetCh(&source))) 
+         HError(9950,"DoGen: White space expected after command %s",cmds);
+      thisCommand = CmdIndex(cmds);
+      switch (thisCommand) {
+      case LM: LoadMMFCommand();break;
+      case LW: LoadWindowCommand();break;
+      case SD: SetOutputDirCommand();break;
+      case SI: SetInfoCommand();break;
+      case SL: SetLabelDirCommand();break;
+      case GE: GenerateCommand();break;
+      case TR: SetTraceCommand();break;          
+      default: 
+         HError(9950,"DoGen: Command %s not recognised",cmds);
+      }
    }
    CloseSource(&source);
+   
+   return;
 }
 
 /* ----------------------------------------------------------- */

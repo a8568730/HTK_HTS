@@ -29,7 +29,7 @@
 /*      File: LPMerge:    LM interpolation                     */
 /* ----------------------------------------------------------- */
 
-/* !HVER!LPMerge:   3.2 [CUED 09/12/02] */
+/* !HVER!LPMerge:   3.2.1 [CUED 15/10/03] */
 
 /* ------------------- Model interpolation  ----------------- */
 

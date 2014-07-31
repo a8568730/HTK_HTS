@@ -35,7 +35,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -74,11 +74,11 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*      HModel.h modified for HTS-1.1b 2003/06/07 by Heiga Zen       */
+/*  ---------------------------------------------------------------  */
+/*      HModel.h modified for HTS-1.1.1 2003/12/26 by Heiga Zen      */
 /*  ---------------------------------------------------------------  */
 
-/* !HVER!HModel:   3.2 [CUED 09/12/02] */
+/* !HVER!HModel:   3.2.1 [CUED 15/10/03] */
 
 #ifndef _HMODEL_H_
 #define _HMODEL_H_
@@ -107,7 +107,10 @@ extern "C" {
 #define MixLogWeight(hset,weight) (weight<MINMIX ? LZERO : log(weight))
 #define MixFloor(hset)            ( MINMIX )
 
-#define StrLogWeight(hset,weight) (weight<MINSWEIGHT ? LZERO : log(weight)) 
+
+#ifdef WIN32
+#define XFORM HTK_XFORM
+#endif
 
 /* ------------------ Master Model File Info ----------------- */
 

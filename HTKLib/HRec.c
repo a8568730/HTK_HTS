@@ -22,7 +22,7 @@
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1b     */
+/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -61,12 +61,12 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*      HRec.c modified for HTS-1.1b 2003/06/07 by Heiga Zen         */
+/*  ---------------------------------------------------------------  */
+/*      HRec.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
-char *hrec_version = "!HVER!HRec:   3.2 [CUED 09/12/02]";
-char *hrec_vc_id = "$Id: HRec.c,v 1.10 2002/12/19 16:37:11 ge204 Exp $";
+char *hrec_version = "!HVER!HRec:   3.2.1 [CUED 15/10/03]";
+char *hrec_vc_id = "$Id: HRec.c,v 1.11 2003/10/15 08:10:13 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

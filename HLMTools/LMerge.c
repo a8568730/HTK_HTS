@@ -29,8 +29,8 @@
 /*    File: LMerge:  combine language models                   */
 /* ----------------------------------------------------------- */
 
-char *lmerge_version = "!HVER!LMerge:   3.2 [CUED 09/12/02]";
-char *lmerge_vc_id = "$Id: LMerge.c,v 1.1 2002/12/19 16:36:27 ge204 Exp $";
+char *lmerge_version = "!HVER!LMerge:   3.2.1 [CUED 15/10/03]";
+char *lmerge_vc_id = "$Id: LMerge.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +52,6 @@ char *lmerge_vc_id = "$Id: LMerge.c,v 1.1 2002/12/19 16:36:27 ge204 Exp $";
 #include "LPCalc.h"
 #include "LPMerge.h"
 
-#define VERSION   "3.2"
 
 #define T_TOP       0001
 
@@ -206,7 +205,8 @@ int main(int argc, char *argv[])
    SaveLangModel(tgtFN,tgtLM);
 
    printf("\nFinished\n");
-   return EXIT_SUCCESS;
+   Exit(EXIT_SUCCESS);
+   return EXIT_SUCCESS; /* never reached -- make compiler happy */
 }   
 
 /* Initialise: perform global initialisations */
