@@ -19,8 +19,8 @@
 /*         File: HLabel.c:   Speech Label File Input           */
 /* ----------------------------------------------------------- */
 
-char *hlabel_version = "!HVER!HLabel:   3.1 [CUED 16/01/02]";
-char *hlabel_vc_id = "$Id: HLabel.c,v 1.8 2002/01/16 18:11:28 ge204 Exp $";
+char *hlabel_version = "!HVER!HLabel:   3.1.1 [CUED 05/06/02]";
+char *hlabel_vc_id = "$Id: HLabel.c,v 1.9 2002/06/05 14:06:45 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

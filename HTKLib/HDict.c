@@ -19,8 +19,8 @@
 /*         File: HDict.c  Dictionary Storage                   */
 /* ----------------------------------------------------------- */
 
-char *hdict_version = "!HVER!HDict:   3.1 [CUED 16/01/02]";
-char *hdict_vc_id = "$Id: HDict.c,v 1.6 2002/01/16 18:11:27 ge204 Exp $";
+char *hdict_version = "!HVER!HDict:   3.1.1 [CUED 05/06/02]";
+char *hdict_vc_id = "$Id: HDict.c,v 1.7 2002/06/05 14:06:45 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

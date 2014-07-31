@@ -32,8 +32,8 @@
 /*         File: HWave.c:   Speech Wave File Input/Output      */
 /* ----------------------------------------------------------- */
 
-char *hwave_version = "!HVER!HWave:   3.1 [CUED 16/01/02]";
-char *hwave_vc_id = "$Id: HWave.c,v 1.7 2002/01/16 18:11:28 ge204 Exp $";
+char *hwave_version = "!HVER!HWave:   3.1.1 [CUED 05/06/02]";
+char *hwave_vc_id = "$Id: HWave.c,v 1.8 2002/06/05 14:06:45 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

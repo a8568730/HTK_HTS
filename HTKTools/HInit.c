@@ -19,8 +19,8 @@
 /*         File: HInit.c: HMM initialisation program           */
 /* ----------------------------------------------------------- */
 
-char *hinit_version = "!HVER!HInit:   3.1 [CUED 16/01/02]";
-char *hinit_vc_id = "$Id: HInit.c,v 1.6 2002/01/16 18:11:29 ge204 Exp $";
+char *hinit_version = "!HVER!HInit:   3.1.1 [CUED 05/06/02]";
+char *hinit_vc_id = "$Id: HInit.c,v 1.7 2002/06/05 14:07:14 ge204 Exp $";
 
 /*
    This program is used to initialise (or tune) a single hidden

@@ -19,8 +19,8 @@
 /*     File: HParse.c: HParse based word-network definition    */
 /* ----------------------------------------------------------- */
 
-char *hparse_version = "!HVER!HParse:   3.1 [CUED 16/01/02]";
-char *hparse_vc_id = "$Id: HParse.c,v 1.6 2002/01/16 18:11:29 ge204 Exp $";
+char *hparse_version = "!HVER!HParse:   3.1.1 [CUED 05/06/02]";
+char *hparse_vc_id = "$Id: HParse.c,v 1.7 2002/06/05 14:07:14 ge204 Exp $";
 
 /* The HParse program reads in a set of HTK  HParse rewrite rules
    (as used in HTK V1.x) and writes out an HTK V2 lattice and

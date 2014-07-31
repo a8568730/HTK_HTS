@@ -19,8 +19,8 @@
 /*         File: HModel.c  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
-char *hmodel_version = "!HVER!HModel:   3.1 [CUED 16/01/02]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.6 2002/01/16 18:11:28 ge204 Exp $";
+char *hmodel_version = "!HVER!HModel:   3.1.1 [CUED 05/06/02]";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.8 2002/06/05 14:06:45 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1606,6 +1606,10 @@ static SMatrix GetTransMat(HMMSet *hset, Source *src, Token *tok)
    if (tok->sym == TRANSP) {
       if (!ReadShort(src,&size,1,tok->binForm)){
          HMError(src,"Size of Transition matrix expected");
+         return(NULL);
+      }
+      if (size < 1){
+         HRError(7031,"GetTransMat: Bad size of transition matrix: %d\n", size);
          return(NULL);
       }
       m = CreateSMatrix(hset->hmem,size,size);

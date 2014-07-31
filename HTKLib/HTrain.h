@@ -19,7 +19,7 @@
 /*         File: HTrain.h   HMM Training Support Routines      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HTrain:   3.1 [CUED 16/01/02] */
+/* !HVER!HTrain:   3.1.1 [CUED 05/06/02] */
 
 #ifndef _HTRAIN_H_
 #define _HTRAIN_H_

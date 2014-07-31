@@ -32,8 +32,8 @@
 /*         File: HNet.c  Network and Lattice Functions         */
 /* ----------------------------------------------------------- */
 
-char *hnet_version = "!HVER!HNet:   3.1 [CUED 16/01/02]";
-char *hnet_vc_id = "$Id: HNet.c,v 1.8 2002/01/16 18:11:28 ge204 Exp $";
+char *hnet_version = "!HVER!HNet:   3.1.1 [CUED 05/06/02]";
+char *hnet_vc_id = "$Id: HNet.c,v 1.10 2002/06/05 14:06:45 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1967,6 +1967,7 @@ static NetNode *FindWordNode(MemHeap *heap,Pron pron,
       node->nlinks=0;
       node->links=NULL;
       node->tag=NULL;
+      node->aux=0;
       node->chain=wnHashTab[hash];
       wnHashTab[hash]=node;
    }
@@ -1987,6 +1988,7 @@ static NetNode *NewNode(MemHeap *heap,HLink hmm,int nlinks)
    node->inst=NULL;node->chain=NULL;
    node->nlinks=nlinks;
    node->tag=NULL;
+   node->aux=0;
    if (nlinks==0)
       node->links=NULL;
    else
@@ -2812,6 +2814,7 @@ static void CreateX1Model(PronHolder *pInst,int p, int q,
          node->type=n_word;
          node->info.pron=NULL;
          node->tag=NULL;
+         node->aux=0;
 
          node->chain=pInst->starts;
          pInst->starts=node;
@@ -2956,6 +2959,7 @@ static void CreateX1Model(PronHolder *pInst,int p, int q,
             node->type=n_word;
             node->info.pron=NULL;
             node->tag=NULL;
+            node->aux=0;
 
             node->chain=pInst->starts;
             pInst->starts=node;
@@ -3520,6 +3524,7 @@ Network *ExpandWordNet(MemHeap *heap,Lattice *lat,Vocab *voc,HMMSet *hset)
             node->links=NULL;
          nxl+=node->nlinks;
          node->nlinks=0;
+         node->aux=0;
       }
    }
 

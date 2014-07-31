@@ -1,3 +1,11 @@
+2002-04-24  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* refine.tex: Correct RC command example.
+
+2002-02-19  Håkan Melin <melin@speech.kth.se>
+
+	* speechio.tex: Correct sign in LP cepstrum calculation.
+
 2002-01-16  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
 	* Makefile (html): Create dir for html version. 

@@ -32,7 +32,7 @@
 /*         File: HParm.h:   Speech Parameter Input/Output      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HParm:   3.1 [CUED 16/01/02] */
+/* !HVER!HParm:   3.1.1 [CUED 05/06/02] */
 
 #ifndef _HPARM_H_
 #define _HPARM_H_
@@ -275,6 +275,29 @@ void GetBufferInfo(ParmBuf pbuf, BufferInfo *info);
 /*
    Get info associated with pbuf.
    Does not block.
+*/
+
+/* ---------------- External Data Source Handling---------------- */
+
+HParmSrcDef CreateSrcExt(Ptr xInfo, ParmKind pk, int size, HTime sampPeriod,
+                         Ptr (*fOpen)(Ptr xInfo,char *fn,BufferInfo *info),
+                         void (*fClose)(Ptr xInfo,Ptr bInfo),
+                         void (*fStart)(Ptr xInfo,Ptr bInfo),
+                         void (*fStop)(Ptr xInfo,Ptr bInfo),
+                         int (*fNumSamp)(Ptr xInfo,Ptr bInfo),
+                         int (*fGetData)(Ptr xInfo,Ptr bInfo,int n,Ptr data));
+/*
+  Create and return a HParmSrcDef object handling an external data source.
+  size: 1 for 8 bit u-law, 0x101 for 8 bit a-law or 2 for 16 bit linear
+  Semantics of functions fClose() etc. described in HParm.c.
+*/
+
+ParmBuf OpenExtBuffer(MemHeap *x, char *fn, int maxObs,
+                      FileFormat ff, HParmSrcDef ext,
+                      TriState enSpeechDet, TriState silMeasure);
+
+/*
+  Open and return input buffer using an external source
 */
 
 /* ----------------- New Buffer Creation Routines -------------- */

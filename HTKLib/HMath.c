@@ -19,8 +19,8 @@
 /*         File: HMath.c   Math Support Module                 */
 /* ----------------------------------------------------------- */
 
-char *hmath_version = "!HVER!HMath:   3.1 [CUED 16/01/02]";
-char *hmath_vc_id = "$Id: HMath.c,v 1.6 2002/01/16 18:11:28 ge204 Exp $";
+char *hmath_version = "!HVER!HMath:   3.1.1 [CUED 05/06/02]";
+char *hmath_vc_id = "$Id: HMath.c,v 1.7 2002/06/05 14:06:45 ge204 Exp $";
 
 /*
    This library provides math support in the following three areas

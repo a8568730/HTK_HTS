@@ -32,8 +32,8 @@
 /*  File: HCompV.c: HMM global mean/variance initialisation    */
 /* ----------------------------------------------------------- */
 
-char *hcompv_version = "!HVER!HCompV:   3.1 [CUED 16/01/02]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.8 2002/01/16 18:11:29 ge204 Exp $";
+char *hcompv_version = "!HVER!HCompV:   3.1.1 [CUED 05/06/02]";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.10 2002/06/05 14:07:14 ge204 Exp $";
 
 
 /* 
@@ -126,7 +126,7 @@ typedef struct SpkrAccListItem{
 }SpkrAccListItem;
 
 static SpkrAccListItem *salist = NULL;   /* global speaker accumulate list */
-static int vSize = 39;                   /* target observation vector size */
+static int vSize = 0;                    /* target observation vector size */
 static char spPattern[MAXSTRLEN];        /* speaker mask */
 static char oflags[MAXSTRLEN] = "m";     /* export flags for CMV */  
 static char cmDir[MAXSTRLEN];            /* directory to export CMV */
@@ -735,7 +735,7 @@ int main(int argc, char *argv[])
    void SetCovs(void);
    void PutVFloor(void);
    void SaveModel(char *outfn);
-   SpkrAcc *sa;
+   SpkrAcc *sa = NULL;
 
    if(InitShell(argc,argv,hcompv_version,hcompv_vc_id)<SUCCESS)
       HError(2000,"HCompV: InitShell failed");

@@ -19,7 +19,7 @@
 /*         File: HFB.h: Forward Backward routines module       */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HFB:   3.1 [CUED 16/01/02] */
+/* !HVER!HFB:   3.1.1 [CUED 05/06/02] */
 
 #ifndef _HFB_H_
 #define _HFB_H_

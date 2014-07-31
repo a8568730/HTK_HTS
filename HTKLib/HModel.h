@@ -19,7 +19,7 @@
 /*         File: HModel.h  HMM Model Definition Data Type      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HModel:   3.1 [CUED 16/01/02] */
+/* !HVER!HModel:   3.1.1 [CUED 05/06/02] */
 
 #ifndef _HMODEL_H_
 #define _HMODEL_H_

@@ -37,7 +37,7 @@ all:    HTKLib.$(CPU).a
 
 HTKLib.$(CPU).a: $(modules)
 	-rm HTKLib.$(CPU).a
-	ar rv HTKLib.$(CPU).a $?
+	ar rv HTKLib.$(CPU).a $(modules)
 	-ranlib HTKLib.$(CPU).a
 
 .PHONY: clean cleanup depend

@@ -19,8 +19,8 @@
 /*         File: HHEd:  HMM Source Definition Editor           */
 /* ----------------------------------------------------------- */
 
-char *hhed_version = "!HVER!HHEd:   3.1 [CUED 16/01/02]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.9 2002/01/16 18:11:29 ge204 Exp $";
+char *hhed_version = "!HVER!HHEd:   3.1.1 [CUED 05/06/02]";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.10 2002/06/05 14:07:14 ge204 Exp $";
 
 /*
    This program is used to read in a set of HMM definitions

@@ -1,3 +1,11 @@
+2002-06-05  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* *.[hc]: Bump version to 3.1.1.
+
+2002-02-23  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HCompV.c: Fix initialisation of CMN/CVN related data structures.
+
 2002-01-16  Gunnar Evermann  <ge204@eng.cam.ac.uk>
 
 	* *.[hc]: Bump version to 3.1.

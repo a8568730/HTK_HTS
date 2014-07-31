@@ -436,7 +436,7 @@ from the Fourier transform of the filter coefficients. However, it can be shown
 that the required cepstra can be more efficiently computed using 
 a simple recursion
 \hequation{
-   c_n = -a_n + \frac{1}{n} \sum_{i=1}^{n-1} (n-i) a_i c_{n-i}
+   c_n = -a_n - \frac{1}{n} \sum_{i=1}^{n-1} (n-i) a_i c_{n-i}
 }{lpcepstra}
 The number of cepstra generated need not be the same as the number of
 filter coefficients, hence it is set by a separate configuration 

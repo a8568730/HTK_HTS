@@ -19,7 +19,7 @@
 /*         File: HMem.h:   Memory Management Module            */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HMem:   3.1 [CUED 16/01/02] */
+/* !HVER!HMem:   3.1.1 [CUED 05/06/02] */
 
 /*
    This module provides a type MemHeap which once initialised

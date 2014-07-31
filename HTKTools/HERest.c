@@ -19,8 +19,8 @@
 /*         File: HERest.c: Embedded B-W ReEstimation           */
 /* ----------------------------------------------------------- */
 
-char *herest_version = "!HVER!HERest:   3.1 [CUED 16/01/02]";
-char *herest_vc_id = "$Id: HERest.c,v 1.8 2002/01/16 18:11:29 ge204 Exp $";
+char *herest_version = "!HVER!HERest:   3.1.1 [CUED 05/06/02]";
+char *herest_vc_id = "$Id: HERest.c,v 1.9 2002/06/05 14:07:14 ge204 Exp $";
 
 /*
    This program is used to perform a single reestimation of

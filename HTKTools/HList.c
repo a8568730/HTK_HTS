@@ -19,8 +19,8 @@
 /*      File: HList.c: List a Speech File or Audio Source      */
 /* ----------------------------------------------------------- */
 
-char *hlist_version = "!HVER!HList:   3.1 [CUED 16/01/02]";
-char *hlist_vc_id = "$Id: HList.c,v 1.7 2002/01/16 18:11:29 ge204 Exp $";
+char *hlist_version = "!HVER!HList:   3.1.1 [CUED 05/06/02]";
+char *hlist_vc_id = "$Id: HList.c,v 1.8 2002/06/05 14:07:14 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

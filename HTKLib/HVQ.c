@@ -19,8 +19,8 @@
 /*         File: HVQ.c:   Vector Quantisation                  */
 /* ----------------------------------------------------------- */
 
-char *hvq_version = "!HVER!HVQ:   3.1 [CUED 16/01/02]";
-char *hvq_vc_id = "$Id: HVQ.c,v 1.6 2002/01/16 18:11:28 ge204 Exp $";
+char *hvq_version = "!HVER!HVQ:   3.1.1 [CUED 05/06/02]";
+char *hvq_vc_id = "$Id: HVQ.c,v 1.7 2002/06/05 14:06:45 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

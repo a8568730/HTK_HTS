@@ -32,8 +32,8 @@
 /*       File: HParm.c:  Speech Parameter File Input/Output    */
 /* ----------------------------------------------------------- */
 
-char *hparm_version = "!HVER!HParm:   3.1 [CUED 16/01/02]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.9 2002/01/16 18:11:28 ge204 Exp $";
+char *hparm_version = "!HVER!HParm:   3.1.1 [CUED 05/06/02]";
+char *hparm_vc_id = "$Id: HParm.c,v 1.11 2002/06/27 10:54:10 ge204 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -3636,8 +3636,7 @@ static ReturnStatus OpenAsChannel(ParmBuf pbuf, int maxObs,
       cf->frSize = (int) (cf->winDur/cf->srcSampRate);
       cf->frRate = (int) (cf->tgtSampRate/cf->srcSampRate);
       SetUpForCoding(pbuf->mem,cf,cf->frSize);
-      cf->rawBuffer=(char *) New(pbuf->mem,cf->frSize*(pbuf->ext->size&0xff)*
-                        ((pbuf->ext->size&0xff00)>>16));
+      cf->rawBuffer=(char *) New(pbuf->mem,cf->frSize*(pbuf->ext->size&0xff));
       /* Call user defined Open routine */
       GetBufferInfo(pbuf,&info);
       pbuf->in.i = pbuf->ext->fOpen(pbuf->ext->xInfo,fname,&info);

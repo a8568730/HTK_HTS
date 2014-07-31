@@ -757,7 +757,7 @@ mixture components using an \texttt{itemlist},
 such as the silence mixture components. 
 \begin{verbatim}
      LS "statsfile"
-     RC 32 "rtree" sil.state[2-4].mix
+     RC 32 "rtree" {sil.state[2-4].mix}
 \end{verbatim}
 In this case the first split that will be made in the regression class tree
 will be to split the speech and non-speech sounds, after which the
