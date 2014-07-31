@@ -1,0 +1,9 @@
+export HTKCF='-ansi -O2 -DOSS_AUDIO'
+export HTKLF='-L/usr/X11R6/lib'
+export HTKCC='gcc'
+export Arch=LINUX
+export Objcopy="echo"
+export PRILF='-x'
+export CPU=linux
+export SHRLF='-shared'
+export LIBEXT='so'

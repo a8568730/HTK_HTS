@@ -1,0 +1,46 @@
+2000-09-25  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* Makefile: Copy compile settings from env files.
+
+2000-09-15  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HDMan.c (ReadCmd): C++ fix for incrementing enums.
+
+2000-09-11  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HVite.c (ProcessFile): Don't accumulate adaptation statistics if
+	no token survived and transcription was generated only due to
+	HREC:FORCEOUT=T.
+        (DoAlignment): Perform adaptation in alignment case as well (i.e.
+        lattice rescoring).
+
+	* HParse.c: 
+	(GetWdBeginNum): Eliminate unused for loop.
+
+	* HSLab.c: 
+	* HSGen.c: 
+	* HLStats.c: 
+	* HLEd.c: 
+	* HVite.c: 
+	* HSmooth.c: 
+	* HResults.c: 
+	* HRest.c: 
+	* HQuant.c: 
+	* HBuild.c: 
+	* HInit.c: 
+	* HHEd.c: 
+	* HERest.c: Warning elimination.
+
+2000-09-08  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HDMan.c: 
+	* HCopy.c: 
+	* HCompV.c: 
+	* HList.c: 
+	* HEAdapt.c: Warning elimination.
+
+2000-09-04  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* *.[hc]: Reindented.
+
+	* *.[hc]: Cleaned up version headers and set version to 3.0.

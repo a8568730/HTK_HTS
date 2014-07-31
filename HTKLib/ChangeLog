@@ -1,0 +1,76 @@
+2000-09-25  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HShell.c (InfoPrinted): Remove reference to SCCS.
+
+	* Makefile: Copy compile settings from env files.
+
+2000-09-15  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* HAdapt.c (GetSymbol): 
+	* HUtil.c (GetKey): 
+	* HGraf.c (HSetColour,HSetGrey,HSetFontSize,HSetLineWidth,InitGCs): 
+	* HParm.c (ReadIOConfig): 
+	* HWave.c (Str2Format): C++ fix for incrementing enums.
+
+	* HLabel.c (GetScribeLab): Warning fix.
+
+2000-09-13  G. Evermann  <ge204@avon>
+
+	* htk_htklib_nt.mkf: Use HGraf_WIN32.obj.
+
+2000-09-08  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* esig_edr.c: 
+	* esig_asc.c: 
+	* esignal.c: 
+	* HMem.c: 
+	* HFB.c: 
+	* HAdapt.c: 
+	* HNet.c: 
+	* HRec.c: 
+	* HNet.h: 
+	* HLM.c: 
+	* HDict.c: 
+	* HTrain.c: 
+	* HUtil.c: 
+	* HModel.c:
+	* HLabel.c:
+	* HGraf.c: 
+	* HVQ.c: 
+	* HParm.c:
+	* HAudio.c:
+	* HWave.c:
+	* HSigP.c: 
+	* Hshell.c:
+	* HMath.c: Warning elimination.
+	Explicitly cast malloc return values to avoid C++ warnings.
+	Remove unused variables.
+	Put parentheses about assignments used as truth values.
+	Explicitly cast doubles to ints.
+	Use correct format chars in printf calls.
+	C++ compatability.
+	Many of the warning fixes are from Dave Hart <dkh21@hermes.cam.ac.uk>
+	
+	* HMath.c (FixSVD): #ifdef 0 unused code.
+
+	* HShell.h: Use predefined type bool in C++.
+
+	* HModel.c: Use EOFSYM in symMap[] instead of EOF (from stdio.h!).
+
+	* HLabel.c (SaveToMasterfile): Return FAIL if no file name given.
+
+	* HAudio.c (InitAudi): Call IsVAXOrder instead of treating its
+	address as a Boolen.
+
+
+2000-09-06  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* *.h: Guard against repeated inclusion.
+	Add C++ wrapper.
+
+2000-09-04  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* *.[hc]: Reindented.
+
+	* *.[hc]: Cleaned up version headers and set version to 3.0.
+

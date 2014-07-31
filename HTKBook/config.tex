@@ -1,0 +1,240 @@
+%/* ----------------------------------------------------------- */
+%/*                                                             */
+%/*                          ___                                */
+%/*                       |_| | |_/   SPEECH                    */
+%/*                       | | | | \   RECOGNITION               */
+%/*                       =========   SOFTWARE                  */ 
+%/*                                                             */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
+%/*         Copyright: Microsoft Corporation                    */
+%/*          1995-2000 Redmond, Washington USA                  */
+%/*                    http://www.microsoft.com                */
+%/*                                                             */
+%/*   Use of this software is governed by a License Agreement   */
+%/*    ** See the file License for the Conditions of Use  **    */
+%/*    **     This banner notice must not be removed      **    */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
+%
+% HTKBook - Dave Ollason and Steve Young 11/11/95
+%
+
+\mychap{Configuration Variables}{confvars}
+
+\index{configuration variables!summary}
+This chapter tabulates all configuration variables used in \HTK.
+
+\newpage
+\mysect{Configuration Variables used in Library Modules}{coninlib}
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|p{1.4cm}|p{2.6cm}|p{1.5cm}|p{6.6cm}|} \hline
+Module & Name & Default & Description  \\ \hline\hline
+ \htool{HParm} & \texttt{SOURCEFORMAT} & \texttt{HTK}
+& File format of source \\ \cline{2-4}
+ \htool{HWave} & \texttt{TARGETFORMAT} & \texttt{HTK} & File format of target \\ \hline
+\htool{HLabel} \htool{HAudio} \htool{HWave} \htool{HParm} &
+\texttt{SOURCERATE} & \texttt{0.0} & Sample rate of source in 100ns units \\ \hline
+\htool{HParm} \htool{HWave} & \texttt{TARGETRATE} & \texttt{0.0} & Sample rate of target in 100ns units \\ \hline
+  & \texttt{LINEOUT} & \texttt{T}   & Enable audio output to machine line output \\ \cline{2-4}
+  & \texttt{PHONESOUT} & \texttt{T} & Enable audio output to machine phones output \\ \cline{2-4}
+\htool{HAudio}
+  & \texttt{SPEAKEROUT} & \texttt{F}& Enable audio output to machine internal speaker \\ \cline{2-4}
+  & \texttt{LINEIN} & \texttt{T} & Enable audio input from machine line input \\ \cline{2-4}
+  & \texttt{MICIN}  & \texttt{F} & Enable audio input from machine mic input \\ \hline
+  & \texttt{NSAMPLES} &  & Num samples in alien file input via a pipe\\ \cline{2-4}
+\htool{HWave} & \texttt{HEADERSIZE}  &   & Size of header in an alien file\\ \cline{2-4}
+ & \texttt{BYTEORDER} &   & Define byte order \texttt{VAX} or other\\ \cline{2-4}
+ & \texttt{STEREOMODE} &   & Select channel: \texttt{RIGHT} or \texttt{LEFT} \\ \hline
+ & \texttt{SOURCEKIND} & \texttt{ANON} & Parameter kind of source \\ \cline{2-4}
+ & \texttt{TARGETKIND} & \texttt{ANON} & Parameter kind of target \\ \cline{2-4}
+ & \texttt{SAVECOMPRESSED} & \texttt{F} & Save the output file in compressed form \\ \cline{2-4}
+ & \texttt{SAVEWITHCRC} & \texttt{T} & Attach a checksum to output parameter file \\ \cline{2-4}
+\htool{HParm}  
+ & \texttt{ADDDITHER} & \texttt{0.0} & Level of noise added to input signal \\ \cline{2-4} 
+ & \texttt{ZMEANSOURCE} & \texttt{F} & Zero mean source waveform before analysis \\ \cline{2-4}
+ & \texttt{WINDOWSIZE} & \texttt{256000.0} & Analysis window size in 100ns units \\ \cline{2-4}
+ & \texttt{USEHAMMING} & \texttt{T} & Use a Hamming window \\ \cline{2-4}
+ & \texttt{PREEMCOEF} & \texttt{0.97} & Set pre-emphasis coefficient \\ \cline{2-4}
+ & \texttt{LPCORDER} &  \texttt{12} &  Order of lpc analysis \\ \cline{2-4}
+ & \texttt{NUMCHANS} & \texttt{20} & Number of filterbank channels \\ \cline{2-4}
+ & \texttt{LOFREQ} & \texttt{-1.0} & Low frequency cut-off in fbank analysis \\ \cline{2-4}
+ & \texttt{HIFREQ}  & \texttt{-1.0} & High frequency cut-off in fbank analysis \\  \hline
+\htool{HLabel}  \htool{HParm} 
+ & \texttt{V1COMPAT} & \texttt{F} & HTK V1 compatibility setting \\ \hline
+\end{tabular}
+\end{center}
+\caption{Library Module Configuration Variables}
+\end{table}
+\clearpage
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|p{1.4cm}|p{3.0cm}|p{1.1cm}|p{6.6cm}|} \hline
+Module & Name & Default & Description  \\ \hline\hline
+\htool{HWave} 
+ & \texttt{NATURALREADORDER} & \texttt{F} & Enable natural read order for binary files \\ \cline{2-4} 
+\htool{HShell} 
+ & \texttt{NATURALWRITEORDER} & \texttt{F} & Enable natural write order for binary files \\ \hline
+ & \texttt{USEPOWER}  & \texttt{F} & Use power not magnitude in fbank analysis \\ \cline{2-4}
+ & \texttt{NUMCEPS}   & \texttt{12} & Number of cepstral parameters \\  \cline{2-4}
+ & \texttt{CEPLIFTER} &   \texttt{22} & Cepstral liftering coefficient \\ \cline{2-4}
+ & \texttt{ENORMALISE} & \texttt{T} & Normalise log energy \\  \cline{2-4}
+ & \texttt{ESCALE} & \texttt{0.1} & Scale log energy \\  \cline{2-4} 
+ & \texttt{SILFLOOR} & \texttt{50.0} & Energy silence floor in dBs \\  \cline{2-4} 
+ & \texttt{DELTAWINDOW} & \texttt{2} & Delta window size \\ \cline{2-4} 
+ & \texttt{ACCWINDOW} & \texttt{2} & Acceleration window size \\ \cline{2-4} 
+ & \texttt{VQTABLE} & \texttt{NULL} & Name of VQ table \\  \cline{2-4}
+ & \texttt{SIMPLEDIFFS} & \texttt{F} & Use simple differences for delta calculations \\ \cline{2-4}
+ & \texttt{RAWENERGY}  & \texttt{T} & Use raw energy \\ \cline{2-4}
+ & \texttt{AUDIOSIG} & \texttt{0} & Audio signal number for remote control \\ \cline{2-4}
+ & \texttt{USESILDET}  & \texttt{F} & Enable speech/silence detector \\ \cline{2-4}
+ & \texttt{MEASURESIL} & \texttt{T} & Measure background silence level \\ \cline{2-4}
+\htool{HParm} 
+ & \texttt{OUTSILWARN} & \texttt{T} & Print a warning message to {\tt stdout} before 
+measuring audio levels \\ \cline{2-4}
+ & \texttt{SPEECHTHRESH} & \texttt{9.0} & Threshold for speech above silence level (in dB) \\ \cline{2-4}
+ & \texttt{SILENERGY}    & \texttt{0.0} & Average background noise level (in dB) - will 
+normally be measured rather than supplied in configuration \\ \cline{2-4}
+ & \texttt{SPCSEQCOUNT}  & \texttt{10} & Window over which speech/silence decision reached \\ \cline{2-4}
+ & \texttt{SPCGLCHCOUNT} & \texttt{0} & Maximum number of frames marked as silence in window which is
+classified as speech whilst expecting start of speech \\ \cline{2-4}  
+ & \texttt{SILSEQCOUNT}  & \texttt{100} & Number of frames classified as silence needed to mark end of
+utterance \\ \cline{2-4}
+ & \texttt{SILGLCHCOUNT} & \texttt{2} & Maximum number of frames marked as silence in window which is
+classified as speech whilst expecting silence \\ \cline{2-4}  
+ & \texttt{SILMARGIN} & \texttt{40} & Number of extra frames included before and after start and end of
+speech marks from the speech/silence detector \\ \hline
+ & \texttt{STRIPTRIPHONES} & \texttt{F} & Enable triphone stripping \\ \cline{2-4}
+ & \texttt{TRANSALT} & \texttt{0} & Filter all but specified label alternative \\ \cline{2-4}
+\htool{HLabel} 
+ & \texttt{TRANSLEV} & \texttt{0} & Filter all but specified label level \\ \cline{2-4}
+ & \texttt{LABELSQUOTE} & \texttt{NULL} & Select method for quoting in label files \\ \cline{2-4}
+ & \texttt{SOURCELABEL} & \texttt{HTK} & Source label format \\ \cline{2-4}
+ & \texttt{TARGETLABEL} & \texttt{HTK} & Target label format \\ \hline
+\end{tabular}
+\end{center}
+\caption{Library Module Configuration Variables (cont)}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|p{1.4cm}|p{2.6cm}|p{1.5cm}|p{6.6cm}|} \hline
+Module & Name & Default & Description  \\ \hline\hline
+\htool{HMem} & \texttt{PROTECTSTAKS} & \texttt{F} & Enable stack protection \\ \hline
+
+ & \texttt{CHKHMMDEFS} & \texttt{T} & Check consistency of HMM defs \\ \cline{2-4}
+ & \texttt{SAVEBINARY} & \texttt{F} & Save HMM defs in binary format \\ \cline{2-4}
+ & \texttt{KEEPDISTINCT} & \texttt{F} & Keep orphan HMMs in distinct files \\ \cline{2-4}
+\htool{HModel} 
+ & \texttt{SAVEGLOBOPTS} & \texttt{T} & Save \hmmt{o} with HMM defs \\ \cline{2-4}
+ & \texttt{ORPHANMACFILE} & \texttt{NULL} & Last resort file for new macros \\ \cline{2-4}
+ & \texttt{HMMSETKIND} & \texttt{NULL} & Kind of HMM Set \\ \cline{2-4}
+ & \texttt{ALLOWOTHERHMMS} & \texttt{T} & Allow MMFs to contain HMM definitions which are 
+not listed in the HMM List \\ \cline{2-4}
+ & \texttt{DISCRETELZERO}  & \texttt{F} & Map DLOGZERO to LZERO in output probability 
+calculations \\ \hline
+ & \texttt{FORCECXTEXP} & \texttt{F} & Force triphone context expansion to get 
+model names (is overridden by \texttt{ALLOWCXTEXP}) \\ \cline{2-4}
+ & \texttt{FORCELEFTBI} & \texttt{F} & Force left biphone
+context expansion to get model names ie. don't try triphone names \\ \cline{2-4}
+ & \texttt{FORCERIGHTBI} & \texttt{F} & Force right biphone
+context expansion to get model names ie. don't try triphone names \\ \cline{2-4}
+\htool{HNet} 
+ & \texttt{ALLOWCXTEXP}  & \texttt{T} & Allow context expansion to get model names \\ \cline{2-4}
+ & \texttt{ALLOWXWRDEXP} & \texttt{F} & Allow context expansion across words \\ \cline{2-4}
+ & \texttt{FACTORLM}     & \texttt{F} & Factor language model likelihoods throughout words rather 
+than applying all at transition into word. This can increase accuracy when pruning is tight and 
+language model likelihoods are relatively high. \\ \cline{2-4} 
+ & \texttt{CFWORDBOUNDARY} & \texttt{T} & In word-internal triphone systems, context-free 
+phones will be treated as word boundaries \\ \hline
+\htool{HRec}
+ & \texttt{FORCEOUT} & \texttt{F} & Forces the most likely partial hypothesis to be used as
+the recognition result even when no token reaches the end of the network by the last frame
+of the utterance \\ \hline
+ & \texttt{ABORTONERR} & \texttt{F} & Causes HError to abort rather than exit \\ \cline{2-4}
+\htool{HShell} & \texttt{NONUMESCAPES} & \texttt{F} & Prevent writing in \verb+012+ format \\ \cline{2-4}
+ & \texttt{MAXTRYOPEN} & \texttt{1} & Maximum number of
+attempts which will be made to open the same file \\ \hline
+ & \texttt{MAXCLUSTITER} & \texttt{10} & Maximum number
+of cluster iterations \\ \cline{2-4}
+\htool{HTrain} & \texttt{MINCLUSTSIZE} & \texttt{3} & Minimum number
+of elements in any one cluster \\ \cline{2-4}
+ & \texttt{BINARYACCFORMAT} & \texttt{T} & Save
+accumulator files in binary format \\ \hline
+\htool{HFB} & \texttt{HSKIPSTART} & \texttt{-1} & Start of skip over region (debugging only) \\ \cline{2-4}
+& \texttt{HSKIPEND} & \texttt{-1} & End of skip over region (debugging only) \\ \hline
+ & \texttt{USEVAR} & \texttt{F} & Compute variance transform \\ \cline{2-4}
+ & \texttt{ADPTSIL} & \texttt{T} & Transform the silence\\ \cline{2-4}
+ \htool{HAdapt} & \texttt{BLOCKS} & \texttt{1} & Number of blocks used in the block diagonal matrix implementation \\ \cline{2-4}
+ & \texttt{SAVEBINARY} & \texttt{F} & Save HMMs/transforms in binary format \\ \cline{2-4}
+ & \texttt{OCCTHRESH} & \texttt{700} & Minimum occupation before computing a regression class transform for a node\\ \hline
+ & \texttt{TRACE} & \texttt{0} & Trace setting\\ \hline
+\end{tabular}
+\end{center}
+\caption{Library Module Configuration Variables (cont)}
+\end{table}
+\clearpage
+
+\newpage
+\mysect{Configuration Variables used in Tools}{conintools}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|p{1.5cm}|p{2.6cm}|p{1.5cm}|p{6.4cm}|} \hline
+Module & Name & Default & Description  \\ \hline\hline
+& \texttt{UPDATEMEANS} & \texttt{F} & Update means \\ \cline{2-4}
+\htool{HCompV} & \texttt{SAVEBINARY} & \texttt{F} & Load/Save in binary format \\ \cline{2-4}
+& \texttt{MINVARFLOOR} & \texttt{0.0} & Minimum variance floor \\
+\hline
+& \texttt{NSTREAMS} & \texttt{1} & Number of streams \\ \cline{2-4}
+& \texttt{SAVEASVQ} & \texttt{F} & Save only the VQ indices \\ \cline{2-4}
+\htool{HCopy} & \texttt{SOURCEFORMAT} & \texttt{HTK} & File format of source \\ \cline{2-4}
+& \texttt{TARGETFORMAT} & \texttt{HTK} & File format of target \\ \cline{2-4}
+& \texttt{SOURCEKIND} & \texttt{ANON} & Parameter kind of source \\ \cline{2-4}
+& \texttt{TARGETKIND} & \texttt{ANON} & Parameter kind of target \\ \hline
+\htool{HERest} & \texttt{SAVEBINARY} & \texttt{F} & Load/Save in binary format \\
+\cline{2-4}
+ & \texttt{BINARYACFORMAT} & \texttt{T} & Load/Save accumulators in binary format \\
+\hline
+\htool{HEAdapt} & \texttt{SAVEBINARY} & \texttt{F} & Load/Save in binary format \\
+\hline
+\htool{HHEd} & \texttt{TREEMERGE} & \texttt{T} & After tree
+splitting, merge leaves \\ \cline{2-4}
+ & \texttt{TIEDMIXNAME} & \texttt{TM} & Tied mixture base name \\
+\hline
+\htool{HParse} & \texttt{V1COMPAT} & \texttt{F} & Enable
+compatibility with HTK V1.X \\ \hline
+& \texttt{REFLEVEL} & \texttt{0} & Label level to be used as reference \\ \cline{2-4}
+& \texttt{TESTLEVEL} & \texttt{0} & Label level to be scored \\ \cline{2-4}
+& \texttt{STRIPCONTEXT} & \texttt{F} & Strip triphone contexts \\ \cline{2-4}
+\htool{HResults} & \texttt{IGNORECASE} & \texttt{F} & If enabled,
+converts labels to uppercase \\ \cline{2-4}
+& \texttt{NISTSCORE} & \texttt{F} & Use NIST fomatting \\ \cline{2-4}
+& \texttt{PHRASELABEL} & \texttt{SENT} & Label for phrase level statistics \\ \cline{2-4}
+& \texttt{PHONELABEL} & \texttt{WORD} & Label for word level statistics \\ \cline{2-4}
+& \texttt{SPEAKERMASK} & \texttt{NULL} & If set then report
+on a per speaker basis \\ \hline
+\htool{HVite} & \texttt{RECOUTPREFIX} & \texttt{NULL} & Prefix for direct
+audio output name \\ \cline{2-4}
+& \texttt{RECOUTSUFFIX} & \texttt{NULL} & Suffix for direct audio output name\\ \hline
+\htool{HLStats} & \texttt{DISCOUNT} & \texttt{0.5} & Discount constant
+for backoff bigrams\\ \hline
+\htool{HList} 
+ & \texttt{AUDIOSIG} & \texttt{0} & Audio signal numberfor remote control 
+   \\ \cline{2-4}
+ & \texttt{SOURCERATE} & \texttt{0.0} & Sample rate of source in 100ns units 
+   \\ \hline
+ & \texttt{TRACE} & \texttt{0} & Trace setting\\ \hline
+\end{tabular}
+\end{center}
+\caption{Tool Specific Configuration Variables}
+\end{table}
+\clearpage
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "htkbook"
+%%% End: 

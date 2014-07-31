@@ -1,0 +1,21 @@
+2000-09-06  Rich Wareham  <rjw57@cam.ac.uk>
+
+	* HTK.tex: Removed warnings when generating HTML        
+
+2000-09-05  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+   
+	* *.tex: Add AucTex master file magic.
+
+	* HTKRef/*.tex: Add labels for subsections to avoid LaTeX warnings.
+
+	* exampsys.tex: Remove reference V2.2.
+
+	* htkbook.tex: Hack to allow generation of PDF and PS.
+
+	* HTK.tex: Use relative path for figures.
+	Use epsfig instead of epsf.tex.
+	
+2000-09-04  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* created ChangeLog. 
+

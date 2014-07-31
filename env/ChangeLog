@@ -1,0 +1,8 @@
+2000-09-25  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* exp.linux: Change X dir to /usr/X11R6.
+
+2000-09-04  Gunnar Evermann  <ge204@eng.cam.ac.uk>
+
+	* exp.*: Fix syntax.
+

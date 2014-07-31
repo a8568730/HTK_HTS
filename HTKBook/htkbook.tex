@@ -1,0 +1,148 @@
+%/* ----------------------------------------------------------- */
+%/*                                                             */
+%/*                          ___                                */
+%/*                       |_| | |_/   SPEECH                    */
+%/*                       | | | | \   RECOGNITION               */
+%/*                       =========   SOFTWARE                  */ 
+%/*                                                             */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
+%/*         Copyright: Microsoft Corporation                    */
+%/*          1995-2000 Redmond, Washington USA                  */
+%/*                    http: //www.microsoft.com                */
+%/*                                                             */
+%/*   Use of this software is governed by a License Agreement   */
+%/*    ** See the file License for the Conditions of Use  **    */
+%/*    **     This banner notice must not be removed      **    */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
+%
+% HTKBook - Steve Young 23/09/95, VV 20/03/97
+%
+
+% Preamble
+\documentclass[a4paper,oneside]{book}
+
+%\usepackage[dvipdfm,colorlinks]{hyperref}
+
+\input{HTK}
+\usepackage{makeidx}
+
+\makeindex
+
+% Start of Document
+\pagestyle{empty}
+\begin{document}
+\newlength{\saveindent}
+\setlength{\saveindent}{\parindent}
+
+%\initfloatingfigs
+
+% Show title page
+% \setlength{\epsfxsize}{150mm}
+% \leavevmode
+% \epsfbox{\figDir/cover.eps}
+
+{ \Large \ \\
+
+\vspace{1cm}
+
+\noindent The HTK Book
+
+\vspace{1cm}
+
+\noindent Steve Young \\
+\noindent Dan Kershaw \\
+\noindent Julian Odell \\
+\noindent Dave Ollason \\
+\noindent Valtcho Valtchev \\
+\noindent Phil Woodland \\
+
+\vspace{1cm}
+
+\noindent The HTK Book (for HTK Version \version)
+
+\vspace{1.5cm}
+
+\noindent \copyright COPYRIGHT 1995-1999 Microsoft Corporation. 
+
+\vspace{0.2cm}
+
+\noindent All Rights Reserved
+
+\vspace{1.5cm}
+
+\noindent First published December 1995
+\vspace{0.2cm}
+
+\noindent Reprinted March 1996 
+\vspace{0.2cm}
+
+\noindent Revised for HTK Version 2.1 March 1997 
+\vspace{0.2cm}
+
+\noindent Revised for HTK Version 2.2 January 1999 
+\vspace{0.2cm}
+
+\noindent Revised for HTK Version 3.0 July 2000 
+\vspace{0.2cm}
+
+}
+
+% TOC
+\newpage
+\tableofcontents
+
+% Actual contents
+\newpage
+\pagestyle{myheadings}
+\pagenumbering{arabic}
+
+\part{Tutorial Overview}
+\include{fundaments}
+\include{htkoview}
+\include{exampsys}
+
+\part{HTK in Depth}
+\include{openviron}
+\include{speechio}
+\include{labels}
+\include{models}
+\include{train}
+\include{adapt}
+\include{refine}
+\include{discmods}
+\include{netdict}
+\include{decode}
+
+\part{Reference Section}
+\mychap{The HTK Tools}{toolref}
+\include{HTKRef/tools}
+\include{HTKRef/HBuild}
+\include{HTKRef/HCompV}
+\include{HTKRef/HCopy}
+\include{HTKRef/HDMan}
+\include{HTKRef/HEAdapt}
+\include{HTKRef/HERest}
+\include{HTKRef/HHEd}
+\include{HTKRef/HInit}
+\include{HTKRef/HLEd}
+\include{HTKRef/HList}
+\include{HTKRef/HLStats}
+\include{HTKRef/HParse}
+\include{HTKRef/HQuant}
+\include{HTKRef/HRest}
+\include{HTKRef/HResults}
+\include{HTKRef/HSGen}
+\include{HTKRef/HSLab}
+\include{HTKRef/HSmooth}
+\include{HTKRef/HVite}
+
+\include{config}
+\include{errors}
+\include{htkslf}
+   
+\clearpage
+\markboth{\bfseries \rmfamily Index}{\bfseries \rmfamily Index}
+\printindex
+\end{document}

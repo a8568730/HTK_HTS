@@ -1,0 +1,133 @@
+		Hidden Markov Toolkit (HTK) 3.0
+
+Use of this software is governed by a license agreement, the terms and
+conditions of which are set forth in the file LICENSE in the
+top-level HTK installation directory.  Please read this file carefully
+as use of this software implies acceptance of the conditions described
+therein.
+
+Introduction
+============
+
+HTK is a toolkit for use in research into automatic speech recogntion
+and has been developed by the Speech Vision Robotics Group at the
+Cambridge University Engineering Department (http://svr-www.eng.cam.ac.uk) 
+and Entropic Ltd (http://www.entropic.com).
+
+Please visit the HTK homepage at the following address for more
+information about HTK:
+
+    http://htk.eng.cam.ac.uk
+
+A number of mailing lists have been established to help users build
+and understand HTK, for details see
+
+    http://htk.eng.cam.ac.uk/mailing/subscribe_mail.shtml
+
+
+License
+=======
+
+HTK is made available free of charge and can be downloaded from the
+website mentioned above. However it may not be redistributed,
+i.e. you must register at the website and download it from
+there. Details about the terms under which HTK is made available can
+be found in the LICENSE file.
+
+
+Compiling & Installing HTK under UNIX
+=====================================
+
+HTK consists of a library (built from the source code in HKTLib/) and
+a set of command line tools (in HTKTools/).
+
+The supplied makefiles require the following environment variables
+to be set
+
+ CPU   current CPU type 
+ HBIN  specifies location of executables $HBIN/bin.$CPU
+ HTKCC Name of C compiler
+ HTKCF C compiler options
+ HTKLF Linker options
+
+See the makefiles in HTKLib/ or HTKTools/ for detailed information
+about how these are used. The directory env/ contains example settings
+of theses variables for a range of Operating Systems.
+
+First build the library in HTKLib/ and then build the tools in
+HTKTools/.
+
+Please address questions regarding building HTK to
+HTK-users@eng.cam.ac.uk
+
+In a future version we will provide an autoconf based build system. 
+
+Compiling & Installing HTK under Windows NT
+===========================================
+
+HTK can be compiled under Windows using the Visual Studio C compiler
+and the 'nmake' facility.  To do this, open a DOS window and cd to the
+htk directory.  Create a directory for the executables
+
+   > mkdir bin.win32
+
+Then compile the HTK Library as follows
+
+   > cd HTKLib
+   > VCVARS32
+   > nmake /f htk_htklib_nt.mkf all
+
+Next cd to the HTKTools directory and make the tools
+
+   > nmake /f htk_htktools_nt.mkf all
+
+This will store the final executables in the bin.win32 directory which
+should be added to your path.
+
+Notes
+
+1) VCVARS32, nmake and the C compiler are usually stored in 
+     C:\Program Files\Microsoft Visual Studio\VC98\bin 
+   This must be in your path.
+2) The variables CPU,HBIN,HTKCC, etc are set directly in the NT
+   makefiles and any existing settings are ignored.
+
+Testing the Installation
+========================
+
+Among the samples on the HTK website you'll find the HTKDemo package
+that can be used to test your installation. See
+http://htk.eng.cam.ac.uk/download.shtml for download instructions.
+
+As an initial test of the installation please run the HTK
+demonstration using the configuration file
+HTKDemo/configs/monPlainM1S1.dcf. There is a README file in the
+HTKDemo directory explaining the operation of the demonstration in
+detail but, in short, you need to run the demonstration script passing
+it the configuration file configs/monPlainM1S1.dcf as input. 
+
+To run the demonstration type:
+
+$ cd HTKDemo
+$ ./runDemo configs/monPlainM1S1.dcf
+
+The recognition results obtained should match the following.
+
+On the training set:
+------------------------ Overall Results --------------------------
+SENT: %Correct=0.00 [H=0, S=7, N=7]
+WORD: %Corr=77.63, Acc=74.89 [H=170, D=37, S=12, I=6, N=219]
+===================================================================
+
+On the test set:
+------------------------ Overall Results --------------------------
+SENT: %Correct=0.00 [H=0, S=3, N=3]
+WORD: %Corr=63.91, Acc=59.40 [H=85, D=35, S=13, I=6, N=133]
+===================================================================
+
+NB to run this demo under Windows you must have perl installed and you
+need to invoke perl explicitly. See http://www.perl.org to download
+the perl distribution. The script runDemo.pl should be used in place
+of runDemo ie to run the test above type
+
+ > perl runDemo.pl configs\monPlainM1S1.dcf
