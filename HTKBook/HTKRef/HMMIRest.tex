@@ -1,0 +1,292 @@
+%/* ----------------------------------------------------------- */
+%/*                                                             */
+%/*                          ___                                */
+%/*                       |_| | |_/   SPEECH                    */
+%/*                       | | | | \   RECOGNITION               */
+%/*                       =========   SOFTWARE                  */ 
+%/*                                                             */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
+%/* developed at:                                               */
+%/*                                                             */
+%/*      Speech Vision and Robotics group                       */
+%/*      Cambridge University Engineering Department            */
+%/*      http://svr-www.eng.cam.ac.uk/                          */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
+%/*         Copyright:                                          */
+%/*                                                             */
+%/*              2002  Cambridge University                     */
+%/*                    Engineering Department                   */
+%/*                                                             */
+%/*   Use of this software is governed by a License Agreement   */
+%/*    ** See the file License for the Conditions of Use  **    */
+%/*    **     This banner notice must not be removed      **    */
+%/*                                                             */
+%
+
+% HTKBook - this chapter written by Dan Povey 01/11/02
+%
+
+\newpage
+\mysect{HMMIRest}{HMMIRest}
+
+\mysubsect{Function}{HMMIRest-Function}
+
+\index{hmmirest@\htool{HMMIRest}|(}
+
+This program is used to perform a single re-estimation of a HMM set using
+a discriminative training criterion.  Maximum Mutual Information (MMI),
+Minimum Phone Error (MPE) and  Minimum Word Error (MWE) are supported.
+Gaussian parameters are re-estimated using the Baum-Welch update.  
+
+Discriminative training needs to be initialised with trained models; these
+will generally be trained using MLE.  Also essential are lattices.
+Two sets of lattices are needed: a lattice for the correct transcription of
+each training file, and a lattice derived from the recognition of each
+training file.  These are called the ``numerator'' and ``denominator''
+lattices respectively, a reference to their respective positions in the
+MMI objective function, which can be expressed as follows:
+
+\newcommand{\num}{{\mathrm{num}}}
+\newcommand{\den}{{\mathrm{den}}}
+\newcommand{\MMI}{{\mathrm{MMI}}}
+\newcommand{\calO}{ {\cal O} }
+\newcommand{\calM}{ {\cal M} }
+
+\begin{equation}
+    {\cal F}_\MMI(\lambda) = \sum_{r=1}^R \log \frac {  p^\kappa(\calO_r | \calM^\num_r) } { p^\kappa(\calO | \calM^\den_r) },
+  \label{eq:mmimodels}
+\end{equation}
+where $\lambda$ is the HMM parameters,  $\kappa$ is a scale on the likelihoods, $\calO_r$ is the
+speech data for the $r$'th training file and $\calM^\num_r$ and $\calM^\den_r$ are the numerator
+and denominator models.  
+
+The numerator and denominator lattices need to contain phone alignment information
+(the start and end times of each phone) and language model likelihoods.
+Phone alignment information can be obtained by using \htool{HDecode} with
+the letter \texttt{d} included in the lattice format options (specified to \htool{HDecode} by the
+\texttt{-q} command line option).  It is important that the language model
+applied to the lattice not be too informative (e.g., use a unigram LM) and that the
+pruning beam used to create it be large enough (probably greater than 100).
+Typically an initial set of lattices would be created by recognition using
+a bigram language model and a pruning beam in the region of 125-200
+(e.g. using \htool{HDecode}, and this would then have a unigram language
+model applied to it and a pruning beam applied in the region 100-150, using
+the tool \htool{HLRescore}.   The phone alignment information
+can then be added using \htool{HDecode}.
+
+Having created these lattices using an initial set of models, the
+tool \htool{HMMIRest} can be used to re-estimate the HMMs for 
+typically 4-8 iterations, using the same set of lattices.   
+
+\htool{HMMIRest} supports multiple mixture Gaussians, tied-mixture
+HMMs, multiple data streams, parameter tying within and between models
+(but not if means and variances are tied independently), and diagonal
+covariance matrices only.
+
+
+%\htool{HMMIRest} supports variance flooring in the same way as \htool{HERest}.
+
+%It also supports \textit{Single pass retraining}, useful when the parameterisation of
+%the front-end (e.g. from MFCC to PLP coefficients) is to be modified.
+
+
+Like \htool{HERest}, \htool{HMMIRest} includes features to allow parallel
+operation where a network of processors is available. When the training set
+is large, it can be split into separate chunks that are processed in
+parallel on multiple machines/processors, speeding up the training process.
+\htool{HMMIRest} can operate in two modes:
+\begin{enumerate}
+\item Single-pass operation: the data files on the command line are the
+  speech files to be used for re-estimation of the HMM set; the re-estimated
+  HMM is written by the program to the directory specified by the {\texttt{-M}}
+   option.
+\item Two-pass operation with data split into \texttt{P} blocks:
+   \begin{enumerate}  
+     \item First pass: multiple jobs are started with the options \texttt{-p 1}, 
+       \texttt{-p 2} $\ldots$ \texttt{-p P} are given; the different subsets of training
+     files should be given on each command line or in a file specified by the \texttt{-S}
+     option.  Accumulator files \texttt{<dir>/HDR<p>.acc.1},  \texttt{<dir>/HDR<p>.acc.2} 
+    and (for MPE) \texttt{<dir>/HDR<p>.acc.3}  are written, where \texttt{<dir>} is
+    the directory specified by the $\texttt{-M}$  and \texttt{<p>} is the number specified
+     by the \texttt{-p} option.  
+     \item Second pass: \htool{HMMIRest} is called with \texttt{-p 0}, and the
+      command-line arguments are the accumulator files written by the first pass.
+     The re-estimated HMM set is written to the directory specifified by the $\texttt{-M}$ option. 
+   \end{enumerate}
+\end{enumerate}
+
+
+
+\mysubsect{Use}{HMMIRest-Use}
+ \label{sec:hmmirestuse}
+
+\htool{HMMIRest} is invoked via the command line
+\begin{verbatim}
+   HMMIRest [options] hmmList trainFile ...
+\end{verbatim}
+or alternatively if the training is in parallel mode, the second pass is invoked as
+\begin{verbatim}
+   HMMIRest [options] hmmList accFile ...
+\end{verbatim}
+
+As always, the list of arguments can be stored in a script file (\texttt{-S} option) if required.  
+
+\subsubsection{Typical use}
+
+To give an example of typical use, for single-pass operation the usage might be:
+\begin{verbatim}
+HMMIRest -A -V -D -H <startdir>/MMF -M <enddir> -C <config> -q <num-lat-dir> 
+        -r <den-lat-dir> -S <traindata-list-file> <hmmlist>
+\end{verbatim}
+For two-pass operation, the first pass would be (for the \texttt{n}'th training file),
+\begin{verbatim}
+HMMIRest -p <p> -A -V -D -H <startdir>/MMF -M <enddir> -C <config> -q <num-lat-dir>
+        -r <den-lat-dir> -S <p'th-traindata-list-file> <hmmlist>
+\end{verbatim}
+and the second pass would be
+\begin{verbatim}
+HMMIRest -p 0 -A -V -D -H <startdir>/MMF -M <enddir> -C <config> -q <num-lat-dir> 
+   -r <den-lat-dir> <hmmlist> <enddir>/HDR1.acc.1 <enddir>/HDR1.acc.2 
+   <enddir>/HDR2.acc.1  <enddir>/HDR2.acc.2 ... <enddir>/HDR<P>.acc.2 
+\end{verbatim}
+This is for MMI training; for MPE there will be three files \texttt{HDRn.acc.1,HDRn.acc.2,HDRn.acc.3}
+per block of training data.  \texttt{ISMOOTHTAU} can also be tuned.
+
+\subsubsection{Typical config variables}
+
+The most important config variables are given as follows for a number of example setups.
+MMI training is the default behaviour.
+\begin{enumerate}  
+   \item I-smoothed MMI training: set \texttt{ISMOOTHTAU=100}
+   \item MPE training (``approximate-accuracy'', which is default kind of MPE): set \texttt{MPE=TRUE}, \texttt{ISMOOTHTAU=50}
+   \item ``Exact'' MPE training: set \texttt{MPE=TRUE}, \texttt{EXACTCORRECTNESS=TRUE}, \texttt{INSCORRECTNESS=-0.9}
+        (this  may have to be tuned in the range -0.8 to -1; it affects the testing 
+        insertion/deletion ratio)
+   \item ``Approximate-error'' MPE training (recommended): set \texttt{MPE=TRUE}, \texttt{CALCASERROR=TRUE}, \texttt{INSCORRECTNESS=-0.9}
+        (this  may have to be tuned in the range -0.8 to -1; it affects the testing 
+        insertion/deletion ratio)
+   \item MWE training: set \texttt{MWE=TRUE}, \texttt{ISMOOTHTAU=25}
+\end{enumerate}
+
+In all cases set \texttt{LATPROBSCALE=<f>}, where \texttt{<f>} will
+normally be in the range 1/10 to 1/20, typically the inverse of the
+language model scale.
+
+
+
+\subsubsection{Storage of lattices}
+
+If there are great many training files, the directories specified for the numerator and denominator lattice
+can contain subdirectories containing the actual lattices.  The name of the subdirectory required can
+be extracted from the filenames by adding config variables for instance as follows:
+\begin{verbatim}
+LATMASKNUM = */%%%?????.???
+LATMASKDEN = */%%%?????.???
+\end{verbatim}
+which would convert a fileneme \texttt{foo/bar12345.lat} to \texttt{<dir>/bar/bar12345.lat},
+where \texttt{<dir>} would be the directory specified by the \texttt{-q} or \texttt{-r} option.
+The \texttt{\%}'s are converted to the directory name and other characters are discarded.
+If lattices are gzipped in order to save space, they can be read in by adding the 
+config
+\begin{verbatim}
+HNETFILTER='gunzip -c < $.gz'
+\end{verbatim}
+
+
+\mysubsect{Command-line options}{HMMIRest-options}
+
+
+
+The full list of the options accepted by \htool{HMMIRest} is as follows.
+Options not ever needed for normal operation are marked ``obscure''.
+
+\begin{optlist}
+
+  \ttitem{-d dir} 
+      (obscure)
+      Normally \htool{HMMIRest} looks for HMM definitions
+       (not already loaded via MMF files) 
+      in the current directory.  This option tells \htool{HMMIRest} to look in
+      the directory {\tt dir} to find them.
+
+  \ttitem{-g~~~~} (obscure) Maximum Likelihood (ML) mode-- Maximum Likelihood lattice-based
+   estimation using only the numerator (correct-sentence) lattices.
+
+  \ttitem{-l~~~~} (obscure) Maximum number of sentences to use (useful only for troubleshooting)
+
+  \ttitem{-o ext} (obscure) This causes the file name extensions of the
+      original models (if any) to be replaced by {\tt ext}.
+
+  \ttitem{-p N~}  Set parallel mode.  1, 2 $\ldots$ N for a forward-backward
+     pass on data split into N blocks.  0 for re-estimating using accumulator
+    files that this will write.  Default (-1) is single-pass operation.
+
+  \ttitem{-q dir}   Directory to look for numerator lattice files.  These files
+      will have a filename the same as the speech file, but with extension
+      \texttt{lat} (or as given by \texttt{-Q} option).
+
+  \ttitem{-qp s}   Path pattern for the extended path to look for numerator lattice files. 
+      The matched string will be spliced to the end of the directory string specified by
+      option `-q' for a deeper path.
+
+  \ttitem{-r dir}   Directory to look for denominator lattice files.
+
+  \ttitem{-rp s}   Path pattern for the extended path to look for denominator lattice files.
+     The matched string will be spliced to the end of the directory string specified by
+      option `-r' for a deeper path.
+
+  \ttitem{-s file}  File to write HMM statistics.
+
+  \ttitem{-twodatafiles} (obscure) Expect two of each data file for single pass retraining.  
+    This works as for HERest; command line contains alternating alignment and update
+    files.
+
+  \ttitem{-u flags} By default, \htool{HMMIRest} updates all of the HMM parameters,
+      that is, means, variances, mixture weights and 
+      transition probabilies. This 
+      option causes just the parameters indicated by the {\tt flags}
+      argument to be updated, this argument is a string containing one
+      or more of the letters {\tt m} (mean), {\tt v} (variance) ,
+      {\tt t} (transition) and {\tt w} (mixture weight).  The 
+      presence of a letter enables
+      the updating of the corresponding parameter set.
+
+  \ttitem{-umle flags} (obscure) A format as in \texttt{-u}; directs that the specified parameters
+     be updated using the ML criterion (for MMI operation only, not MPE/MWE).
+
+  \ttitem{-w floor} (obscure) Set the mixture weight floor as a multiple
+    of \texttt{MINMIX=1.0e-5}.  Default is 2.
+
+  \ttitem{-x ext}  By default, \htool{HMMIRest} expects a HMM definition for 
+      the label X to be stored in a file called {\tt X}.  This
+      option causes \htool{HMMIRest} to look for the HMM definition in the
+      file {\tt X.ext}.
+\stdoptB
+\stdoptF
+\stdoptH
+\ttitem{-Hprior MMF}  Load HMM macro file {\tt MMF}, to be used as prior model in adaptation.  Use with config variables {\tt PRIORTAU} etc.  
+\stdoptI
+\stdoptM
+
+ \ttitem{-Q ext} Set the lattice file extension to {\tt ext}
+\end{optlist}
+
+\stdopts{HMMIRest}
+
+\mysubsect{Tracing}{HMMIRest-Tracing}
+
+
+The command-line trace option can only be set to 0 (trace off)
+or 1 (trace on), which is the default.  Tracing behaviour can
+be altered by the {\tt TRACE} configuration variables in the modules \htool{HArc}
+and \htool{HFBLat}.
+
+\index{hmmirest@\htool{HMMIRest}|)}
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "../htkbook"
+%%% End: 

@@ -1,0 +1,217 @@
+%/* ----------------------------------------------------------- */
+%/*                                                             */
+%/*                          ___                                */
+%/*                       |_| | |_/   SPEECH                    */
+%/*                       | | | | \   RECOGNITION               */
+%/*                       =========   SOFTWARE                  */ 
+%/*                                                             */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
+%/*         Copyright: Microsoft Corporation                    */
+%/*          1995-2000 Redmond, Washington USA                  */
+%/*                    http://www.microsoft.com                */
+%/*                                                             */
+%/*   Use of this software is governed by a License Agreement   */
+%/*    ** See the file License for the Conditions of Use  **    */
+%/*    **     This banner notice must not be removed      **    */
+%/*                                                             */
+%/* ----------------------------------------------------------- */
+
+\newpage
+\mysect{HEAdapt}{HEAdapt}
+
+\subsection{Function}
+\index{headapt@\htool{HEAdapt}|(}
+This program is used to perform 
+adaptation of a set of HMMs using either maximum likelihood linear 
+regression (MLLR), maximum a-posteriori (MAP) or both. 
+The default is MLLR.
+In order to perform the adaptation, the first stage requires a
+state/frame alignment. As such the initial operation of \htool{HEAdapt}
+follows \htool{HERest} closely. The adaptation training
+data consists of one or more utterances each of which has a 
+transcription in the form of a standard label file (segment
+boundaries are ignored).  For each training utterance, a
+composite model is effectively synthesised by concatenating
+the phoneme models given by the transcription.  Each mixture
+component's accumulators in \htool{HEAdapt}
+are updated simultaneously by performing a standard Baum-Welch pass over
+each training utterance using the composite model.
+\htool{HEAdapt} will also prune the
+$\alpha$ and $\beta$ matrices, just as \htool{HERest}.  
+  
+\htool{HEAdapt} is intended to operate on HMMs which have been fully
+trained using \htool{HCompV}, \htool{HInit}, \htool{HRest}, \htool{HERest}.
+\htool{HEAdapt} supports multiple mixture diagonal covariance Gaussian
+HMMs only (i.e. \texttt{PLAINHS} and \texttt{SHAREDHS} systems),
+with a single data stream only, and parameter tying within and between models. 
+\htool{HEAdapt} also supports tee-models
+(see section~\ref{s:teemods}), for handling optional silence and non-speech
+sounds. These may be placed between the units (typically words or phones)
+listed in the transcriptions, but they cannot be used at the start or end of a
+transcription. Furthermore, chains of tee-models are not permitted.
+
+After accumulating statistics, \htool{HEAdapt} estimates the mean and
+(optionally) the variance transforms.  \htool{HEAdapt} will output
+either the adapted HMM set (as an MMF), or a transform model file
+(TMF). The TMF can then be applied to the original model set (for
+instance when using \htool{HVite}). Note that with MAP adaptation a
+transform is not available and a full HMM set must be output.
+
+When \htool{HEAdapt} is being run to calculate multiple regression
+transforms, the model set being adapted must contain a regression
+class tree. The regression class tree is constructed using the {\tt
+RC} edit command in \htool{HHEd}.
+
+\subsection{Use}{}
+
+\htool{HEAdapt} is invoked via the command line
+\begin{verbatim}
+   HEAdapt [options] hmmList adaptFile ...
+\end{verbatim}
+This causes the set of HMMs given in {\tt hmmList} to be loaded.
+The given list of
+adaptation training files is then used to perform one adaptation
+cycle. As always, the list of training files can be stored in a script
+file  if required.  On completion, \htool{HEAdapt} outputs new updated 
+versions of each HMM definition or a new transform models file.
+
+The detailed operation of \htool{HEAdapt} is controlled by the following
+command line options
+\begin{optlist}
+
+  \ttitem{-b N} Set the number of blocks to be used in the block
+      diagonal matrix representation of the mean transformation. This
+      option will override the config setting \texttt{HADAPT:BLOCKS},
+      or if this is not set the default number of blocks is 1.
+
+  \ttitem{-c f} Set the minimum forward probability fixed distance for
+      the alpha pruning to {\tt f}. Restrict the computation of the
+      $\alpha$ values to just those for which the total log likelihood
+      $\alpha_j(t)\beta_j(t)$ is within distance {\tt f} of the total
+      likelihood (default 10.0).
+ 
+  \ttitem{-d dir} 
+      Normally \htool{HEAdapt} looks for HMM definitions
+      (not already loaded via MMF files) 
+      in the current directory.  This option tells \htool{HEAdapt} to look in
+      the directory {\tt dir} to find them.
+
+  \ttitem{-f field desc} Set the description field {\tt field} in the
+      transform model file to {\tt desc}. Currently the choices for
+      {\tt field} are {\tt uid}, {\tt uname}, {\tt chan} and {\tt desc}.
+
+  \ttitem{-g} Perform global adaptation only. 
+
+  \ttitem{-i N} Update the transforms (incrementally) after
+      accumulating statistics every {\tt N} utterances. The default
+      operation is static adaptation, i.e. after seeing ALL the
+      adaptation data.
+
+  \ttitem{-j f} MAP adaptation with scaling factor {\tt f}. The
+      default operation is MLLR adaptation. If MAP adaptation is to be
+      performed the default value of {\tt f} is 15.0
+ 
+
+  \ttitem{-k} Use MLLR to transform the HMM model set before performing MAP
+
+  \ttitem{-m f}  Set the minimum threshold occupation count for a
+      regression class to {\tt f}. A separate regression
+      transformation will be generated at the lowest level in the tree
+      for which there is sufficient occupancy (data). This option will
+      override the config setting \texttt{HADAPT:OCCTHRESH}. The
+      default setting is 700.0.
+  
+  \ttitem{-o ext}  This causes the file name extensions of the
+      original models (if any) to be replaced by {\tt ext}.
+
+  \ttitem{-t f [i l]} Set the pruning threshold to {\tt f}.  During the 
+      backward probability calculation, at
+      each time $t$ 
+      all (log) $\beta$ values falling more than {\tt f} below the
+      maximum $\beta$ value at that time are ignored.  During the
+      subsequent forward pass, (log) $\alpha$ values are only
+      calculated if there are corresponding valid $\beta$ values.
+      Furthermore, if the ratio of the $ \alpha \beta $ product divided
+      by the total probability (as computed on the backward pass)
+      falls below a fixed threshold then those values of $\alpha$
+      and $\beta$ are ignored. Setting {\tt f} to zero disables
+      pruning  (default value 0.0).  Tight pruning thresholds can
+      result in \htool{HEAdapt} failing to process an utterance.
+      if the {\tt i} and {\tt l} options are given, then a pruning
+      error results in the threshold being increased by {\tt i} and
+      utterance processing restarts.  If errors continue, this procedure will 
+      be repeated until the limit {\tt l} is reached.
+      
+  \ttitem{-u flags} By default \htool{HEAdapt} creates transforms for
+      the means only. This option causes the parameters indicated by
+      the {\tt flags} to be created; this argument is a string
+      containing one or more of the letters {\tt m} (mean) and {\tt v}
+      (variance). The presence of a letter
+      enables the creation of the corresponding part of the transform.
+
+  \ttitem{-w f}  This sets the minimum variance (i.e. diagonal element of
+      the covariance matrix) to the real value {\tt f} (default value
+      0.0).
+      
+  \ttitem{-x ext}  By default, \htool{HEAdapt} expects a HMM definition for 
+      the label X to be stored in a file called {\tt X}.  This
+      option causes \htool{HEAdapt} to look for the HMM definition in the
+      file {\tt X.ext}.
+  \ttitem{-B} Output the HMM definition files in binary format. If
+      outputting a tmf, then this option specifies binary output for
+      the tmf.
+
+\stdoptF
+\stdoptG
+\stdoptH
+\stdoptI
+
+ \ttitem{-J tmf} Load a transform set from the transform model file
+      {\tt tmf}. The {\tt tmf} is used to transform the {\tt mmf}
+      before performing the state/frame alignment, and a transform is
+      calculated based on this state/frame alignment and the {\tt mmf}.
+      
+  \ttitem{-K tmf} Save the transform set in the transform model file 
+      {\tt tmf}.
+
+\stdoptL
+\stdoptM
+\stdoptX
+
+\end{optlist}
+\stdopts{HEAdapt}
+
+\subsection{Tracing}
+
+\htool{HEAdapt} supports the following trace options where each
+trace flag is given using an octal base
+\begin{optlist}
+   \ttitem{00001} basic progress reporting.
+   \ttitem{00002} show the logical/physical HMM map.
+\end{optlist}
+
+Trace flags are set using the \texttt{-T} option or the  \texttt{TRACE} 
+configuration variable.
+
+The library that \htool{HEAdapt} utilises, called \htool{HAdapt} supports other
+useful trace options. For library modules, tracing has to be performed via 
+the config file and the module name must prefix the trace (e,g \texttt{HADAPT:TRACE=0001}). 
+The following are \htool{HAdapt} trace options
+where each trace flag is given using an octal base
+\begin{optlist}
+   \ttitem{00001} basic progress reporting.
+   \ttitem{00002} trace on the accumulations.
+   \ttitem{00004} trace on the transformations.
+   \ttitem{00010} output the auxiliary function score.
+   \ttitem{00020} regression classes input/output tracing.
+   \ttitem{00040} regression class tree usage.
+   \ttitem{00200} detailed trace for accumulations at the class level.
+\end{optlist}
+\index{headapt@\htool{HEAdapt}|)}
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "../htkbook"
+%%% End: 
