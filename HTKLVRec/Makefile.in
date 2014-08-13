@@ -1,0 +1,95 @@
+# @configure_input@
+
+############################################################
+# Makefile for HTKLVRec
+# 
+# N.B. you must make HTKLib.a (in the HTKLib directory first)
+#
+# "make" or "make all": to build all all binaries
+# "make install": install all binaries in @bindir@
+# "make clean": remove object files
+# "make cleanup": remove object files and binaries
+############################################################
+
+SHELL   = 	/bin/sh
+inc     = 	../HTKLib
+HTKLIB  = 	$(inc)/HTKLib.a 
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+VPATH = @srcdir@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+sbindir = @sbindir@
+libexecdir = @libexecdir@
+datadir = @datadir@
+sysconfdir = @sysconfdir@
+sharedstatedir = @sharedstatedir@
+localstatedir = @localstatedir@
+libdir = @libdir@
+infodir = @infodir@
+mandir = @mandir@
+includedir = @includedir@
+oldincludedir = /usr/include
+
+CC      = 	@CC@
+CFLAGS  := 	-DNO_LAT_LM @CFLAGS@ -I$(inc)
+LDFLAGS = 	@LDFLAGS@ -lm
+INSTALL = 	@INSTALL@
+HTKLIB = $(inc)/HTKLib.a
+HEADER = HLVLM.h  HLVModel.h  HLVNet.h  HLVRec.h config.h
+
+all: HDecode HDecode.mod
+
+std:
+	rm -f config.h
+	cp config.orig.h config.h
+
+mod:
+	rm -f config.h
+	cp config.mod.h config.h
+
+HDecode: std HDecode.o HLVNet.o HLVRec.o HLVLM.o HLVModel.o $(HTKLIB)
+	$(CC) $(CFLAGS)	 -o HDecode HDecode.o HLVNet.o	HLVRec.o HLVLM.o \
+	HLVModel.o $(HTKLIB) $(LDFLAGS)
+
+HDecode.mod: mod HDecode.mod.o HLVNet.o HLVRec.o HLVLM.o HLVModel.o $(HTKLIB)
+	$(CC) $(CFLAGS)	 -o HDecode.mod HDecode.mod.o HLVNet.o	HLVRec.o HLVLM.o \
+	HLVModel.o $(HTKLIB) $(LDFLAGS)
+
+HLVModel.o: HLVModel.c $(HEADER)
+
+HLVNet.o: HLVNet.c $(HEADER)
+
+HLVLM.o: HLVLM.c $(HEADER)
+
+HLVRec.o: HLVRec.c HLVRec-GC.c	HLVRec-LM.c	 HLVRec-misc.c	HLVRec-outP.c \
+		  HLVRec-propagate.c  HLVRec-traceback.c $(HEADER)
+
+HDecode.o: HDecode.c $(HEADER)
+
+HDecode.mod.o: HDecode.mod.c $(HEADER)
+
+
+strip: HDecode
+	-strip HDecode HDecode.mod
+
+clean:
+	-rm -f *.o 
+
+cleanup:
+	-rm -f *.o HDecode HDecode.mod
+
+distclean:
+	-rm -f *.o HDecode HDecode.mod Makefile
+
+install: mkinstalldir
+	$(INSTALL) -m 755 HDecode $(bindir)
+	$(INSTALL) -m 755 HDecode.mod $(bindir)
+
+mkinstalldir:
+	-mkdir -p $(bindir)
+
+.PHONY: std mod all strip clean cleanup distclean install mkinstalldir
+
+
