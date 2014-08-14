@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hlm_version = "!HVER!HLM:   3.4 [CUED 25/04/06]";
-char *hlm_vc_id = "$Id: HLM.c,v 1.6 2008/05/30 07:19:15 zen Exp $";
+char *hlm_vc_id = "$Id: HLM.c,v 1.7 2008/06/24 03:19:09 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -157,7 +157,7 @@ static void SyncStr(char *buf,char *str)
 static int GetInt(void)
 {
    int x;
-   char buf[100];
+   char buf[MAXSTRLEN];
    
    if (!ReadInt(&source,&x,1,FALSE))
       HError(8150,"GetInt: Int Expected at %s",SrcPosition(source,buf));
@@ -168,7 +168,7 @@ static int GetInt(void)
 static float GetFloat(Boolean bin)
 {
    float x;
-   char buf[100];
+   char buf[MAXSTRLEN];
 
    if (!ReadFloat(&source,&x,1,bin))
       HError(8150,"GetFloat: Float Expected at %s",SrcPosition(source,buf));
@@ -423,7 +423,7 @@ static int ReadNGrams(NGramLM *nglm,int n,int count, Boolean bin)
    float prob;
    LabId wdid;
    SEntry *cse;
-   char wd[255];
+   char wd[MAXSTRLEN];
    lmId ndx[NSIZE+1];
    NEntry *ne,*le=NULL;
    int i, idx, total;

@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hlabel_version = "!HVER!HLabel:   3.4 [CUED 25/04/06]";
-char *hlabel_vc_id = "$Id: HLabel.c,v 1.6 2008/05/30 07:19:16 zen Exp $";
+char *hlabel_vc_id = "$Id: HLabel.c,v 1.7 2008/06/24 03:19:09 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -642,7 +642,7 @@ typedef enum _TrSymbol TrSymbol;
 static int curch = ' ';
 static TrSymbol trSym = TRNULL;
 static double trNum;
-static char trStr[256];
+static char trStr[MAXSTRLEN];
 
 /* IsNumeric: returns true if given string is a number */
 Boolean IsNumeric(char *s)
@@ -1019,7 +1019,7 @@ static void LoadSCRIBELabels(MemHeap *x, Transcription *t, Source *src)
    float score;
    ScribeLab ltype, lx;
    double sp;
-   char buf[256];
+   char buf[MAXSTRLEN];
    
    if (!GetConfFlt(cParm,numParm,"SOURCERATE",&sp))  
       sp = 500.0;   /* actual SCRIBE rate */
@@ -1216,7 +1216,7 @@ static unsigned MLFHash(char *s)
                            and append the entries to the MLF table */
 void LoadMasterFile(char *fname)
 {
-   char buf[1024];
+   char buf[MAXFNAMELEN];
    char *men;        /* end of mode indicator */
    char *pst,*pen;   /* start/end of pattern (inc quotes) */
    char *dst=NULL,*den=NULL;   /* start/end of subdirectory (inc quotes) */
@@ -1228,12 +1228,12 @@ void LoadMasterFile(char *fname)
       HError(6520,"LoadMasterFile: MLF file limit reached [%d]",MAXMLFS);
    if ((f = fopen(fname,"rb")) == NULL)
       HError(6510,"LoadMasterFile: cannot open MLF %s",fname);
-   if (fgets(buf,1024,f) == NULL)
+   if (fgets(buf,MAXFNAMELEN,f) == NULL)
       HError(6513,"LoadMasterFile: MLF file is empty");
    if (NoMLFHeader(buf))
       HError(6551,"LoadMasterFile: MLF file header is missing"); 
    incSpaces=FALSE;
-   while (fgets(buf,1024,f) != NULL){
+   while (fgets(buf,MAXFNAMELEN,f) != NULL){
       if (!inEntry && FindMLFStr(buf,&pst,&pen)) {
          e = (MLFEntry *)New(&mlfHeap,sizeof(MLFEntry));
          e->type = FindMLFType(pen+1,&men);
@@ -1292,10 +1292,10 @@ FILE *GetMLFFile(int fidx)
 Boolean IsMLFFile(char *fn)
 {
    FILE *f;
-   char buf[1024];
+   char buf[MAXFNAMELEN];
    
    if ((f = fopen(fn,"rb")) == NULL) return FALSE;
-   if (fgets(buf,1024,f) == NULL) {
+   if (fgets(buf,MAXFNAMELEN,f) == NULL) {
       fclose(f); return FALSE;
    }
    if (NoMLFHeader(buf)) {
@@ -1314,7 +1314,7 @@ MLFEntry *GetMLFTable(void)
               this new name is suffixed to subdir and stored in tryspec */            
 static void SplitPath(char *path, char *name, char *subdir, char *tryspec)
 {
-   char buf1[1024],buf2[1024],*p;
+   char buf1[MAXFNAMELEN],buf2[MAXFNAMELEN],*p;
    char pch[2] = " ";
    
    pch[0] = PATHCHAR;
@@ -1339,7 +1339,7 @@ static FILE * OpenLabFile(char *fname, Boolean *isMLF)
 {
    FILE *f;
    MLFEntry *e;
-   char path[1024],name[256],tryspec[1024];
+   char path[MAXFNAMELEN],name[MAXSTRLEN],tryspec[MAXFNAMELEN];
    Boolean isMatch = FALSE;
    unsigned fixedHash;     /* hash value for PAT_FIXED */
    unsigned anypathHash;   /* hash value for PAT_ANYPATH */ 

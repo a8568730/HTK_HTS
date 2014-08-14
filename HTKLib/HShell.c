@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hshell_version = "!HVER!HShell:   3.4 [CUED 25/04/06]";
-char *hshell_vc_id = "$Id: HShell.c,v 1.10 2008/05/30 07:19:15 zen Exp $";
+char *hshell_vc_id = "$Id: HShell.c,v 1.11 2008/06/24 03:19:08 zen Exp $";
 
 #include "HShell.h"
 
@@ -115,8 +115,8 @@ Boolean vaxOrder = FALSE;
 #define MAXEFS 5                        /* max num ext files to remember */
 
 typedef struct {                        /* extended file name */
-   char logfile[1024];                  /* logical name */
-   char actfile[1024];                  /* actual file name */
+   char logfile[MAXFNAMELEN];           /* logical name */
+   char actfile[MAXFNAMELEN];           /* actual file name */
    long stindex;                        /* start sample to extract */
    long enindex;                        /* end sample to extract */
 }ExtFile;
@@ -131,7 +131,7 @@ static int extFileUsed = 0;             /* total ext files in buffer */
 char * RegisterExtFileName(char *s)
 {
    char *eq,*rb,*lb,*co;
-   char buf[1024];
+   char buf[MAXFNAMELEN];
    ExtFile *p;
 
    if (!extendedFileNames)
@@ -699,7 +699,7 @@ static char *defargs[2]={ "<Uninitialised>", "" };
 static char **arglist=defargs;/* actual arg list */
 static FILE *script = NULL;   /* script file if any */
 static int scriptcount = 0;   /* num words in script */
-static char scriptBuf[256];   /* buffer for current script arg */
+static char scriptBuf[MAXSTRLEN];   /* buffer for current script arg */
 static Boolean scriptBufLoaded = FALSE;
 static Boolean wasQuoted;     /* true if next arg was quoted */
 static ConfParam *cParm[MAXGLOBS];      /* config parameters */
@@ -953,7 +953,7 @@ static Boolean FilterSet(IOFilter filter, char *s)
 void SubstFName(char *fname, char *s)
 {
    char *p;
-   char buf[1028];
+   char buf[MAXFNAMELEN+4];
 
    while ((p=strchr(s,'$')) != NULL){
       *p = '\0'; ++p;
@@ -975,7 +975,7 @@ FILE *FOpen(char *fname, IOFilter filter, Boolean *isPipe)
    FILE *f;
    int i;
    Boolean isInput;
-   char mode[8],cmd[1028];
+   char mode[8],cmd[MAXFNAMELEN+4];
 
    if (filter <= NoFilter){ /* then input */
       isInput = TRUE;
@@ -1848,7 +1848,7 @@ char * PathOf(char *fn, char *s)
 /* EXPORT->ExtnOf: extension part of fn */
 char * ExtnOf(char *fn, char *s)
 {
-   char *t,buf[100];
+   char *t,buf[MAXSTRLEN];
    
    NameOf(fn,buf);
    t = strrchr(buf,'.');

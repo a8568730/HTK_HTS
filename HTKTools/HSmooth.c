@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hsmooth_version = "!HVER!HSmooth:   3.4 [CUED 25/04/06]";
-char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.7 2008/05/30 07:19:10 zen Exp $";
+char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.8 2008/06/24 03:19:04 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -565,7 +565,7 @@ void CreateMonoList(void)
    int i,j;
    Boolean found;
    LabId list[MAXMONOPHONES], id;
-   char buf[255];
+   char buf[MAXSTRLEN];
    MLink q;
 
    nPhones = 0;
@@ -602,7 +602,7 @@ int LoadASet(LabId x)
    HLink hmm;
    MLink q;
    LabId id;
-   char *aid,buf[255];
+   char *aid,buf[MAXSTRLEN];
    
    aSize = 0;
    for (i=0; i<MACHASHSIZE; i++)

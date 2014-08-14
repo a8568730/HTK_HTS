@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hslab_version = "!HVER!HSLab:   3.4 [CUED 25/04/06]";
-char *hslab_vc_id = "$Id: HSLab.c,v 1.5 2008/05/30 07:19:10 zen Exp $";
+char *hslab_vc_id = "$Id: HSLab.c,v 1.6 2008/06/24 03:19:04 zen Exp $";
 
 /* 
    --------------------------------------------------------------
@@ -436,7 +436,7 @@ Wave Record(long *nSamples, HTime *sampPeriod)
    Boolean done;
    HEventRec hev;
    BarType tm, vu;
-   char sbuf[256];
+   char sbuf[MAXSTRLEN];
    long i, chunk;
    long nWaiting, nToRecord;
    SampleType *buf, smin, smax;
@@ -672,7 +672,7 @@ void PlotGStripes(int x, int y, int width, int height)
 void PrintMsg(RectWin *win, char *msg)
 {
    int sx, sy, pos, pad = 4;
-   char sbuf[256];
+   char sbuf[MAXSTRLEN];
 
    HSetXMode(GCOPY);
    DrawRectWin(win);
@@ -1358,7 +1358,7 @@ void RecordOp(OpType op, LLink p)
 void UndoOp(void)
 {
    Label p;
-   char sbuf[256];
+   char sbuf[MAXSTRLEN];
 
    if (undoEmpty)
       return;
@@ -1638,9 +1638,9 @@ void DoPlay(void)
 /* DoSpecial: execute external command if environment variable set */ 
 void DoSpecial(void)
 {
-   char strbuf[256];
-   char cmdstr[256];
-   char cmdfn[256];
+   char strbuf[MAXSTRLEN];
+   char cmdstr[MAXSTRLEN];
+   char cmdfn[MAXSTRLEN];
    
    if (CommandSet(HSLabCmd, cmdstr)){
       strcpy(cmdfn, PathOf(spfn, strbuf));
@@ -1976,7 +1976,7 @@ void DoSave(void)
 /* CheckForSave: check to see if changes have to be saved */
 void CheckForSave(void)
 {
-   char sbuf[255], *prompt = "Save label file (Y/N): ", c;
+   char sbuf[MAXSTRLEN], *prompt = "Save label file (Y/N): ", c;
    Boolean is0;
 
    if (!labsModified)
@@ -2037,7 +2037,7 @@ void CreateButtons(void)
    int btn_area_x;
    int btn_area_y;
    int x, y, w;
-   char cmdstr[256];
+   char cmdstr[MAXSTRLEN];
    HButton *btn;
 
    btn_area_w = (int) (WIDTH *BTN_AREA_W);

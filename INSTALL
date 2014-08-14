@@ -23,5 +23,6 @@ And then apply HTS-2.1_for_HTK-3.4.patch for HTK-3.4 as
 Finally configure and compile it.
 
 Please refer to "Compiling & Installing HTK under UNIX/Linux, OS X or Cygwin"
-and "Compiling & Installing HTK under Windows" sections in htk/README for details.
+and "Compiling & Installing HTK under Windows" sections in htk/README for
+details.
 

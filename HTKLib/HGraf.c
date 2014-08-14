@@ -65,8 +65,8 @@
 /* ----------------------------------------------------------------- */
 
 char *hgraf_version = "!HVER!HGraf(X):   3.4 [CUED 25/04/06]";
-char *hgraf_vc_id = "$Id: HGraf.c,v 1.5 2008/05/30 07:19:16 zen Exp $";
-/* char *hgraf_vc_id = "$Id: HGraf.c,v 1.5 2008/05/30 07:19:16 zen Exp $"; */
+char *hgraf_vc_id = "$Id: HGraf.c,v 1.6 2008/06/24 03:19:08 zen Exp $";
+/* char *hgraf_vc_id = "$Id: HGraf.c,v 1.6 2008/06/24 03:19:08 zen Exp $"; */
 
 /*
    This is the X Windows implementation of HGraf.  It is server
@@ -499,7 +499,7 @@ void HFillArc(int x0,int y0,int x1,int y1,int stAngle,int arcAngle)
 void HPrintf(int x, int y, char *format, ...)
 {
    va_list arg;
-   char s[256];
+   char s[MAXSTRLEN];
    
    va_start(arg, format);
    vsprintf(s, format, arg);
@@ -707,7 +707,7 @@ void RedrawHButton(HButton *btn)
    int pad = 2;
    int x, y, w, h, r, s, pos;
    HPoint poly[9], shad[4];
-   char sbuf[256], nullchar = '\0';
+   char sbuf[MAXSTRLEN], nullchar = '\0';
    
    x = btn->x;   y=btn->y;   w=btn->w;   h=btn->h;   r=3; s=1;
 
@@ -868,7 +868,7 @@ static void InitGlobals(void)
 /* EXPORT-> MakeXGraf: Connect to the X-server and init globals */
 void MakeXGraf(char *wname, int x, int y, int w, int h, int bw)
 {
-   char sbuf[256], *hgraf = "HGraf";
+   char sbuf[MAXSTRLEN], *hgraf = "HGraf";
    Window window, parent;
    XSetWindowAttributes setwinattr;
    unsigned long vmask;

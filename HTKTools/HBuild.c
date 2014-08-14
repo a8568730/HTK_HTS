@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hbuild_version = "!HVER!HBuild:   3.4 [CUED 25/04/06]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 1.7 2008/05/30 07:19:09 zen Exp $";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.8 2008/06/24 03:19:04 zen Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.
@@ -687,7 +687,7 @@ void NumberEntries(WPGrammar *wpg, Word sentEnd)
 void ReadWPGrammar(WPGrammar *wpg, Vocab * voc, char *gramFn)
 {
    FILE *gf;
-   char buf[255];
+   char buf[MAXSTRLEN];
    int ch;
    Word newWord;
    GramEntry *newGram = NULL;

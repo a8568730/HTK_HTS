@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hhed_version = "!HVER!HHEd:   3.4 [CUED 25/04/06]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.64 2008/06/10 06:01:48 zen Exp $";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.67 2008/06/23 09:21:09 zen Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -143,6 +143,7 @@ static char * hmmDir = NULL;     /* directory to look for hmm def files */
 static char * hmmExt = NULL;     /* hmm def file extension */
 static char * newDir = NULL;     /* directory to store new hmm def files */
 static char * newExt = NULL;     /* extension of new edited hmm files */
+static char * hmmListFn = NULL;  /* HMM list file */
 static Boolean noAlias = FALSE;  /* set to zap all aliases in hmmlist */
 static Boolean inBinary = FALSE; /* set to save models in binary */
 static char * mmfFn  = NULL;     /* output MMF file, if any */
@@ -255,6 +256,7 @@ void Summary(void)
    printf("                       and then saved to filename\n");
    printf("IX filename          - Set the Input Xform to filename\n");
    printf("JO size floor        - Set size and min mix weight for a JOin\n");
+   printf("JM hmmFile itemlist  - Join Models on stream or state level\n");
    printf("LS statsfile         - Load named statsfile\n");
    printf("LT filename          - Load Questions and Trees from filename\n");
    printf("MD n itemlist        - MixDown command, change mixtures in itemlist to n\n");
@@ -336,7 +338,7 @@ int main(int argc, char *argv[])
    if (NumArgs() == 0) Exit(0);
    SetConfParms();
  
-   CreateHeap(&hmmHeap,"Model Heap",MSTAK,1,1.0,40000,400000);
+   CreateHeap(&hmmHeap,"Model Heap",MSTAK,1,1.0,40000,1600000);
    CreateHMMSet(&hSet,&hmmHeap,TRUE);hset=&hSet;fidx=0;
 
    while (NextArg() == SWITCHARG) {
@@ -409,7 +411,8 @@ int main(int argc, char *argv[])
    if (NumArgs()>1)
       HError(2619,"HHEd: Unexpected extra args on command line");
 
-   Initialise(GetStrArg());
+   hmmListFn = GetStrArg();
+   Initialise(hmmListFn);
 
    if (hset->logWt == TRUE) HError(999,"HHEd requires linear weights");
 
@@ -3731,7 +3734,10 @@ void BuildTree (ILink ilist, double threshold, char *macRoot, char *pattern)
          threshold = MDLfactor * 0.5 * (double)numParam * (N-2) * log(count);
       else  /* state-level or stream-level clustering */
          threshold = MDLfactor * 0.5 * (double)numParam * log(node->occ);
-      
+
+      if (threshold<0.0)
+         threshold = 0.0;
+
       if (trace & T_BID) { 
          printf("based on MDL criterion, threshold=%e", threshold);
          fflush(stdout);
@@ -4429,17 +4435,17 @@ void ConvertModelsCommand(void)
       ApplyHMMSetXForm(hset, hset->parentXForm, TRUE);
    if (hset->curXForm!=NULL)
       ApplyHMMSetXForm(hset, hset->curXForm, TRUE);
-
+   
    /* start conversion */
    strcpy(head,"pdf.");
-
+   
    for (s=1; s<=hset->swidth[0]; s++) {
       nMix = MaxMixInSetS(hset, s);
       if ((hset->msdflag[s] && nMix>2) || (!hset->msdflag[s] && nMix>1)) 
          HError(9999,"ConvertModels: Only single mixture system is supported");
       out[s]=FALSE;
-}
-
+   }
+   
    for (s=1; s<=hset->swidth[0]; s++) {
       if (!out[s]) {
          /* output vector size and number of pdfs for each tree */
@@ -4650,6 +4656,7 @@ void RenameHMMSetIdCommand(void)
 }
 
 /* -------------------- CL - Clone Command ---------------------- */
+
 
 void SwapLists(HMMSet *set,HMMSet *list)
 {
@@ -6386,7 +6393,7 @@ void ImposeTreeCommand (void)
 
    if (treeList == NULL)
       HError(2662,"ImposeTreeCommand: there are no existing trees");
-   
+                  
    for (tree=treeList; tree!=NULL; tree=tree->next) {
       /* set active stream flag */
       ClearSet(streams);
@@ -6407,7 +6414,7 @@ void ImposeTreeCommand (void)
                   TriStrip(buf); 
                   MapTreeName(buf);
                   tid = GetLabId(buf,FALSE);
-   }
+               }
                
                if (((usePattern && IPatMatch(buf, tree->patList)) 
                  || singleTree 
@@ -7131,7 +7138,7 @@ Boolean PureStream (CoList *list)
    
    if (list==NULL)
       return TRUE;
-
+      
    stream = list->stream;
 
    for (c=list->next; c!=NULL; c=c->next)
@@ -7149,7 +7156,7 @@ int MaxVecSize (CoList *list)
    
    if (list==NULL)
       return 0;
-      
+
    vSize = VectorSize(list->mp->mean);
 
    for (c=list->next; c!=NULL; c=c->next)
@@ -7511,17 +7518,17 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
             c1 = c1->next;
          }
             numLeft++;
-         }
-         else {
-            if (c2==NULL)
-               c2 = ch2->list = c;
-            else {
-               c2->next = c;
-               c2 = c2->next;
-            }
-            numRight++;
-         }
       }
+      else {
+         if (c2 == NULL)
+            c2 = ch2->list = c;
+         else {
+            c2->next = c;
+            c2 = c2->next;
+         }
+            numRight++;
+      }
+   }
       else if (!parent->pureStream) {
          /* stream is not pure */
          if (c->stream == s) {
@@ -7530,7 +7537,7 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
             else {
                c1->next = c;
                c1 = c1->next;
-            }
+}
             numLeft++;
          }
          else {
@@ -7552,14 +7559,14 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
                c1 = c1->next;
             }
             numLeft++;
-      }
-      else {
-         if (c2 == NULL)
-            c2 = ch2->list = c;
-         else {
-            c2->next = c;
-            c2 = c2->next;
          }
+         else {
+            if (c2==NULL)
+               c2 = ch2->list = c;
+            else {
+               c2->next = c;
+               c2 = c2->next;
+            }
             numRight++;
          }
       }
@@ -7567,9 +7574,10 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
 
    ch1->nComponents = numLeft;
    ch2->nComponents = numRight;
-   if (c1 != NULL)
+
+   if (c1!=NULL)
       c1->next = NULL;
-   if (c2 != NULL)
+   if (c2!=NULL)
       c2->next = NULL;
 }
 
@@ -7580,22 +7588,22 @@ void ClusterChildren (RNode *parent, RNode *ch1, RNode *ch2)
    double oldDistance, newDistance=0.0 ;
 
    if (parent->pureStream && parent->pureVecSize) {
-   do {
-      iter+=1;
-      if (iter >= MAX_ITER)
-         break;
+      do {
+         iter+=1;
+         if (iter >= MAX_ITER)
+            break;
          CalcDistance(parent->list, ch1, ch2);
-      if (iter == 1)
-         oldDistance = ((ch1->clusterScore + ch2->clusterScore) / 
-            (ch1->clustAcc + ch2->clustAcc)) + thresh + 1;
-      else
-         oldDistance = newDistance ;
-      newDistance = (ch1->clusterScore + ch2->clusterScore) / 
-         (ch1->clustAcc + ch2->clustAcc) ;
-      if (trace & T_CLUSTERS) {
          if (iter == 1)
-            printf("Iteration %d: Distance = %e\n", iter, newDistance);
+            oldDistance = ((ch1->clusterScore + ch2->clusterScore) / 
+                           (ch1->clustAcc + ch2->clustAcc)) + thresh + 1;
          else
+            oldDistance = newDistance ;
+         newDistance = (ch1->clusterScore + ch2->clusterScore) / 
+                       (ch1->clustAcc + ch2->clustAcc) ;
+         if (trace & T_CLUSTERS) {
+            if (iter == 1)
+               printf("Iteration %d: Distance = %e\n", iter, newDistance);
+            else
                printf("Iteration %d: Distance = %e, Delta = %e\n", iter, newDistance, oldDistance - newDistance);
          fflush(stdout);
       }
@@ -8038,6 +8046,221 @@ void ReOrderFeaturesCommand()
    FreeVector(&gstack, tmpv);
    FreeVector(&gstack, tmpm);
    FreeIntVec(&gstack,frv);
+}
+
+/* ----------------- JoinModel Command -------------------- */
+
+void JoinModelByState (ILink ilist, HMMSet *srcSet, HMMSet *dstSet)
+{
+   HLink hmm;
+   ILink p;
+   MLink mSrc, mDst;
+   StateElem *se;
+   StateInfo *si;
+   int j;
+   int state, N;
+
+   hmm = ilist->owner;
+   N = hmm->numStates;
+
+   for (j=2,state=0; j<hmm->numStates; j++)
+      if (hmm->svec+j==(StateElem *)ilist->item) {
+         state = j;
+         break;
+      }
+
+   if (state==0)
+      HError(2663,"JoinModelByState: cannot find state index");
+
+   for (p=ilist; p!=NULL; p=p->next) {
+      se = (StateElem *)p->item;
+      si = se->info;
+
+      mSrc = FindMacroStruct(srcSet,'s',si);
+      if (mSrc!=NULL) {  /* shared state */
+         mDst = FindMacroName(dstSet, 's', mSrc->id);
+
+         if (mDst==NULL) {
+            mDst = NewMacro(dstSet, mSrc->fidx, 's', mSrc->id, mSrc->structure);
+            si = (StateInfo *) mDst->structure;
+
+            if (trace&T_DET) {
+               printf(" Adding macro(state=%d) %s\n", state, mSrc->id->name);
+               fflush(stdout);
+            }
+         }
+         else {  /* already existed, update si */
+            si = (StateInfo *) mDst->structure;
+         }
+      }
+      else {  /* not a shared state */
+         if (trace&T_DET) {
+            mSrc = FindMacroStruct(srcSet,'h',p->owner);
+            HError(-2663,"JoinModelByState: not a shared stream (state=%d) in macro %s\n", state, mSrc->id->name);
+         }
+      }
+
+      /* then handle state itself */
+      mSrc = FindMacroStruct(srcSet, 'h', p->owner);
+      mDst = FindMacroName  (dstSet, 'h', mSrc->id);
+
+      (((HLink)mDst->structure)->svec + state)->info = si;
+   }
+
+   return;
+}
+
+void JoinModelByStream (ILink ilist, HMMSet *srcSet, HMMSet *dstSet)
+{
+   HLink hmm;
+   ILink p;
+   MLink mSrc, mDst;
+   StateElem *se;
+   StateInfo *si;
+   StreamElem *ste;
+   StreamInfo *sti;
+   int j, s;
+   int state, N;
+
+   hmm = ilist->owner;
+   N = hmm->numStates;
+
+   state = 0;
+   if (ilist->owner==ilist->item) {  /* never go here */
+      HError(-2663,"JoinModelByStream: Join Model on model level is not supported.\n");
+      state=-1;
+      return;
+   }
+   else {
+      for (j=2,state=0; j<hmm->numStates; j++)
+         if (hmm->svec+j==(StateElem *)ilist->item) {
+            state = j;
+            break;
+         }
+   }
+
+   if (state==0)
+      HError(2663,"JoinModelByStream: cannot find state index");
+
+   for (p=ilist; p!=NULL; p=p->next) {
+      se = (StateElem *) p->item;
+      si = se->info;
+
+      for(s=1; s<=srcSet->swidth[0]; s++) {
+         if (streams.set[s]) {
+            /* Merge this stream from srcSet to dstSet */
+            ste = si->pdf+s;
+            sti = ste->info;
+
+            /* First we handle shared macro */
+            mSrc = FindMacroStruct(srcSet,'p',sti);
+            if (mSrc!=NULL) {  /* shared stream */
+               mDst = FindMacroName(dstSet, 'p', mSrc->id);
+
+               if (mDst==NULL) {
+                  mDst = NewMacro(dstSet, mSrc->fidx, 'p', mSrc->id, mSrc->structure);
+                  sti = (StreamInfo *)mDst->structure;
+                  if (trace&T_DET) {
+                     printf(" Adding macro (state=%d, stream=%d) %s\n", state, s, mSrc->id->name);
+                     fflush(stdout);
+                  }
+               }
+               else {  /* already existed, update sti */
+                  sti = (StreamInfo *)mDst->structure;
+               }
+            }
+            else {
+               /* Not a shared stream */
+               if (trace & T_DET) {
+                  mSrc = FindMacroStruct(srcSet,'h',p->owner);
+                  HError(-2663,"JoinModelByStream: not a shared stream(state=%d, stream=%d) in macro %s\n", state, s, mSrc->id->name);
+               }
+            }
+
+            /* Then we handle stream itself */
+            mSrc = FindMacroStruct(srcSet, 'h', p->owner);
+            mDst = FindMacroName  (dstSet, 'h', mSrc->id);
+
+            (((((HLink)mDst->structure)->svec + state)->info)->pdf+s)->info = sti;
+         }
+      }
+   }
+
+   return;
+}
+
+void JoinModelCommand (void)
+{
+   HMMSet tmpSet;
+   HMMSet * tmpset;
+   char buf[MAXSTRLEN];
+
+   ILink ilist=NULL;  /* list of items to tie */
+   char type=' ';     /* type of items to tie */
+   char *pattern,*p;  /* pattern of items to use */
+   int s;
+
+   ChkedAlpha("MMF file name", buf);
+
+   CreateHMMSet(&tmpSet,&hmmHeap,TRUE);
+   tmpset = &tmpSet;
+   if(MakeHMMSet(&tmpSet,hmmListFn)<SUCCESS)
+      HError(2628,"JoinModelCommand: MakeHMMSet failed");
+   AddMMF(&tmpSet,buf);
+   if(LoadHMMSet(&tmpSet,NULL,NULL)<SUCCESS)
+      HError(2628,"JoinModelCommand: LoadHMMSet failed");
+
+   if (hset->swidth[0]!=tmpset->swidth[0])
+      HError(2630,"JoinModelCommand: num streams incompatible");
+   if (hset->pkind!=tmpset->pkind)
+      HError(2630,"JoinModelCommand: different parameter kinds");
+   if (hset->numLogHMM!=tmpset->numLogHMM)
+      HError(2630,"JoinModelCommand: different number of logical HMMs");
+   if (hset->numPhyHMM!=tmpset->numPhyHMM)
+      HError(2630,"JoinModelCommand: different number of physical HMMs");
+   ClearSet(streams);
+   pattern = PItemList(&ilist,&type,tmpset,&source,&streams,0,0,(trace&T_ITM)?TRUE:FALSE);
+
+   printf("JM %s %s\n", buf, pattern);
+
+   /* extract specified model pattern */
+   if (type!='h') {
+      if ((p=strchr(pattern, '.'))==NULL)
+         HError(9999, "JoinModelCommand: Specified pattern does not include any dot");
+      *p = '}'; *(p+1) = '\0';
+   }
+
+   if (ilist==NULL) {
+      HError(-2631,"JoinModelCommand: No items to cluster\n");
+      return;
+   }
+
+   if (type=='h' || type=='s')
+      for (s=1;s<=hset->swidth[0];s++)
+         streams.set[s] = TRUE;
+
+   switch(type) {
+   case 's':
+      JoinModelByState(ilist, tmpset, hset); break;
+   case 'p':
+      JoinModelByStream(ilist, tmpset, hset); break;
+   case 'h':
+   default:
+      HError(2663,"JoinModelCommand: type %c is not supported", type);
+      break;
+   }
+
+   if (CheckHSet(hset)<SUCCESS){
+      ResetHMMSet(hset);
+      HRError(7031,"LoadHMMSet: Invalid HMM data");
+      return;
+   }
+
+   SetIndexes(hset);
+   SetCovKindUsage(hset);
+   SetParmHMMSet(hset);
+
+   return;
 }
 
 /* ----------------- DR - Convert decision trees to a regression tree for adaptation --------------- */
@@ -8569,8 +8792,8 @@ void CommentCommand()
 void Initialise(char *hmmListFn)
 {
   
-   CreateHeap(&questHeap,"Question Heap",MSTAK,1,1.0,8000,16000);
-   CreateHeap(&tmpHeap,"Temporary Heap",MSTAK,1,1.0,40000,400000);
+   CreateHeap(&questHeap,"Question Heap",MSTAK,1,1.0,8000,200000);
+   CreateHeap(&tmpHeap,"Temporary Heap",MSTAK,1,1.0,40000,1600000);
 
 
    if(MakeHMMSet(&hSet,hmmListFn)<SUCCESS)
@@ -8598,21 +8821,21 @@ void Initialise(char *hmmListFn)
 /* -------------------- Top Level of Editing ---------------- */
 
 
-static int  nCmds = 50;
+static int  nCmds = 51;
 
 static char *cmdmap[] = {"AT","RT","SS","CL","CM","CO","CT","JO","MU","TI","UF","NC",
                          "TC","UT","MT","SH","SU","SW","SK",
                          "RC",
                          "RO","RM","RN","RP",
                          "LS","QS","TB","TR","AU","GQ","MD","ST","LT",
-                         "MM","DP","HK","FC","DV","FA","FV","IX","PX","AX","PS","PR","DR","DM","IT","//","" };
+                         "MM","DP","HK","FC","DV","FA","FV","IX","PX","AX","PS","PR","DR","DM","IT","JM","//","" };
 
 typedef enum           { AT=1,RT , SS , CL , CM , CO , CT , JO , MU , TI , UF , NC ,
                          TC , UT , MT , SH , SU , SW , SK ,
                          RC ,
                          RO , RM , RN , RP ,
                          LS , QS , TB , TR , AU , GQ , MD , ST , LT ,
-                         MM , DP , HK , FC , DV, FA , FV , IX , PX , AX , PS , PR , DR , DM , IT, XX }
+                         MM , DP , HK , FC , DV , FA , FV , IX , PX , AX , PS , PR , DR , DM , IT , JM , XX }
 cmdNum;
 
 /* CmdIndex: return index 1..N of given command */
@@ -8695,6 +8918,7 @@ void DoEdit(char * editFn)
       case PR: ProjectCommand(); break;
       case DR: DecTrees2RegTreeCommand(); break;
       case IT: ImposeTreeCommand (); break;
+      case JM: JoinModelCommand(); break;
       case XX: CommentCommand(); break;
       default: 
          HError(2650,"DoEdit: Command %s not recognised",cmds);

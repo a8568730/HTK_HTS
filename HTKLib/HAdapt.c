@@ -77,7 +77,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hadapt_version = "!HVER!HAdapt:   3.4  [CUED 25/04/06]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.48 2008/06/16 12:13:02 jyamagi Exp $";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.49 2008/06/18 13:15:13 zen Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>
@@ -4551,8 +4551,8 @@ Boolean GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes, int xfindex)
          else 
             HError(999,"Not currently supported");
       }
-      
-   Dispose(&gstack,accs);
+
+      Dispose(&gstack,accs);
       return TRUE;
    }else{
       return FALSE;
@@ -4587,43 +4587,45 @@ static Boolean GenClassXForm(XFInfo *xfinfo)
   }
   classes = CreateIntVec(&gstack,bclass->numClasses);
   for (b=1;b<=bclass->numClasses;b++) {
+      if (GetBaseClassVSize(bclass,b)>0) {
      ZeroIntVec(classes); classes[b] = 1;
     /* Accumulate structure regenerated each time as this will handle
        streams of different sizes simply */
-      blockSize = GetBlockSize(xfinfo,b);
-      bandWidth = GetBandWidth(xfinfo,b,blockSize);
+         blockSize = GetBlockSize(xfinfo,b);
+         bandWidth = GetBandWidth(xfinfo,b,blockSize);
      if (strmProj)
-         accs = CreateAccStruct(&gstack,xfinfo,xform->hset->vecSize,blockSize,bandWidth);
+            accs = CreateAccStruct(&gstack,xfinfo,xform->hset->vecSize,blockSize,bandWidth);
      else     
-         accs = CreateAccStruct(&gstack,xfinfo,GetBaseClassVSize(bclass,b),blockSize,bandWidth);
+            accs = CreateAccStruct(&gstack,xfinfo,GetBaseClassVSize(bclass,b),blockSize,bandWidth);
     for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
       mp = ((MixtureElem *)i->item)->mpdf;
       AccMixPDFStats(xform->hset,mp,accs);
     }
     /* Use last component of the baseclass to access baseclass stats */
     if (AccAdaptBaseTriMat(xform))  AccBaseClassStats(mp,accs);
-
-      /* get threshold for this base class */
-      s = bclass->stream[b];
-      GetSplitThresh(xfinfo,thresh);
-      
-      printf("Class %d (stream=%d, vsize=%d", b, s, accs->dim);
-      if (xform->xformSet->xkind!=SEMIT)
-         printf(",occ=%f)\n", accs->occ);
-      else
-         printf(")\n"); 
-
-      if ((accs->dim>0) && ((xform->xformSet->xkind==SEMIT) || (accs->occ > thresh[s]))) {
-         EstXForm(accs,xfinfo,classes);
+   
+         /* get threshold for this base class */
+         s = bclass->stream[b];
+         GetSplitThresh(xfinfo,thresh);
+         
+         printf("Class %d (stream=%d, vsize=%d", b, s, accs->dim);
+         if (xform->xformSet->xkind!=SEMIT)
+            printf(",occ=%f)\n", accs->occ);
+         else
+            printf(")\n"); 
+   
+         if ((accs->dim>0) && ((xform->xformSet->xkind==SEMIT) || (accs->occ > thresh[s]))) {
+            EstXForm(accs,xfinfo,classes);
       xform->xformWgts.assign[b] = xform->xformSet->numXForms;
       if (mllrDiagCov) 
 	diagCovXForm->xformWgts.assign[b] = diagCovXForm->xformSet->numXForms;
-      } 
-      else {
+         } 
+         else {
        xform->xformWgts.assign[b] = 0;
     }
     Dispose(&gstack,accs);
   }
+   }
   return TRUE;
 }
 

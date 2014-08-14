@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hled_version = "!HVER!HLEd:   3.4 [CUED 25/04/06]";
-char *hled_vc_id = "$Id: HLEd.c,v 1.8 2008/05/30 07:19:09 zen Exp $";
+char *hled_vc_id = "$Id: HLEd.c,v 1.9 2008/06/24 03:19:04 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1426,7 +1426,7 @@ void DeleteLevel(Transcription *ltr,int lev)
 void EditFile(char *labfn)
 {
    ScriptItem *i;
-   char outfn[255];
+   char outfn[MAXFNAMELEN];
    int m,d,r,c,a,clev,nlev,list;
    Transcription *ct,*levs,*at;
    LabList *ll,*rl;

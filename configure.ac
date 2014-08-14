@@ -66,9 +66,10 @@
 # ----------------------------------------------------------------- #
 
 # After editing this file, run "autoconf" to regenerate "configure".
-AC_INIT(HTS,2.1RC2, hts-users@sp.nitech.ac.jp)
+AC_INIT(HTS,2.1, hts-users@sp.nitech.ac.jp)
 AC_COPYRIGHT(Copyright 2003-2005 University of Cambridge)
-AC_COPYRIGHT(Copyright 2001-2008 Nagoya Institute of Technology and Tokyo Institute of Technology)
+AC_COPYRIGHT(Copyright 2001-2008 Nagoya Institute of Technology)
+AC_COPYRIGHT(Copyright 2001-2008 Tokyo Institute of Technology)
 
 AC_PREFIX_DEFAULT(/usr/local/HTS-2.1)
 
@@ -182,7 +183,6 @@ case "$host_cpu" in
 		;;
 esac
 
-
 case "$host" in
 		*x86_64*linux*)
 		CFLAGS="-ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
@@ -245,6 +245,38 @@ case "$host" in
 				LIBEXT=dylib
 		;;				
 esac
+
+# define MAXSTRLEN if users want to change it to other value
+AC_ARG_VAR([MAXSTRLEN],[max length of strings (default=256)])
+if test -n "$MAXSTRLEN" -a $MAXSTRLEN!=256; then
+	AC_MSG_CHECKING(user-defined maximum length of strings)
+	CFLAGS="$CFLAGS -DMAXSTRLEN=$MAXSTRLEN"
+	AC_MSG_RESULT($MAXSTRLEN)
+fi
+
+# define MAXFNAMELEN if users want to change it to other value
+AC_ARG_VAR([MAXFNAMELEN],[max length of file names (default=1024)])
+if test -n "$MAXFNAMELEN" -a $MAXFNAMELEN!=1024; then
+	AC_MSG_CHECKING(user-defined maximum length of file names)
+	CFLAGS="$CFLAGS -DMAXFNAMELEN=$MAXFNAMELEN"
+	AC_MSG_RESULT($MAXFNAMELEN)
+fi
+
+# define PAT_LEN if users want to change it to other value
+AC_ARG_VAR([PAT_LEN],[max length of patterns (default=2048)])
+if test -n "$PAT_LEN" -a $PAT_LEN!=2048; then
+	AC_MSG_CHECKING(user-defined maximum length of file names)
+	CFLAGS="$CFLAGS -DPAT_LEN=$PAT_LEN"
+	AC_MSG_RESULT($PAT_LEN)
+fi
+
+# define SMAX if users want to change it to other value
+AC_ARG_VAR([SMAX],[max number of streams (default=9)])
+if test -n "$SMAX" -a $SMAX!=9; then
+	AC_MSG_CHECKING(user-defined maximum number of streams)
+	CFLAGS="$CFLAGS -DSMAX=$SMAX"
+	AC_MSG_RESULT($SMAX)
+fi
 
 
 # Process customised options

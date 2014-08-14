@@ -754,7 +754,7 @@ int main(int argc, char *argv[])
                strcpy (datafn_lat, datafn);
 
             if(nDenLats > 0){ /* Load denominator (recognition) lattices. */
-               char buf1[1024],buf2[1024],buf3[1024];
+               char buf1[MAXFNAMELEN],buf2[MAXFNAMELEN],buf3[MAXFNAMELEN];
                if ( denLatSubDirPat[0] )
                   if ( !MaskMatch( denLatSubDirPat , buf1 , datafn_lat ) )
                      HError(2319,"HERest: mask %s has no match with segemnt %s" , denLatSubDirPat , datafn_lat );
@@ -785,7 +785,7 @@ int main(int argc, char *argv[])
             }
 
             if(nNumLats > 0){  /* Load numerator (correct transcription) lattices. */
-               char buf1[1024],buf2[1024],buf3[1024];
+               char buf1[MAXFNAMELEN],buf2[MAXFNAMELEN],buf3[MAXFNAMELEN];
                if ( numLatSubDirPat[0] )
                   if ( !MaskMatch( numLatSubDirPat , buf1 , datafn_lat ) )
                      HError(2319,"HERest: mask %s has no match with segemnt %s" , numLatSubDirPat , datafn_lat );
@@ -959,7 +959,7 @@ int main(int argc, char *argv[])
 
 void Initialise(char *hmmListFn)
 {  
-   char buf[256];
+   char buf[MAXSTRLEN];
 
    CreateHeap(&transStack,   "transStore",    MSTAK, 1, 0.5, 1000,  10000);
    CreateHeap(&accStack,   "accStore",    MSTAK, 1, 1.0, 50000,  500000);

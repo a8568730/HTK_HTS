@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hcopy_version = "!HVER!HCopy:   3.4 [CUED 25/04/06]";
-char *hcopy_vc_id = "$Id: HCopy.c,v 1.5 2008/05/30 07:19:08 zen Exp $";
+char *hcopy_vc_id = "$Id: HCopy.c,v 1.6 2008/06/24 03:19:04 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -135,7 +135,7 @@ static Wave wv;                 /* main waveform; cat all input to this */
 static ParmBuf pb;              /* main parmBuf; cat input, xform wv to this */
 static Transcription *trans=NULL;/* main labels; cat all input to this */
 static Transcription *tr;       /* current transcription */
-static char labFile[255];       /* current source of trans */
+static char labFile[MAXSTRLEN]; /* current source of trans */
 static HTime off = 0.0;         /* length of files appended so far */
 
 /* ---------------- Memory Management ------------------------- */

@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hresults_version = "!HVER!HResults:   3.4 [CUED 25/04/06]";
-char *hresults_vc_id = "$Id: HResults.c,v 1.8 2008/05/30 07:19:08 zen Exp $";
+char *hresults_vc_id = "$Id: HResults.c,v 1.9 2008/06/24 03:19:04 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -133,7 +133,7 @@ MemHeap tempHeap;                     /* Stores data valid only for file */
 MemHeap permHeap;                     /* Stores global stats */
 
 static char *recfn;                   /* rec file name (test) */
-static char labfn[255];               /* lab file name (reference) */
+static char labfn[MAXSTRLEN];         /* lab file name (reference) */
 
 static int rlev=0;                    /* Label level to be used as ref */
 static int tlev=0;                    /* Label level to be scored */
@@ -141,7 +141,7 @@ static LabList *ref,*test;            /* the labels being compared */
 static Transcription *ans;            /* the full set of answers */
 
 static char * refid=NULL;             /* identifiers for reference material */
-static char recid[5][255];            /* upto 5 identifiers for */
+static char recid[5][MAXSTRLEN];      /* upto 5 identifiers for */
 static int recidUsed = 0;             /* number of test identifiers set */
 
 
@@ -409,7 +409,7 @@ void NormaliseName(LabList *ll,int lev)
    LLink l;
    Equiv *p;
    int i,n,len;
-   char buf[256],*ptr;
+   char buf[MAXSTRLEN],*ptr;
 
    n=CountAuxLabs(ll,lev);
    for (p=eqlist; p!=NULL; p=p->next) {
@@ -657,10 +657,10 @@ void PClip(char * instr, char *outstr, int max)
 /* PrintHeader: print title information */
 void PrintHeader(void)
 {
-   char datestr[255];
+   char datestr[MAXSTRLEN];
    time_t clock = time(NULL);
    int i;
-   char buf[100];
+   char buf[MAXSTRLEN];
 
    strcpy(datestr,ctime(&clock));
    datestr[strlen(datestr)-1] = '\0';
@@ -707,7 +707,7 @@ void PrintFileStats(char *fn, int h, int d, int s, int i)
    float accuracy,correct;
    float psub,pdel,pins,perr;
    int nc;
-   char buf[100];
+   char buf[MAXSTRLEN];
    
    if (!headerPrinted) {
       PrintHeader();

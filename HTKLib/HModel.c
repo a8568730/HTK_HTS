@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmodel_version = "!HVER!HModel:   3.4 [CUED 25/04/06]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.28 2008/05/30 07:19:14 zen Exp $";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.30 2008/06/24 03:19:08 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -135,7 +135,7 @@ static Boolean reorderComps=FALSE;      /* re-order mixture components (PDE) */
 
 static Boolean allowOthers=TRUE;        /* allow unseen models in files */
 static HSetKind cfHSKind;
-static char orphanMacFile[100];         /* last resort file for new macros */
+static char orphanMacFile[MAXSTRLEN];   /* last resort file for new macros */
 
 static MemHeap xformStack;              /* For Storage of xforms with no model sets ... */
 
@@ -423,8 +423,8 @@ static ReturnStatus CheckDiscrete(HMMSet *hset)
    return (SUCCESS);
 }
 
-/* CheckHSet: check the consistency of a complete HMM Set */
-static ReturnStatus CheckHSet(HMMSet *hset)
+/* EXPORT->CheckHSet: check the consistency of a complete HMM Set */
+ReturnStatus CheckHSet(HMMSet *hset)
 {
    int h;
    MLink m;

@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hparm_version = "!HVER!HParm:   3.4 [CUED 25/04/06]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.9 2008/05/30 07:19:14 zen Exp $";
+char *hparm_vc_id = "$Id: HParm.c,v 1.10 2008/06/24 03:19:08 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1154,7 +1154,7 @@ char *ParmKind2Str(ParmKind kind, char *buf)
 ParmKind Str2ParmKind(char *str)
 {
    ParmKind i = -1;
-   char *s,buf[255];
+   char *s,buf[MAXSTRLEN];
    Boolean hasE,hasD,hasN,hasA,hasT,hasF,hasC,hasK,hasZ,has0,hasV,found;
    int len;
    
@@ -1663,7 +1663,7 @@ static void DeleteColumn(float *data, int nUsed, int si, int d)
 static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf, 
                           int hdValid, int tlValid)
 {
-   char buf[100],buff1[256],buff2[256];
+   char buf[MAXSTRLEN],buff1[MAXSTRLEN],buff2[MAXSTRLEN];
    int si,ti,d=0,ds,de, i, j, step, size;
    short span[12];
    float *fp, mean, scale;
@@ -1897,7 +1897,7 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
     Conversion is applied to the single row pointed to by data. */ 
 static void DelQualifiers(float *data, IOConfig cf)
 {
-   char buf[100];
+   char buf[MAXSTRLEN];
    int si,d,used=cf->nUsed;
    short span[12];
    Boolean baseX,statX,eX,zX;
@@ -3987,7 +3987,7 @@ static void FillBufFromChannel(ParmBuf pbuf,int minRows)
    IOConfig cf = pbuf->cf;
    PBlock *pb,*lb;
    Boolean dis,cleared;
-   char b1[100];
+   char b1[MAXSTRLEN];
    int availRows,newRows,space,i,head,tail,nShift;
    short *sp1=NULL, *sp2;
    float *fp1=NULL, *fp2;

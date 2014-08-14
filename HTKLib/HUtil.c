@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hutil_version = "!HVER!HUtil:   3.4 [CUED 25/04/06]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.19 2008/06/06 05:52:52 zen Exp $";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.20 2008/06/23 09:15:55 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1431,7 +1431,7 @@ void ResetHooks(HMMSet *hset,char *what)
 void LoadStatsFile(char *statfile,HMMSet *hset,Boolean otrace)
 {
    Source src;
-   char hname[256];
+   char hname[MAXSTRLEN];
    int i,s,idx,count,N,lnum = 0;
    float x,tmp;
    HMMDef *hmm;

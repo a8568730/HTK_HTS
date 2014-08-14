@@ -117,10 +117,22 @@ extern "C" {
 #endif
 
 
+#ifndef MAXSTRLEN
 #define MAXSTRLEN 256    /* max length of a string */
-#define MAXFNAMELEN 1034 /* max length of a file name */
+#endif  /* MAXSTRLEN */
+
+#ifndef MAXFNAMELEN
+#define MAXFNAMELEN 1024 /* max length of a file name */
+#endif  /* MAXFNAMELEN */
+
+#ifndef PAT_LEN
 #define PAT_LEN 2048     /* max length of pattern */
+#endif  /* PAT_LEN */
+
+#ifndef SMAX
 #define SMAX      9      /* max num data streams + 1 */
+#endif  /* SMAX */
+
 #define MAXGLOBS  256    /* max num global config parms */
 
 #define SING_QUOTE '\''  /* character used as quote */

@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hdman_version = "!HVER!HDMan:   3.4 [CUED 25/04/06]";
-char *hdman_vc_id = "$Id: HDMan.c,v 1.7 2008/05/30 07:19:08 zen Exp $";
+char *hdman_vc_id = "$Id: HDMan.c,v 1.8 2008/06/24 03:19:04 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -762,7 +762,7 @@ void SkipHeader(Source *src, int skipHeaderLines)
 void CreateBuffer(char *dName, Boolean isInput)
 {
    DBuffer *db;
-   char buf[256],scriptFN[256],*src;
+   char buf[MAXSTRLEN],scriptFN[MAXFNAMELEN],*src;
    Boolean ReadNextWord(DBuffer *db);
 
    if (isInput) {
@@ -853,7 +853,7 @@ void LoadWordList(void)
 /* UCase: convert id to upper case and return new id */
 LabId UCase(LabId id)
 {
-   static char s[255];
+   static char s[MAXSTRLEN];
    int len,i;
 
    strcpy(s,id->name);
@@ -866,7 +866,7 @@ LabId UCase(LabId id)
 /* LCase: convert id to lower case and return new id */
 LabId LCase(LabId id)
 {
-   static char s[255];
+   static char s[MAXSTRLEN];
    int len,i;
 
    strcpy(s,id->name);
@@ -999,7 +999,7 @@ Boolean ReadNextWord(DBuffer *db)
 void WriteEntry(FILE *f, LabId word, LabId outsym, Pronunciation *p, int margin, Boolean findNew)
 {
    int i,st,en;
-   char buf[256],m[20];
+   char buf[MAXSTRLEN],m[20];
    
    if (p->nPhone == 0) return;
    if (!nullOutput) {
@@ -1175,7 +1175,7 @@ void DelDefOp(WordBuf *wb, LabId *args)
    Boolean found = FALSE;
    Pronunciation *p;
    LabId *ph;
-   char buf[256];
+   char buf[MAXSTRLEN];
 
    if (wb->word == *args){
       for (i=0; !found && i<wb->nPron; i++){
@@ -1211,7 +1211,7 @@ void DelDefOp(WordBuf *wb, LabId *args)
 void FunctionWordOp(WordBuf *wb, LabId *args)
 {
    int i,j;
-   static char s[255];
+   static char s[MAXSTRLEN];
    Pronunciation *p;
    
    if (IsInIdList(wb->word,args)) 
@@ -1442,7 +1442,7 @@ void AppendSilenceOp(WordBuf *wb, LabId *args)
 /* MakeTriId:  concatenate args separated by - and +'s and return its id */
 LabId MakeTriId(LabId l, LabId c, LabId r)
 {
-   char buf[100];
+   char buf[MAXSTRLEN];
    LabId item;
    
    if (l!=NULL && l!=wdBnd && c!=wdBnd){

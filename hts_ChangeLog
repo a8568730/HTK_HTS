@@ -1,3 +1,65 @@
+2008-06-24 12:25  Heiga Zen
+
+	* configure, configure.ac, HTKLib/HShell.h: MAXFNAMELEN (max length
+	  of file names) and PAT_LEN (max length of patterns) can also be
+	  set through configure script (e.g., ./configure PAT_LEN=4096).
+
+2008-06-24 12:19  Heiga Zen
+
+	* HTKTools/HBuild.c, HTKTools/HCopy.c, HTKTools/HDMan.c,
+	  HTKTools/HLEd.c, HTKTools/HMMIRest.c, HTKTools/HResults.c,
+	  HTKTools/HSLab.c, HTKTools/HSmooth.c, HTKLib/HFBLat.c,
+	  HTKLib/HGraf.c, HTKLib/HGraf_WIN32.c, HTKLib/HModel.c,
+	  HTKLib/HParm.c, HTKLib/HShell.c, HTKLib/HWave.c, HTKLib/HLM.c,
+	  HTKLib/HLabel.c: Use MAXSTRLEN and MAXFNAMELEN instead of integer
+	  values.
+
+2008-06-24 12:16  Heiga Zen
+
+	* HTKTools/HERest.c: Remove unused variable.
+
+2008-06-23 18:23  Heiga Zen
+
+	* configure, configure.ac, HTKLib/HShell.h: SMAX (max # of streams)
+	  and MAXSTRLEN (max length of strings) now can be set through
+	  configure script (./configure MAXSTRLEN=1024).
+
+2008-06-23 18:21  Heiga Zen
+
+	* HTKTools/HHEd.c: Merge modification by Marcela Charfuelan:
+	  increase max # of elements of model, question, and temporary
+	  heaps.
+
+2008-06-23 18:15  Heiga Zen
+
+	* HTKLib/HUtil.c: Merge modification by Marcela Charfuelan: use
+	  MAXSTRLEN instead of 256 for the size of hname[] in
+	  LoadStatsFile().
+
+2008-06-19 21:24  Heiga Zen
+
+	* HTKTools/HHEd.c: Modification suggested by Junichi Yamagishi: the
+	  MDL threshold value rarely becomes negative due to numerical
+	  errors.  In this situation, it should be set to 0.0.
+
+2008-06-19 13:31  Heiga Zen
+
+	* HTKLib/HModel.c, HTKLib/HModel.h, HTKTools/HHEd.c: Merge a patch
+	  code provided by Xuchen Yao and Feng Ding: Add "JM" command to
+	  HHEd.  This command merges different models on state or stream
+	  level.  This makes it possible to do "TB" or "TC" command in
+	  parallel and then merge all generated models together.
+
+2008-06-18 22:15  Heiga Zen
+
+	* HTKLib/HAdapt.c: Fix a bug reported by Yufeng Hao: baseclasses
+	  whose dimensionalities are equal to 0 should be skipped while
+	  generating xforms.
+
+2008-06-18 13:00  Heiga Zen
+
+	* configure, configure.ac: Update copyright and version number.
+
 2008-06-16 21:13  Junichi Yamagishi
 
 	* HTKLib/HAdapt.c:
@@ -705,25 +767,25 @@
 
 2007-12-12 18:32  Heiga Zen
 
-	* HTKTools/.cvsignore: Update .cvsignore.
+	* HTKTools/.cvsignore (HSMM): Update .cvsignore.
 
 2007-12-12 18:31  Heiga Zen
 
 	* HTKTools/HERest.c, HTKTools/HMGenS.c, HTKTools/HVite.c,
-	  HTKLib/HShell.c, HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HTrain.h:
-	  Support HSMM training and synthesis.
+	  HTKLib/HShell.c, HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HTrain.h
+	  (HSMM): Support HSMM training and synthesis.
 
 2007-12-12 18:30  Heiga Zen
 
-	* HTKLib/: HGen.c, HGen.h: Export JointProb().
+	* HTKLib/: HGen.c, HGen.h (HSMM): Export JointProb().
 
 2007-12-12 18:29  Heiga Zen
 
-	* HTKTools/HLEd.c: Cast to avoid warning.
+	* HTKTools/HLEd.c (HSMM): Cast to avoid warning.
 
 2007-12-12 18:29  Heiga Zen
 
-	* HTKTools/HHEd.c: Remove an unused variable.
+	* HTKTools/HHEd.c (HSMM): Remove an unused variable.
 
 2007-12-04 18:38  Heiga Zen
 

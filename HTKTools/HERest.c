@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *herest_version = "!HVER!HERest:   3.4 [CUED 25/04/06]";
-char *herest_vc_id = "$Id: HERest.c,v 1.38 2008/05/30 07:19:10 zen Exp $";
+char *herest_vc_id = "$Id: HERest.c,v 1.39 2008/06/24 03:16:02 zen Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -1701,7 +1701,6 @@ void UpdateTMVars(HMMSet *hset)
    Vector mean;
    Covariance cov;
    Boolean mixFloored,shared;
-   Vector varFloor[SMAX];
    
    S = hset->swidth[0];
    for (s=1;s<=S;s++){

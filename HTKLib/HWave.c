@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hwave_version = "!HVER!HWave:   3.4 [CUED 25/04/06]";
-char *hwave_vc_id = "$Id: HWave.c,v 1.6 2008/05/30 07:19:15 zen Exp $";
+char *hwave_vc_id = "$Id: HWave.c,v 1.7 2008/06/24 03:19:08 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -633,7 +633,7 @@ static void NISTSkipLine(FILE *f)
 /* GetNISTIVal: get int val from f (indicated by -i) */
 static int GetNISTIVal(FILE *f)
 {
-   char buf[100];
+   char buf[MAXSTRLEN];
    
    if (strcmp(GetNISTToken(f,buf),"-i") != 0)
       HError(6251,"GetNISTIVal: NIST type indicator -i expected");
@@ -643,7 +643,7 @@ static int GetNISTIVal(FILE *f)
 /* GetNISTSVal: get string of lenth n into s (indicated by -sn) */
 static void GetNISTSVal(FILE *f, char *s)
 {
-   char buf[100];
+   char buf[MAXSTRLEN];
 
    GetNISTToken(f,buf);
    if (buf[0] != '-' || buf[1] != 's')
@@ -656,7 +656,7 @@ static void GetNISTSVal(FILE *f, char *s)
 /* GetNISTHeaderInfo: get the NIST Header info */
 static long GetNISTHeaderInfo(FILE *f, Wave w, InputAction *ia)
 {
-   char token[100],*lab,byteFormat[100],sampCoding[100],buf[100];
+   char token[MAXSTRLEN],*lab,byteFormat[MAXSTRLEN],sampCoding[MAXSTRLEN],buf[MAXSTRLEN];
    Boolean interleaved = FALSE;
    long nS,sR,sS, cC;
    long dataBytes;

@@ -584,6 +584,13 @@ ReturnStatus SaveHMMList(HMMSet *hset, char *fname);
    Save a HMM list in fname describing given HMM set 
 */
 
+void SetIndexes(HMMSet *hset);
+void SetCovKindUsage (HMMSet *hset);
+ReturnStatus CheckHSet(HMMSet *hset);
+/*
+   Check the consistency of a complete HMM Set
+*/
+
 
 /* -------------- Shared Structure "Seen" Flags -------------- */
 

@@ -641,7 +641,7 @@ void HFillArc(int x0,int y0,int x1,int y1,int stAngle,int arcAngle)
 void HPrintf(int x, int y, char *format, ...)
 { 
    va_list arg;
-   char s[256];
+   char s[MAXSTRLEN];
    HGDIOBJ oldObject = SelectObject(memDC,theFont);
    HDC dc = GetDC(theWindow);
      
@@ -998,7 +998,7 @@ void RedrawHButton(HButton *btn)
    int pad = 2;
    int x, y, w, h, r, s, pos;
    HPoint poly[9], shad[4];
-   char sbuf[256], nullchar = '\0';
+   char sbuf[MAXSTRLEN], nullchar = '\0';
      
    x = btn->x;   y=btn->y;   w=btn->w;   h=btn->h;   r=3; s=1;
      
@@ -1130,7 +1130,7 @@ void MakeXGraf(char *wname, int x, int y, int w, int h, int bw)
      /* WIN32: bw is ignored. */
 {
    WNDCLASS WindowClass;
-   char sbuf[256], *hgraf = "HGraf";
+   char sbuf[MAXSTRLEN], *hgraf = "HGraf";
    HDC dc;
      
    if (winCreated)

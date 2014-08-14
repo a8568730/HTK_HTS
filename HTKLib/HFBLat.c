@@ -73,7 +73,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hfblat_version = "!HVER!HFBLat:   3.4 [CUED 25/04/06]";
-char *hfblat_vc_id = "$Id: HFBLat.c,v 1.13 2008/05/30 07:19:14 zen Exp $";
+char *hfblat_vc_id = "$Id: HFBLat.c,v 1.14 2008/06/24 03:19:08 zen Exp $";
 
 /*
   Performs forward/backward alignment
@@ -1497,7 +1497,7 @@ static void StepForward()
 
 
 
-static  char buf1[255];
+static  char buf1[MAXSTRLEN];
 static  Boolean eSep;
 
  
