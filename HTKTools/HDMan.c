@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hdman_version = "!HVER!HDMan:   3.4 [CUED 25/04/06]";
-char *hdman_vc_id = "$Id: HDMan.c,v 1.4 2006/12/29 04:44:56 zen Exp $";
+char *hdman_vc_id = "$Id: HDMan.c,v 1.6 2007/10/03 07:20:10 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -453,23 +453,23 @@ void PutPhone(LabId id)
    char buf[80];
    LabId baseId;
 
-   if (((int)id->aux == 0 || (int)id->aux == -1) && newPhones != NULL) {
+   if (((long)id->aux == 0 || (long)id->aux == -1) && newPhones != NULL) {
       fprintf(newPhones,"%s\n",ReWriteString(id->name,NULL,ESCAPE_CHAR));
       /* avoid printing it again */
-      id->aux = (Ptr)((int)id->aux - 2);
+      id->aux = (Ptr)((long)id->aux - 2);
    }
    strcpy(buf,id->name);
    TriStrip(buf);
    baseId=GetLabId(buf,TRUE);
-   if ((int)baseId->aux <= 0 ) {  /* not seen this label before */
-      if ((int)baseId->aux == 0 || (int)baseId->aux == -2){
+   if ((long)baseId->aux <= 0 ) {  /* not seen this label before */
+      if ((long)baseId->aux == 0 || (long)baseId->aux == -2){
          if (nNewPhones == MAXPVOC)
             HError(1430,"PutPhone: MAXPVOC exceeded");
          newList[nNewPhones++] = baseId;
       }
       baseId->aux = (Ptr)0;            
    }
-   baseId->aux = (Ptr)((int)baseId->aux + 1);
+   baseId->aux = (Ptr)((long)baseId->aux + 1);
 }
 
 /* ListNewPhones: list new phones to log file along with counts */
@@ -481,7 +481,7 @@ void ListNewPhones(void)
       fprintf(logF,"Def Phone Usage Counts\n");
       fprintf(logF,"---------------------\n");
       for (i=0; i<nDefPhones; i++) {
-         c = (int)defList[i]->aux;
+         c = (long)defList[i]->aux;
          if (c<0) c=0;
          fprintf(logF," %2d. %-5s : %5d\n",i+1,defList[i]->name,c);
       }
@@ -490,7 +490,7 @@ void ListNewPhones(void)
       fprintf(logF,"New Phone Usage Counts\n");
       fprintf(logF,"---------------------\n");
       for (i=0; i<nNewPhones; i++){
-         c = (int)newList[i]->aux;
+         c = (long)newList[i]->aux;
          if (c<0) c=0;
          fprintf(logF," %2d. %-5s : %5d\n",i+1, newList[i]->name,c);
       }

@@ -40,7 +40,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -74,7 +74,7 @@
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
 
-char *hlvrec_prop_vc_id = "$Id: HLVRec-propagate.c,v 1.2 2006/12/29 04:44:56 zen Exp $";
+char *hlvrec_prop_vc_id = "$Id: HLVRec-propagate.c,v 1.4 2007/10/01 18:07:58 zen Exp $";
 
 
 static int winTok_cmp (const void *v1,const void *v2)
@@ -1398,9 +1398,9 @@ void ProcessFrame (DecoderInst *dec, Observation **obsBlock, int nObs,
                }
 #endif
 
-               PropagateExternal (dec, inst, !(dec->weBeamWidth < dec->beamWidth) || 
-                                  (l == LAYER_SIL) || (l == LAYER_AB),
-                                  l == LAYER_BY);
+               PropagateExternal (dec, inst, 
+                                 ((!(dec->weBeamWidth < dec->beamWidth) || (l == LAYER_SIL) || (l == LAYER_AB)) ? TRUE:FALSE),
+                                 ((l == LAYER_BY) ? TRUE:FALSE));
             }
 
             

@@ -8,7 +8,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -46,8 +46,8 @@
 /*         File: HGen.c: Generate parameter sequence from HMM        */
 /*  ---------------------------------------------------------------  */
 
-char *hgen_version = "!HVER!HGen:   1.1.2 [NIT 08/08/05]";
-char *hgen_vc_id = "$Id: HGen.c,v 1.16 2006/12/29 04:44:54 zen Exp $";
+char *hgen_version = "!HVER!HGen:   2.0.1 [NIT 01/10/07]";
+char *hgen_vc_id = "$Id: HGen.c,v 1.23 2007/09/17 11:26:41 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -71,14 +71,16 @@ char *hgen_vc_id = "$Id: HGen.c,v 1.16 2006/12/29 04:44:54 zen Exp $";
 #define T_MAT   0002  /* trace matrices */
 #define T_STA   0004  /* trace state sequence */
 
-static int trace =  0;
+static int trace = 0;
 
 static ConfParam *cParm[MAXGLOBS];  /* config parameters */
 static int nParm = 0;
 
-static int  maxIter  = 20;          /* max iterations in EM-based parameter generation */
+static int maxIter   = 20;          /* max iterations in EM-based parameter generation */
 static float epsilon = 1.0E-4;      /* convergence criterion */
 static Boolean rndpg = FALSE;       /* random generation instead of ML one */
+static float rndMean = 0.0;         /* mean of Gaussian noise for random generation */
+static float rndVar  = 1.0;         /* variance of Gaussian noise for random generation */
 
 /* -------------------------- Initialisation ----------------------- */
 
@@ -99,6 +101,8 @@ void InitGen(void)
          if (GetConfInt (cParm,nParm,"MAXITER",   &i)) maxIter = i;
          if (GetConfFlt (cParm,nParm,"EPSILON",   &d)) epsilon = d;
          if (GetConfBool(cParm,nParm,"RNDPG",     &b)) rndpg   = b;
+         if (GetConfFlt (cParm,nParm,"RNDMEAN",   &d)) rndMean = d;
+         if (GetConfFlt (cParm,nParm,"RNDVAR",    &d)) rndVar  = d;
       }
    }
 }
@@ -292,7 +296,7 @@ static void SetupPdfStreams (GenInfo *genInfo)
                         mpdf = si->pdf[s].info->spdf.cpdf[m].mpdf;
                         if (VectorSize(mpdf->mean)==genInfo->hset->swidth[s]) {
                            /* use the best mixture only */
-                           if (si->pdf[s].info->spdf.cpdf[m].weight > weight) {
+                           if (si->pdf[s].info->spdf.cpdf[m].weight >= weight) {
                               weight = si->pdf[s].info->spdf.cpdf[m].weight;
                               max = m;
                            }
@@ -307,8 +311,8 @@ static void SetupPdfStreams (GenInfo *genInfo)
                         bound = ChkBoundary(pst, v+k-1, t, T);
                         switch (mpdf->ckind) {
                         case DIAGC:
-                           mseq_t    [v+k-1] += (bound) ? 0.0 : 1/mpdf->cov.var[k] * mpdf->mean[k];
-                           vseq_t.var[v+k-1] += (bound) ? 0.0 : 1/mpdf->cov.var[k];
+                           mseq_t    [v+k-1] += (bound) ? 0.0 : 1.0 / mpdf->cov.var[k] * mpdf->mean[k];
+                           vseq_t.var[v+k-1] += (bound) ? 0.0 : 1.0 / mpdf->cov.var[k];
                            break;
                         case INVDIAGC:
                            mseq_t    [v+k-1] += (bound) ? 0.0 : mpdf->cov.var[k] * mpdf->mean[k];
@@ -342,7 +346,7 @@ static void SetupPdfStreams (GenInfo *genInfo)
    return;
 }
 
-/* ----------------------- Sentence HMM initization/reset routines ----------------------- */
+/* ----------------------- Sentence model initization/reset routines ----------------------- */
 
 /* GetStateIndex: get state index from name */
 static int GetStateIndex (LabId id)
@@ -360,22 +364,22 @@ static void SetStateSequence (GenInfo *genInfo)
    IntSet acyclic;
 
    /* set state sequence */
-   if (genInfo->stateAlign) {        /* state alignment is given */
+   if (genInfo->stateAlign) {        /* state alignments are given */
       for (i=1,j=0,n=0; i<=CountLabs(genInfo->labseq->head); i++) {
          /* get i-th label */
          label = GetLabN(genInfo->labseq->head, i);
       
-         /* prepare an array to store durations of the j-th HMM */
+         /* prepare an array to store state durations in the j-th model */
          if (label->auxLab[1]!=NULL) {
             j++; n=0;
          }
       
-         /* get state duration from label */
+         /* get state duration from the given label */
          k = GetStateIndex(label->labid);
          if (k<=1 || k>=genInfo->hmm[j]->numStates)
             HError(9999, "SetStateSequence: #state in the %d-th label is out of range", i);
          
-         /* set n-th state in this model */
+         /* set the n-th state in this model */
          genInfo->sindex[j][++n] = k;
       }
    }
@@ -447,8 +451,8 @@ static void CountDurStat (Vector mean, Vector ivar, float *sum, float *sqr, IntV
 /* SetStateDurations: set state durations */
 static void SetStateDurations (GenInfo *genInfo)
 {
-   int i,j,m,nStates,modeldur,start=0,tframe=0;
-   float sum,sqr,rho,weight,diff=0.0;
+   int i,j,k,s,cnt,nStates,modeldur,start=0,tframe=0;
+   float sum,sqr,rho,diff=0.0;
    Vector *mean, *ivar;
    Label *label;
    HLink dm;
@@ -468,14 +472,14 @@ static void SetStateDurations (GenInfo *genInfo)
       
       /* # of states in the i-th model */
       nStates = genInfo->hmm[i]->numStates-2;
+      mean[i] = CreateVector(genInfo->genMem, nStates);
+      ivar[i] = CreateVector(genInfo->genMem, nStates);
       
       /* set statistics of the i-th state */
-      for (m=1,weight=0.0; m<=dm->svec[2].info->pdf[1].info->nMix; m++) {
-         if (VectorSize(dm->svec[2].info->pdf[1].info->spdf.cpdf[m].mpdf->mean)==nStates 
-             && MixWeight(genInfo->dset,dm->svec[2].info->pdf[1].info->spdf.cpdf[m].weight)>weight) {
-            mean[i] = dm->svec[2].info->pdf[1].info->spdf.cpdf[m].mpdf->mean;
-            ivar[i] = dm->svec[2].info->pdf[1].info->spdf.cpdf[m].mpdf->cov.var;  /* inverse variance (ConvDiagC was called when duration model set was loaded) */
-            weight = MixWeight(genInfo->dset,dm->svec[2].info->pdf[1].info->spdf.cpdf[m].weight);
+      for (s=cnt=1; s<=genInfo->dset->swidth[0]; s++) {
+         for (k=1; k<=genInfo->dset->swidth[s]; k++,cnt++) {
+            mean[i][cnt] = dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->mean[k];
+            ivar[i][cnt] = dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.var[k];  /* inverse variance (ConvDiagC was called when duration model set was loaded) */
          }
       }
       
@@ -483,7 +487,7 @@ static void SetStateDurations (GenInfo *genInfo)
       CountDurStat(mean[i], ivar[i], &sum, &sqr, genInfo->sindex[i]);
    }
    
-   /* set rho, please refer 
+   /* set rho, please refer to
     * T. Yoshimura, et al. "Duration Modeling in HMM-based Speech Synthesis System", 
     * Proc. of ICSLP, vol.2, pp.29-32, 1998, for detail 
     * */
@@ -504,7 +508,7 @@ static void SetStateDurations (GenInfo *genInfo)
             rho = 1.0;
          }
          else {  /* model-level alignment of the i-th label is specified */
-            modeldur = (label->end - label->start)/genInfo->frameRate;
+            modeldur = (int) (label->end - label->start)/genInfo->frameRate;
             sum = sqr = 0.0;
             CountDurStat(mean[i], ivar[i], &sum, &sqr, genInfo->sindex[i]);
             rho = (modeldur-sum)/sqr;
@@ -643,7 +647,7 @@ static void SetSpaceIndexes (MemHeap *x, GenInfo *genInfo)
 /* EXPORT->InitialiseGenInfo: initialize a genInfoence HMM according to the given label */
 void InitialiseGenInfo (GenInfo *genInfo, Transcription *tr)
 {
-   int i, j;
+   int i, j, n=0, max=0;
    MLink hmacro, dmacro;
    Label *label;
    LabId id;
@@ -689,11 +693,16 @@ void InitialiseGenInfo (GenInfo *genInfo, Transcription *tr)
       
       /* LabId of this model */
       if (genInfo->stateAlign) {
-         id = label->auxLab[1];
-         if (id==NULL)  /* auxLab[1] == NULL -> ignore */
+         n++;
+         if ((id=label->auxLab[1]) == NULL) {  /* auxLab[1] == NULL -> ignore */
             continue;
+         }
+         else {
+            max = (n>max) ? n : max;
+            n = 0;
+         }
       }
-      else {         
+      else {
          /* find state duration model */
          id = label->labid;
          if ((dmacro = FindMacroName(genInfo->dset, 'l', id)) == NULL)
@@ -714,12 +723,12 @@ void InitialiseGenInfo (GenInfo *genInfo, Transcription *tr)
    
    
    /* set state sequence which maximizes its state sequence prob */
-   genInfo->sindex = CreateIMatrix(genInfo->genMem, genInfo->labseqlen, genInfo->maxStates);
+   genInfo->sindex = CreateIMatrix(genInfo->genMem, genInfo->labseqlen, ((genInfo->stateAlign)?max+1:genInfo->maxStates));
    ZeroIMatrix(genInfo->sindex);
    SetStateSequence(genInfo);
    
    /* set state durations which maximize their state duration prob */
-   genInfo->durations = CreateIMatrix(genInfo->genMem, genInfo->labseqlen, genInfo->maxStates);
+   genInfo->durations = CreateIMatrix(genInfo->genMem, genInfo->labseqlen, ((genInfo->stateAlign)?max+1:genInfo->maxStates));
    ZeroIMatrix(genInfo->durations);
    if (genInfo->stateAlign)
       GetLabStateDurations(genInfo);
@@ -916,7 +925,7 @@ static void Forward_Substitution (PdfStream *pst)
       
       /* random generation */
       if (rndpg)
-         g[t] += GaussDeviate(0, 1.0);
+         g[t] += GaussDeviate(rndMean, rndVar);
    }
    
    if (trace & T_MAT) {
@@ -1250,7 +1259,7 @@ static Boolean MixUtt (GenInfo *genInfo, FBInfo *fbInfo, UttInfo *utt)
 }
 
 /* EXPORT->ParamGen: Generate parameter sequence */
-void ParamGen (GenInfo *genInfo, UttInfo *utt, FBInfo *fbInfo, ParmGenType type)
+void ParamGen (GenInfo *genInfo, UttInfo *utt, FBInfo *fbInfo, const ParmGenType type)
 {
    int n=1;
    Boolean success=TRUE;

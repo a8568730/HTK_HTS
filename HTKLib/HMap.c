@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -465,7 +465,8 @@ void MAPUpdateModels(HMMSet *hset, UPDSet uFlags)
 {
   HMMScanState hss;
   HLink hmm;
-  int px,n,nmapped=0,totM;
+   int px,nmapped=0,totM;
+   long n;
 
   if (hset->logWt == TRUE) HError(999,"HMap: requires linear weights");
 
@@ -483,7 +484,7 @@ void MAPUpdateModels(HMMSet *hset, UPDSet uFlags)
   px=1;
   do {   
     hmm = hss.hmm;
-    n = (int)hmm->hook;
+      n = (long)hmm->hook;
     if (n<minEgs && !(trace&T_UPD))
       HError(-2331,"UpdateModels: %s[%d] copied: only %d egs\n",
 	     HMMPhysName(hset,hmm),px,n);

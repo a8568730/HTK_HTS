@@ -31,7 +31,7 @@
 #   Interdisciplinary Graduate School of Science and Engineering    #
 #                  Tokyo Institute of Technology                    #
 #                                                                   #
-#                     Copyright (c) 2001-2006                       #
+#                     Copyright (c) 2001-2007                       #
 #                       All Rights Reserved.                        #
 #                                                                   #
 #  Permission is hereby granted, free of charge, to use and         #
@@ -66,11 +66,13 @@
 #  ---------------------------------------------------------------  #
 
 # After editing this file, run "autoconf" to regenerate "configure".
-AC_INIT(HTS,2.0,hts-users@lavender.ics.nitech.ac.jp)
+AC_INIT(HTS,2.0.1, hts-users@sp.nitech.ac.jp)
 AC_COPYRIGHT(Copyright 2003-2005 University of Cambridge)
-AC_COPYRIGHT(Copyright 2001-2006 Nagoya Institute of Technology and Tokyo Institute of Technology)
+AC_COPYRIGHT(Copyright 2001-2007 Nagoya Institute of Technology and Tokyo Institute of Technology)
 
-dnl Checks for programs.
+AC_PREFIX_DEFAULT(/usr/local/HTS-2.0.1)
+
+# Checks for programs.
 AC_PROG_MAKE_SET
 AC_PROG_AWK
 AC_PROG_CC
@@ -79,30 +81,30 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_RANLIB
 
-dnl Check for ar
+# Check for ar
 AN_MAKEVAR([AR], [AC_PROG_AR])
 AN_PROGRAM([ar], [AC_PROG_AR])
 AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL(AR, ar, :)])
 AC_PROG_AR
 
-dnl Checks for libraries.
+# Checks for libraries.
 AC_CHECK_LIB([X11], [main])
 AC_CHECK_LIB([m], [main])
 
-dnl Checks for header files.
+# Checks for header files.
 AC_CONFIG_HEADERS
 AC_PATH_X
 AC_HEADER_STDC
 AC_CHECK_HEADERS(errno.h fcntl.h float.h limits.h malloc.h memory.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h)
 
-dnl Checks for typedefs, structures, and compiler characteristics.
+# Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_C_VOLATILE
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
 AC_STRUCT_TM
 
-dnl Checks for library functions.
+# Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MEMCMP
 AC_FUNC_MALLOC
@@ -116,48 +118,49 @@ AC_CHECK_FUNCS(floor gettimeofday memmove memset modf pow socket sqrt strchr str
 
 AC_CANONICAL_HOST
 AC_C_BIGENDIAN
+AC_CHECK_SIZEOF(int *)
 
-dnl Traditional HTK build?
-dnl if enabled this will install in $bindir.$host_cpu
+
+# Traditional HTK build?
+# if enabled this will install in $bindir.$host_cpu
 AC_ARG_ENABLE(trad-htk,
 		AS_HELP_STRING([--enable-trad-htk],
 		[HTK installed into $prefix/bin.$cpu and installed when compiled]))
 
-dnl Build HDecode
+# Build HDecode
 AC_ARG_ENABLE(hdecode,
 		AS_HELP_STRING([--enable-hdecode],
 		[build large vocabulary recognition system (HDecode)]))
 
-dnl Build LM Tools
+# Build LM Tools
 AC_ARG_ENABLE(hlmtools,
-		AS_HELP_STRING([--enable-hlmtools],
-		[build Language Modelling tools]))
+	AS_HELP_STRING([--enable-hlmtools],
+	[build Language Modelling tools]))
 
-dnl Disable building for X
-dnl i.e. use HGraf.null, and don't build HSLab
+# Disable building for X
+# i.e. use HGraf.null, and don't build HSLab
 AC_ARG_ENABLE(hslab,
 		AS_HELP_STRING([--disable-hslab],
 		[don't build HSLab]))
 
-dnl Build LV Recognition
+# Build LV Recognition
 AC_ARG_ENABLE(htkbook,
 		AS_HELP_STRING([--enable-htkbook],
 		[build HTK book]))
 
-dnl Disable building hts_engine
+# Disable building hts_engine
 AC_ARG_ENABLE(hts_engine,
-		AS_HELP_STRING([--disable-hts_engine],
-		[don't build hts_engine]))
+	AS_HELP_STRING([--disable-hts_engine],
+	[don't build hts_engine]))
 
-dnl Use -Wall if using gcc
+# Use -Wall if using gcc
 case "$CC" in
 	 gcc*)
 		CFLAGS="-Wall -Wno-switch $CFLAGS"
 		;;		
 esac
 
-
-dnl customise for htk comilpation
+# customise for htk comilpation
 trad_bin_dir=$host
 case "$host_cpu" in
 	 powerpc)
@@ -168,13 +171,15 @@ esac
 
 case "$host" in
 		*x86_64*linux*)
-				case "$CC" in
-					gcc*)
-						CFLAGS="-m32 $CFLAGS"
-					;;
-				esac	
-				CFLAGS="-ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
+		CFLAGS="-ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
+		AC_MSG_CHECKING(whether to compile in 32-bit or 64-bit mode)
+		if test x$ac_cv_sizeof_int_p = x"4"; then
+			AC_MSG_RESULT(32-bit)
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
+		elif test x$ac_cv_sizeof_int_p = x"8"; then
+			AC_MSG_RESULT(64-bit)
+			LDFLAGS="-L/usr/X11R6/lib64 $LDFLAGS"
+		fi
 				ARCH=linux
 				trad_bin_dir=linux
 		;;
@@ -204,11 +209,11 @@ case "$host" in
 				CFLAGS="-ansi -DCYGWIN -D'ARCH=\"ASCII\"' $CFLAGS"
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
 				ARCH=ASCII
-				CPU=cygwin
+		CPU=cygwin
 				BINARY_EXTENSION=.exe
 		;;				
-		darwin)
-				CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' -I/usr/include/malloc $CFLAGS"
+	*darwin*)
+		CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' -I/usr/include/malloc $CFLAGS"
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
 				ARCH=darwin
 				Objcopy=echo
@@ -219,12 +224,12 @@ case "$host" in
 		;;				
 esac
 
-dnl Process customised options
+# Process customised options
 make_all=htktools
 make_install=install-htktools
 build_notes="Build notes: "
-dnl Tweak bindir and libdir for backwards compatibility 
-dnl with previous versions of HTK
+# Tweak bindir and libdir for backwards compatibility 
+# with previous versions of HTK
 case "$enable_trad_htk" in
      yes)
 	bindir=${bindir}.${trad_bin_dir}
@@ -232,13 +237,13 @@ case "$enable_trad_htk" in
 	;;
 esac
 case "$enable_hlmtools" in
-     yes)
+	yes)
 	make_all="$make_all hlmtools"
 	make_install="$make_install install-hlmtools"
 	build_notes="$build_notes Language Modelling tools will be built."
 	;;
-	  *)
-	build_notes="$build_notes The Language Modelling tools will not be built. You can build them manually later by running 'make hlmtools install-hlmtools'."
+	*)
+		build_notes="$build_notes The Language Modelling tools will not be built. You can build them manually later by running 'make hlmtools install-hlmtools'."
 	;;
 esac
 case "$enable_hdecode" in
@@ -248,7 +253,7 @@ case "$enable_hdecode" in
 	build_notes="$build_notes Large Vocabulary recogniser HDecode will be built."
 	;;
      *)
-	build_notes="$build_notes HDecode will not be built. You can build it manually later by running 'make hdecode install-hdecode'."
+		build_notes="$build_notes HDecode will not be built. You can build it manually later by running 'make hdecode install-hdecode'."
 	;;
 esac
 case "$enable_htkbook" in
@@ -271,13 +276,13 @@ case "$enable_hslab" in
 	;;
 esac
 case "$enable_hts_engine" in
-	  no)
-	build_notes="$build_notes hts_engine will not be built. You can build it manually later by running 'make hts_engine install-hts_engine'."
+	no)
+		build_notes="$build_notes hts_engine will not be built. You can build it manually later by running 'make hts_engine install-hts_engine'."
 	;;
-	  *)
-	make_all="$make_all hts_engine"
-	make_install="$make_install install-hts_engine"
-	build_notes="$build_notes hts_engine will be built."
+	*)
+		make_all="$make_all hts_engine"
+		make_install="$make_install install-hts_engine"
+		build_notes="$build_notes hts_engine will be built."
 	;;
 esac
 

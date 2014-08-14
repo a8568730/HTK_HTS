@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *haudio_version = "!HVER!HAudio:   3.4 [CUED 25/04/06]";
-char *haudio_vc_id = "$Id: HAudio.c,v 1.3 2006/12/29 04:44:53 zen Exp $";
+char *haudio_vc_id = "$Id: HAudio.c,v 1.4 2007/09/18 12:20:43 zen Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"

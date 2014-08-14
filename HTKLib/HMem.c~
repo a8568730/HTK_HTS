@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hmem_version = "!HVER!HMem:   3.4 [CUED 25/04/06]";
-char *hmem_vc_id = "$Id: HMem.c,v 1.5 2007/10/03 07:20:14 zen Exp $";
+char *hmem_vc_id = "$Id: HMem.c,v 1.4 2007/09/18 12:20:44 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -560,7 +560,7 @@ void PrintHeapStats(MemHeap *x)
    case CHEAP: tc = 'C'; break;
    }
    for (p=x->heap; p != NULL; p = p->next) ++nBlocks;
-   printf("nblk=%3d, siz=%6zd*%-3zd, used=%9zd, alloc=%9zd : %s[%c]\n",
+   printf("nblk=%3d, siz=%6lu*%-3lu, used=%9lu, alloc=%9lu : %s[%c]\n",
           nBlocks, x->curElem, x->elemSize, x->totUsed, 
           x->totAlloc*x->elemSize,x->name,tc) ;
    fflush(stdout);

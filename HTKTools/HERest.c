@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *herest_version = "!HVER!HERest:   3.4 [CUED 25/04/06]";
-char *herest_vc_id = "$Id: HERest.c,v 1.13 2006/12/29 04:44:56 zen Exp $";
+char *herest_vc_id = "$Id: HERest.c,v 1.19 2007/10/03 07:20:10 zen Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -136,11 +136,10 @@ static char * hmmExt = NULL;     /* hmm def file extension */
 static char * newDir = NULL;     /* directory to store new hmm def files */
 static char * newExt = NULL;     /* extension of new reestimated hmm files */
 static char * statFN;            /* stats file, if any */
-static char * durFN;             /* duration model file, if any */
 static float minVar  = 0.0;      /* minimum variance (diagonal only) */
 static float mixWeightFloor=0.0; /* Floor for mixture weights */
 static int minEgs    = 3;        /* min examples to train a model */
-static UPDSet uFlags = (UPDSet) (UPMEANS|UPVARS|UPTRANS|UPMIXES); /* update flags */
+static UPDSet uFlags = (UPDSet) (UPMEANS|UPVARS|UPTRANS|UPMIXES); /* update flags for HMMs */
 static int parMode   = -1;       /* enable one of the // modes */
 static Boolean stats = FALSE;    /* enable statistics reports */
 static char * mmfFn  = NULL;     /* output MMF file, if any */
@@ -148,7 +147,6 @@ static int trace     = 0;        /* Trace level */
 static Boolean saveBinary = FALSE;  /* save output in binary  */
 static Boolean ldBinary = TRUE;        /* load/dump in binary */
 static Boolean applyVFloor = FALSE;  /* variance flooring */
-static Boolean calcDuration = FALSE; /* calcurate duration model */
 static Boolean useAlign = FALSE;     /* use model alignment from label */
 static FileFormat dff=UNDEFF;       /* data file format */
 static FileFormat lff=UNDEFF;       /* label file format */
@@ -164,7 +162,7 @@ static char al_hmmExt[MAXSTRLEN];  	 /* alignment hmm def file extension */
 static char al_hmmMMF[MAXFNAMELEN];  /* alignment hmm MMF */
 static char al_hmmLst[MAXFNAMELEN];  /* alignment hmm list */
 static char up_hmmMMF[MAXFNAMELEN];  /* alignment hmm list */
-static HMMSet al_hset ;      	 /* Option 2nd set of models for alignment */
+static HMMSet al_hset;               /* Option 2nd set of HMMs for alignment */
 
 /* Global Data Structures - valid for all training utterances */
 static LogDouble pruneInit = NOPRUNE;    /* pruning threshold initially */
@@ -176,8 +174,8 @@ static Boolean twoDataFiles = FALSE; /* Enables creation of ot2 for FB
 static int totalT=0;       /* total number of frames in training data */
 static LogDouble totalPr=0;   /* total log prob upto current utterance */
 static Vector vFloor[SMAX]; /* variance floor - default is all zero */
-
-static MemHeap hmmStack;   /*For Storage of all dynamic structures created...*/
+static MemHeap hmmStack;   /* For storage of all dynamic structures created... */
+static MemHeap durStack;   /* For storage of all dynamic structures created... */
 static MemHeap uttStack;
 static MemHeap fbInfoStack;
 static MemHeap accStack;
@@ -188,6 +186,20 @@ static int maxSpUtt = 0;
 static float varFloorPercent = 0;
 
 static char *labFileMask = NULL;
+
+/* for duration model generation */
+static char * durFN;                    /* duration model file, if any */
+static UPDSet dur_uFlags = (UPDSet) 0;  /* update flags for duration models */
+static float durminVar = 0.0;           /* variance floor value */
+static float durvarFloorPercent = 0.0;  /* variance flooring percent */
+static Boolean applydurVFloor = FALSE;  /* apply variance flooring */
+/* static Boolean al_durUsed = FALSE;  */    /* Set for 2-model ReEstimation */
+/* static char al_durDir[MAXFNAMELEN]; */    /* dir to look for alignment duration model defs */
+/* static char al_durExt[MAXSTRLEN];   */    /* alignment duration model def file extension */
+/* static char al_durMMF[MAXFNAMELEN]; */    /* alignment duration model MMF */
+/* static char al_durLst[MAXFNAMELEN]; */    /* alignment duration model list */
+/* static char up_durMMF[MAXFNAMELEN]; */    /* alignment duration model list */
+static HMMSet al_dset;                  /* Option 2nd set of duration models for alignment */
 
 /* ------------------ Process Command Line -------------------------- */
    
@@ -220,7 +232,7 @@ void SetConfParms(void)
       if (GetConfStr(cParm,nParm,"ALIGNMODELEXT",buf)) {
           strcpy(al_hmmExt,buf); al_hmmUsed = TRUE;
       }
-      if (GetConfBool(cParm,nParm,"USEALIGNINXFORM", &b)) {
+      if (GetConfBool(cParm,nParm,"USEALIGNINXFORaM", &b)) {
          xfInfo.use_alInXForm = b;
       }
       if (GetConfStr(cParm,nParm,"ALIGNINXFORMEXT",buf)) {
@@ -247,6 +259,16 @@ void SetConfParms(void)
       if (GetConfStr(cParm,nParm,"LABFILEMASK",buf)) {
          labFileMask = (char*)malloc(strlen(buf)+1); 
          strcpy(labFileMask, buf);
+      }
+      /* duration model */
+      if (GetConfFlt(cParm,nParm,"DURMINVAR",&f)) {
+         durminVar = f;
+      }
+      if (GetConfFlt(cParm,nParm,"DURVARFLOORPERCENTILE",&f)) {
+         durvarFloorPercent = f;
+      }
+      if (GetConfBool(cParm,nParm,"APPLYDURVARFLOOR",&b)) {
+         applydurVFloor = b;
       }
 
       if (GetConfStr(cParm,nParm,"UPDATEMODE",buf)) {
@@ -366,14 +388,16 @@ int main(int argc, char *argv[])
    UttInfo *utt;            /* utterance information storage */
    FBInfo *fbInfo;          /* forward-backward information storage */
    HMMSet hset;             /* Set of HMMs to be re-estimated */
+   HMMSet dset;             /* Set of duration models to be generated */
    Source src;
    float tmpFlt;
    int tmpInt;
    int numUtt,spUtt=0;
 
-   void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn);
+   void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, HMMSet *dset, char *hmmListFn);
    void DoForwardBackward(FBInfo *fbInfo, UttInfo *utt, char *datafn, char *datafn2);
-   void UpdateModels(HMMSet *hset, ParmBuf pbuf2);
+   void UpdateVFloors (HMMSet *hset, UPDSet uFlags, const double minVar, const double percent);
+   void UpdateModels(HMMSet *hset, ParmBuf pbuf2, UPDSet uFlags);
    void StatReport(HMMSet *hset);
    
    if(InitShell(argc,argv,herest_version,herest_vc_id)<SUCCESS)
@@ -422,10 +446,11 @@ int main(int argc, char *argv[])
       case 'e':
          useAlign = TRUE; break;
       case 'g':
-         calcDuration = TRUE;
          if (NextArg()!=STRINGARG)
             HError(2319,"HERest: duration model file name expected");
-         durFN = GetStrArg(); break;
+         durFN = GetStrArg();
+         dur_uFlags = (UPDSet) (UPMEANS|UPVARS);
+         break;
       case 'm':
          minEgs = GetChkedInt(0,1000,s); break;
       case 'o':
@@ -561,7 +586,7 @@ int main(int argc, char *argv[])
    if (NextArg() != STRINGARG)
       HError(2319,"HERest: file name of vocabulary list expected");
 
-   Initialise(fbInfo, &fbInfoStack, &hset, GetStrArg());
+   Initialise(fbInfo, &fbInfoStack, &hset, &dset, GetStrArg());
    InitUttInfo(utt, twoDataFiles);
    numUtt = 1;
 
@@ -611,29 +636,69 @@ int main(int argc, char *argv[])
    } 
    else { 
       if (parMode>0  || (parMode==0 && (updateMode&UPMODE_DUMP))){
+         /* dump HMM accs */
+         if (dur_uFlags&(UPMEANS|UPVARS)) 
+            MakeFN("HER$.hmm.acc",newDir,NULL,newFn);
+        else
          MakeFN("HER$.acc",newDir,NULL,newFn);
          f=DumpAccs(&hset,newFn,uFlags,parMode);
          tmpFlt = (float)totalPr;
          WriteFloat(f,&tmpFlt,1,ldBinary);
          WriteInt(f,(int*)&totalT,1,ldBinary);
          fclose( f );
+         
+         /* dump dur accs */
+         if (dur_uFlags&(UPMEANS|UPVARS)) {
+            MakeFN("HER$.dur.acc",newDir,NULL,newFn);
+            f=DumpAccs(&dset,newFn,dur_uFlags,parMode);
+            tmpFlt = (float)totalPr;
+            WriteFloat(f,&tmpFlt,1,ldBinary);
+            WriteInt(f,(int*)&totalT,1,ldBinary);
+            fclose( f );
+         }
       }
       if (parMode <= 0) {
          if (stats) {
             StatReport(&hset);
          }
-         if (calcDuration) {
-            SaveDuration(fbInfo,durFN,GAUSSD);
+         /* update HMMs */
+         if (updateMode&UPMODE_UPDATE) {
+            UpdateModels(&hset,utt->pbuf2, uFlags);
+            if (trace&T_TOP) {
+               if (mmfFn == NULL)
+                  printf("Saving hmm's to dir %s\n",(newDir==NULL)?"Current":newDir); 
+               else
+                  printf("Saving hmm's to MMF %s\n",mmfFn);
+               fflush(stdout);
+      }
+            SaveHMMSet(&hset,newDir,newExt,NULL,saveBinary);
+   }
+         /* update duration models */
+         if ((updateMode&UPMODE_UPDATE) && (dur_uFlags&(UPMEANS|UPVARS))) {
+            /* first estimate variance floor */
+            if ((dur_uFlags&UPVARS) && (durvarFloorPercent>0.0))
+               UpdateVFloors(&dset, dur_uFlags, durminVar, durvarFloorPercent);
+            /* replace minVar & applyVFloor using these for duration models */
+            minVar = durminVar; applyVFloor = applydurVFloor;
+            /* estimate duration models */
+            UpdateModels(&dset,utt->pbuf2, dur_uFlags);
+            if (trace&T_TOP) {
+               if (durFN == NULL)
+                  printf("Saving duration models to dir %s\n",(newDir==NULL)?"Current":newDir); 
+               else
+                  printf("Saving duration models to MMF %s\n",durFN);
+               fflush(stdout);
+            }
+            SaveInOneFile(&dset,durFN);
+            SaveHMMSet(&dset,NULL,newExt,NULL,saveBinary);
          }
-         if (updateMode&UPMODE_UPDATE)
-            UpdateModels(&hset,utt->pbuf2);
+         
+         if (trace&T_TOP) {
+            printf("Reestimation complete - average log prob per frame = %e\n", totalPr/totalT);
+            printf("     - total frames seen          = %e\n", (double)totalT);
+         }
       }
    }
-
-   utt = (UttInfo *) New(&uttStack, sizeof(UttInfo));
-   CreateHeap(&fbInfoStack,   "FBInfoStore",  MSTAK, 1, 0.5, 100 ,  1000 );
-   fbInfo = (FBInfo *) New(&fbInfoStack, sizeof(FBInfo));
-   CreateHeap(&accStack,   "accStore",    MSTAK, 1, 1.0, 50000,   500000);
 
    ResetHeap(&accStack);
    Dispose(&fbInfoStack, fbInfo);
@@ -664,11 +729,13 @@ int main(int argc, char *argv[])
 
 /* -------------------------- Initialisation ----------------------- */
 
-void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
+void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, HMMSet *dset, char *hmmListFn)
 {   
    HSetKind hsKind;
    int L,P,S,vSize,maxM; 
 
+   void GenDurMMF (HMMSet *hset, char *durfn);
+   
    /* Load HMMs and init HMMSet related global variables */
    if(MakeHMMSet( hset, hmmListFn )<SUCCESS)
       HError(2321,"Initialise: MakeHMMSet failed");
@@ -718,7 +785,6 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
          printf("Output to MMF file:  %s\n",mmfFn); 
       fflush(stdout);
    }
-   SetVFloor( hset, vFloor, minVar);
    totalPr = 0.0;
 
    if (xfInfo.inSpkrPat == NULL) xfInfo.inSpkrPat = xfInfo.outSpkrPat; 
@@ -735,10 +801,31 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
 
    if ((uFlags&UPXFORM) || (uFlags&UPSEMIT))
       CheckAdaptSetUp(hset); 
+
+   /* duration model initialization */
+   if (dur_uFlags&(UPMEANS|UPVARS)) {
+      CreateHeap(&durStack,"DurStore", MSTAK, 1, 1.0, 50000, 500000);
+      CreateHMMSet(dset,&durStack,TRUE);
+   
+      /* generate duration model mmf according to hset */
+      GenDurMMF(hset,durFN);
+      
+      /* Load duration models and init HMMSet related global variables */
+      AddMMF(dset,durFN);
+      if (MakeHMMSet(dset, hmmListFn )<SUCCESS)
+         HError(2321,"Initialise: MakeHMMSet failed");
+      if (LoadHMMSet(dset, NULL, NULL)<SUCCESS)
+         HError(2321,"Initialise: LoadHMMSet failed");
+      AttachAccs(dset, &accStack, dur_uFlags);
+      ZeroAccs(dset, dur_uFlags);
+      
+      if (parMode != 0)
+         ConvDiagC(dset,TRUE);
+   }
    
    /* initialise and  pass information to the forward backward library */
-   InitialiseForBack(fbInfo, x, hset, uFlags, pruneInit, pruneInc,
-                     pruneLim, minFrwdP, calcDuration, useAlign);
+   InitialiseForBack(fbInfo, x, hset, uFlags, dset, dur_uFlags, pruneInit, pruneInc,
+                     pruneLim, minFrwdP, useAlign);
 
    if (parMode != 0) {
       ConvLogWt(hset);
@@ -750,7 +837,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
        /* load alignment HMM set */
        CreateHMMSet(&al_hset,&hmmStack,TRUE);
        xfInfo.al_hset = &al_hset;
-      if (xfInfo.al_inXFormExt == NULL) xfInfo.al_inXFormExt = xfInfo.al_inXFormExt;
+      if (xfInfo.al_inXFormExt == NULL) xfInfo.al_inXFormExt = xfInfo.inXFormExt;
        /* load multiple MMFs */
        if (strlen(al_hmmMMF) > 0 ) {
            char *p,*q;
@@ -780,7 +867,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, char *hmmListFn)
            LoadHMMSet(&al_hset,NULL,NULL);
 
        /* switch model set */
-       UseAlignHMMSet(fbInfo,x,&al_hset);
+      UseAlignHMMSet(fbInfo,x,&al_hset,&al_dset);
        if (parMode != 0) {
 	  ConvDiagC(&al_hset,TRUE);
 	  ConvLogWt(&al_hset);
@@ -838,12 +925,145 @@ void StatReport(HMMSet *hset)
    px=1;
    do {
       hmm = hss.hmm;
-      PrintStats(hset,f,px,hmm,(int)hmm->hook);
+      PrintStats(hset,f,px,hmm,(long)hmm->hook);
       px++;
    } while (GoNextHMM(&hss));
    EndHMMScan(&hss);
    fclose(f);
 }
+
+/* ------------------- Duration model related operations  -------------------- */
+void GenDurMMF (HMMSet *hset, char *durfn)
+{
+   FILE *fp;
+   char buf[MAXSTRLEN];
+   int h,i,N,MaxN;
+   Boolean isPipe;
+   MLink mac;
+   HLink hmm;
+   
+   /* vSize of dur MMF */
+   MaxN  = MaxStatesInSet(hset)-2;
+   
+   /* ------- Output duration model ------- */
+   if (trace & T_TOP)
+      printf("Generatnig dur MMF from HMM MMF...\n");
+      
+   if ((fp = FOpen(durfn,NoOFilter,&isPipe)) == NULL)
+      HError(7360,"GenDurMMF: Cannot create dur MMF file %s", durfn);
+   
+   /* output model definition and dummy state-transition matrix */   
+   fprintf(fp,"~o\n");
+   fprintf(fp,"<STREAMINFO> %d", MaxN);
+   for (i=1; i<=MaxN; i++)
+      fprintf(fp," 1");
+   fprintf(fp,"\n<MSDINFO> %d", MaxN);
+   for (i=1; i<=MaxN; i++)
+      fprintf(fp," 0");
+   fprintf(fp,"\n<VECSIZE> %d <NULLD><DIAGC><%s>\n",MaxN,ParmKind2Str(hset->pkind,buf));
+   fprintf(fp,"~t \"trP_1\"\n<TRANSP> 3\n");
+   fprintf(fp,"0 1 0\n0 0 1\n0 0 0\n");
+
+   /* output vfloor macro */
+   for (i=1; i<=MaxN; i++) {
+      fprintf(fp,"~v \"varFloor%d\" \n",i);
+      fprintf(fp,"<VARIANCE> 1\n");
+      fprintf(fp,"%e\n",minVar);
+   }
+
+   /* output dummy state duration PDFs */
+   for (h=0; h<MACHASHSIZE; h++) {
+      for (mac=hset->mtab[h]; mac!=NULL; mac=mac->next) {
+         if (mac->type=='h') {
+            hmm = mac->structure;
+            N = hmm->numStates-2;
+            if (N!=MaxN)
+               HError(7399,"GenDurMMF: Number of states is inconsistent in %s", mac->id->name);
+
+            fprintf(fp,"~h \"%s\"\n",mac->id->name);
+            fprintf(fp,"<BEGINHMM>\n<NUMSTATES> 3\n<STATE> 2\n");
+            
+            /* output dummy mean & variance */
+            for (i=1; i<=N; i++) {
+               fprintf(fp,"<STREAM> %d\n", i);
+               fprintf(fp,"<MEAN> 1\n");
+               fprintf(fp," 0.0\n");
+               fprintf(fp,"<VARIANCE> 1\n");
+               fprintf(fp," 1.0\n");
+            }
+
+            /* output link to the dummy transition matrix macro */
+            fprintf(fp,"~t \"trP_1\"\n<ENDHMM>\n");
+         }
+      }
+   }
+   
+   FClose(fp,isPipe);
+   
+   if (trace&T_TOP) {
+      printf("done");
+      fflush(stdout);
+   }
+   
+   return;
+}
+
+/* UpdateVFloors: use acc values to calc new estimate of variance floors */
+void UpdateVFloors (HMMSet *hset, UPDSet uFlags, const double minVar, const double percent)
+{
+   int s,k;
+   double occ;
+   HMMScanState hss;
+   MuAcc *ma=NULL;
+   VaAcc *va=NULL;
+   DVector mean,var;
+   Vector varFloor[SMAX];
+   
+   /* get current variance floor */
+   SetVFloor(hset,varFloor,minVar);
+   
+   for (s=1; s<=hset->swidth[0]; s++) {
+      /* initialization */
+      occ = 0.0;
+      var  = CreateDVector(&gstack, hset->swidth[s]); ZeroDVector(var);
+      mean = CreateDVector(&gstack, hset->swidth[s]); ZeroDVector(mean);
+            
+      /* acc statistics for variance flooring */
+      NewHMMScan(hset,&hss);
+      while (GoNextMix(&hss,FALSE)) {
+         if ((hss.s==s) && (VectorSize(hss.mp->mean)==hset->swidth[s])) {  /* MSD check */
+            /* get mean & variance accumulators */
+            va = (VaAcc *) GetHook(hss.mp->cov.var);
+            ma = (MuAcc *) GetHook(hss.mp->mean);
+            
+            /* accumulate */
+            occ += va->occ;
+            for (k=1; k<=VectorSize(hss.mp->mean); k++) {
+               if (uFlags&UPMEANS) mean[k] += ma->mu[k];
+               if (hss.mp->ckind==DIAGC || hss.mp->ckind==INVDIAGC)
+                  var[k] += va->cov.var[k];
+               else
+                  var[k] += va->cov.inv[k][k];
+            }
+         }
+      }
+      EndHMMScan(&hss);
+      
+      /* free vectors */
+      FreeDVector(&gstack,mean);
+      FreeDVector(&gstack,var);
+      
+      /* update variance */
+      for (k=1; k<=hset->swidth[s]; k++)
+         varFloor[s][k] = (var[k]/occ - mean[k]/occ*mean[k]/occ) * percent/100.0;
+   }
+                    
+   /* Reset vfloor */
+   ResetVFloor(hset,varFloor);
+   
+   return;
+}
+
 
 /* -------------------- Top Level of F-B Updating ---------------- */
 
@@ -1158,6 +1378,10 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
    Vector mean;
    Covariance cov;
    Boolean mixFloored,shared;
+   Vector varFloor[SMAX];
+   
+   /* variance flooring */
+   SetVFloor(hset,varFloor,minVar);
    
    N = hmm->numStates;
    se = hmm->svec+2;
@@ -1166,7 +1390,7 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
       ste = se->info->pdf+1;
       for (s=1;s<=S;s++,ste++){
          sti = ste->info;
-         minV = vFloor[s];
+         minV = varFloor[s];
          me = sti->spdf.cpdf + 1; M = sti->nMix;
          for (m=1;m<=M;m++,me++)
             if (me->weight > MINMIX){
@@ -1220,6 +1444,11 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
             }
       }
    }
+   
+   /* Reset vfloor */
+   ResetVFloor(hset,varFloor);
+   
+   return;
 }
 
 /* UpdateTMVars: use acc values to calc new estimate of vars for TIEDHS */
@@ -1234,6 +1463,10 @@ void UpdateTMVars(HMMSet *hset)
    Vector mean;
    Covariance cov;
    Boolean mixFloored,shared;
+   Vector varFloor[SMAX];
+   
+   /* set variance floor */
+   SetVFloor(hset,varFloor,minVar);
    
    S = hset->swidth[0];
    for (s=1;s<=S;s++){
@@ -1287,6 +1520,11 @@ void UpdateTMVars(HMMSet *hset)
          }
       }
    }
+   
+   /* set variance floor */
+   ResetVFloor(hset,varFloor);
+   
+   return;
 }
 
 static  int fltcompare(const void *_i, const void *_j)
@@ -1395,7 +1633,7 @@ void MLUpdateModels(HMMSet *hset, UPDSet uFlags)
    px=1;
    do {   
       hmm = hss.hmm;
-      n = (int)hmm->hook;
+      n = (long)hmm->hook;
       if (n<minEgs && !(trace&T_UPD))
          HError(-2331,"UpdateModels: %s[%d] copied: only %d egs\n",
                 HMMPhysName(hset,hmm),px,n);
@@ -1433,10 +1671,9 @@ void MLUpdateModels(HMMSet *hset, UPDSet uFlags)
    }
 }
 
-
 /* UpdateModels: update all models and save them in newDir if set,
    new files have newExt if set */
-void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
+void UpdateModels (HMMSet *hset, ParmBuf pbuf2, UPDSet uFlags)
 {
    int maxM;
    static char str[MAXSTRLEN];
@@ -1473,13 +1710,6 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
          FloorVars(hset,s);
    }
 
-   if (trace&T_TOP){
-      if (mmfFn == NULL)
-         printf("Saving hmm's to dir %s\n",(newDir==NULL)?"Current":newDir); 
-      else
-         printf("Saving hmm's to MMF %s\n",mmfFn);
-      fflush(stdout);
-   }
    ClearSeenFlags(hset,CLR_ALL);
    if (twoDataFiles){
       if (parMode == 0){
@@ -1498,13 +1728,6 @@ void UpdateModels(HMMSet *hset, ParmBuf pbuf2)
       SetXForm(hset,xfInfo.outXForm);
       ApplyHMMSetXForm(hset, xfInfo.outXForm, TRUE);
       hset->semiTied = NULL;
-   }
-   
-   SaveHMMSet(hset,newDir,newExt,NULL,saveBinary);
-   if (trace&T_TOP) {
-      printf("Reestimation complete - average log prob per frame = %e\n",
-             totalPr/totalT);
-      printf("     - total frames seen          = %e\n", (double)totalT);
    }
 }
 

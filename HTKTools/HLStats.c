@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hlstats_version = "!HVER!HLStats:   3.4 [CUED 25/04/06]";
-char *hlstats_vc_id = "$Id: HLStats.c,v 1.2 2006/12/29 04:44:55 zen Exp $";
+char *hlstats_vc_id = "$Id: HLStats.c,v 1.4 2007/10/03 07:20:10 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -420,7 +420,9 @@ void InitWordInfo(WordInfo *w, LabId id, Cntr *pCntr)
 /* InitStats: Create and init all necessary global accumulators */
 void InitStats(char *listFn)
 {
-   int h,p,l;
+   int h;
+   long l;
+   long p;
    MLink q,hm;
    HLink hmm;
    HMMSet *hset;
@@ -474,7 +476,7 @@ void InitStats(char *listFn)
             if (hm==NULL || hmm->hook==0)
                HError(1390,"InitStats: No physical name found for %s",
                       q->id->name);
-            InitWordInfo(lTab+l,q->id,pTab+(int)hmm->hook);
+            InitWordInfo(lTab+l,q->id,pTab+(long)hmm->hook);
             l++;
          }
    qsort(lTab+1,lSize,sizeof(WordInfo),wd_cmp);
@@ -543,13 +545,13 @@ void GatherStats(Transcription *t)
    if (l->labid==exitId) en--;
 
    /* Coerce previous labels to be enterId */
-   for (i=0; i<ASIZE; i++) in[i]=(int)enterId->aux;
-   lt = lTab+(int)enterId->aux; ++lt->count;
+   for (i=0; i<ASIZE; i++) in[i]=(long)enterId->aux;
+   lt = lTab+(long)enterId->aux; ++lt->count;
    
    /* Process actual labels in list */ 
    for (i=st; i<=en; i++) {
       l = GetLabN(ll,i);
-      lab=(int)l->labid->aux;
+      lab=(long)l->labid->aux;
       dur = (float)(l->end - l->start)/10000.0;
       lt=lTab+lab;
       /* increment stats */
@@ -561,7 +563,7 @@ void GatherStats(Transcription *t)
       if (doBigram) {
          /* We ignore all transitions into enterId and exitId */
          /* May wish to warn user about badly formed sentences */
-         if (!(lab==(int)enterId->aux || (lab==(int)exitId->aux))) {
+         if (!(lab==(long)enterId->aux || (lab==(long)exitId->aux))) {
             for (j=ASIZE-1;j>0;j--) in[j]=in[j-1];
             in[0]=lab;
             ae = GetAEntry(in,TRUE);
@@ -572,11 +574,11 @@ void GatherStats(Transcription *t)
    /* Deal with transition into EXIT */
    if (doBigram) {
       for (j=ASIZE-1;j>0;j--) in[j]=in[j-1];
-      in[0]=(int)exitId->aux;
+      in[0]=(long)exitId->aux;
       ae = GetAEntry(in,TRUE);
       ae->count++;
    }
-   lt = lTab+(int)exitId->aux; ++lt->count;
+   lt = lTab+(long)exitId->aux; ++lt->count;
 }
 
 /* ----------------------- Output Results -------------------- */
@@ -590,7 +592,7 @@ int CmpCntr(const void *p1, const void *p2)
 
    c1=(Cntr *)p1; c2=(Cntr *)p2;
    diff=c1->count-c2->count;
-   if (diff==0) return((int)c2->name->aux-(int)c1->name->aux);
+   if (diff==0) return((long)c2->name->aux-(long)c1->name->aux);
    else return(diff);
 }
 
@@ -604,7 +606,7 @@ int CmpWordInfo(const void *p1, const void *p2)
    
    c1=(WordInfo *)p1; c2=(WordInfo *)p2;
    diff=c1->count-c2->count;
-   if (diff==0) return((int)c2->name->aux-(int)c1->name->aux);
+   if (diff==0) return((long)c2->name->aux-(long)c1->name->aux);
    else return(diff);
 }
 
@@ -717,10 +719,10 @@ static float BuildNEntry(NEntry *ne,Vector boff,float bent)
    ne->nse=0;
    tot=cnt=0.0;
    bsum=1.0;
-   if (ne->word[0]!=(int)exitId->aux)
+   if (ne->word[0]!=(long)exitId->aux)
       for (ae=(AEntry *) ne->user; ae!=NULL; ae=ae->link) {
          tot+=ae->count;
-         if (ae->word[0]!=0 && ae->word[0]!=(int)enterId->aux &&
+         if (ae->word[0]!=0 && ae->word[0]!=(long)enterId->aux &&
              ae->count>bigThresh)
             cnt+=(ae->count-disCount),ne->nse++,bsum-=boff[ae->word[0]];
       }
@@ -734,7 +736,7 @@ static float BuildNEntry(NEntry *ne,Vector boff,float bent)
       bowt = (bsum>0.0) ? (1.0-cnt/tot)/bsum : 0.0;
       ent  = (bowt>0.0) ? bowt*(bent-log2(bowt)) : 0.0;
       for (cse=ne->se,ae=(AEntry *) ne->user; ae!=NULL; ae=ae->link)
-         if (ae->word[0]!=0 && ae->word[0]!=(int)enterId->aux &&
+         if (ae->word[0]!=0 && ae->word[0]!=(long)enterId->aux &&
              ae->count>bigThresh) {
             prob=((double)ae->count-disCount)/tot;
             cse->word=ae->word[0];
@@ -777,7 +779,7 @@ void OutputBoBigram(void)
    RebuildAETab(aelists);          /* Un-hash hashtable */
 
    for (i=1,tot=0.0;i<=lSize;i++) {    /* Calculate unigrams first */
-      if (i==(int)enterId->aux)
+      if (i==(long)enterId->aux)
          nglm->unigrams[i]=0.0;
       else if (lTab[i].count<uniFloor)
          nglm->unigrams[i]=uniFloor;
@@ -806,9 +808,9 @@ void OutputBoBigram(void)
       ent = BuildNEntry(ne,nglm->unigrams,uent);
       nglm->counts[2]+=ne->nse;
       if (trace&T_BIG) 
-         if (i!=(int)exitId->aux){
-            if (i==(int)enterId->aux)
-               bent+=nglm->unigrams[(int)exitId->aux]*ent;
+         if (i!=(long)exitId->aux){
+            if (i==(long)enterId->aux)
+               bent+=nglm->unigrams[(long)exitId->aux]*ent;
             else 
                bent+=nglm->unigrams[i]*ent;
             printf("   %-20s - %4d foll, ent %6.3f [= %6.2f]\n",
@@ -880,7 +882,7 @@ void OutputMatBigram(void)
             ae->count=0;
       scale = (1.0 - fsum) / vsum;
       for (j=1;j<=lSize;j++) {
-         if (j==(int)enterId->aux) vec[j]=0.0;
+         if (j==(long)enterId->aux) vec[j]=0.0;
          else if (tot==0.0) vec[j]=1.0/(lSize-1);
          else vec[j]=bigFloor;
       }
@@ -902,7 +904,7 @@ void OutputMatBigram(void)
                ent += fent;
                nf--;  np++;
             }
-         if (i!=(int)exitId->aux){
+         if (i!=(long)exitId->aux){
             j=lTab[i].count;
             bent+=j*ent;tn+=j;
             if (tot==0.0)

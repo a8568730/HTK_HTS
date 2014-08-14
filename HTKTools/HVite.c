@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hvite_version = "!HVER!HVite:   3.4 [CUED 25/04/06]";
-char *hvite_vc_id = "$Id: HVite.c,v 1.6 2006/12/29 04:44:55 zen Exp $";
+char *hvite_vc_id = "$Id: HVite.c,v 1.8 2007/09/18 12:24:07 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -583,9 +583,8 @@ void Initialise(void)
       alignvri=InitVRecInfo(alignpsi,1,TRUE,FALSE);
       SetPruningLevels(alignvri,0,genBeam,-LZERO,0.0,tmBeam);
       InitUttInfo(utt, FALSE);
-      InitialiseForBack(fbInfo, &regHeap, &hset,
-                        (UPDSet) (UPXFORM), genBeam*2.0, genBeam*2.0, 
-                        genBeam*4.0+1.0, 10.0, FALSE, FALSE);
+      InitialiseForBack(fbInfo, &regHeap, &hset, (UPDSet) (UPXFORM), NULL, (UPDSet) 0, 
+                        genBeam*2.0, genBeam*2.0, genBeam*4.0+1.0, 10.0, FALSE);
       utt->twoDataFiles = FALSE;
       utt->S = hset.swidth[0]; 
       AttachPreComps(&hset,hset.hmem);

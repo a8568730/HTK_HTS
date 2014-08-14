@@ -39,7 +39,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -111,7 +111,7 @@ static void UpdateLMlookahead(DecoderInst *dec, LexNode *ln)
       }
       else {    /* if we ever do fastLMLA, be careful as tok->lmscore might increase! */
          lmscore = LMCacheLookaheadProb (dec, tok->lmState, lmlaIdx, 
-                                         tok->delta < dec->fastlmlaBeam);
+                                         ((tok->delta < dec->fastlmlaBeam) ? TRUE:FALSE));
          if (lmscore > tok->lmscore)    /* if lmla goes up, leave old estimate */
             lmscore = tok->lmscore;
       }

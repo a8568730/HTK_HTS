@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hmodel_version = "!HVER!HModel:   3.4 [CUED 25/04/06]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.16 2006/12/29 04:44:53 zen Exp $";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.20 2007/10/03 07:20:13 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -199,7 +199,7 @@ void InitModel(void)
       if (GetConfFlt(cParm,nParm,"PDETHRESHOLD2",&d)) pdeTh2 = d;
       if (GetConfFlt(cParm,nParm,"IGNOREVALUE",&d)) ignoreValue = d;
    }
-}
+   }
 
 /* EXPORT->ResetModel: reset module */
 void ResetModel (void)
@@ -1820,10 +1820,12 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
          HMError(src,"GetToken failed");
          return(NULL);
       }
-   } else {
+   } 
+   else {
       mp = (MixPDF *)New(hset->hmem,sizeof(MixPDF));
       mp->nUse = 0; mp->hook = NULL; mp->gConst = LZERO;
       mp->mIdx = 0; mp->stream = 0; mp->vFloor = NULL;
+      mp->cov.var = NULL;  mp->cov.inv = NULL; mp->cov.xform = NULL; mp->ckind = NULLC;
       if((mp->mean = GetMean(hset,src,tok))==NULL){      
          HMError(src,"GetMean Failed");
          return(NULL);
@@ -1839,7 +1841,8 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
             HRError(7032,"GetMixPDF: trying to change global cov type to DiagC");
             return(NULL);
          }
-      } else if (tok->sym==INVCOVAR || (tok->sym==MACRO && tok->macroType=='i')){
+      } 
+      else if (tok->sym==INVCOVAR || (tok->sym==MACRO && tok->macroType=='i')) {
          if((mp->cov.inv = GetCovar(hset,src,tok))==NULL){
             HMError(src,"GetCovar Failed");
             return(NULL);
@@ -1850,7 +1853,8 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
             HRError(7032,"GetMixPDF: trying to change global cov type to FullC");
             return(NULL);
          }
-      } else if (tok->sym==LLTCOVAR || (tok->sym==MACRO && tok->macroType=='c')){
+      } 
+      else if (tok->sym==LLTCOVAR || (tok->sym==MACRO && tok->macroType=='c')) {
          if((mp->cov.inv = GetCovar(hset,src,tok))==NULL){
             HMError(src,"GetCovar Failed");
             return(NULL);
@@ -1861,7 +1865,8 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
             HRError(7032,"GetMixPDF: trying to change global cov type to LLTC");
             return(NULL);
          }
-      } else if (tok->sym==XFORM || (tok->sym==MACRO && tok->macroType=='x')){
+      } 
+      else if (tok->sym==XFORM || (tok->sym==MACRO && tok->macroType=='x')) {
          if((mp->cov.xform = GetTransform(hset,src,tok))==NULL){
             HMError(src,"GetTransform Failed");
             return(NULL);
@@ -1872,7 +1877,8 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
             HRError(7032,"GetMixPDF: trying to change global cov type to XFormC");
             return(NULL);
          }
-      } else{
+      } 
+      else{
          HMError(src,"Variance or Xform expected in GetMixPDF");
          return(NULL);
       }
@@ -2032,8 +2038,8 @@ static StreamInfo *GetStreamInfo(HMMSet *hset, Source *src, Token *tok, int s)
       if(GetToken(src,tok)<SUCCESS){
          HMError(src,"GetToken failed");
             return(NULL);
+         }
       }
-   }
       else 
          sti->stream = s;
       
@@ -2042,11 +2048,11 @@ static StreamInfo *GetStreamInfo(HMMSet *hset, Source *src, Token *tok, int s)
          if (!ReadInt(src,&sti->nMix,1,tok->binForm)) {
             HMError(src,"Num Mix in Shared Stream expected");
             return(NULL);
-         }
+      }
          if (GetToken(src,tok)<SUCCESS) {
             HMError(src,"GetToken failed");
             return(NULL);
-         }
+   }
       } else 
          sti->nMix=1;
 
@@ -3582,7 +3588,7 @@ static unsigned Hash(char *name)
 /* EXPORT-> NewMacro: append a macro with given values to list */
 MLink NewMacro(HMMSet *hset, short fidx, char type, LabId id, Ptr structure)
 {
-   unsigned int hashval;
+   unsigned long hashval;
    MLink m;
    PtrMap *p;
 
@@ -3644,7 +3650,7 @@ MLink NewMacro(HMMSet *hset, short fidx, char type, LabId id, Ptr structure)
    m->structure = structure;
    m->next = hset->mtab[hashval]; hset->mtab[hashval] = m;
    if (hset->pmap != NULL) {
-      hashval = (unsigned int)m->structure % PTRHASHSIZE;
+      hashval = (unsigned long)m->structure % PTRHASHSIZE;
       p = (PtrMap *)New(hset->hmem,sizeof(PtrMap));
       p->ptr = m->structure; p->m = m; 
       p->next = hset->pmap[hashval]; hset->pmap[hashval] = p;
@@ -3699,7 +3705,7 @@ MLink FindMacroStruct(HMMSet *hset, char type, Ptr structure)
 {
    MLink m;
    int h,n;
-   unsigned int i;
+   unsigned long i;
    PtrMap *p;
    
 
@@ -3708,7 +3714,7 @@ MLink FindMacroStruct(HMMSet *hset, char type, Ptr structure)
       if (trace&T_PMP) printf("HModel: creating pointer map hash table\n");
       for (n=0,h=0; h<MACHASHSIZE; h++)
          for (m=hset->mtab[h]; m!=NULL; m=m->next){
-            i = (unsigned int)m->structure % PTRHASHSIZE;
+            i = (unsigned long)m->structure % PTRHASHSIZE;
             p = (PtrMap *)New(hset->hmem,sizeof(PtrMap));
             p->ptr = m->structure; p->m = m; 
             p->next = hset->pmap[i]; hset->pmap[i] = p;
@@ -3716,7 +3722,7 @@ MLink FindMacroStruct(HMMSet *hset, char type, Ptr structure)
          }
       if (trace&T_PMP) printf("HModel: %d pointers hashed\n",n);
    }
-   i = (unsigned int)structure % PTRHASHSIZE;
+   i = (unsigned long)structure % PTRHASHSIZE;
    for (p = hset->pmap[i]; p != NULL; p = p->next) {
       m = p->m;
       if (p->ptr == structure && m->type == type)
@@ -3801,6 +3807,27 @@ void SetVFloor(HMMSet *hset, Vector *vFloor, float minVar)
          for (j=1; j<=hset->swidth[s]; j++)
             vFloor[s][j] = minVar;
       }
+   }
+}
+
+/* EXPORT->ResetVFloor: reset vFloor[1..S] */
+void ResetVFloor(HMMSet *hset, Vector *vFloor)
+{
+   int s;
+   char mac[MAXSTRLEN], num[10];
+   LabId id;
+   MLink m;
+   
+   if (vFloor==NULL) return;
+   
+   for (s=hset->swidth[0]; s>0; s--) {
+      strcpy(mac,"varFloor");
+      sprintf(num,"%d",s); strcat(mac,num);
+      id = GetLabId(mac,FALSE);
+      if (id != NULL  && (m=FindMacroName(hset,'v',id)) != NULL)
+         vFloor[s] = NULL;
+      else  
+         FreeVector(hset->hmem,vFloor[s]);
    }
 }
 
@@ -4222,7 +4249,8 @@ void SetIndexes(HMMSet *hset)
    StreamInfo *sti;
    MixPDF *mp;
    MLink m;
-   int h,nm,nsm,ns,nss,nsp,np,nt;
+   int h,nm,nsm,ns,nss,nsp,np;
+   long nt;
    
    /* Reset indexes */
    hset->indexSet = TRUE;
@@ -4252,7 +4280,7 @@ void SetIndexes(HMMSet *hset)
          SetHook(hss.hmm->transP,(Ptr)(++nt));
          TouchV(hss.hmm->transP);
       }
-      hss.hmm->tIdx=(int)GetHook(hss.hmm->transP);
+      hss.hmm->tIdx=(long)GetHook(hss.hmm->transP);
    } while (GoNextHMM(&hss));
    EndHMMScan(&hss);
    NewHMMScan(hset,&hss);

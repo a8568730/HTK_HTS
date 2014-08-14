@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hnet_version = "!HVER!HNet:   3.4 [CUED 25/04/06]";
-char *hnet_vc_id = "$Id: HNet.c,v 1.3 2006/12/29 04:44:54 zen Exp $";
+char *hnet_vc_id = "$Id: HNet.c,v 1.5 2007/10/03 07:20:14 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -381,7 +381,7 @@ static Lattice *GetSubLat(LabId subLatId,Lattice *subLat)
       subLatHashTab=NULL;
       return(NULL);
    }
-   h=(((unsigned) subLatId)%SUBLATHASHSIZE);
+   h=(((unsigned long) subLatId)%SUBLATHASHSIZE);
    for (cur=subLatHashTab[h];cur!=NULL;cur=cur->chain)
       if (cur->subLatId==subLatId) break;
    if (subLat!=NULL) {
@@ -1664,7 +1664,7 @@ NodeId FindLatEnd(Lattice *lat)
 
 static void PrintNode(NetNode *node,HMMSet *hset)
 {
-   printf("Node[%05d] ",(((unsigned) node)/sizeof(NetNode))%100000);
+   printf("Node[%05ld] ",(((unsigned long) node)/sizeof(NetNode))%100000);
    if (node->type & n_hmm)
       printf("{%s}\n",HMMPhysName(hset,node->info.hmm));
    else if (node->type == n_word && node->info.pron==NULL) {
@@ -1692,8 +1692,8 @@ static void PrintLinks(NetLink *links,int nlinks)
    int i;
 
    for (i=0; i<nlinks; i++) {
-      printf("    %-2d: -> [%05d] == %7.3f\n",i,
-             (((unsigned) links[i].node)/sizeof(NetNode)%100000),
+      printf("    %-2d: -> [%05ld] == %7.3f\n",i,
+             (((unsigned long) links[i].node)/sizeof(NetNode)%100000),
              links[i].like);
       fflush(stdout);
    }
@@ -2050,7 +2050,7 @@ static NetNode *FindWordNode(MemHeap *heap,Pron pron,
    NetNode *node;
 
    hash=0;
-   un.ptrs[0]=pron;un.ptrs[1]=pInst;un.ptrs[2]=(Ptr)type;
+   un.ptrs[0]=pron;un.ptrs[1]=pInst;un.ptrs[2]=(Ptr)((long)type);
    for (i=0;i<12;i++)
       hash=((hash<<8)+un.chars[i])%WNHASHSIZE;
 

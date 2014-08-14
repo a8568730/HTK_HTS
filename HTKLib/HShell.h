@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -118,9 +118,9 @@ extern "C" {
 
 
 #define MAXSTRLEN 256    /* max length of a string */
-#define MAXFNAMELEN 1034 /* max length of a file name */
+#define MAXFNAMELEN 1024 /* max length of a file name */
 #define PAT_LEN 2048     /* max length of pattern */
-#define SMAX      8      /* max num data streams + 1 */
+#define SMAX      9      /* max num data streams + 1 */
 #define MAXGLOBS  256    /* max num global config parms */
 
 #define SING_QUOTE '\''  /* character used as quote */

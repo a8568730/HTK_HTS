@@ -8,7 +8,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -47,7 +47,7 @@
 /*  ---------------------------------------------------------------  */
 
 
-/* !HVER!HGen:   2.0 [NIT 06/11/06] */
+/* !HVER!HGen:   2.0.1 [NIT 01/10/07] */
 
 #ifndef _HGEN_H_
 #define _HGEN_H_

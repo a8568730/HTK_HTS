@@ -39,7 +39,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -253,7 +253,7 @@ static LogDouble totalPr1=0,totalPr2=0,totalPr3=0;              /* total log pro
 
 
 static Vector vFloor[SMAX];          /* variance floor - default is all zero */
-static float minVar;                 /* variance floor if vFloor not specified in hmm set. */
+/* static float minVar; */                /* variance floor if vFloor not specified in hmm set. */
 
 static MemHeap accStack;           /* accumulated statistics */
 static MemHeap hmmStack;           /* HMM defs and related structures */
@@ -1092,7 +1092,7 @@ void StatReport(void) /*This is used by other programs so I have had to change i
    px=1;
    do {
       hmm = hss.hmm;
-      PrintStats(f,px,hmm,(int)hmm->hook);
+      PrintStats(f,px,hmm,(long)hmm->hook);
       px++;
    } while (GoNextHMM(&hss));
    EndHMMScan(&hss);
@@ -1415,7 +1415,8 @@ void UpdateWeightsAndTrans (void)
 {
    HMMScanState hss;
    HLink hmm;
-   int px,n;
+   int px;
+   long n;
    void UpdateWeight(const int s, StreamInfo *sti);
 
    NewHMMScan(&hset,&hss);
@@ -1430,7 +1431,7 @@ void UpdateWeightsAndTrans (void)
    do{
       void UpdateTrans(int px, HLink hmm);
       hmm=hss.hmm;
-      n = (int)hmm->hook; /*The number of training egs seen*/
+      n = (long)hmm->hook; /*The number of training egs seen*/
 
       /* n is NO LONGER USED. */
 

@@ -38,7 +38,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -73,7 +73,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hdecode_version = "!HVER!HDecode:   3.4 [GE 25/04/06]";
-char *hdecode_sccs_id = "$Id: HDecode.c,v 1.2 2006/12/29 04:44:56 zen Exp $";
+char *hdecode_sccs_id = "$Id: HDecode.c,v 1.4 2007/10/01 18:07:58 zen Exp $";
 
 /* this is just the tool that handles command line arguments and
    stuff, all the real magic is in HLVNet and HLVRec */
@@ -718,7 +718,7 @@ DecoderInst *Initialise (void)
    obs = (Observation *) New (&gcheap, outpBlocksize * sizeof (Observation));
    for (i = 0; i < outpBlocksize; ++i)
       obs[i] = MakeObservation (&gcheap, hset.swidth, hset.pkind, 
-                                (hset.hsKind == DISCRETEHS), eSep);
+                                ((hset.hsKind==DISCRETEHS) ? TRUE:FALSE), eSep);
 
    CreateHeap (&inputBufHeap, "Input Buffer Heap", MSTAK, 1, 1.0, 80000, 800000);
 
@@ -1096,10 +1096,13 @@ void DoRecognition (DecoderInst *dec, char *fn)
 
       if (labForm != NULL)
          ReFormatTranscription (trans, pbInfo.tgtSampRate, FALSE, FALSE,
-                                strchr(labForm,'X')!=NULL,
-                                strchr(labForm,'N')!=NULL,strchr(labForm,'S')!=NULL,
-                                strchr(labForm,'C')!=NULL,strchr(labForm,'T')!=NULL,
-                                strchr(labForm,'W')!=NULL,strchr(labForm,'M')!=NULL);
+                               ((strchr(labForm,'X')!=NULL) ? TRUE:FALSE),
+                               ((strchr(labForm,'N')!=NULL) ? TRUE:FALSE),
+                               ((strchr(labForm,'S')!=NULL) ? TRUE:FALSE),
+                               ((strchr(labForm,'C')!=NULL) ? TRUE:FALSE),
+                               ((strchr(labForm,'T')!=NULL) ? TRUE:FALSE),
+                               ((strchr(labForm,'W')!=NULL) ? TRUE:FALSE),
+                               ((strchr(labForm,'M')!=NULL) ? TRUE:FALSE));
       
       MakeFN (fn, labDir, labExt, labfn);
 

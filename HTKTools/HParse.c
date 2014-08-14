@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hparse_version = "!HVER!HParse:   3.4 [CUED 25/04/06]";
-char *hparse_vc_id = "$Id: HParse.c,v 1.3 2006/12/29 04:44:55 zen Exp $";
+char *hparse_vc_id = "$Id: HParse.c,v 1.5 2007/10/03 07:20:10 zen Exp $";
 
 /* The HParse program reads in a set of HTK  HParse rewrite rules
    (as used in HTK V1.x) and writes out an HTK V2 lattice and
@@ -433,7 +433,7 @@ static void PrModelName(Link p)
       strcpy(name,"????");
    else
       strcpy(name,p->modelName->name);
-   printf("%s[%03d] ",name, ((int)p % 4000) / 4 );
+   printf("%s[%03ld] ",name, ((long)p % 4000) / 4 );
 }
 
 /* PrintLinkSet: print first n slots of given LinkSet to stdout */
@@ -2054,7 +2054,7 @@ void LabelInternal(Link p)
       }  
    }
    else if ((ni->nType != wdEnd) && (ni->nType != wdInternal))
-      HError(3131,"LabelInternal: incorrect WD_BEGIN/WD_END node connection, node %d is %d",((int)p % 4000) / 4,ni->nType);
+      HError(3131,"LabelInternal: incorrect WD_BEGIN/WD_END node connection, node %ld is %d",((long)p % 4000) / 4,ni->nType);
 }
 
 /* FindNodeTypes: mark each node as wdInternal or wdExternal */

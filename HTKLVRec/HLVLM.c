@@ -38,7 +38,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -73,7 +73,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hlvlm_version = "!HVER!HLVLM:   3.4 [GE 25/04/06]";
-char *hlvlm_vc_id = "$Id: HLVLM.c,v 1.4 2006/12/29 04:44:56 zen Exp $";
+char *hlvlm_vc_id = "$Id: HLVLM.c,v 1.5 2007/10/01 18:07:58 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

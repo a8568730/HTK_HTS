@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hutil_version = "!HVER!HUtil:   3.4 [CUED 25/04/06]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.8 2006/12/29 04:44:54 zen Exp $";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.12 2007/09/18 12:20:45 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -503,7 +503,7 @@ void ConvDiagC(HMMSet *hset, Boolean convData)
                for (k=1; k<=VectorSize(v); k++) {
                   if (v[k] > MAXVAR) v[k] = MAXVAR;
                   if (v[k] < MINVAR) v[k] = MINVAR;
-                  v[k] = 1/v[k];
+                  v[k] = 1.0/v[k];
                }
                TouchV(v);
             }
@@ -533,7 +533,7 @@ void ForceDiagC(HMMSet *hset)
             for (k=1; k<=VectorSize(hss.mp->mean); k++) {
                if (v[k] > MAXVAR) v[k] = MAXVAR;
                if (v[k] < MINVAR) v[k] = MINVAR;
-               v[k] = 1/v[k];
+               v[k] = 1.0/v[k];
             }
             TouchV(v);
          }
@@ -1010,21 +1010,21 @@ static void PStatecomp(ILink models, ILink *ilist, char *type,
       SkipSpaces();
       if (ch=='[')
             PMix(models,ilist,type,states,str,hset);
-         else {
-            ChkType('p',type);
-            for (h=models; h!=NULL; h=h->next) {
-               hmm = h->owner;
-               for (j=2; j<hmm->numStates; j++)
+      else {
+         ChkType('p',type);
+         for (h=models; h!=NULL; h=h->next) {
+            hmm = h->owner;
+            for (j=2; j<hmm->numStates; j++)
                   if (IsMember(states,j)) {
-                    for (s=1; s<=hset->swidth[0];s++)   
+                  for (s=1; s<=hset->swidth[0];s++)   
                         if (IsMember(str,s)) { /* tie -> spdf */
-                           if (trace & T_ITM)
-                              printf(" %12s.state[%d].stream[%d]\n",
-                                     HMMPhysName(hset,hmm),j,s);
-                           AddItem(hmm,hmm->svec[j].info->pdf+s,ilist);
-                        }
-                  }
-            }
+                        if (trace & T_ITM)
+                           printf(" %12s.state[%d].stream[%d]\n",
+                                  HMMPhysName(hset,hmm),j,s);
+                        AddItem(hmm,hmm->svec[j].info->pdf+s,ilist);
+                     }
+         }
+      }
          }
       }
       else {
@@ -1037,15 +1037,15 @@ static void PStatecomp(ILink models, ILink *ilist, char *type,
                      AddItem(hmm,hmm->svec+j,ilist);
                   }
                   else
-                  for (s=1; s<=hset->swidth[0];s++)   
+                     for (s=1; s<=hset->swidth[0];s++)   
                         if (IsMember(str,s)) { /* tie -> spdf */
-                        if (trace & T_ITM)
-                           printf(" %12s.state[%d].stream[%d]\n",
-                                  HMMPhysName(hset,hmm),j,s);
-                        AddItem(hmm,hmm->svec[j].info->pdf+s,ilist);
-                     }
+                           if (trace & T_ITM)
+                              printf(" %12s.state[%d].stream[%d]\n",
+                                     HMMPhysName(hset,hmm),j,s);
+                           AddItem(hmm,hmm->svec[j].info->pdf+s,ilist);
+                        }
+               }
          }
-      }
       }
       if (streams != NULL)
          for (s=1;s<=SMAX;s++)
@@ -1127,7 +1127,7 @@ static void PHIdent(ILink *models, HMMSet *hset)
    GetAlpha(pattern);
    p = pattern; h=0;
    while ((*p != '\0') && (h<MAXSTRLEN) && (fullName)) {
-     if ((*p=='*')||(*p=='?')||(*p=='%')) fullName=FALSE;
+      if ((*p=='*')||(*p=='?')) fullName=FALSE;
      h++; 
      p = pattern+h;
    }
@@ -1463,6 +1463,126 @@ void LoadStatsFile(char *statfile,HMMSet *hset,Boolean otrace)
       printf("  Mean Occupation Count = %f\n",occSum/occN);
       fflush(stdout);
    }
+}
+
+/* ------------------- Configuration File Parsing  --------------------- */
+
+/* EXPORT->ParseConfIntVec: interpret config string as integer array */
+IntVec ParseConfIntVec (MemHeap *x, char *inbuf, Boolean residual)
+{
+   IntVec ivec = NULL;
+   int size,cnt;
+   char buf[MAXSTRLEN],tbuf[MAXSTRLEN];
+
+   if ((inbuf=ParseString(inbuf,buf))>0) {
+      if (strcmp(buf,"IntVec") != 0)
+         HError(999,"ParseConfIntVec: format is 'IntVec n i1 i2 ... in'");
+      sscanf(inbuf,"%d",&size);
+      inbuf=ParseString(inbuf,tbuf);
+      ivec = CreateIntVec(x,size);
+      cnt = 1;
+      while ((strlen(inbuf)>0) && (cnt<=size) &&
+             (sscanf(inbuf,"%d",&(ivec[cnt])))) {
+         inbuf=ParseString(inbuf,tbuf);
+         cnt++;
+      }
+      if (residual && strlen(inbuf)>0)
+         HError(999,"ParseConfIntVec: residual elements - format is  n i1 ... in");
+   } else
+      HError(999,"ParseConfIntVec: format is  n i1 ... in");
+   return ivec;
+}
+
+/* EXPORT->ParseConfVector: interpret config string as float array */
+Vector ParseConfVector (MemHeap *x, char *inbuf, Boolean residual)
+{
+   Vector vec = NULL;
+   int size,cnt;
+   char buf[MAXSTRLEN],tbuf[MAXSTRLEN];
+
+   if ((inbuf=ParseString(inbuf,buf))>0) {
+      if (strcmp(buf,"Vector") != 0)
+         HError(999,"ParseConfVector: format is 'Vector n f1 f2 ... fn'");
+      sscanf(inbuf,"%d",&size);
+      inbuf=ParseString(inbuf,tbuf);
+      vec = CreateVector(x,size);
+      cnt = 1;
+      while ((strlen(inbuf)>0) && (cnt<=size) &&
+             (sscanf(inbuf,"%f",&(vec[cnt])))) {
+         inbuf=ParseString(inbuf,tbuf);
+         cnt++;
+      }
+      if (residual && strlen(inbuf)>0)
+         HError(999,"ParseConfVector: residual elements - format is  n f1 ... fn");
+   } else
+      HError(999,"ParseConfVector: format is  n f1 ... fn");
+   return vec;
+}
+
+/* EXPORT->ParseConfStrVec: interpret config string as string array */
+char **ParseConfStrVec (MemHeap *x, char *inbuf, Boolean residual)
+{
+   char **str=NULL;
+   int size,cnt;
+   char buf[MAXSTRLEN],tbuf[MAXSTRLEN];
+
+   if ((inbuf=ParseString(inbuf,buf))>0) {
+      if (strcmp(buf,"StrVec") != 0)
+         HError(999,"ParseConfStrVec: format is 'StrVec n s1 s2 ... sn'");
+      sscanf(inbuf,"%d",&size);
+      inbuf=ParseString(inbuf,tbuf);
+
+      str = (char **) New(x, (size+1)*sizeof(char *));
+      str[0] = (char *) New(x, sizeof(char));
+      str[0][0] = (char) size;  /* size should be within char range */
+      for (cnt=1; cnt<=size; cnt++)
+         str[cnt] = (char *) New(x, MAXSTRLEN*sizeof(char));
+
+      cnt = 1;
+      while ((strlen(inbuf)>0) && (cnt<=size) &&
+             (inbuf=ParseString(inbuf,str[cnt]))) {
+         cnt++;
+      }
+      if (residual && strlen(inbuf)>0)
+         HError(999,"ParseConfStrVec: residual elements - format is  n s1 ... sn");
+   } else
+      HError(999,"ParseConfStrVec: format is  n s1 ... sn");
+
+   return str;
+}
+
+/* EXPORT->ParseConfBoolVec: interpret config string as Boolean array */
+Boolean *ParseConfBoolVec (MemHeap *x, char *inbuf, Boolean residual)
+{
+   Boolean *vec=NULL;
+   int size,cnt;
+   char buf[MAXSTRLEN],tbuf[MAXSTRLEN];
+
+   if ((inbuf=ParseString(inbuf,buf))>0) {
+      if (strcmp(buf,"BoolVec") != 0)
+         HError(999,"ParseConfBoolVec: format is 'BoolVec n f1 f2 ... fn'");
+      sscanf(inbuf,"%d",&size);
+      inbuf=ParseString(inbuf,tbuf);
+      vec = (Boolean *) New(x,size*sizeof(Boolean));
+      cnt = 1;
+      while ((strlen(inbuf)>0) && (cnt<=size) && (sscanf(inbuf,"%s",buf))) {
+         /* parse input as Boolean value */
+         if (strcmp(buf,"T")==0 || strcmp(buf,"TRUE")==0)
+            vec[cnt] = TRUE;
+         else if (strcmp(buf,"F")==0 || strcmp(buf,"FALSE")==0)
+            vec[cnt] = FALSE;
+         else
+            HError(9999,"ParseConfBoolVec: %s is not a Boolean value", buf);
+
+         inbuf=ParseString(inbuf,tbuf);
+         cnt++;
+      }
+      if (residual && strlen(inbuf)>0)
+         HError(999,"ParseConfBoolVec: residual elements - format is  n f1 ... fn");
+   } else
+      HError(999,"ParseConfBoolVec: format is  n f1 ... fn");
+
+   return vec;
 }
 
 /* ---------------------------- End of HUtil.c --------------------------- */

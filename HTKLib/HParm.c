@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hparm_version = "!HVER!HParm:   3.4 [CUED 25/04/06]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.6 2006/12/29 04:44:53 zen Exp $";
+char *hparm_vc_id = "$Id: HParm.c,v 1.7 2007/09/18 12:20:45 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

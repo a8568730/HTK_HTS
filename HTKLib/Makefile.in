@@ -134,7 +134,6 @@ lvobjects = $(basename @HGRAF@).lv.o esig_asc.lv.o \
 	HExactMPE.lv.o \
 	HFB.lv.o \
 	HFBLat.lv.o \
-	HGen.lv.o \
 	HLabel.lv.o \
 	HLat.lv.o \
 	HLM.lv.o \

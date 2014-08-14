@@ -38,7 +38,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -73,7 +73,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hfblat_version = "!HVER!HFBLat:   3.4 [CUED 25/04/06]";
-char *hfblat_vc_id = "$Id: HFBLat.c,v 1.5 2006/12/29 04:44:54 zen Exp $";
+char *hfblat_vc_id = "$Id: HFBLat.c,v 1.8 2007/10/03 07:20:13 zen Exp $";
 
 /*
   Performs forward/backward alignment
@@ -216,7 +216,7 @@ int GetNoContextPhone(LabId phone, int *nStates_quinphone/*actually,number of HM
 
    if(PhoneMEEUseContext){
       if(Quinphone) HError(1, "Quinphone not compatible with context phones...");
-      return (int) phone;
+      return (int) ((long)phone);
    }
    strcpy(buf,lab);
 #ifdef SUPPORT_QUINPHONE
@@ -255,7 +255,7 @@ int GetNoContextPhone(LabId phone, int *nStates_quinphone/*actually,number of HM
    /* Want to return an integer identifier for the string.  Put the string into an integer
       if it is <4 chars long, otherwise call GetLabId.  Calling GetLabId too much can be
       inefficient so I use this approach instead for short phones. */
-   if(len > sizeof(int)) return (int) GetLabId(tmp, TRUE);
+   if(len > sizeof(int)) return (int) ((long)GetLabId(tmp, TRUE));
    else return ans;
 }
 
@@ -297,7 +297,7 @@ static void SetCorrectness(FBLatInfo *fbInfo, Lattice *numLat){
                {
                   LabId label = numLat->larcs[larcid].lAlign[seg].label; 
                   if(!PhoneMEEUseContext) i_label = GetNoContextPhone(label,&quinphone_nstates,&quinphone_state,NULL,NULL); 
-                  else i_label = (int)label; /* Use address of LabId. */
+                  else i_label = (int)((long)label); /* Use address of LabId. */
                }
 
                end_time = start_time + numLat->larcs[larcid].lAlign[seg].dur;
@@ -346,7 +346,7 @@ static void SetCorrectness(FBLatInfo *fbInfo, Lattice *numLat){
 #endif
             ca = New(&fbInfo->tempStack, sizeof(CorrectArc));
             ca->start = i_start; ca->end = i_end; 
-            ca->i_label = (int)numLat->larcs[larcid].end->word->wordName;
+            ca->i_label = (int)((long)numLat->larcs[larcid].end->word->wordName);
 
             for(i=i_start;i<=i_end;i++){
                CorrectArcList *cal = New(&fbInfo->tempStack, sizeof(CorrectArcList));
@@ -376,7 +376,7 @@ static void SetCorrectness(FBLatInfo *fbInfo, Lattice *numLat){
                /*get phone start&end times.*/
                i_start=a->t_start;i_end=a->t_end;
                if(!PhoneMEEUseContext)  iphone = GetNoContextPhone(phone,&quinphone_nstates,&quinphone_state, a, &i_end);
-               else iphone = (int)phone;
+               else iphone = (int)((long)phone);
 #ifdef SUPPORT_QUINPHONE
                if(Quinphone && quinphone_nstates>1 && quinphone_state > 2){ ZeroCorrectness = TRUE; }
 #endif
@@ -440,12 +440,12 @@ static void SetCorrectness(FBLatInfo *fbInfo, Lattice *numLat){
                   for(i=i_start;i<=i_end;i++){ /*look for all the ref. phones in this time interval.*/
                      for(cal = correctArc[i];cal;cal=cal->t){
                         float proportion;
-                        int otherWord; 
+                        long otherWord; 
                         currBegin = cal->h->start; currEnd=cal->h->end;
                         otherWord = cal->h->i_label; /*is actually the (int)LabId in this case.*/
                         proportion =
                            (float)(MIN(i_end,currEnd)-MAX(i_start,currBegin)+1)/ ((float)(currEnd-currBegin+1)); 
-                        if(otherWord == (int)word)
+                        if(otherWord == (long)word)
                            /*Work out how much overlap we have with the correct phone*/
                            /* ref length div by overlap length */
                            currCorrect = MAX(currCorrect, InsCorrectness + proportion*(-InsCorrectness+1));
@@ -588,7 +588,7 @@ static void SetCorrectnessAsError(FBLatInfo *fbInfo, Lattice *numLat){    /* re 
                {
                   LabId label = numLat->larcs[larcid].lAlign[seg].label; 
                   if(!PhoneMEEUseContext) i_label = GetNoContextPhone(label,&quinphone_nstates,&quinphone_state,NULL,NULL); 
-                  else i_label = (int)label; /* Use address of LabId. */
+                  else i_label = (int)((long)label); /* Use address of LabId. */
 
 		  is_nonsil = (int) ! IsSilence(label->name);
                }
@@ -639,7 +639,7 @@ static void SetCorrectnessAsError(FBLatInfo *fbInfo, Lattice *numLat){    /* re 
 #endif
             ca = New(&fbInfo->tempStack, sizeof(CorrectArc));
             ca->start = i_start; ca->end = i_end; 
-            ca->i_label = (int)numLat->larcs[larcid].end->word->wordName;
+            ca->i_label = (int)((long)numLat->larcs[larcid].end->word->wordName);
 
             for(i=i_start;i<=i_end;i++){
                CorrectArcList *cal = New(&fbInfo->tempStack, sizeof(CorrectArcList));
@@ -663,12 +663,12 @@ static void SetCorrectnessAsError(FBLatInfo *fbInfo, Lattice *numLat){    /* re 
                LabId phone = a->phone;
                int iphone; /*as ints..*/
                int i_start, i_end;
-               float currCorrect; /*-1 is the min correctness (for wrong phones).*/
+               float currCorrect=-1; /*-1 is the min correctness (for wrong phones).*/
                
                /*get phone start&end times.*/
                i_start=a->t_start;i_end=a->t_end;
                if(!PhoneMEEUseContext)  iphone = GetNoContextPhone(phone,&quinphone_nstates,&quinphone_state, a, &i_end);
-               else iphone = (int)phone;
+               else iphone = (int)((long)phone);
 #ifdef SUPPORT_QUINPHONE
                if(Quinphone && quinphone_nstates>1 && quinphone_state > 2){ ZeroCorrectness = TRUE; }
 #endif
@@ -1442,8 +1442,8 @@ static void StepForward()
   
    for (q=1;q<=fbInfo->Q;q++){  /* inc access counters */
       up_hmm = fbInfo->aInfo->ac[q].hmm;
-      negs = (int)up_hmm->hook+1;
-      up_hmm->hook = (void *)negs;
+      negs = (int)((long)up_hmm->hook+1);
+      up_hmm->hook = (void *)((long)negs);
    }
 
    for (t=1;t<=fbInfo->T;t++) {

@@ -8,7 +8,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -44,8 +44,8 @@
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
 
-char *hmgens_version = "!HVER!HMGenS:   1.1.2 [NIT 15/10/03]";
-char *hmgens_vc_id = "$Id: HMGenS.c,v 1.24 2006/12/29 04:44:56 zen Exp $";
+char *hmgens_version = "!HVER!HMGenS:   2.0.1 [NIT 01/10/07]";
+char *hmgens_vc_id = "$Id: HMGenS.c,v 1.31 2007/09/17 12:14:45 zen Exp $";
 
 /*  
     This program is used to generate feature vector sequences 
@@ -144,69 +144,6 @@ static char **winFn[SMAX];          /* fn of window */
 
 /* --------------------- Process Command Line ---------------------- */
 
-/* ParseConfIntVec: interpret config string as integer array */
-static IntVec ParseConfIntVec (MemHeap *x, char *inbuf, Boolean residual)
-{
-   IntVec ivec = NULL;
-   int size,cnt;
-   char buf[MAXSTRLEN],tbuf[MAXSTRLEN];
-
-   if (sscanf(inbuf,"%s",buf)>0) {
-      if (strcmp(buf,"IntVec") != 0)
-         HError(999,"ParseConfIntVec: format is 'IntVec n i1 i2 ... in'");
-      inbuf=strstr(inbuf,"IntVec")+strlen("IntVec");
-      sscanf(inbuf,"%d",&size);
-      sprintf(tbuf,"%d",size);
-      inbuf=strstr(inbuf,tbuf)+(int)strlen(tbuf);
-      ivec = CreateIntVec(x,size);
-      cnt = 1;
-      while ((strlen(inbuf)>0) && (cnt<=size) &&
-             (sscanf(inbuf,"%d",&(ivec[cnt])))) {
-         sprintf(tbuf,"%d",ivec[cnt]);
-         inbuf=strstr(inbuf,tbuf)+(int)strlen(tbuf);
-         cnt++;
-      }
-      if (residual && strlen(inbuf)>0)
-         HError(999,"ParseConfIntVec: residual elements - format is  n b1 ... bn");
-   } else
-      HError(999,"ParseConfIntVec: format is  n b1 ... bn");
-   return ivec;
-}
-
-/* ParseConfStrVec: interpret config string as string array */
-char **ParseConfStrVec (MemHeap *x, char *inbuf, Boolean residual)
-{
-   char **str=NULL;
-   int size,cnt;
-   char buf[MAXSTRLEN],tbuf[MAXSTRLEN];
-
-   if (sscanf(inbuf,"%s",buf)>0) {
-      if (strcmp(buf,"StrVec") != 0)
-         HError(999,"ParseConfStrVec: format is 'StrVec n s1 s2 ... sn'");
-      inbuf=strstr(inbuf,"StrVec")+strlen("StrVec");
-      sscanf(inbuf,"%d",&size);
-      sprintf(tbuf,"%d",size);
-      inbuf=strstr(inbuf,tbuf)+(int)strlen(tbuf);
-      
-      str = (char **) New(x, (size+1)*sizeof(char *));
-      str[0] = (char *) New(x, sizeof(char));
-      str[0][0] = (char) size;  /* size should be within char range */
-      for (cnt=1; cnt<=size; cnt++)
-         str[cnt] = (char *) New(x, MAXSTRLEN*sizeof(char));
-      
-      cnt = 1;
-      while ((strlen(inbuf)>0) && (cnt<=size) &&
-             (inbuf=ParseString(inbuf,str[cnt]))) {
-         cnt++;
-      }
-      if (residual && strlen(inbuf)>0)
-         HError(999,"ParseConfStrVec: residual elements - format is  n s1 ... sn");
-   } else
-      HError(999,"ParseConfStrVec: format is  n s1 ... sn");
-   
-   return str;
-}
-
 void SetConfParms (void)
 {
    int s,i;
@@ -260,8 +197,8 @@ void ReportUsage (void)
    printf(" -b f    Mixture pruning threshold                         10.0\n");
    printf(" -c n    type of parameter generation algorithm            0\n");
    printf("          0: both mix and state sequences are given        \n");
-   printf("          1: mix sequence is given,                        \n");
-   printf("             but state sequence is hidden                  \n");
+   printf("          1: state sequence is given,                      \n");
+   printf("             but mix sequence is hidden                    \n");
    printf("          2: both state and mix sequences are hidden       \n");
    printf(" -d s    dir to find hmm definitions                       current\n");
    printf(" -e      use model alignment from label for pruning        off\n");
@@ -655,8 +592,8 @@ void Initialise (void)
    AttachAccs(&hmset, &gstack, (UPDSet)0);
    ZeroAccs(&hmset, (UPDSet)0);
    
-   InitialiseForBack(fbInfo, &fbInfoStack, &hmset, (UPDSet)0, pruneInit, pruneInc,
-                     pruneLim, minFrwdP, FALSE, useAlign);
+   InitialiseForBack(fbInfo, &fbInfoStack, &hmset, (UPDSet)0, &dmset, (UPDSet)0, pruneInit, pruneInc,
+                     pruneLim, minFrwdP, useAlign);
                      
    /* handle input xform */
    xfInfo.inFullC = TRUE;
@@ -677,8 +614,8 @@ void Initialise (void)
 void WriteStateDurations (char *labfn, GenInfo *genInfo)
 {
    char fn[MAXFNAMELEN];
-   int i, j, m, nState, modeldur;
-   float modelMean,weight;
+   int i, j, k, s, cnt, nState, modeldur;
+   float modelMean;
    Label *label;
    FILE *durfp;
    Vector mean=NULL;
@@ -689,13 +626,18 @@ void WriteStateDurations (char *labfn, GenInfo *genInfo)
    if ((durfp = FOpen(fn,NoOFilter,&isPipe)) == NULL)
       HError(9911,"WriteStateDurations: Cannot create output file %s", fn);
    
+   /* prepare mean vector */
+   mean = CreateVector(genInfo->genMem, genInfo->maxStates);
+   
    for (i=1; i<=genInfo->labseqlen; i++) {
       label = GetLabN(genInfo->labseq->head, i);
       nState = genInfo->hmm[i]->numStates-2;
-      for (m=1,weight=0.0; m<=genInfo->dm[i]->svec[2].info->pdf[1].info->nMix; m++)
-         if (VectorSize(genInfo->dm[i]->svec[2].info->pdf[1].info->spdf.cpdf[m].mpdf->mean)==nState
-            && MixWeight(&dmset, genInfo->dm[i]->svec[2].info->pdf[1].info->spdf.cpdf[m].weight)>weight)
-            mean = genInfo->dm[i]->svec[2].info->pdf[1].info->spdf.cpdf[m].mpdf->mean;
+      
+      /* compose mean vector of the i-th state duration model */
+      for (s=cnt=1; s<=genInfo->dset->swidth[0]; s++) {
+         for (k=1; k<=genInfo->dset->swidth[s]; k++,cnt++)
+            mean[cnt] = genInfo->dm[i]->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->mean[k];
+      } 
       
       modeldur=0; modelMean=0.0;
       for (j=1; genInfo->sindex[i][j]!=0; j++) {
@@ -722,6 +664,9 @@ void WriteStateDurations (char *labfn, GenInfo *genInfo)
          fflush(stdout);
       }
    }
+
+   /* dispose mean vector */
+   FreeVector(genInfo->genMem,mean);
    
    /* close file pointer for saving state durations */
    FClose(durfp, isPipe);

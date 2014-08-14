@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hlm_version = "!HVER!HLM:   3.4 [CUED 25/04/06]";
-char *hlm_vc_id = "$Id: HLM.c,v 1.2 2006/12/29 04:44:53 zen Exp $";
+char *hlm_vc_id = "$Id: HLM.c,v 1.4 2007/10/03 07:20:14 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -426,7 +426,8 @@ static int ReadNGrams(NGramLM *nglm,int n,int count, Boolean bin)
    char wd[255];
    lmId ndx[NSIZE+1];
    NEntry *ne,*le=NULL;
-   int i, g, idx, total;
+   int i, idx, total;
+   long g;
    unsigned char size, flags=0;
 
    cse = (SEntry *) New(nglm->heap,count*sizeof(SEntry));
@@ -475,7 +476,7 @@ static int ReadNGrams(NGramLM *nglm,int n,int count, Boolean bin)
             else {
                ReadLMWord(wd);
                wdid = GetLabId(wd, FALSE);
-               idx = (wdid==NULL?0:(int)wdid->aux);
+               idx = (wdid==NULL?0:(long)wdid->aux);
             }
             if (idx<1 || idx>nglm->vocSize)
                HError(8150,"ReadNGrams: Unseen word (%s) in %dGram",wd,n);
@@ -675,7 +676,8 @@ static void ReadMatBigram(LModel *lm,char *fn)
 {
    Vector vec;
    char buf[132];
-   int P,p,j;
+   int P,j;
+   long p;
    float sum,x;
    LabId id;
    MatBiLM *matbi;
@@ -721,7 +723,7 @@ static void ReadMatBigram(LModel *lm,char *fn)
       if (p>P)
          HError(8150,"ReadMatBigram: More rows than columns in bigram %s",fn);
       id=GetLabId(buf,TRUE);
-      if ((int)id->aux != 0) 
+      if ((long)id->aux != 0) 
          HError(8150,"ReadMatBigram: Duplicated name %s in bigram %s",buf,fn);
       id->aux = (Ptr) p;
       matbi->wdlist[p] = id;
@@ -815,12 +817,12 @@ float GetLMProb(LModel *lm, LabId prid[NSIZE], LabId wdid)
   
    switch (lm->type) {
    case boNGram:
-      word = (int)wdid->aux;
+      word = (long)wdid->aux;
       if (word==0 || word>lm->data.ngram->vocSize)
          return(LZERO);
       for (s=-1,i=0;i<NSIZE;i++)
          if (prid[i]!=NULL) 
-            ndx[i]=(int)prid[i]->aux, cpid[i]=prid[i], s=i;
+            ndx[i]=(long)prid[i]->aux, cpid[i]=prid[i], s=i;
          else
             ndx[i]=0, cpid[i]=NULL;
 
@@ -851,8 +853,8 @@ float GetLMProb(LModel *lm, LabId prid[NSIZE], LabId wdid)
          return(bowt+GetLMProb(lm,cpid,wdid)); /* else recurse */
       break;
    case matBigram:
-      p=(int) prid[0]->aux;
-      q=(int) wdid->aux;
+      p=(long) prid[0]->aux;
+      q=(long) wdid->aux;
       return(lm->data.matbi->bigMat[p][q]);
    default:
       prob=LZERO;
@@ -965,7 +967,7 @@ LogFloat LMTrans (LModel *lm, LMState src, LabId wdid, LMState *dest)
    assert (lm->type == boNGram);
    nglm = lm->data.ngram;
 
-   word = (int) wdid->aux;
+   word = (long) wdid->aux;
 
    if (word==0 || word>lm->data.ngram->vocSize) {
       HError (-9999, "word %d not in LM wordlist", word);

@@ -38,7 +38,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -958,7 +958,7 @@ void CalcStats (Lattice *lat)
       ln = topOrder[i];
 
       /* count words */
-      ln->word->aux = (Ptr) (((int)ln->word->aux) + 1);
+      ln->word->aux = (Ptr) (((long)ln->word->aux) + 1);
 
       /* count incoming and outgoing arcs */
       d = 0;
@@ -1843,7 +1843,7 @@ void ApplyNGram2LabLat(Lattice *lat, LModel *lm)
       fprintf(stdout, "\n");
       fprintf(stdout, "\n Vocab entries: ");
       for (j = 0; j < lat->nn - 2; j++) {
-         fprintf(stdout, "%s ", lm->data.ngram->wdlist[(int) revlab[j]->aux]->name);
+         fprintf(stdout, "%s ", lm->data.ngram->wdlist[(long) revlab[j]->aux]->name);
       }
       fprintf(stdout, "\n\n");
       fflush(stdout);

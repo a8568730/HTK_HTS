@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hresults_version = "!HVER!HResults:   3.4 [CUED 25/04/06]";
-char *hresults_vc_id = "$Id: HResults.c,v 1.4 2006/12/29 04:44:56 zen Exp $";
+char *hresults_vc_id = "$Id: HResults.c,v 1.6 2007/10/03 07:20:10 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1172,7 +1172,7 @@ void ReadHMMList(char *fn)
    Source source;
    LabId labid;
    char buf[MAXSTRLEN];
-   int i;
+   long i;
 
    /* Once to find out how many lines */
    if(InitSource(fn,&source,HMMListFilter)<SUCCESS)
@@ -1199,9 +1199,9 @@ void ReadHMMList(char *fn)
 
 int Index(LabId labid)
 {
-   int i;
+   long i;
    
-   i=(int)labid->aux;
+   i=(long)labid->aux;
    if (wSpot && i==0) return(0);
    if (i<1 || i>nLabs || names[i]!=labid)
       HError(3331,"Index: Label %s not in list[%d of %d]",

@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hbuild_version = "!HVER!HBuild:   3.4 [CUED 25/04/06]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 1.3 2006/12/29 04:44:56 zen Exp $";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.5 2007/10/03 07:20:10 zen Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.
@@ -430,7 +430,8 @@ Lattice *ProcessBoBiGram(MemHeap *latHeap, Vocab *voc, NGramLM *nLM)
    LArc *la;
 
    lmId ndx[NSIZE+1];  
-   int i,j,k;
+   int i,k;
+   long j;
    Lattice *lat;
    Boolean enterFound=FALSE;
    Boolean exitFound=FALSE;
@@ -491,7 +492,7 @@ Lattice *ProcessBoBiGram(MemHeap *latHeap, Vocab *voc, NGramLM *nLM)
       ndx[0] = i;
       ne = GetNEntry(nLM,ndx,FALSE);
       fromWd =  GetWord(voc,nLM->wdlist[i],FALSE);
-      fromNode =  lat->lnodes+((int) fromWd->aux);
+      fromNode =  lat->lnodes+((long) fromWd->aux);
       la->start = fromNode;    /* backoff weight */
       la->end = lat->lnodes;
       if (ne==NULL) la->lmlike = 0.0;
@@ -502,7 +503,7 @@ Lattice *ProcessBoBiGram(MemHeap *latHeap, Vocab *voc, NGramLM *nLM)
             if ((nLM->wdlist[se->word] == unknownId) && zapUnknown)
                continue;
             toWd = GetWord(voc,nLM->wdlist[se->word],FALSE);
-            toNode = lat->lnodes+((int) toWd->aux);
+            toNode = lat->lnodes+((long) toWd->aux);
             if (nLM->wdlist[se->word] != enterId) {
                la->start = fromNode;
                la->end = toNode;
@@ -521,7 +522,8 @@ Lattice *ProcessMatBiGram(MemHeap *latHeap, Vocab *voc, MatBiLM *bg)
    LNode *ln,*fromNode,*toNode;
    LArc *la;
    Word wd,fromWd,toWd;
-   int i,j;
+   int i;
+   long j;
    int skipWord=0;
    Lattice *lat;
    Vector row;
@@ -557,12 +559,12 @@ Lattice *ProcessMatBiGram(MemHeap *latHeap, Vocab *voc, MatBiLM *bg)
    for (i=1,j=0; i < bg->numWords; i++) {
       row = bg->bigMat[i];
       fromWd =  GetWord(voc,bg->wdlist[i],FALSE);
-      fromNode =  lat->lnodes+((int) fromWd->aux);
+      fromNode =  lat->lnodes+((long) fromWd->aux);
       if (i == skipWord) continue;
       for (j=2; j <= (i==1?bg->numWords-1:bg->numWords); j++) {
          if (j == skipWord) continue;
          toWd = GetWord(voc,bg->wdlist[j],FALSE);
-         toNode = lat->lnodes+((int) toWd->aux);
+         toNode = lat->lnodes+((long) toWd->aux);
          la->start = fromNode;
          la->end = toNode;
          la->lmlike = row[j];

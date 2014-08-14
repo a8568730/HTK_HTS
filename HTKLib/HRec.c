@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hrec_version = "!HVER!HRec:   3.4 [CUED 25/04/06]";
-char *hrec_vc_id = "$Id: HRec.c,v 1.3 2006/12/29 04:44:54 zen Exp $";
+char *hrec_vc_id = "$Id: HRec.c,v 1.5 2007/09/18 12:20:45 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -566,7 +566,7 @@ static LogFloat cPOutP(PSetInfo *psi,Observation *obs,StateInfo *si,int id)
 {
    PreComp *pre;
    LogFloat outp;
-   StreamElem *ste;
+   StreamInfo *sti;
    Vector w;
    int s,S;
 
@@ -587,21 +587,21 @@ static LogFloat cPOutP(PSetInfo *psi,Observation *obs,StateInfo *si,int id)
       else {
          S=obs->swidth[0];
          if (S==1 && si->weights==NULL){
-            ste=si->pdf+1;
+            sti=si->pdf[1].info;
             if (psi->streamShared)
-               outp=cSOutP(psi->hset,1,obs,ste->info,id);
+               outp=cSOutP(psi->hset,1,obs,sti,id);
             else 
-               outp=cMOutP(psi->hset,1,obs,ste->info,id);
+               outp=cMOutP(psi->hset,1,obs,sti,id);
          }
          else {
             outp=0.0;
-            ste=si->pdf+1;
             w=si->weights;
-            for (s=1;s<=S;s++,ste++) {
+            for (s=1;s<=S;s++) {
+               sti = si->pdf[s].info;
                if (psi->streamShared)
-                  outp+=w[s]*cSOutP(psi->hset,s,obs,ste->info,id);
+                  outp+=w[s]*cSOutP(psi->hset,s,obs,sti,id);
                else
-                  outp+=w[s]*cMOutP(psi->hset,s,obs,ste->info,id);
+                  outp+=w[s]*cMOutP(psi->hset,s,obs,sti,id);
             }
          }
       }

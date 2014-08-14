@@ -1,14 +1,14 @@
 ================================================================
-    The HMM-based Speech Synthesis System (HTS) version 2.0 
-                  release December 29, 2006
+   The HMM-based Speech Synthesis System (HTS) version 2.0.1
+                    release October 1, 2007
 
 
-The HMM-Based Speech Synthesis System (HTS) 
-(http://hts.ics.nitech.ac.jp/) has been being developed by the 
-HTS working group (see "Who we are" below) and others (see 
-"Acknowledgements" in the separate file).  The training part of 
-HTS was implemented as a modified version of the Hidden Markov 
-Model Toolkit (HTK) (http://htk.eng.cam.ac.uk/).  Major 
+The HMM-Based Speech Synthesis System (HTS)
+(http://hts.sp.nitech.ac.jp/) has been being developed by the
+HTS working group (see "Who we are" below) and others (see
+"Acknowledgments" in the separate file).  The training part of
+HTS was implemented as a modified version of the Hidden Markov
+Model Toolkit (HTK) (http://htk.eng.cam.ac.uk/).  Major
 modifications which we made to HTK are listed below:
                                 
  - Context clustering based on MDL criterion (instead of ML one)
@@ -18,111 +18,82 @@ modifications which we made to HTK are listed below:
  - State duration modeling and clustering
 
 Related publications about the techniques and algorithms used in
-HTS can be found at 
-http://hts.ics.nitech.ac.jp/publications.html
+HTS can be found at http://hts.sp.nitech.ac.jp/?Publications
 
-The current version does not include any text analyzer but the 
-Festival Speech Synthesis System 
-(http://www.festvox.org/festival/) can be used as a text 
-analyzer.  Since version 1.1, HTS has included a small run-time 
-synthesis engine called hts_engine 
-(less than 2 Mbytes including HMMs).  Since the synthesis engine 
-can run without the HTK library, it is suitable for using on the 
-Festival and other applications.
+The current version does not include any text analyzer but the
+Festival Speech Synthesis System
+(http://www.festvox.org/festival/) can be used as a text
+analyzer.  Since version 1.1, HTS has included a small run-time
+synthesis engine called hts_engine (less than 2 Mbytes including
+HMMs).  Since the synthesis engine can run without the HTK
+library, it is suitable for using on the Festival and other
+applications.
 
 
-This distribution comes with demo scripts for training 
-speaker-dependent and speaker-adaptation systems using "CMU ARCTIC 
-databases" (http://www.festvox.org/cmu_arctic/).  These demo 
-scripts generate "voices" for Festival.
+This distribution comes with demo scripts for training
+speaker-dependent and speaker-adaptation systems using "CMU
+ARCTIC databases" (http://www.festvox.org/cmu_arctic/).  These
+demo scripts generate "voices" for Festival.
 
-Six HTS voices for Festival 1.95 & 1.96 trained by CMU ARCTIC 
-databases are also released with HTS version 2.0.  Each of HTS 
-voices consists of HMMs trained by the demo script, and can be 
-used as a "voice" of Festival Speech Synthesis System without any 
-other HTS tools.
+Six HTS voices for Festival 1.95 & 1.96 trained by CMU ARCTIC
+databases are also released with HTS version 2.0.1.  Each of HTS
+voices consists of HMMs trained by the demo script, and can be
+used as a "voice" of Festival Speech Synthesis System without
+any other HTS tools.
 
 *** Notes for Japanese speech synthesis ***
 
-A demo script using the Nitech database for speech synthesis 
-"Nitech Jp ATR503 m001" is also prepared for training Japanese 
-voices.  Voices trained by the demo script can be used on 
-GalateaTalk, which is a speech synthesis module of an open-source 
-toolkit for anthropomorphic spoken dialogue agents developed in 
-Galatea project (http://hil.t.u-tokyo.ac.jp/~galatea/), without 
-any other HTS tools.
+A demo script using the Nitech database for speech synthesis
+"Nitech Jp ATR503 m001" is also prepared for training Japanese
+voices.  Voices trained by the demo script can be used on
+GalateaTalk, which is a speech synthesis module of an
+open-source toolkit for anthropomorphic spoken dialogue agents
+developed in Galatea project
+(http://hil.t.u-tokyo.ac.jp/~galatea/), without any other HTS
+tools.
 
 An HTS voice for GalateaTalk trained by the demo script is also
-released with HTS version 2.0.
+released with HTS version 2.0.1.
 
 ****************************************************************
-		   What's new in version 2.0
+                  What's new in version 2.0.1
 ****************************************************************
 
- * Based on HTK-3.4.
- * Compilation without SPTK.
- * The license of HTS was slightly modified.
- * Support gcc4.
- * Thousands of fixed bugs.
- * HRest can generate state duration densities (-g option).
- * Model boundaries can be given to HERest (-e option).
-   We may specify a part of model boundaries (e.g, pause positions).
- * Reduced-memory implementation of context clustering in HHEd 
-   (-r option).
- * Each decision tree can have a name with regular expression 
-   (-p option).
-     ex. TB 000 {(*-a+*, *-i+*, *-u+*).state[2]}
-         TB 000 {(*-sil+*, *-pau+*).state[3]}
-   As a result, different two trees can be constructed for 
-   consonants and vowels, respectively.
- * The interface of HMGenS has been switched from HHEd-style to 
-   HERest-style.
- * Flexible model structures in HMGenS (in the previous version, 
-   the first stream is assumed as mcep, and the others are assumed 
-    as log F0).  Non-left-to-right models and full covariance 
-    matrices for state output pdfs can also be used.
- * EM-based parameter generation algorithm (-c option), i.e, 
-   mixture of Gaussians can be used.
-     -c 0: Cholesky decomposition
-     -c 1: EM (with fixed state sequence)
-     -c 2: EM (phone boundaries can be given with -e option)
- * Random generation algorithm is also supported 
-   (set config. variable RNDPG = TRUE).
- * Speaker adaptation, adaptive training, and semi-tied covariance i
-   transforms are supported for multi-stream HMMs/MSD-HMMs.
-     - MLLRMEAN, MLLRCOV, and CMLLR-based adaptation.
-     - CMLLR-based adaptive training.
-     - Decision trees for context clustering can be used to define
-       regression classes for adaptation.
-     - HMGenS can read MLLRMEAN, MLLRCOV, CMLLR, and SEMIT transforms i
-       for adaptation.
- * MAP adaptation is also supported.
- * Performance improvements in hts_engine.
- * Miscellaneous changes.
+ * Many bug fixes.
+ * Band structure for linear transforms.
+ * Stream-dependent variance flooring scales.
+ * State duration model mmf structure is changed.  In the
+   previous versions we used a multi-variate Gaussian PDF to
+   represent state duration PDFs of an HMM.  However, from this
+   version we use multi-stream structure.  This is very
+   important for the future HSMM support.
+ * Speaker-dependent demo supports LSP in addition to mcep.
 
 ****************************************************************
                             Copying
 ****************************************************************
 
-The basic core system of HTS version 2.0 is released as a patch 
-code to HTK version 3.4.  The patch code is released under a 
-BSD-style license, without commercial restrictions.  However, it 
-should be noted that once you apply the patch to the HTK source 
-code, you must obey the license of HTK.
+The basic core system of HTS version 2.0.1 is released as a
+patch code to HTK version 3.4.  The patch code is released under
+a MIT-style license, without commercial restrictions.  However,
+it should be noted that once you apply the patch to the HTK
+source code, you must obey the license of HTK.
 
-Although the patch code is free, we still offer no warranties 
-and no maintenance.  We will continue to endeavor to fix bugs 
-and answer queries when can, but are not in a position to 
-guarantee it.  We will consider consultancy if desired, please 
+Although the patch code is free, we still offer no warranties
+ and no maintenance.  We will continue to endeavor to fix bugs
+and answer queries when can, but are not in a position to
+guarantee it.  We will consider consultancy if desired, please
 contacts us for details.
 
-If you are using HTS version 2.0 in commercial environment, even 
-though no license is required, we would be grateful if you let 
-us know as it helps justify ourselves to our various sponsors.  
-We also strongly encourage you to
+If you are using HTS version 2.0.1 in commercial environment,
+even though no license is required, we would be grateful if you
+let us know as it helps justify ourselves to our various
+sponsors.  We also strongly encourage you to
 
- * reference the use of HTS in any publications that use the software
- * report all bugs, where possible with bug fixes, that are found.
+ * reference the use of HTS in any publications that use the
+   software
+ * report all bugs, where possible with bug fixes, that are
+   found.
 
 The current copyright on the core system is
 
@@ -136,7 +107,7 @@ The current copyright on the core system is
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -170,9 +141,9 @@ The current copyright on the core system is
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
 
-Several tools in HTS version 2.0 are independent of HTK (though 
-most of them use the HTK library).  The copyright of these tools 
-is
+Several tools in HTS version 2.0.1 are independent of HTK
+(though most of them use the HTK library).  The copyright of
+these tools is
 
 /*  ---------------------------------------------------------------  */
 /*           The HMM-Based Speech Synthesis System (HTS)             */
@@ -184,7 +155,7 @@ is
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -224,29 +195,29 @@ is
                           Installation
 ****************************************************************
 
-Please expand HTS-2.0_for_HTK-3.4.tar.bz2 and see the extracted 
-file "INSTALL".  Note that HTS requires HTK.
+Please expand HTS-2.0.1_for_HTK-3.4.tar.bz2 and see the
+extracted file "INSTALL".  Note that HTS requires HTK.
 
 ****************************************************************
                            Who we are
 ****************************************************************
 
-HTS working group is a voluntary group for developing the
-HMM-Based Speech Synthesis System.  Current HTS working group
-members are
+The HTS working group is a voluntary group for developing the
+HMM-Based Speech Synthesis System.  Current members are
 
- Keiichi Tokuda      http://kt-lab.ics.nitech.ac.jp/~tokuda/
+ Keiichi Tokuda      http://www.sp.nitech.ac.jp/~tokuda/
  (Principle Designer)
- Heiga Zen           http://kt-lab.ics.nitech.ac.jp/~zen/
+ Heiga Zen           http://www.sp.nitech.ac.jp/~zen/
  (Main Maintainer)
- Jun-ichi Yamagishi  http://www.kbys.ip.titech.ac.jp/yamagishi/
- Takashi Masuko
- Shinji Sako         http://hil.t.u-tokyo.ac.jp/~sako/profile.html.en
+ Junichi Yamagishi   http://homepages.inf.ed.ac.uk/jyamagis/
  Alan W. Black       http://www.cs.cmu.edu/~awb/
- Takashi Nose
+ Takashi Masuko
+ Shinji Sako         http://www.mmsp.nitech.ac.jp/~sako/
+ Tomoki Toda         http://spalab.naist.jp/~tomoki/index_e.html
+ Takashi Nose        
+ Keiichiro Oura      http://www.sp.nitech.ac.jp/~uratec/
 
 and the members are dynamically changing.  The current formal
 contact address of HTS working group and a mailing list for HTS
-users can be found at http://hts.ics.nitech.ac.jp/
+users can be found at http://hts.sp.nitech.ac.jp/
 ================================================================
-

@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hcompv_version = "!HVER!HCompV:   3.4 [CUED 25/04/06]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.3 2006/12/29 04:44:56 zen Exp $";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.5 2007/09/18 12:24:07 zen Exp $";
 
 /* 
    This program calculates a single overall variance vector from a
@@ -135,6 +135,7 @@ static long totalCount=0;           /* total number of vector samples*/
 static Boolean meanUpdate = FALSE;  /* update means  */
 static Boolean saveBinary = FALSE;  /* save output in binary  */
 static float vFloorScale = 0.0;     /* if >0.0 then vFloor scaling */
+static Vector vFloorScaleStr = NULL; /* vFloorScale for each stream */ 
 
 /* Major Data Structures */
 static MLink macroLink;             /* Link to specific HMM macro */
@@ -188,6 +189,7 @@ void SetConfParms(void)
    Boolean b,c;
    int i;
    double d;
+   char buf[MAXSTRLEN];
    
    nParm = GetConfig("HCOMPV", TRUE, cParm, MAXGLOBS);
    if (nParm>0) {
@@ -195,6 +197,9 @@ void SetConfParms(void)
       if (GetConfBool(cParm,nParm,"UPDATEMEANS",&b)) meanUpdate = b;
       if (GetConfBool(cParm,nParm,"SAVEBINARY",&c)) saveBinary = c;
       if (GetConfFlt(cParm,nParm,"MINVARFLOOR",&d)) minVar = d;
+      if (GetConfFlt(cParm,nParm,"VFLOORSCALE",&d)) vFloorScale = d;
+      if (GetConfStr(cParm,nParm,"VFLOORSCALESTR",buf))
+         vFloorScaleStr = ParseConfVector(&gstack,buf,TRUE);
    }
 }
 
@@ -294,6 +299,13 @@ void Initialise(void)
       segId = GetLabId(segLab,TRUE);
    }
 
+   /* Check threshold */
+   if (vFloorScaleStr==NULL) {
+      vFloorScaleStr = CreateVector(&gstack, hset.swidth[0]);
+      for (s=1; s<=hset.swidth[0]; s++)
+         vFloorScaleStr[s] = vFloorScale;
+   }
+   
    if (trace&T_TOP) {
       printf("Calculating Fixed Variance\n");
       printf("  HMM Prototype: %s\n",hmmfn);
@@ -446,7 +458,7 @@ void PutVFloor(void)
       else
          CopyVector(accs[s].fixed.var,v);
       for (i=1; i<=hset.swidth[s]; i++)
-         v[i] *= vFloorScale;
+         v[i] *= vFloorScaleStr[s];
       fprintf(f,"<Variance> %d\n",hset.swidth[s]);
       WriteVector(f,v,FALSE);
       FreeVector(&gstack,v);
@@ -829,6 +841,7 @@ int main(int argc, char *argv[])
    InitVQ();    InitModel();
    if(InitParm()<SUCCESS)  
       HError(2000,"HCompV: InitParm failed");
+   InitUtil();
 
    if (!InfoPrinted() && NumArgs() == 0)
       ReportUsage();
@@ -955,8 +968,8 @@ int main(int argc, char *argv[])
       SaveModel(outfn);   
       if (trace&T_TOP)
          printf("Output written to directory %s\n",(outDir==NULL)?"./":outDir);
-      if (vFloorScale>0.0)
          PutVFloor();
+      FreeVector(&gstack,vFloorScaleStr);
    }
    else {
       /* report export data type */

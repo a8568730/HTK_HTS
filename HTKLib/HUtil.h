@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -323,6 +323,17 @@ void LoadStatsFile(char *statfile,HMMSet *hset,Boolean otrace);
 /*
    Load the statistics file output by HERest into state hooks
 */
+
+/* ------------------- Configuration File Parsing  --------------------- */
+
+/*
+   Functions to provide arbitrary vector parsers for configuration file
+*/
+
+IntVec ParseConfIntVec(MemHeap *x, char *inbuf, Boolean residual);
+Vector ParseConfVector(MemHeap *x, char *inbuf, Boolean residual);
+char **ParseConfStrVec(MemHeap *x, char *inbuf, Boolean residual);
+Boolean *ParseConfBoolVec(MemHeap *x, char *inbuf, Boolean residual);
 
 #ifdef __cplusplus
 }

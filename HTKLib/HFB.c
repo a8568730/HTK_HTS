@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hfb_version = "!HVER!HFB:   3.4 [CUED 25/04/06]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.7 2006/12/29 04:44:54 zen Exp $";
+char *hfb_vc_id = "$Id: HFB.c,v 1.13 2007/10/03 07:20:13 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -132,13 +132,6 @@ static struct {
 static Boolean pde = FALSE;  /* partial distance elimination */
 static Boolean sharedMix = FALSE; /* true if shared mixtures */
 static Boolean sharedStream = FALSE; /* true if shared streams */
-
-/* for duration model variance flooring */
-
-static DAcc *gda = NULL;                /* accs for variance flooring */
-static float durminVar = 0.0;           /* variance floor value */
-static float durvarFloorPercent = 0.0;  /* variance flooring percent */
-static Boolean applydurVFloor = FALSE;  /* apply variance flooring */
 
 /* ------------------------- Min HMM Duration -------------------------- */
 
@@ -239,19 +232,6 @@ static WtAcc *CreateWtAcc(MemHeap *x, int nMix)
    return wa;
 }
 
-/* CreateDAcc: create an accumulator for duration counts */
-static DAcc *CreateDAcc(MemHeap *x, int numStates)
-{
-   DAcc *da;
-   
-   da = (DAcc *) New(x, sizeof(DAcc));
-   da->occ = CreateDVector(x,numStates);  ZeroDVector(da->occ);
-   da->sum = CreateDVector(x,numStates);  ZeroDVector(da->sum);
-   da->sqr = CreateDVector(x,numStates);  ZeroDVector(da->sqr);
-   
-   return da;
-}
-
 /* AttachTrAccs: attach transition accumulators to hset */
 static void AttachWtTrAccs(HMMSet *hset, MemHeap *x)
 {
@@ -301,9 +281,6 @@ void InitFB(void)
          if (GetConfFlt(cParm,nParm,"MINFORPROB", &d)) pruneSetting.minFrwdP = d;
          if (GetConfBool(cParm,nParm,"ALIGNCOMPLEVEL",&b)) alCompLevel = b;
          if (GetConfBool(cParm,nParm,"PDE",&b)) pde = b;
-         if (GetConfFlt(cParm,nParm,"DURMINVAR",&d)) durminVar = d;
-         if (GetConfFlt(cParm,nParm,"DURVARFLOORPERCENTILE",&d)) durvarFloorPercent = d;
-         if (GetConfBool(cParm,nParm,"APPLYDURVARFLOOR",&b)) applydurVFloor = b;
       }
    }
 }
@@ -321,31 +298,31 @@ void SetTraceFB(void)
 }
 
 /* EXPORT->InitialiseForBack: IniInitialise the forward backward memory stacks and make initialisations  */
-void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, UPDSet uset, 
-                       LogDouble pruneInit, LogDouble pruneInc, 
-                       LogDouble pruneLim, float minFrwdP,
-                       Boolean calcDur, Boolean useAlign)
+void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, UPDSet uFlags, HMMSet *dset, UPDSet dur_uFlags, 
+                       LogDouble pruneInit, LogDouble pruneInc, LogDouble pruneLim, 
+                       float minFrwdP, Boolean useAlign)
 {
    int s;
    AlphaBeta *ab;
   
-   fbInfo->uFlags = uset;
+   fbInfo->uFlags = uFlags; fbInfo->dur_uFlags = dur_uFlags;
    fbInfo->up_hset = fbInfo->al_hset = hset;
+   fbInfo->up_dset = fbInfo->al_dset = dset;
    fbInfo->twoModels = FALSE;
    fbInfo->hsKind = hset->hsKind;
    /* Accumulators attached using AttachAccs() in HERest are overwritten
       by the following line. This is ugly and needs to be sorted out. Note:
       this function is called by HERest and HVite */
    AttachWtTrAccs(hset, x);
+   if (dur_uFlags&(UPMEANS|UPVARS))
+      AttachWtTrAccs(dset, x);
    SetMinDurs(hset);
    fbInfo->maxM = MaxMixInSet(hset);
    fbInfo->skipstart = skipstartInit;
    fbInfo->skipend   = skipendInit;
-   fbInfo->calcDur  = calcDur;
    fbInfo->useAlign = useAlign;
-   fbInfo->inXForm = NULL;
-   fbInfo->al_inXForm = NULL;
-   fbInfo->paXForm = NULL;
+   fbInfo->inXForm = fbInfo->al_inXForm = fbInfo->paXForm = NULL;
+   fbInfo->dur_inXForm = fbInfo->dur_al_inXForm = fbInfo->dur_paXForm = NULL;
    for (s=1;s<=hset->swidth[0];s++)
       fbInfo->maxMixInS[s] = MaxMixInSetS(hset, s);
    fbInfo->ab = (AlphaBeta *) New(x, sizeof(AlphaBeta));
@@ -380,10 +357,12 @@ void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, UPDSet uset,
 	 HError(7399,"PDE is not compatible with shared mixtures");
       printf("Partial Distance Elimination on\n");
    }
+   
+   return;
 }
 
 /* Use a different model set for alignment */
-void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset)
+void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset, HMMSet *al_dset)
 {
    int s,S;
 
@@ -611,21 +590,35 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
    TrAcc *ta;
    LabId  *qIds;
    short *qDms;
-   HLink *al_qList, *up_qList;
+   HLink *al_qList=NULL, *up_qList=NULL, *al_dList=NULL, *up_dList=NULL;
    HMMSet *al_hset, *up_hset;
+   HMMSet *al_dset, *up_dset;
 
    al_hset=fbInfo->al_hset; up_hset=fbInfo->up_hset;
-   /* init logical hmm list */
+   al_dset=fbInfo->al_dset; up_dset=fbInfo->up_dset;
+
+   /* init logical hmm & dur model list */
    up_qList=(HLink *)New(&ab->abMem, Q*sizeof(HLink)); 
    --up_qList;
+   if ( (up_dset!=NULL) && (fbInfo->dur_uFlags&(UPMEANS|UPVARS)) ) {
+      up_dList=(HLink *)New(&ab->abMem, Q*sizeof(HLink)); 
+      --up_dList;
+   }
 
    /* 2-model re-estimation update models */
    if (fbInfo->twoModels) {
       al_qList=(HLink *)New(&ab->abMem, Q*sizeof(HLink));
       --al_qList;
+      if ( (al_dset!=NULL) && (fbInfo->dur_uFlags&(UPMEANS|UPVARS)) ) {
+         al_dList=(HLink *)New(&ab->abMem, Q*sizeof(HLink));
+         --al_dList;
    }
-   else /* use same list for update and align */
+   }
+   else {
+      /* use same list for update and align */
       al_qList = up_qList;
+      al_dList = up_dList;
+   }
 
    qIds = (LabId *)New(&ab->abMem, Q*sizeof(LabId));
    --qIds;
@@ -638,11 +631,22 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
       if((macroName=FindMacroName(al_hset,'l',lab->labid))==NULL)
          HError(7321,"CreateInsts: Unknown label %s",lab->labid->name);
       al_qList[q] = (HLink)macroName->structure;
+      if ( (al_dset!=NULL) && (fbInfo->dur_uFlags&(UPMEANS|UPVARS)) ) {
+         if ((macroName=FindMacroName(al_dset,'l',lab->labid))==NULL)
+            HError(7321,"CreateInsts: Unknown label %s",lab->labid->name);
+         al_dList[q] = (HLink)macroName->structure;
+      }
+      
       /* 2-model re-estimation update models */
       if (fbInfo->twoModels){ 
          if((macroName=FindMacroName(up_hset,'l',lab->labid))==NULL)
             HError(2321,"CreateInsts: Unknown update label %s",lab->labid->name);
          up_qList[q] = (HLink)macroName->structure;
+         if ( (up_dset!=NULL) && (fbInfo->dur_uFlags&(UPMEANS|UPVARS)) ) {
+            if ((macroName=FindMacroName(up_dset,'l',lab->labid))==NULL)
+               HError(2321,"CreateInsts: Unknown update label %s",lab->labid->name);
+            up_dList[q] = (HLink)macroName->structure;
+         }
          /* need equal num states */
          if ((al_qList[q])->numStates != (up_qList[q])->numStates)
             HError(999,"Num states differ in align and update models (%d %d)",
@@ -665,6 +669,9 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
    /* store in struct*/
    ab->al_qList = al_qList; 
    ab->up_qList = up_qList;
+   ab->al_dList = al_dList;
+   ab->up_dList = up_dList;
+   
    ab->qIds  = qIds;
    ab->qDms  = qDms;
 
@@ -1136,6 +1143,10 @@ static void Setotprob(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt, int t, int S,
                      if (S==1) {
                         outprobj[0] = NewOtprobVec(&ab->abMem,1);
                      outprobj[0][0] = SOutP(hset,s,&utt->o[t],sti);
+                  }
+                  else {
+                        outprobj[s] = NewOtprobVec(&ab->abMem,1);
+                     outprobj[s][0] = SOutP(hset,s,&utt->o[t],sti);
                      }
 		     break;
                   case PLAINHS:  
@@ -1777,7 +1788,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                   else {
                      otvs = ApplyCompFXForm(mp,o2[t].fv[s],inxform,&det,t);
                   }
-               } 
+                  }
                else {
                   otvs = ApplyCompFXForm(mp,o[t].fv[s],inxform,&det,t);
                }
@@ -1996,49 +2007,42 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
 }
 
 /* UpDurParms: update duration accs of given hmm */
-static void UpDurParms(FBInfo *fbInfo, UttInfo *utt, HLink hmm, 
-                       const int t0, const int q)
+static void UpDurParms(FBInfo *fbInfo, UttInfo *utt, HLink hmm, const int t0, const int q)
 {
-   int i, j, k, t1, dur;
-   double occ, sum, sqr, Lr;
+   int i, j, k, kk, t1, vSize;
+   double Lr, dur, zmean, zmean2, zmeanlr;
    LogDouble Sumxi, xi;
-   HMMSet *hset;
    AlphaBeta *ab;
    PruneInfo *p;
-   MLink mac;
-   DAcc *da;
+   MixPDF *mp;
+   Vector mean,var,mu_jm,invk;
+   TriMat inv;
+   MuAcc *ma=NULL;
+   VaAcc *va=NULL;
    
    const int T = utt->T;
    const int N = hmm->numStates;
    
-   hset = fbInfo->up_hset;
-   ab   = fbInfo->ab;
-   p    = ab->pInfo;
-   
-   /* attach duration accs for duration variance flooring */
-   if (gda==NULL)
-      gda = CreateDAcc(hset->hmem, MaxStatesInSet(hset));
-   
-   /* attach duration accs for given hmm */
-   if ((mac=FindMacroStruct(hset,'h',hmm))==NULL)
-      HError(7270,"UpDurParms: Cannot find hmm definition");
-   if (mac->hook==NULL)
-      mac->hook = CreateDAcc(hset->hmem, N); 
-   
-   da = mac->hook; 
-   for (j=2;j<N;j++) { 
-      occ = sum = sqr = 0.0;
+   ab = fbInfo->ab;
+   p  = ab->pInfo;
+      
+   for (j=2; j<N; j++) {
+      /* accumulators */
+      mp = ab->up_dList[q]->svec[2].info->pdf[j-1].info->spdf.cpdf[1].mpdf;  /* currently single mix is assumed */
+      mean = mp->mean; vSize = VectorSize(mean);
+      if (fbInfo->dur_uFlags&UPMEANS) ma = (MuAcc *) GetHook(mean);
+      if (fbInfo->dur_uFlags&UPVARS)  va = (VaAcc *) GetHook(mp->cov.var);
       
       /* initial state */
       Sumxi = hmm->transP[1][j] + ab->alphat[q][1];
       if (t0>1) {
-         for (i=2;i<N;i++)
+         for (i=2; i<N; i++)
             if (i!=j && hmm->transP[i][j]>LSMALL)
                Sumxi = LAdd(Sumxi,ab->alphat1[q][i]+hmm->transP[i][j]);
       }
                
       /* count statistics from t0 to t1 */
-      for (t1=t0;t1<=T;t1++) {  
+      for (t1=t0; t1<=T; t1++) {  
          if (Sumxi>LSMALL && p->qLo[t1]<=q && q<=p->qHi[t1]) {
             Sumxi += ab->otprob[t1][q][j][0][0];
             if (t1>t0) 
@@ -2058,26 +2062,59 @@ static void UpDurParms(FBInfo *fbInfo, UttInfo *utt, HLink hmm,
                      
             /* update duration counts */
             Lr = L2F(xi);
-            if (Lr>0.00) {
-               dur = t1-t0+1;
-               occ += Lr;
-               sum += Lr*dur;
-               sqr += Lr*dur*dur; 
-            }      
-         } 
+            if (Lr>0.0) {
+               dur = (double)(t1-t0+1);
+               
+               /* acc statistics */
+               if ((fbInfo->dur_uFlags&UPMEANS) && (fbInfo->dur_uFlags&UPVARS)) {
+                  ma->occ += Lr;
+                  va->occ += Lr;
+                  mu_jm = ma->mu;
+                  if ((mp->ckind==DIAGC)||(mp->ckind==INVDIAGC)){
+                     var = va->cov.var;
+                     for (k=1; k<=vSize; k++) {
+                        zmean=dur-mp->mean[k];
+                        zmeanlr=zmean*Lr;
+                        mu_jm[k] += zmeanlr;
+                        var[k] += zmean*zmeanlr;
+                     }
+                  }
+                  else {
+                     inv = va->cov.inv;
+                     for (k=1; k<=vSize; k++) {
+                        invk = inv[k];
+                        zmean=dur-mp->mean[k];
+                        zmeanlr=zmean*Lr;
+                        mu_jm[k] += zmeanlr;
+                        for (kk=1; kk<=k; kk++) {
+                           zmean2 = dur-mp->mean[kk];
+                           invk[kk] += zmean2*zmeanlr;
+                        }
+                     }
+                  }
+               }
+               else if (fbInfo->uFlags&UPMEANS) {
+                   mu_jm = ma->mu;
+                   ma->occ += Lr;
+                   for (k=1;k<=vSize;k++)     /* sum zero mean */
+                      mu_jm[k] += (dur-mean[k])*Lr;
+               }
+               else if (fbInfo->uFlags&UPVARS){
+                   va->occ += Lr;
+                   if ((mp->ckind==DIAGC)||(mp->ckind==INVDIAGC)) {
+                      var = va->cov.var;
+                      for (k=1; k<=vSize; k++) {
+                         zmean=dur-mean[k];
+                         var[k] += zmean*zmean*Lr;
+                      }
+                   }
+               }
+            }  
+         }
          else 
             break; 
       }
-               
-      /* update accs for duration */
-      da->occ[j-1] += occ;
-      da->sum[j-1] += sum;
-      da->sqr[j-1] += sqr;
-      
-      gda->occ[j-1] += occ;
-      gda->sum[j-1] += sum;
-      gda->sqr[j-1] += sqr;
-   } 
+   }
 } 
 
 /* -------------------- Top Level of F-B Updating ---------------- */
@@ -2088,7 +2125,8 @@ static void UpDurParms(FBInfo *fbInfo, UttInfo *utt, HLink hmm,
 
 static void StepForward(FBInfo *fbInfo, UttInfo *utt)
 {
-   int q,t,start,end,negs;
+   int q,t,start,end;
+   long negs;
    DVector aqt,aqt1,bqt,bqt1,bq1t;
    HLink al_hmm, up_hmm;
    AlphaBeta *ab;
@@ -2109,9 +2147,17 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
       ab->occm--;
    }  
    for (q=1;q<=utt->Q;q++){             /* inc access counters */
+      /* hmms */
       up_hmm = ab->up_qList[q];
-      negs = (int)up_hmm->hook+1;
+      negs = (long)up_hmm->hook+1;
       up_hmm->hook = (void *)negs;
+      
+      /* duration models */
+      if (fbInfo->dur_uFlags&(UPMEANS|UPVARS)) {
+         up_hmm = ab->up_dList[q];
+         negs = (long)up_hmm->hook+1;
+         up_hmm->hook = (void *)negs;
+      }
    }
 
    ResetObsCache();
@@ -2156,7 +2202,7 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
                        utt->S, utt->twoDataFiles, utt->pr);
          if (fbInfo->uFlags&UPTRANS)
             UpTranParms(fbInfo,up_hmm,t,q,aqt,bqt,bqt1,bq1t,utt->pr);
-         if (fbInfo->calcDur)
+         if (fbInfo->dur_uFlags&(UPMEANS|UPVARS))
             UpDurParms(fbInfo,utt,up_hmm,t,q);
       }
       if (trace&T_OCC && NonSkipRegion(fbInfo->skipstart,fbInfo->skipend,t)) 
@@ -2312,98 +2358,6 @@ void ResetUttObservations (UttInfo *utt, HMMSet *al_hset)
    }
    utt->o++;
    Dispose(&gstack, utt->o);
-}
-
-/* EXPORT-> SaveDuration: save state duration probability distribution */ 
-void SaveDuration(FBInfo *fbInfo, char *durfn, const DurKind dkind) 
-{ 
-   int h,i,N,MaxN; 
-   double mean,var,occ,sum,sqr; 
-   FILE *fp;
-   HMMSet *hset;
-   HLink hmm;
-   MLink mac;
-   DAcc *da;
-   Vector floor;
-   
-   hset  = fbInfo->up_hset;
-   MaxN  = MaxStatesInSet(hset)-2;
-   
-   floor = CreateVector(hset->hmem,MaxN);
-   
-   /* set variance floor value */
-   for (i=1; i<=MaxN; i++) {
-      occ = gda->occ[i];  sum = gda->sum[i];  sqr = gda->sqr[i];       
-      /* compute global variance */
-      var = (sqr-sum*sum/occ)/occ;   
-      /* determine variance floor value */
-      floor[i] = (durvarFloorPercent>0.0) ? durvarFloorPercent*var/100 : durminVar;
-   }
-
-   /* ------- Output duration model ------- */
-   if (trace & T_TOP)
-      printf("Saving duration models to MMF %s\n", durfn);
-      
-   if ((fp=fopen(durfn,"w")) == NULL)
-      HError(7360,"SaveDuration: Can not open duration model file %s.\n", durfn);
-   
-   /* output model definition and dummy state-transition matrix */
-   fprintf(fp,"~o\n<VECSIZE> %d<GEND><DIAGC><USER>\n",MaxN);
-   fprintf(fp,"~t \"trP_1\"\n<TRANSP> 3\n");
-   fprintf(fp,"0 1 0\n0 0 1\n0 0 0\n");
-
-   /* output vfloor macro */
-   fprintf(fp,"~v \"varFloor1\" \n");
-   fprintf(fp,"<VARIANCE> %d \n",MaxN);
-   for (i=1;i<=MaxN;i++)
-      fprintf(fp,"%e ",floor[i]);
-   fprintf(fp,"\n");
-
-   /* output state duration distribution */
-   for (h=0;h<MACHASHSIZE;h++) {
-      for (mac=hset->mtab[h]; mac!=NULL; mac=mac->next)
-         if (mac->type=='h') {
-            hmm = mac->structure;
-            da = mac->hook;                
-            N = hmm->numStates-2;
-            if (N!=MaxN)
-               HError(7399,"SaveDuration: All HMMs have to be composed from the same number of HMM states",
-                      mac->id->name,N+2,MaxN+2);
-
-            if (da!=NULL) {
-               fprintf(fp,"~h \"%s\"\n",mac->id->name);
-               fprintf(fp,"<BEGINHMM>\n<NUMSTATES> 3\n<STATE> 2\n");
-               
-               /* output mean */
-               fprintf(fp,"<MEAN> %d\n",N);
-               for (i=1;i<=N;i++) {
-                  if (da->occ[i]<=0.0) 
-                     mean = 0.0;
-                  else 
-                     mean = da->sum[i]/da->occ[i];
-                  fprintf(fp,"%e ",mean);
-               }
-               
-               /* output variance */
-               fprintf(fp,"\n<VARIANCE> %d\n",N);
-               for (i=1; i<=N; i++) {
-                  if (da->occ[i]<=0.0)
-                     var = 0.0;
-                  else
-                     var = (da->sqr[i]-da->sum[i]*da->sum[i]/da->occ[i])/da->occ[i];
-
-                  /* variance flooring */
-                  if (applydurVFloor && var<floor[i])
-                     var = floor[i];
-
-                  fprintf(fp,"%e ",var);
-               }
-               fprintf(fp,"\n~t \"trP_1\"\n<ENDHMM>\n");
-            }
-         }
-   }
-   fclose(fp);
-          
 }
 
 /* FBUtt: apply forward-backward to given utterance */

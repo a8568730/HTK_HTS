@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -77,7 +77,7 @@
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
 char *htrain_version = "!HVER!HTrain:   3.4 [CUED 25/04/06]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.7 2006/12/29 04:44:54 zen Exp $";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.9 2007/10/03 07:20:14 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1523,7 +1523,7 @@ FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, UPDSet uFlags, int ind
    do {
       hmm = hss.hmm;
       DumpPName(f,hss.mac->id->name);     
-      i = (int) hmm->hook;
+      i = (int)((long) hmm->hook);
       WriteInt(f,&i,1,ldBinary); 
       while (GoNextState(&hss,TRUE)) {
          while (GoNextStream(&hss,TRUE)) {
@@ -1702,7 +1702,7 @@ Source LoadAccsParallel(HMMSet *hset, char *fname, UPDSet uFlags, int index)
       hmm = hss.hmm;
       CheckPName(&src,hss.mac->id->name); 
       ReadInt(&src,&negs,1,ldBinary);
-      negs += (int)hmm->hook; hmm->hook = (void *)negs;
+      negs += (int)((long)hmm->hook); hmm->hook = (void *)((long)negs);
       while (GoNextState(&hss,TRUE)) {
          while (GoNextStream(&hss,TRUE)) {
             LoadWtAcc(&src,((WtAcc *)hss.sti->hook)+index,hss.M);

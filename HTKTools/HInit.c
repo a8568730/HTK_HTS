@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hinit_version = "!HVER!HInit:   3.4 [CUED 25/04/06]";
-char *hinit_vc_id = "$Id: HInit.c,v 1.3 2006/12/29 04:44:56 zen Exp $";
+char *hinit_vc_id = "$Id: HInit.c,v 1.5 2007/10/03 07:20:10 zen Exp $";
 
 /*
    This program is used to initialise (or tune) a single hidden
@@ -605,7 +605,7 @@ void UCollectData(Sequence ***seqMat)
          n = (int)(((float)(j-1)/obsPerState)+2);
          for (s=1; s<=nStreams; s++){
             if (hset.hsKind==DISCRETEHS){
-               p = (Ptr)((int)obs.vq[s]);
+               p = (Ptr)((long)obs.vq[s]);
                StoreItem(seqMat[n][s][1],p);
             } else if(hset.msdflag[s]){
                order = SpaceOrder(obs.fv[s]);
@@ -716,7 +716,7 @@ void UniformSegment(void)
             count = 0; dw = sti->spdf.dpdf;
             ZeroShortVec(dw);             
             for (i=1; i<=seq->nItems; i++){
-               vqidx = (int)GetItem(seq,i);
+               vqidx = (long)GetItem(seq,i);
                if (vqidx<1 || vqidx>M)
                   HError(2170,"UniformSegment: vqidx out of range[%d]",vqidx);
                ++dw[vqidx]; ++count;

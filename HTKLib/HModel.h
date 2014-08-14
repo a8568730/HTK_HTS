@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -485,6 +485,11 @@ void SetVFloor(HMMSet *hset, Vector *vFloor, float minVar);
    components are set to minVar.
 */
 
+void ResetVFloor(HMMSet *hset, Vector *vFloor);
+/*
+   Reset the variance floors 
+ */
+ 
 void ApplyVFloor(HMMSet *hset);
 /* 
    Apply the variance floors in hset to all covariances in the model set 

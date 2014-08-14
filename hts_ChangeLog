@@ -1,11 +1,349 @@
-2006-12-29 20:17  Heiga Zen <zen@ics.nitech.ac.jp>
+2007-10-03 16:20  Heiga Zen
+
+	* HTKTools/HBuild.c, HTKTools/HDMan.c, HTKTools/HERest.c,
+	  HTKTools/HHEd.c, HTKTools/HInit.c, HTKTools/HLEd.c,
+	  HTKTools/HLStats.c, HTKTools/HMMIRest.c, HTKTools/HParse.c,
+	  HTKTools/HResults.c, HTKTools/HSmooth.c, HTKTools/Makefile.in,
+	  HTKLib/HAdapt.c, HTKLib/HFB.c, HTKLib/HFBLat.c, HTKLib/HMap.c,
+	  HTKLib/HModel.c, HTKLib/HArc.c, HTKLib/HDict.c,
+	  HTKLib/HExactMPE.c, HTKLib/HLM.c, HTKLib/HLat.c, HTKLib/HMem.c,
+	  HTKLib/HNet.c, HTKLib/HTrain.c, configure, configure.ac: Apply
+	  patch code to support 64-bit environments by Hisashi Kawai.
+
+2007-10-03 12:17  Heiga Zen
+
+	* HTKTools/HERest.c: Remove unused variable "shared".
+
+2007-10-03 12:14  Heiga Zen
+
+	* HTKLib/HFBLat.c: Initialize currCorrect in
+	  SetCorrectnessAsError().
+
+2007-10-02 20:54  Heiga Zen
+
+	* HTKLib/HMath.c: Free vv in LUDecompose() and DLUDecompose().
+
+2007-10-02 03:25  Heiga Zen
+
+	* configure.ac: Add AC_PREFIX_DEFAULT.	Change dnl to #.
+
+2007-10-02 03:21  Heiga Zen
+
+	* Makefile.in: Update license.
+
+2007-10-02 03:16  Heiga Zen
+
+	* hts_engine/: global.hpp, hts_engine.cpp, misc.cpp, misc.hpp,
+	  mlpg.cpp, mlpg.hpp, model.cpp, model.hpp, tree.cpp, tree.hpp,
+	  vocoder.cpp, vocoder.hpp: Update license.
+
+2007-10-02 03:07  Heiga Zen
+
+	* HTKLVRec/: HDecode.c, HDecode.mod.c, HLVLM.c, HLVLM.h,
+	  HLVModel.c, HLVModel.h, HLVNet.c, HLVNet.h, HLVRec-GC.c,
+	  HLVRec-LM.c, HLVRec-misc.c, HLVRec-outP.c, HLVRec-propagate.c,
+	  HLVRec-traceback.c, HLVRec.c, HLVRec.h, config.h: Update license.
+
+2007-10-02 02:54  Heiga Zen
+
+	* HTKTools/HERest.c: Comment out unused variables (maybe used in
+	  future releases).
+
+2007-10-02 02:53  Heiga Zen
+
+	* HTKLib/HFB.c: Initialize variables.
+
+2007-10-01 01:27  Heiga Zen
+
+	* HTKLVRec/HLVRec.c, HTKLib/HArc.c: Fix two bugs reported by
+	  Zhi-Jie Yan in HTK-Developers ML.
+
+2007-09-28 11:12  Heiga Zen
+
+	* HTKLib/.cvsignore, HTKTools/.cvsignore, .cvsignore: Update
+	  .cvsignore.
+
+2007-09-27 18:16  Heiga Zen
+
+	* HTKLib/HAdapt.c: Remove unused variable and fix arguments of
+	  functions.
+
+2007-09-18 21:24  Heiga Zen
+
+	* HTKTools/: HBuild.c, HCompV.c, HCopy.c, HDMan.c, HERest.c,
+	  HInit.c, HLEd.c, HLRescore.c, HLStats.c, HList.c, HMMIRest.c,
+	  HParse.c, HQuant.c, HRest.c, HResults.c, HSGen.c, HSLab.c,
+	  HSmooth.c, HVite.c: Update license of HTS.
+
+2007-09-18 21:22  Heiga Zen
+
+	* HTKTools/.cvsignore: Add several files.
+
+2007-09-18 21:20  Heiga Zen
+
+	* HTKLib/: HAdapt.c, HAdapt.h, HArc.c, HArc.h, HAudio.c, HAudio.h,
+	  HDict.c, HDict.h, HExactMPE.c, HExactMPE.h, HFB.c, HFB.h,
+	  HFBLat.c, HFBLat.h, HGen.h, HGraf.c, HGraf.h, HGraf.null.c,
+	  HGraf_WIN32.c, HLM.c, HLM.h, HLabel.c, HLabel.h, HLat.c, HLat.h,
+	  HMap.c, HMap.h, HMath.c, HMath.h, HMem.c, HMem.h, HModel.c,
+	  HModel.h, HNet.c, HNet.h, HParm.c, HParm.h, HRec.c, HRec.h,
+	  HShell.c, HShell.h, HSigP.c, HSigP.h, HTrain.c, HTrain.h,
+	  HUtil.c, HUtil.h, HVQ.c, HVQ.h, HWave.c, HWave.h, esig_asc.c,
+	  esig_edr.c, esig_nat.c, esignal.c, esignal.h, strarr.c, strarr.h:
+	  Update license of HTS.
+
+2007-09-18 21:19  Heiga Zen
+
+	* HTKLib/.cvsignore: Add log.
+
+2007-09-18 21:17  Heiga Zen
+
+	* configure: Update for version 2.0.1.
+
+2007-09-17 21:29  Heiga Zen
+
+	* HTKLib/HFB.c: Remove unused variables.
+
+2007-09-17 21:21  Heiga Zen
+
+	* HTKLib/HMath.c: Add casts.
+
+2007-09-17 21:16  Heiga Zen
+
+	* HTKLib/HUtil.c: 1 -> 1.0.
+
+2007-09-17 21:14  Heiga Zen
+
+	* HTKTools/HMGenS.c: Remove unused variables.
+
+2007-09-17 21:12  Heiga Zen
+
+	* HTKTools/HHEd.c: 1 -> 1.0.  Remove unused variables.	DISCRETE ->
+	  DISCRETEHS.
+
+2007-09-17 20:26  Heiga Zen
+
+	* HTKLib/HGen.c: Remove unused variables.  Add casting.
+
+2007-09-17 19:57  Heiga Zen
+
+	* HTKLib/HAdapt.c: Small fixes.
+
+2007-09-12 17:23  Heiga Zen
+
+	* HTKTools/HHEd.c: MDL factor range is modified.  From 0.0-10.0 to
+	  0.0 -> 10000.0.
+
+2007-09-12 17:17  Heiga Zen
+
+	* HTKTools/HCompV.c: Stream-dependent variance flooring scales.
+
+2007-09-12 17:14  Heiga Zen
+
+	* HTKLib/HAdapt.c, HTKLib/HUtil.c, HTKLib/HUtil.h,
+	  HTKTools/HMGenS.c: Move ParseConf{Vec,IntVec,StrVec,BoolVec} to
+	  HUtil.c.
+
+2007-09-07 17:57  Heiga Zen
+
+	* HTKLib/HGen.c, HTKTools/HMGenS.c: Update version number.
+
+2007-09-06 12:46  Heiga Zen
+
+	* HTKTools/HMMIRest.c: Fix bug reported in HTK-Developers ML by
+	  Arlindo Veiga.
+
+2007-09-06 12:43  Heiga Zen
+
+	* configure.ac: Support Intel Mac.
+
+2007-09-05 16:16  Heiga Zen
+
+	* configure.ac: Update configure.ac for the HTS-2.0.1 release.
+
+2007-09-05 15:39  Heiga Zen
+
+	* HTKTools/HMGenS.c: Support state duration models with mult-stream
+	  structure in WriteStateDurations().  Add & update comments.
+
+2007-09-05 15:37  Heiga Zen
+
+	* HTKTools/HHEd.c: Support state duration models with multi-stream
+	  structure in ConvertModelsCommand() without losing the
+	  compatibility to the past hts_engine releases.  Add
+	  DiagVarCommand() which converts full covariance mmf to diagonal
+	  covariance form.
+
+2007-09-05 15:29  Heiga Zen
+
+	* HTKLib/Makefile.in: Remove HGen.lv.o.
+
+2007-09-05 15:28  Heiga Zen
+
+	* HTKLib/HGen.c: Support state duration models with mult-stream
+	  structure in SetStateDurations().
+
+2007-07-17 18:41  Heiga Zen
+
+	* AUTHORS: [no log message]
+
+2007-07-17 18:36  Heiga Zen
+
+	* AUTHORS: [no log message]
+
+2007-07-17 18:20  Heiga Zen
+
+	* HTKTools/HMGenS.c: Fix and add comments.
+
+2007-07-17 16:04  Heiga Zen
+
+	* HTKLib/HGen.c: * Add comments.
+
+2007-07-17 15:47  Heiga Zen
+
+	* HTKLib/HAdapt.c: * Fix memory handling in full <-> diag
+	  covariance conversion.  * Add comments.  * Support band structure
+	  for MLLRMEAN/MLLRCOV/CMLLR/SEMIT transforms.
+
+2007-07-17 11:29  Heiga Zen
+
+	* HTKLib/HGen.c: Add mean and variance of Gaussian noise for random
+	  generation.
+
+2007-07-12 15:39  Heiga Zen
+
+	* HTKLib/HMath.h: Covariance: struct -> union.
+
+2007-07-12 15:34  Heiga Zen
+
+	* HTKTools/: HMGenS.c, HVite.c: Fix InitialiseForBack() interface.
+
+2007-07-12 15:33  Heiga Zen
+
+	* HTKLib/HShell.h: Increase SMAX from 8 to 9.
+
+2007-07-12 15:32  Heiga Zen
+
+	* HTKLib/: HModel.c, HModel.h: Add ResetVFloor().
+
+2007-07-12 15:31  Heiga Zen
+
+	* HTKLib/HGen.c: Fix bug: ergotic HMM with state alignments doesn't
+	  work correctly.
+
+2007-07-12 15:29  Heiga Zen
+
+	* HTKLib/HFB.c, HTKLib/HFB.h, HTKTools/HERest.c: Estimate state
+	  duration models in a same manner used to estimate HMMs.
+
+2007-06-20 02:55  Junichi Yamagishi
+
+	* HTKLib/HGen.c:
+	  Modify SetupPdfStreams
+
+2007-04-03 12:41  Heiga Zen
+
+	* ChangeLog.htk: Add ChangeLog.htk
+
+2007-04-03 12:41  Heiga Zen
+
+	* hts_engine/.cvsignore: Include *.trace in .cvsignore
+
+2007-04-03 12:33  Heiga Zen
+
+	* HTKLib/HFB.c: Properly allocate otprob vector if
+	  hsKind==DISCRETEHS && S!=1
+
+2007-03-19 08:01  Takashi Nos
+
+	* HTKTools/HMGenS.c: Usage for -c 1 option was modified.
+
+2007-03-07 10:22  Heiga Zen
+
+	* HTKTools/HHEd.c: * Merge TiePDF and TieStream.  * TiePDF():
+	  Compose tied mix. if joinSize!=0.  * SplitStreamCommand(): Fix a
+	  bug in variance flooring handling.  * SplitStreams:
+	  S*sizeof(StreamInfo) should be sizeof(StreamInfo).
+
+2007-03-07 10:11  Heiga Zen
+
+	* HTKLib/HAdapt.c: AccCMLLRBaseStats(): Return if
+	  ra->bTriMat==NULL.
+
+2007-02-27 14:53  Heiga Zen
+
+	* HTKTools/HERest.c:	if (al_inXFormExt==NULL)  al_inXFormExt =
+	  al_inXFormExt
+	  -> if (al_inXFormExt==NULL) al_inXFormExt = inXFormExt
+
+2007-02-15 18:33  Heiga Zen
+
+	* HTKLib/HAdapt.c:
+	  * Add many comments.	* ApplyHMMSetXForm: check parent xforms.
+
+2007-02-12 20:46  Heiga Zen
+
+	* HTKLib/HShell.h: Fix MAXFNAMELEN
+
+2007-02-12 20:32  Heiga Zen
+
+	* HTKLib/HAdapt.c: [no log message]
+
+2007-02-12 20:27  Heiga Zen
+
+	* HTKLib/HAdapt.c: [no log message]
+
+2007-01-31 15:56  Heiga Zen
+
+	* HTKLib/HAdapt.c: Set hset->ckind=DIAGC in ResetXFormHMMSet if
+	  hset->ckind=FULLC.
+
+2007-01-31 15:53  Heiga Zen
+
+	* HTKLib/HAdapt.c: Duplicate xformName.
+
+2007-01-30 19:35  Heiga Zen
+
+	* HTKLib/HRec.c: Use StreamInfo instead of StreamElem.
+
+2007-01-30 19:33  Heiga Zen
+
+	* HTKLib/HMath.h: Covariance: union -> struct
+
+2007-01-22 16:46  Heiga Zen
+
+	* HTKTools/HHEd.c: bname and index are too small.
+
+2007-01-07 12:53  Heiga Zen
+
+	* HTKLVRec/: HDecode.c, HLVRec-LM.c, HLVRec-propagate.c: Avoid icc
+	  warnings.
+
+2007-01-07 12:25  Heiga Zen
+
+	* HTKLib/HAdapt.c: Handle FULLC case in ResetComp.
+
+2007-01-07 12:23  Heiga Zen
+
+	* HTKLib/HModel.c: Initialise mp->cov.{var,inv,xform} to NULL
+
+2007-01-04 23:43  Junichi Yamagishi
+
+	* HTKLib/HUtil.c:
+
+	  Remove % from pattern match for speeding up
+
+	  -	if ((*p=='*')||(*p=='?')||(*p=='%')) +	   if
+	  ((*p=='*')||(*p=='?')) fullName=FALSE;
+
+2006-12-29 20:17  Heiga Zen
 
 	* configure.ac, HTKTools/HCluster.c, HTKTools/Makefile.icc:
 	  * Delete HCluster.c and Makefile.icc
 
 	  * Update license in configure.ac
 
-2006-12-29 13:44  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-29 13:44  Heiga Zen
 
 	* HTKLib/HAdapt.c, HTKLib/HAudio.c, HTKLib/HAudio.h,
 	  HTKLib/HGraf.c, HTKLib/HGraf.null.c, HTKLib/HLM.c, HTKLib/HLM.h,
@@ -47,7 +385,7 @@
 
 	  * Update license
 
-2006-12-29 12:26  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-29 12:26  Heiga Zen
 
 	* HTKLib/HModel.c, HTKLib/HNet.c, HTKLib/HParm.c, HTKLib/HShell.c,
 	  HTKLib/esignal.h, HTKTools/HDMan.c, HTKTools/HMMIRest.c,
@@ -59,161 +397,161 @@
 
 	  Avoid icc warning.
 
-2006-12-29 12:25  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-29 12:25  Heiga Zen
 
 	* HTKLib/.cvsignore: Add HTKLib.lv.a
 
-2006-12-28 21:07  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-28 21:07  Heiga Zen
 
 	* HTKTools/HHEd.c: Ignore #components when components in this node
 	  are not pure.
 
-2006-12-28 19:59  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-28 19:59  Heiga Zen
 
 	* configure, configure.ac: Add -I/usr/include/malloc to for darwin
 	  part of configure.ac.
 
-2006-12-27 19:19  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 19:19  Heiga Zen
 
 	* HTKLib/HAdapt.c, HTKLib/HGen.c, HTKTools/HHEd.c,
 	  hts_engine/mlpg.cpp, hts_engine/vocoder.cpp: Remove register
 	  variables.
 
-2006-12-27 19:18  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 19:18  Heiga Zen
 
 	* configure.ac: Use -m32 if CC=gcc*.
 
-2006-12-27 19:16  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 19:16  Heiga Zen
 
 	* hts_engine/mlpg.cpp: remove unused variable.
 
-2006-12-27 18:38  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 18:38  Heiga Zen
 
 	* HTKTools/: HERest.c, HHEd.c, HVite.c: Fix HTK license: 2002 ->
 	  2002-2004
 
-2006-12-27 18:37  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 18:37  Heiga Zen
 
 	* HTKTools/htk_htktools_nt.mkf, HTKLib/htk_htklib_nt.mkf: Fix CRLF
 
-2006-12-27 18:36  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 18:36  Heiga Zen
 
 	* hts_engine/.cvsignore: Add test2.sh
 
-2006-12-27 18:36  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 18:36  Heiga Zen
 
 	* hts_engine/.cvsignore: Add test2
 
-2006-12-27 18:35  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 18:35  Heiga Zen
 
 	* configure, configure.ac: disable HLMTools by default.
 
-2006-12-27 18:34  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 18:34  Heiga Zen
 
 	* README: HTK-3.4 alpha -> HTK-3.4
 
-2006-12-27 15:21  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 15:21  Heiga Zen
 
 	* HTKLib/HAdapt.c: Add if (xfInfo!=NULL) in InitAdapt.
 
-2006-12-27 15:20  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 15:20  Heiga Zen
 
 	* HTKTools/HHEd.c: Support parent/adapt xforms for model
 	  conversion.
 
-2006-12-27 13:01  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 13:01  Heiga Zen
 
 	* HTKLib/Makefile: [no log message]
 
-2006-12-27 01:21  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 01:21  Heiga Zen
 
 	* HTKLib/HModel.h: Fix bugs.
 
-2006-12-27 01:21  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-27 01:21  Heiga Zen
 
 	* HTKTools/HHEd.c: Load AdaptXForm command.
 
-2006-12-26 20:25  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-26 20:25  Heiga Zen
 
 	* hts_engine/: hts_engine.cpp, mlpg.cpp: Eliminate an assumption
 	  that the static features are always used as the first part of
 	  feature vectors.
 
-2006-12-26 20:20  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-26 20:20  Heiga Zen
 
 	* hts_engine/.cvsignore: add miscelaneous files.
 
-2006-12-26 19:19  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-26 19:19  Heiga Zen
 
 	* HLMLib/.cvsignore, .cvsignore: add miscelaneous files.
 
-2006-12-26 19:19  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-26 19:19  Heiga Zen
 
 	* HLMTools/.cvsignore: [no log message]
 
-2006-12-26 19:15  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-26 19:15  Heiga Zen
 
 	* hts_engine/.cvsignore, HTKTools/.cvsignore, HTKLVRec/.cvsignore,
 	  HTKLib/.cvsignore: add miscelaneous files.
 
-2006-12-26 19:12  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-26 19:12  Heiga Zen
 
 	* configure, configure.ac: Include checks suggested by autoscan.
 
-2006-12-26 19:11  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-26 19:11  Heiga Zen
 
 	* hts_engine/misc.hpp: Fix header file names.
 
-2006-12-26 18:30  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-26 18:30  Heiga Zen
 
 	* .cvsignore: Add autom4te.cache
 
-2006-12-26 18:30  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-26 18:30  Heiga Zen
 
 	* .cvsignore: Add .cdtproject
 
-2006-12-26 14:16  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-26 14:16  Heiga Zen
 
 	* HTKTools/HHEd.c: BuildRegCluster
 
 	  # of terminal nodes for each stream should be controlled by
 	  nTerminals
 
-2006-12-25 17:00  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-25 17:00  Heiga Zen
 
 	* configure, configure.ac, HLMLib/Makefile.in, HTKLib/Makefile.in:
 	  Command "ar" should be able to be given.
 
-2006-12-25 16:57  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-25 16:57  Heiga Zen
 
 	* hts_engine/Makefile.in: Fix a bug.
 
-2006-12-25 16:50  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-25 16:50  Heiga Zen
 
 	* HTKTools/HERest.c: Fix a bug.
 
-2006-12-25 16:32  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-25 16:32  Heiga Zen
 
 	* hts_engine/: Makefile.in, misc.cpp: Add #ifdef for future
 	  Festival integration.
 
-2006-12-25 16:32  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-25 16:32  Heiga Zen
 
 	* configure, configure.ac:
 	  Add strdup to AC_CHECK_FUNCS
 
-2006-12-25 15:53  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-25 15:53  Heiga Zen
 
 	* configure, configure.ac:
 	  Correct Copyright from "HTS Working Group" to "Nagoya Institute
 	  of Technology and Tokyo Institute of Technology"
 
-2006-12-25 15:50  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-25 15:50  Heiga Zen
 
 	* HTKLVRec/: HLVLM.c, HLVRec-traceback.c, Makefile.in:
 	  Modify to remove gcc4 warnings.
 
-2006-12-25 15:49  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-25 15:49  Heiga Zen
 
 	* HTKLib/ChangeLog.CUHTK, HTKLib/HAdapt.h, HTKLib/HFBLat.c,
 	  HTKLib/HGen.c, HTKLib/HLabel.c, HTKLib/HLat.c, HTKLib/HModel.h,
@@ -226,7 +564,7 @@
 	  HTKTools/HVite.c, HTKTools/Makefile.icc, HTKTools/Makefile.in:
 	  Update from HTK-3.4-alpha to HTK-3.4 release.
 
-2006-12-25 15:46  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-25 15:46  Heiga Zen
 
 	* hts_engine/: Makefile.in, global.h, global.hpp, hts_engine.cc,
 	  hts_engine.cpp, hts_engine_nt.mkf, misc.cc, misc.cpp, misc.h,
@@ -236,28 +574,28 @@
 	  * rename from .cc to .cpp * rename from .h to .hpp * add makefile
 	  for MSVC
 
-2006-12-18 12:41  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-18 12:41  Heiga Zen
 
 	* hts_engine/mlpg.cc:
 	  Coad cleaning.
 
-2006-12-15 15:14  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-15 15:14  Heiga Zen
 
 	* hts_engine/: tree.cc, tree.h:
 	  Non recursive node search for tree loading.
 
-2006-12-14 20:58  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-14 20:58  Heiga Zen
 
 	* HTKLVRec/: HDecode-license.txt, HLVLM.c, HLVRec-traceback.c,
 	  Makefile.in, config.h, config.mod.h, config.orig.h:
 	  Update from HTK-3.4-alpha to HTK-3.4 release.
 
-2006-12-14 17:20  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-14 17:20  Heiga Zen
 
 	* FAQ, Makefile.in, configure.ac:
 	  Update from HTK-3.4-alpha to HTK-3.4 release.
 
-2006-12-14 17:12  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-14 17:12  Heiga Zen
 
 	* HTKBook/: ChangeLog, HTK.tex, Makefile, Makefile.in, adapt.tex,
 	  config.tex, decode.tex, exampsys.tex, htkbook.out, htkbook.tex,
@@ -267,7 +605,7 @@
 	  HTKRef/HHEd.tex, HTKRef/HLRescore.tex:
 	  Update from HTK-3.4-alpha to HTK-3.4 release.
 
-2006-12-13 13:52  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-13 13:52  Heiga Zen
 
 	* hts_engine/: hts_engine.cc, mlpg.cc, model.cc, tree.cc,
 	  vocoder.cc, vocoder.h:
@@ -275,45 +613,45 @@
 	  application.	* Switch from Cholesky to LDL factorization.  *
 	  Close file pointers.
 
-2006-12-12 20:08  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-12 20:08  Heiga Zen
 
 	* Makefile.in, configure, configure.ac, hts_engine/Makefile.in,
 	  hts_engine/configure, hts_engine/configure.in,
 	  hts_engine/tree.cc:
 	  Integrate configure for hts_engine into configure of HTK (HTS).
 
-2006-12-12 20:07  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-12 20:07  Heiga Zen
 
 	* HTKTools/HHEd.c:
 	  Support min occ threshold for tree-based clustering.
 
-2006-12-12 20:05  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-12 20:05  Heiga Zen
 
 	* HTKLib/HGen.c:
 	  SetStateSequence
 
 	  Variable "n" should be reset for every "j".
 
-2006-12-12 20:01  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-12 20:01  Heiga Zen
 
 	* HTKLib/HAdapt.c:
 	  Remove unused vairables/functions.
 
-2006-12-11 15:56  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-11 15:56  Heiga Zen
 
 	* HTKTools/HMGenS.c:
 	  Generator
 
 	  Do not output state durations if -s option is specified.
 
-2006-12-08 14:36  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-08 14:36  Heiga Zen
 
 	* hts_engine/hts_engine.cc:
 	  Fix a bug in checking the utterance length.
 
 	  Reported by Alexis Moinet :-)
 
-2006-12-08 14:00  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-08 14:00  Heiga Zen
 
 	* hts_engine/tree.cc: SearchTree
 
@@ -321,39 +659,39 @@
 
 	  Patch contributed by Nicholas Volk
 
-2006-12-05 14:59  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-05 14:59  Heiga Zen
 
 	* hts_engine/: Makefile.in, configure, configure.in, global.h,
 	  hts_engine.cc, misc.cc, misc.h, mlpg.cc, mlpg.h, model.cc,
 	  model.h, tree.cc, tree.h, vocoder.cc, vocoder.h: Add hts_engine
 
-2006-12-04 17:10  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-04 17:10  Heiga Zen
 
 	* .cvsignore: [no log message]
 
-2006-12-04 15:22  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-04 15:22  Heiga Zen
 
 	* HTKTools/HHEd.c: ConvertModelsCommand
 
 	  * Support FULLC
 
-2006-12-04 15:13  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-04 15:13  Heiga Zen
 
 	* HTKLib/: HAdapt.c, HAdapt.h: Speeding up CMLLR and MLLRCOV
 
-2006-12-01 00:25  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-01 00:25  Heiga Zen
 
 	* HTKLib/HModel.c: [no log message]
 
-2006-12-01 00:13  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-01 00:13  Heiga Zen
 
 	* HTKTools/HHEd.c: Just remove spaces.
 
-2006-12-01 00:11  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-12-01 00:11  Heiga Zen
 
 	* HTKLib/HModel.c: [no log message]
 
-2006-11-30 21:08  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-30 21:08  Heiga Zen
 
 	* HTKLib/: HAdapt.c, HModel.c, HModel.h: GetStreamClass
 
@@ -365,374 +703,374 @@
 	  * Store nodes in rtree->nodes (ILink) and use it for FindNode to
 	  avoid recursive process.
 
-2006-11-30 11:36  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-30 11:36  Heiga Zen
 
 	* HTKTools/HMGenS.c: WriteParms
 
 	    fix a bug.
 	    Use WriteFloat instead of WriteVector.
 
-2006-11-30 01:42  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-30 01:42  Heiga Zen
 
 	* HTKTools/HHEd.c: AverageDistance
 
 	    return LZERO if vSize is equal to 0
 
-2006-11-10 17:21  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-10 17:21  Heiga Zen
 
 	* HTKTools/HHEd.c: * Initialize variable c to NULL in LoadQuestion.
 
-2006-11-10 17:17  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-10 17:17  Heiga Zen
 
 	* HTKTools/HHEd.c: * Fix a bug in ConvertTrees.
 
-2006-11-10 17:11  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-10 17:11  Heiga Zen
 
 	* HTKTools/HHEd.c: * remove unsused variables in DupState.
 
-2006-11-09 18:36  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-09 18:36  Heiga Zen
 
 	* HTKLib/: HGen.c, HGen.h: * Change ParmGenType for EM from 'EM' to
 	  'FB'.
 
-2006-11-09 18:18  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-09 18:18  Heiga Zen
 
 	* HTKTools/HMGenS.c: * Change use input xform option from '-k'
 	  (HVite style) to '-a'  (HERest style).  * Add model alignment
 	  pruning using '-e' option.
 
-2006-11-09 18:14  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-09 18:14  Heiga Zen
 
 	* HTKTools/HERest.c: * Update ReporUsage message.
 
-2006-11-09 18:09  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-09 18:09  Heiga Zen
 
 	* HTKTools/HHEd.c: * Fix bug in ValidProbNode.	* Remove singleTree
 	  check from ConvertTrees/ConvertModels.  * Add strict model
 	  structure checking to ConvertTrees/ConvertModels.
 
-2006-11-09 03:43  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-09 03:43  Heiga Zen
 
 	* HTKLib/HGen.c, HTKLib/HGen.h, HTKTools/HMGenS.c: * Change usage
 	  of -c option for HMGenS:  1--CHOLESKY   2--MIX  3--FB
 
-2006-11-09 03:35  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-09 03:35  Heiga Zen
 
 	* HTKLib/HAdapt.c: * fix small bug.
 
-2006-11-09 03:21  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-09 03:21  Heiga Zen
 
 	* HTKLib/HAdapt.c: * Fix ApplyCompFXForm related functions to
 	  support general MSD observations.
 
-2006-11-09 03:19  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-09 03:19  Heiga Zen
 
 	* HTKTools/HHEd.c: * Fix bugs in DupState & DupStream.
 
-2006-11-09 02:49  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-09 02:49  Heiga Zen
 
 	* HTKTools/HERest.c: * Set applyVFloor=TRUE when minimum variance
 	  value is specified by '-v' option.
 
-2006-11-07 13:21  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-07 13:21  Heiga Zen
 
 	* HTKLib/HGen.c: * Fix segmentation fault when FBUtt is failed.
 
-2006-11-07 13:20  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-07 13:20  Heiga Zen
 
 	* HTKTools/HMGenS.c: * Add options for pruning, hmmDir, dmDir,
 	  dmDir, and dmExt.
 
-2006-11-07 12:44  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-07 12:44  Heiga Zen
 
 	* HTKLib/HAdapt.c, HTKLib/HAdapt.h, HTKLib/HModel.c,
 	  HTKLib/HModel.h, HTKTools/HERest.c: * Support parent XForm for
 	  alignment hset.
 
-2006-11-05 18:03  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-05 18:03  Heiga Zen
 
 	* HTKLib/: HAdapt.c, HAdapt.h: * Change type of the first argument
 	  of AccAdaptFrame from float to double
 
-2006-11-05 12:48  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-05 12:48  Heiga Zen
 
 	* HTKTools/HHEd.c: * Check baseId of each tree includes pattern
 	  character (should not include when -p option is not used)
 
-2006-11-05 12:40  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-05 12:40  Heiga Zen
 
 	* HTKTools/HMGenS.c: * SentenceModel -> GenInfo * Add a command
 	  line option to handle parent XForm
 
-2006-11-05 12:39  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-05 12:39  Heiga Zen
 
 	* HTKLib/: HGen.c, HGen.h: * Remove unused functions *
 	  SentenceModel -> GenInfo
 
-2006-11-04 00:27  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-04 00:27  Heiga Zen
 
 	* HTKLib/HAdapt.c: * Remove stream index check in
 	  UpdateBaseAccsWithPaac.
 
-2006-11-03 17:51  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-03 17:51  Heiga Zen
 
 	* HTKLib/HAdapt.c, HTKLib/HMath.c, HTKLib/HMath.h, HTKLib/HModel.c,
 	  HTKLib/HParm.c, HTKLib/HTrain.c, HTKLib/HWave.c,
 	  HTKLib/HExactMPE.c, HTKLib/HRec.c, HTKTools/HMGenS.c: * Support
 	  gcc4
 
-2006-11-02 16:57  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-02 16:57  Heiga Zen
 
 	* HTKTools/HHEd.c: * ReportUsage: remove version tag
 
-2006-11-02 16:53  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-02 16:53  Heiga Zen
 
 	* HTKTools/HMGenS.c: * Initialise: Load different list file for
 	  HMMs and duration models.
 
-2006-11-02 16:52  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-02 16:52  Heiga Zen
 
 	* HTKLib/HGen.c: * SetStateSequence: T_TOP -> T_STA
 
-2006-11-01 15:33  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:33  Heiga Zen
 
 	* HTKTools/HVite.c: * Check adaptation setup.
 
-2006-11-01 15:32  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:32  Heiga Zen
 
 	* HTKTools/HRest.c: * Avoid warnings when icc is used.
 
-2006-11-01 15:32  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:32  Heiga Zen
 
 	* HTKTools/HMGenS.c: * Change interface of HMGenS from HHEd style
 	  to HERest one.
 
-2006-11-01 15:31  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:31  Heiga Zen
 
 	* HTKTools/HHEd.c: * GetCentroidStr: fix gConst.  *
 	  ConvertModelsCommand: check hset setting is valid for conversion.
 	  * Avoid warnings when icc is used.
 
-2006-11-01 15:29  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:29  Heiga Zen
 
 	* HTKTools/HERest.c: * Check adaptation setting.
 
-2006-11-01 15:26  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:26  Heiga Zen
 
 	* HTKLib/: HLabel.c, HShell.c, HUtil.c, HMap.c, HTrain.c: * Avoid
 	  warnings when icc is used.
 
-2006-11-01 15:25  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:25  Heiga Zen
 
 	* HTKLib/HModel.c: * GetBaseClasses: create swidth array when
 	  <STREAMINFO> is not specified.  * Avoid warnings when icc is
 	  used.
 
-2006-11-01 15:23  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:23  Heiga Zen
 
 	* HTKLib/: HMem.c, HMem.h: * Add double tri matrix related
 	  functions.  * Avoid warnings when icc is used.
 
-2006-11-01 15:21  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:21  Heiga Zen
 
 	* HTKLib/: HMath.c, HMath.h: * Add double tri matrix related
 	  functions.
 
-2006-11-01 15:20  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:20  Heiga Zen
 
 	* HTKLib/HParm.c: * Comment out including sys/ioctl.h because it is
 	  loaded in HShell.h.
 
-2006-11-01 15:19  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:19  Heiga Zen
 
 	* HTKLib/HGraf.c: * Avoid warnings when icc is used.
 
-2006-11-01 15:18  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:18  Heiga Zen
 
 	* HTKLib/HGen.c: * SetStateSequence: Add trace about determined
 	  state sequence.  * SentenceProb: Set output prob of given
 	  sentence to utt->pr.
 
-2006-11-01 15:17  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:17  Heiga Zen
 
 	* HTKLib/HFBLat.c: * Avoid warnings when icc is used.  * Stream
 	  index is passed to AccAdaptFrame.
 
-2006-11-01 15:16  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:16  Heiga Zen
 
 	* HTKLib/HFB.c: * Initialize xform links in fbInfo to NULL.  *
 	  Avoid warnings when icc is used.  * Stream index is passed to
 	  AccAdaptFrame.
 
-2006-11-01 15:13  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:13  Heiga Zen
 
 	* HTKLib/: HAudio.c, HExactMPE.c: * Avoid warning when Intel C
 	  compiler is used.
 
-2006-11-01 15:12  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-11-01 15:12  Heiga Zen
 
 	* HTKLib/: HAdapt.c, HAdapt.h: * Implement saving adapted mmf in
 	  FULLC form.  * Fix a bug in UpdateBaseAccs.  * Check blocksize
 	  consistency by CheckAdaptSetUp.
 
-2006-10-24 20:00  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-24 20:00  Heiga Zen
 
 	* HTKLib/HGen.c, HTKLib/HGen.h, HTKTools/HMGenS.c: Implement
 	  several functions.
 
-2006-10-17 16:19  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-17 16:19  Heiga Zen
 
 	* HTKLib/HModel.h: RegAcc: store nodeOcc in double.
 
-2006-10-16 17:41  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-16 17:41  Heiga Zen
 
 	* HTKLib/HAdapt.c: AccAdaptFrame: use model vecsize instead of obs
 	  vecsize CompFXForm: check spaceorder.  SetOcc: use double.
 
-2006-10-15 16:32  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-15 16:32  Heiga Zen
 
 	* HTKLib/HAdapt.c: Support setting different threshold and block
 	  structure for each stream
 
-2006-10-15 16:31  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-15 16:31  Heiga Zen
 
 	* HTKLib/: HModel.c, HModel.h: RegTree: add stream index to RegTree
 
-2006-10-15 16:25  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-15 16:25  Heiga Zen
 
 	* HTKTools/HHEd.c: SynthModel: state and stream sharing structure
 	  is not correctly handled.
 
-2006-10-09 21:23  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-09 21:23  Heiga Zen
 
 	* HTKTools/HMGenS.c: Support mixture-hidden paramter generation.
 
-2006-10-09 21:21  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-09 21:21  Heiga Zen
 
 	* HTKTools/HHEd.c: Fix a bug in decision tree -> regression tree
 	  conversion.
 
 	  si->weights are not initialized in AssignStructure.
 
-2006-10-09 21:19  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-09 21:19  Heiga Zen
 
 	* HTKLib/: HGen.c, HGen.h: Implement mixture-hidden parameter
 	  generation algorithm.
 
-2006-10-09 21:18  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-09 21:18  Heiga Zen
 
 	* HTKLib/HAdapt.c: Fix CMLLR and MLLRCOV.
 
-2006-10-04 01:26  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-04 01:26  Heiga Zen
 
 	* HTKLib/HModel.c: [no log message]
 
-2006-10-04 00:00  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-04 00:00  Heiga Zen
 
 	* HTKTools/HMGenS.c: Generator: show output prob. of generated
 	  param. sequence.
 
-2006-10-03 23:57  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 23:57  Heiga Zen
 
 	* HTKTools/HHEd.c: FindProtoModel: support usePattern and
 	  singleTree.
 
-2006-10-03 23:56  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 23:56  Heiga Zen
 
 	* HTKTools/HERest.c: Initialise: remove ApplyVFloor
 
-2006-10-03 23:55  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 23:55  Heiga Zen
 
 	* HTKLib/HUtil.c: EndHMMScan: reset hss->si, hss->sti, and hss->mp
 
-2006-10-03 23:53  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 23:53  Heiga Zen
 
 	* HTKLib/HShell.c: [no log message]
 
-2006-10-03 23:53  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 23:53  Heiga Zen
 
 	* HTKLib/HModel.c: CheckMix: add !mf to Full Covariances.
 	  CheckOptions: add check about consistency between VecSize and
 	  StreamInfo
 
-2006-10-03 23:51  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 23:51  Heiga Zen
 
 	* HTKLib/HGen.c: Support random generation
 
-2006-10-03 23:50  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 23:50  Heiga Zen
 
 	* HTKLib/HGen.h: Add UpdateObservations
 
-2006-10-03 23:49  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 23:49  Heiga Zen
 
 	* HTKLib/HFB.c: SetAlignBeam: fix start frame handling.
 
-2006-10-03 12:51  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 12:51  Heiga Zen
 
 	* HTKLib/Makefile: [no log message]
 
-2006-10-03 02:06  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 02:06  Heiga Zen
 
 	* HTKTools/HMGenS.c: [no log message]
 
-2006-10-03 01:09  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 01:09  Heiga Zen
 
 	* HTKTools/HMGenS.c: [no log message]
 
-2006-10-03 00:53  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 00:53  Heiga Zen
 
 	* HTKTools/HMGenS.c: [no log message]
 
-2006-10-03 00:32  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-03 00:32  Heiga Zen
 
 	* HTKTools/HMGenS.c: [no log message]
 
-2006-10-02 19:51  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-02 19:51  Heiga Zen
 
 	* HTKTools/HMGenS.c: SenteceModel
 
-2006-10-02 19:51  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-02 19:51  Heiga Zen
 
 	* HTKLib/: HGen.c, HGen.h: Add SentenceModel
 
-2006-10-02 19:50  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-02 19:50  Heiga Zen
 
 	* HTKLib/: HTrain.c, HTrain.h: Add ResetWtAccs
 
-2006-10-02 19:49  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-02 19:49  Heiga Zen
 
 	* HTKLib/HFB.c: CreateInsts: add ResetWtAcc to reset stream-level
 	  cache.
 
-2006-10-02 19:48  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-02 19:48  Heiga Zen
 
 	* HTKLib/: HMath.c, HMath.h: Add IMatrix related functions.
 
-2006-10-01 22:40  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-10-01 22:40  Heiga Zen
 
 	* HTKTools/HHEd.c: [no log message]
 
-2006-08-03 13:20  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-08-03 13:20  Heiga Zen
 
 	* HTKLib/HGen.c, HTKTools/HMGenS.c: [no log message]
 
-2006-07-01 15:28  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-07-01 15:28  Heiga Zen
 
 	* HTKLib/HModel.c, HTKLib/HShell.c, HTKLib/HUtil.c, HTKLib/HUtil.h,
 	  HTKTools/HHEd.c, HTKTools/HMGenS.c: Implement Dec2Reg in HHEd.c
 
-2006-06-27 21:21  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-06-27 21:21  Heiga Zen
 
 	* HTKLib/HAdapt.c, HTKLib/HModel.h, HTKTools/HERest.c,
 	  HTKTools/HHEd.c, HTKTools/HMGenS.c, HTKLib/HModel.c: Implement
 	  speaker adaptation for MSD-HMM; Integrate HMGenS_align to HMGenS;
 	  Many bug fixes;
 
-2006-06-24 12:05  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-06-24 12:05  Heiga Zen
 
 	* HTKTools/HHEd.c: [no log message]
 
-2006-06-23 16:41  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-06-23 16:41  Heiga Zen
 
 	* HTKTools/HMGenS.c, HTKLib/HFB.c, HTKLib/HModel.c, HTKLib/HUtil.c,
 	  HTKTools/HERest.c, HTKTools/HHEd.c: Debug a number of bugs.
@@ -748,7 +1086,7 @@
 
 	  HMGenS.c	  Fix bugs
 
-2006-06-20 21:03  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-06-20 21:03  Heiga Zen
 
 	* HTKLib/HArc.c, HTKLib/HArc.h, HTKLib/HExactMPE.c,
 	  HTKLib/HExactMPE.h, HTKLib/HFBLat.c, HTKLib/HFBLat.h,
@@ -1020,7 +1358,7 @@
 	  htkdist/env/exp.sun4_solaris_cc,
 	  htkdist/env/exp.sun4_solaris_gcc: [no log message]
 
-2006-06-20 13:49  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-06-20 13:49  Heiga Zen
 
 	* .project, AUTHORS, ChangeLog, FAQ, LICENSE, Makefile.in, README,
 	  config.guess, config.sub, configure, configure.ac, install-sh,
@@ -1417,7 +1755,7 @@
 	  htkdist/env/exp.sun4_solaris_cc,
 	  htkdist/env/exp.sun4_solaris_gcc: HTS-2.0_for_HTK-3.4
 
-2006-06-20 13:49  Heiga Zen <zen@ics.nitech.ac.jp>
+2006-06-20 13:49  Heiga Zen
 
 	* .project, AUTHORS, ChangeLog, FAQ, LICENSE, Makefile.in, README,
 	  config.guess, config.sub, configure, configure.ac, install-sh,

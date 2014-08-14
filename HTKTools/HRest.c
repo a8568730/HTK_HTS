@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hrest_version = "!HVER!HRest:   3.4 [CUED 25/04/06]";
-char *hrest_vc_id = "$Id: HRest.c,v 1.4 2006/12/29 04:44:56 zen Exp $";
+char *hrest_vc_id = "$Id: HRest.c,v 1.5 2007/09/18 12:24:07 zen Exp $";
 
 /*
    This program is used to estimate the transition parameters,

@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hled_version = "!HVER!HLEd:   3.4 [CUED 25/04/06]";
-char *hled_vc_id = "$Id: HLEd.c,v 1.3 2006/12/29 04:44:55 zen Exp $";
+char *hled_vc_id = "$Id: HLEd.c,v 1.5 2007/10/03 07:20:10 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -349,14 +349,14 @@ void SetConfParms(void)
 /* Initialise: confparms, str->int map and memory */
 void Initialise(void)
 {
-   int i;
+   long i;
    char buf[MAXSTRLEN];
    LabId labid;
    
    SetConfParms();
    asterix = GetLabId("*",TRUE);
    for (i=1;i<=99;i++) {
-      sprintf(buf,"%d",i);
+      sprintf(buf,"%ld",i);
       labid=GetLabId(buf,TRUE);
       labid->aux=(void*) i;
    }
@@ -607,11 +607,11 @@ void PrintScript(char *scriptFN)
          printf(" ]\n");
          break;
       case SETLEV:
-         printf("Set Level to %d\n",(int)i->cmd.args[0]->aux);
+         printf("Set Level to %ld\n",(long)i->cmd.args[0]->aux);
          break;
       case DELLEV:
          if (i->cmd.nArgs==1)
-            printf("Delete Level %d\n",(int)i->cmd.args[0]->aux);
+            printf("Delete Level %ld\n",(long)i->cmd.args[0]->aux);
          else
             printf("Delete Current Level\n");
          break;
@@ -783,7 +783,7 @@ void ReadScript(char *scriptFn)
       case SETLEV:
          i->cmd.nArgs = ReadIdList(&src,i->cmd.args);
          if (i->cmd.nArgs!=1 || 
-             (n=(int)i->cmd.args[0]->aux)<1 || n>99 )
+             (n=(long)i->cmd.args[0]->aux)<1 || n>99 )
             HError(1230,"ReadScript: ML must have 1 arg between 1 and 99");          
          break;   
       case DELLEV:
@@ -791,7 +791,7 @@ void ReadScript(char *scriptFn)
          if (i->cmd.nArgs>1)
             HError(1230,"ReadScript: DL can have at most 1 arg");
          if (i->cmd.nArgs==1 && 
-             ((n=(int)i->cmd.args[0]->aux)<1 || n>99) )
+             ((n=(long)i->cmd.args[0]->aux)<1 || n>99) )
             HError(1230,"ReadScript: DL arg must be between 1 and 99");           
          break;   
       case SORT:
@@ -1480,7 +1480,7 @@ void EditFile(char *labfn)
                d += DeleteOp(ll,i->cmd.args); break;
             case DELLEV:
                if (i->cmd.nArgs==1)
-                  DeleteLevel(levs,(int)i->cmd.args[0]->aux);
+                  DeleteLevel(levs,(int)((long)i->cmd.args[0]->aux));
                else
                   DeleteLevel(levs,clev);
                break;
@@ -1491,7 +1491,7 @@ void EditFile(char *labfn)
             case ISIL:
                a += ISilOp(ll,i->cmd.args); break;
             case SETLEV:
-               clev=(int)i->cmd.args[0]->aux;
+               clev=(long)i->cmd.args[0]->aux;
                if (clev>nlev) {
                   ll = NULL;
                   HError(-1231,"EditLevel: Level %d does not exist",clev);

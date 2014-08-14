@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hsgen_version = "!HVER!HSGen:   3.4 [CUED 25/04/06]";
-char *hsgen_vc_id = "$Id: HSGen.c,v 1.2 2006/12/29 04:44:56 zen Exp $";
+char *hsgen_vc_id = "$Id: HSGen.c,v 1.3 2007/09/18 12:24:07 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

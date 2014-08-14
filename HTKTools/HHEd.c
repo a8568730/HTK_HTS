@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hhed_version = "!HVER!HHEd:   3.4 [CUED 25/04/06]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.31 2006/12/29 04:44:55 zen Exp $";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.38 2007/10/10 04:26:11 zen Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -229,6 +229,7 @@ void Summary(void)
    printf("AU hmmlist           - Add Unseen triphones in given hmmlist to\n");
    printf("                       currently loaded HMM list using previously\n");
    printf("                       built decision trees.\n");
+   printf("AX filename          - Set the Adapt XForm to filename\n");
    printf("CL hmmList           - CLone hmms to give new hmmList\n");
    printf("CM directory         - Convert models to pdf for speech synthesizer\n");
    printf("CO newHmmList        - COmpact identical HMM's by sharing same phys model\n");
@@ -236,11 +237,13 @@ void Summary(void)
    printf("DP s n id ...        - Duplicate the hmm set n times using id to differentiate\n");
    printf("                       the new hmms and macros.  Only macros the type of which\n");
    printf("                       appears in s will be duplicated, others will be shared.\n");
-   printf("DR id                - Convert decision trees to a regression tree.\n"); 
+   printf("DR id                - Convert decision trees to a regression tree.\n");
+   printf("DV                   - Convert full covariance to diagonal variances\n"); 
    printf("FA f                 - Set variance floor to average within state variance * f\n");
    printf("FV vFloorfile        - Load variance floor from file\n");
    printf("FC                   - Convert diagonal variances to full covariances\n");
    printf("HK hsetkind          - change current set to hsetkind\n");
+   printf("IX filename          - Set the Input Xform to filename\n");
    printf("JO size floor        - set size and min mix weight for a JOin\n");
    printf("LS statsfile         - load named statsfile\n");
    printf("LT filename          - Load Questions and Trees from filename\n");
@@ -250,6 +253,7 @@ void Summary(void)
    printf("MU n itemlist        - MixUp command, change mixtures in itemlist to n\n");
    printf("NC n macro itemlist  - N-Cluster specified components and tie\n");
    printf("PR                   - Convert model-set with PROJSIZE to compact form\n");
+   printf("PX filename          - Set the Parent Xform to filename\n");
    printf("QS name itemlist     - define a question as a list of model names\n");
    printf("RC n id [itemList]   - Build n regression classes (for adaptation purposes)\n");
    printf("                       also supplying a regression tree identifier/label name\n");
@@ -275,9 +279,6 @@ void Summary(void)
    printf("TI macro itemlist    - TIe the specified components\n");
    printf("TR n                 - set trace level to n (overrides -T option)\n");
    printf("UT itemlist          - UnTie the specified components\n");
-   printf("IX filename          - Set the Input Xform to filename\n");
-   printf("PX filename          - Set the Parent Xform to filename\n");
-   printf("AX filename          - Set the Adapt XForm to filename\n");
    printf("// comment           - Comment line (ignored)\n");
    Exit(0);
 }
@@ -334,7 +335,7 @@ int main(int argc, char *argv[])
          HError(2619,"HHEd: Bad switch %s; must be single letter",s);
       switch(s[0]) {
       case 'a':
-         MDLfactor = GetChkedFlt(0.0,10.0,s); break;
+         MDLfactor = GetChkedFlt(0.0,10000.0,s); break;
       case 'd':
          if (NextArg()!=STRINGARG)
             HError(2619,"HHEd: Input HMM definition directory expected");
@@ -1063,9 +1064,10 @@ void SplitStreams(HMMSet *hset,StateInfo *si,Boolean simple,Boolean first)
    eposIdx = 0;
    for (j=0; j<3; j++) epos[j] = 0;
    for (s=1;s<=S;s++,ste++) {
-      ste->info = (StreamInfo *)New(hset->hmem,S*sizeof(StreamInfo));
+      ste->info = (StreamInfo *)New(hset->hmem,sizeof(StreamInfo));
       sti = ste->info;
       oldsti = oldste->info;
+      sti->nUse = oldsti->nUse;  sti->hook = NULL; sti->stream = s;
       width = hset->swidth[s];
       M = sti->nMix = oldsti->nMix;
       sti->hook = NULL;
@@ -1152,7 +1154,7 @@ ILink TypicalState(ILink ilist, LabId macId)
       si = ((StateElem *)(i->item))->info;
       sti = si->pdf[1].info;
       M = sti->nMix;
-      gsum = 0;
+      gsum = 0.0;
       for (m=1; m<=M; m++)
          if (sti->spdf.cpdf[m].weight>MINMIX)
             gsum += sti->spdf.cpdf[m].mpdf->gConst;
@@ -1193,31 +1195,6 @@ void TieState(ILink ilist, LabId macId)
       if (si != tsi) {
          se->info = tsi;
          ++tsi->nUse;
-      }
-   }
-}
-
-/* TieStream: tie all stream info fields in ilist */
-void TieStream(ILink ilist, LabId macId)
-{
-   ILink i;
-   StreamInfo *sti,*tsti;
-   StreamElem *ste;
-
-   if (badGC) {
-      FixAllGConsts(hset);  /* in case any bad gConsts around */
-      badGC=FALSE;
-   }
-
-   ste = (StreamElem *) ilist->item;
-   tsti = ste->info;
-   tsti->nUse = 1;
-   NewMacro(hset,fidx,'p',macId,tsti);
-   for (i=ilist; i!=NULL; i=i->next) {
-      ste = (StreamElem *)i->item; sti = ste->info;
-      if (sti != tsti) {
-         ste->info = tsti;
-         ++tsti->nUse;
       }
    }
 }
@@ -1513,11 +1490,12 @@ MixtureElem RemTop(void)
 void SplitMix(MixtureElem *mi,MixtureElem *m01,MixtureElem *m02,int vSize)
 {
    const float pertDepth = 0.2;
-   int k,splitcount;
+   int k;
+   long splitcount;
    float x;
    TriMat mat=NULL;
    
-   splitcount = (int) mi->mpdf->hook + 1;
+   splitcount = (long) mi->mpdf->hook + 1;
    m01->mpdf = CloneMixPDF(hset,mi->mpdf,FALSE); 
    m02->mpdf = CloneMixPDF(hset,mi->mpdf,FALSE);
    m01->weight = m02->weight = mi->weight/2.0;
@@ -1608,34 +1586,46 @@ void CreateJMacros(LabId rootMacId)
    }
 }
 
-/* TiePDF: join mixtures for set of 'joinSize' tied pdfs in ilist
-   This is standard 'tied mixture' case. Min mix weight
-   is joinFloor * MINMIX   */
+/* TiePDF: tie stream if joinSize==0. otherwise join mixtures for set of 'joinSize' tied pdfs in ilist
+   This is standard 'tied mixture' case. Min mix weight is joinFloor * MINMIX   */
 void TiePDF(ILink ilist, LabId macId)
 {
    ILink i;
    int m,nSplit,vs,vSize=0;
    StreamElem *ste;
-   StreamInfo *sti;
+   StreamInfo *sti,*tsti;
    MixtureElem *me, mix,mix1,mix2;
    
    if (badGC) {
       FixAllGConsts(hset);         /* in case any bad gConsts around */
       badGC=FALSE;
    }
-   if (joinSize==0)
-      HError(2634,"TiePDF: Join size and floor not set - use JO command");
+
+   if (joinSize==0) {  /* Tie StreamInfo */
+      ste = (StreamElem *) ilist->item;
+      tsti = ste->info;
+      tsti->nUse = 1;
+      NewMacro(hset,fidx,'p',macId,tsti);
+      for (i=ilist; i!=NULL; i=i->next) {
+         ste = (StreamElem *)i->item; sti = ste->info;
+         if (sti != tsti) {
+            ste->info = tsti;
+            ++tsti->nUse;
+         }
+      }
+   }
+   else {  /* Create Tied Mixture */
    nJoins = 0; joinSet = CreateJMixSet();
    for (i=ilist; i!=NULL; i=i->next) {
       ste = (StreamElem *) i->item;
-      sti = ste->info;
-      vs = VectorSize(sti->spdf.cpdf[1].mpdf->mean);
+         sti = ste->info;
+         vs = VectorSize(sti->spdf.cpdf[1].mpdf->mean);
       if (vSize==0)
          vSize = vs;
       else if (vs != vSize)
          HError(2630,"TiePDF: incompatible vector sizes %d vs %d",vs,vSize);
-      for (m=1;m<=sti->nMix;m++) {
-         me = sti->spdf.cpdf+m;
+         for (m=1;m<=sti->nMix;m++) {
+            me = sti->spdf.cpdf+m;
          if (IsSeen(me->mpdf->nUse)) continue;
          Touch(&me->mpdf->nUse); /* Make sure we don't add twice */
          AddJMix(me);
@@ -1660,23 +1650,24 @@ void TiePDF(ILink ilist, LabId macId)
    CreateJMacros(macId);
    for (i=ilist; i!=NULL; i=i->next) { /* replace pdfs */
       ste = (StreamElem *) i->item;
-      sti = ste->info;
-      if (IsSeen(sti->nUse)) continue;
+         sti = ste->info;
+         if (IsSeen(sti->nUse)) continue;
       me = CreateJMixSet();
       for (m=1;m<=joinSize;m++) {
          me[m].mpdf = joinSet[m].mpdf;
          ++(joinSet[m].mpdf->nUse);
       }
-      FixWeights(me,i->owner,sti);
-      sti->spdf.cpdf = me; sti->nMix = joinSize;
-      Touch(&sti->nUse);
+         FixWeights(me,i->owner,sti);
+         sti->spdf.cpdf = me; sti->nMix = joinSize;
+         Touch(&sti->nUse);
    }
    for (i=ilist; i!=NULL; i=i->next) { /* reset nMix flags */
       ste = (StreamElem *) i->item;
-      sti = ste->info;
-      Untouch(&sti->nUse);
+         sti = ste->info;
+         Untouch(&sti->nUse);
    }
    if (joinSize>maxMixes) maxMixes=joinSize;
+}
 }
 
 /* TieHMMs: tie all hmms in ilist to 1st */
@@ -1730,11 +1721,7 @@ void ApplyTie(ILink ilist, char *macName, char type)
    case 'v':   TieVar(ilist,macId); break;
    case 'i':   TieInv(ilist,macId); break;
    case 'x':   TieXform(ilist,macId); break;
-   case 'p':   if (hset->hsKind==TIEDHS)
-                  TiePDF(ilist,macId);
-               else
-                  TieStream(ilist,macId);
-               break;
+   case 'p':   TiePDF(ilist,macId); break;
    case 'w':   TieWeights(ilist,macId); break;
    case 'd':   TieDur(ilist,macId); break;
    case 'h':   TieHMMs(ilist,macId); break;
@@ -2359,17 +2346,17 @@ int HeaviestMix(char *hname, MixtureElem *me, int M)
 
    gThresh = meanGC - 4.0*stdGC;
    maxm = m;  mp = me[m].mpdf;
-   max = me[m].weight - (int)mp->hook;
-   if ((int)mp->hook < 5000 && mp->gConst < gThresh) {
+   max = me[m].weight - (long)mp->hook;
+   if ((long)mp->hook < 5000 && mp->gConst < gThresh) {
       max -= 5000.0; mp->hook = (void *)5000;
       HError(-2637,"HeaviestMix: mix 1 in %s has v.small gConst [%f]",
              hname,mp->gConst);
    }
    for (m=m+1; m<=M; m++) {   
       mp = me[m].mpdf;
-      w = me[m].weight - (int)mp->hook;
+      w = me[m].weight - (long)mp->hook;
       if (VectorSize(mp->mean) > 0) {  /* MSD check */
-      if ((int)mp->hook < 5000 && mp->gConst < gThresh) {
+         if ((long)mp->hook < 5000 && mp->gConst < gThresh) {
          w -= 5000.0; mp->hook = (void *)5000;
          HError(-2637,"HeaviestMix: mix %d in %s has v.small gConst [%f]",
                 m,hname,mp->gConst);
@@ -2382,8 +2369,8 @@ int HeaviestMix(char *hname, MixtureElem *me, int M)
    if (me[maxm].weight<=MINMIX)
       HError(2697,"HeaviestMix:  heaviest mix is defunct!");
    if (trace & T_DET) {
-      printf("               : Split %d (weight=%.3f, count=%d, score=%.3f)\n",
-             maxm, me[maxm].weight, (int)me[maxm].mpdf->hook, max);
+      printf("               : Split %d (weight=%.3f, count=%ld, score=%.3f)\n",
+             maxm, me[maxm].weight, (long)me[maxm].mpdf->hook, max);
       fflush(stdout);
    }
    return maxm;
@@ -3027,7 +3014,7 @@ void IncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes)
    int vSize;
    DVector tsum, tsqr, asum, asqr;
    Boolean first=TRUE; 
-   
+
    const int S = no->nStream;
    
    for (s=1,first=TRUE; s<=S; s++) {
@@ -3378,7 +3365,7 @@ void GetCentroidStr (StreamInfo *sti, AccSumStrE *astr, Vector vfloor)
    MixPDF *mp;
    DVector sum, sqr;
    AccSumMixE *amix;
-
+   
    for (m=1; m<=astr->nMix; m++) {
       mp = sti->spdf.cpdf[m].mpdf;
       amix = astr->accme+m;
@@ -3394,7 +3381,7 @@ void GetCentroidStr (StreamInfo *sti, AccSumStrE *astr, Vector vfloor)
             if (applyVFloor && v<vfloor[k])
                v = (double)vfloor[k];
             mp->cov.var[k] = (float)v;
-   }
+         }
          tocc += occ; 
 
          FixDiagGConst(mp);  /* fix gConst */
@@ -3450,8 +3437,8 @@ void TieLeafNodes(Tree *tree, char *macRoot)
    double occ;
    ILink ilist,i;
    CLink cl;
-   char clnum[20];                      /* cluster number */
-   int clidx;                           /* cluster index  */
+   char clnum[20];              /* cluster number */
+   int clidx;                   /* cluster index */
    char buf[MAXSTRLEN],str[MAXSTRLEN];  /* construct mac name in this */
    Node *node;
    int s,j,numItems = 0;
@@ -3509,8 +3496,8 @@ void TieLeafNodes(Tree *tree, char *macRoot)
                if (useLeafStats)
                   GetCentroid(node->macro[j], cl, &no, s);
                j++;
+            }
          }
-      }
          if (tree->nActiveStr>1)
             id=GetLabId(buf,TRUE);
       }
@@ -4055,7 +4042,7 @@ Tree *LoadTree(char *name,Source *src)
    LabId lab_no,lab_yes,qname;
    Tree *tree;
    Node *node;
-   char buf[MAXSTRLEN],bname[64],index[64],mname[MAXSTRLEN],*p;
+   char buf[MAXSTRLEN],bname[MAXSTRLEN],index[MAXSTRLEN],mname[MAXSTRLEN],*p;
    Boolean strTree=FALSE;
   
    strcpy(bname,name);
@@ -4283,35 +4270,35 @@ void ConvertModelsCommand(void)
    Node *leaf, **array;
    StreamInfo *sti;
    Boolean isPipe;
-
+   
    ChkedAlpha("CM output directory name", dn);
    if (trace & T_BID) {
       printf("\nCM %s\n Convert current HMMSet into the hts_engine format\n",dn);
       fflush(stdout);
    }
-
+   
    /* check hset is valid for converting */
-   if (hset->hsKind==DISCRETE)
+   if (hset->hsKind==DISCRETEHS)
       HError(9999,"ConvertModels: Only continuous HMMSet is supported");
    if (treeList==NULL)
       HError(2655,"ConvertModels: No trees loaded - use LT command");
-
+   
    /* if parent/adapt transforms have been set, apply them */
    if (hset->curXForm==NULL && hset->parentXForm!=NULL)
       ApplyHMMSetXForm(hset, hset->parentXForm, TRUE);
    if (hset->curXForm!=NULL)
       ApplyHMMSetXForm(hset, hset->curXForm, TRUE);
-
+   
    /* start conversion */
    strcpy(head,"pdf.");
-
+   
    for (s=1; s<=hset->swidth[0]; s++) {
       nMix = MaxMixInSetS(hset, s);
       if ((hset->msdflag[s] && nMix>2) || (!hset->msdflag[s] && nMix>1)) 
          HError(9999,"ConvertModels: Only single mixture system is supported");
       out[s]=FALSE;
-}
-
+   }
+   
    for (s=1; s<=hset->swidth[0]; s++) {
       if (!out[s]) {
          /* output vector size and number of pdfs for each tree */
@@ -4336,8 +4323,8 @@ void ConvertModelsCommand(void)
                   WriteInt(file, &tree->nLeaves, 1, TRUE);
                }
             }
-}
-
+         }
+         
          /* output pdf (mixture weight, mean vector and covariance matrix) */
          for (i=2; i<=MaxStatesInSet(hset)+1; i++) {
             for (tree=treeList; tree!=NULL; tree=tree->next) {
@@ -4353,6 +4340,7 @@ void ConvertModelsCommand(void)
                   
                   /* output array */
                   for (j=1; j<=tree->nLeaves; j++) {
+                     /* very dirty implementation but we have to keep the compatibility... :-( */
                      for (k=0; k<tree->nActiveStr; k++) {
                         if (IsFullSet(tree->streams))
                            sti = ((StateInfo *)array[j]->macro[0]->structure)->pdf[k+1].info; /* state tying */
@@ -4363,35 +4351,64 @@ void ConvertModelsCommand(void)
                         if (vSize!=hset->swidth[sti->stream])
                            HError(9999,"ConvertModels: Vector size of the first mixture is not equal to stream width (%d, %d)", 
                                   vSize, hset->swidth[sti->stream]);
+                        
+                        /* output mean */
                         WriteVector(file, sti->spdf.cpdf[1].mpdf->mean, TRUE);
-                        for (v=1; v<=VectorSize(sti->spdf.cpdf[1].mpdf->mean); v++) {
-                           switch (sti->spdf.cpdf[1].mpdf->ckind) {
-                           case DIAGC:
-                              var = sti->spdf.cpdf[1].mpdf->cov.var[v];
-                              break;
-                           case INVDIAGC:
-                              var = 1/sti->spdf.cpdf[1].mpdf->cov.var[v];
-                              break;
-                           case FULLC:
-                              var = 1/sti->spdf.cpdf[1].mpdf->cov.inv[v][v];  /* only diagonal elements are used */
-                              break;
-                           default:
-                              HError(999,"ConvertModels: not supported CovKind");
+                        
+                        /* for multi space probability distribution */
+                        if (sti->nMix>1) {
+                           for (v=1; v<=VectorSize(sti->spdf.cpdf[1].mpdf->mean); v++) {
+                              switch (sti->spdf.cpdf[1].mpdf->ckind) {
+                              case DIAGC:
+                                 var = sti->spdf.cpdf[1].mpdf->cov.var[v];
+                                 break;
+                              case INVDIAGC:
+                                 var = 1.0/sti->spdf.cpdf[1].mpdf->cov.var[v];
+                                 break;
+                              case FULLC:
+                                 var = 1.0/sti->spdf.cpdf[1].mpdf->cov.inv[v][v];  /* only diagonal elements are used */
+                                 break;
+                              default:
+                                 HError(999,"ConvertModels: not supported CovKind");
+                              }
+                              
+                              /* output variance value */
+                              WriteFloat(file, &var, 1, TRUE);  /* this part is very dirty!! */
                            }
                            
-                           /* variance flooring */ 
-                           /* if (var<vf[s][v])
-                              var = vf[s][v]; */
-                              
-                           /* output variance value */
-                           WriteFloat(file, &var, 1, TRUE);
-                        }
-                        if (sti->nMix>1) {  /* for multi space probability distribution */
+                           /* output space weight */
                            weight = sti->spdf.cpdf[1].weight;
                            WriteFloat(file, &weight, 1, TRUE);
                            
                            weight = 1-weight;
                            WriteFloat(file, &weight, 1, TRUE);
+                        }
+                     }
+                     for (k=0; k<tree->nActiveStr; k++) {
+                        if (IsFullSet(tree->streams))
+                           sti = ((StateInfo *)array[j]->macro[0]->structure)->pdf[k+1].info; /* state tying */
+                        else
+                           sti = (StreamInfo *)array[j]->macro[k]->structure;                 /* stream tying */
+                        
+                        /* output variance */
+                        if (sti->nMix==1) {
+                           for (v=1; v<=VectorSize(sti->spdf.cpdf[1].mpdf->mean); v++) {
+                              switch (sti->spdf.cpdf[1].mpdf->ckind) {
+                              case DIAGC:
+                                 var = sti->spdf.cpdf[1].mpdf->cov.var[v];
+                                 break;
+                              case INVDIAGC:
+                                 var = 1.0/sti->spdf.cpdf[1].mpdf->cov.var[v];
+                                 break;
+                              case FULLC:
+                                 var = 1.0/sti->spdf.cpdf[1].mpdf->cov.inv[v][v];  /* only diagonal elements are used */
+                                 break;
+                              default:
+                                 HError(999,"ConvertModels: not supported CovKind");
+                              }
+
+                              WriteFloat(file, &var, 1, TRUE);
+                           }
                         }
                      }
                   }
@@ -5576,7 +5593,7 @@ void SplitStreamCommand(Boolean userWidths)
       DeleteMacroStruct(hset,'v',v);
       for (s=1,next=1;s<=S;s++) {
          sprintf(buf,"varFloor%d",s);
-         if (simple || s<=S) 
+         if (simple || s<S) 
             vf[s] = SliceVector(v,next,next+swidth[s]-1);
          else
             vf[s] = ChopVector(v,epos[0],epos[1],epos[2]);
@@ -6604,6 +6621,51 @@ void FullCovarCommand(void)
    hset->ckind = FULLC;
 }
 
+/* ------------- DV - DiagVar Command ----------------- */
+
+void DiagVarCommand (void)
+{
+   HMMScanState hss;
+   int i,u,z;
+   SVector var;
+   STriMat inv;
+   MLink ml;
+
+   if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
+      HError(2640,"DiagVarCommand: Only possible for continuous models");
+   if (hset->ckind != FULLC)
+      HError(2640,"DiagVarCommand: Only implemented for FULLC models");
+
+   NewHMMScan(hset,&hss);
+   while(GoNextMix(&hss,FALSE)) {
+      inv = hss.me->mpdf->cov.inv;
+      hss.me->mpdf->ckind = INVDIAGC;
+      u = GetUse(inv);
+      if (u==0 || !IsSeen(u)) {
+         z = TriMatSize(inv);
+         var = CreateSVector(&hmmHeap,z);
+         for (i=1; i<=z; i++)
+            var[i] = inv[i][i];
+         if (u!=0) {
+            ml = FindMacroStruct(hset,'i',inv);
+            DeleteMacro(hset,ml);                 /* this needs to delete */
+            NewMacro(hset,fidx,'v',ml->id,var);   /* the macro name also */
+            TouchV(inv);
+            SetUse(var,u);
+            SetHook(inv,var);
+         }
+      }
+      else  /* a macro that we have already seen */
+         var = GetHook(inv);
+      hss.me->mpdf->cov.var = var;
+   }
+   EndHMMScan(&hss);
+   hset->ckind = DIAGC;
+   
+   ConvDiagC(hset,TRUE);  /* inv -> var */
+   FixAllGConsts(hset);   /* fix gConsts */
+}
+
 /* ------------- PR - ProjectCommand   ----------------- */
 
 void ProjectCommand(void)
@@ -7083,17 +7145,17 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
             c1 = c1->next;
          }
             numLeft++;
-      }
-      else {
-         if (c2 == NULL)
-            c2 = ch2->list = c;
-         else {
-            c2->next = c;
-            c2 = c2->next;
          }
+         else {
+            if (c2==NULL)
+               c2 = ch2->list = c;
+            else {
+               c2->next = c;
+               c2 = c2->next;
+            }
             numRight++;
+         }
       }
-   }
       else if (!parent->pureStream) {
          /* stream is not pure */
          if (c->stream == s) {
@@ -7102,7 +7164,7 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
             else {
                c1->next = c;
                c1 = c1->next;
-}
+            }
             numLeft++;
          }
          else {
@@ -7124,14 +7186,14 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
                c1 = c1->next;
             }
             numLeft++;
-         }
+      }
+      else {
+         if (c2 == NULL)
+            c2 = ch2->list = c;
          else {
-            if (c2==NULL)
-               c2 = ch2->list = c;
-            else {
-               c2->next = c;
-               c2 = c2->next;
-            }
+            c2->next = c;
+            c2 = c2->next;
+         }
             numRight++;
          }
       }
@@ -7139,10 +7201,9 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
 
    ch1->nComponents = numLeft;
    ch2->nComponents = numRight;
-
-   if (c1!=NULL)
+   if (c1 != NULL)
       c1->next = NULL;
-   if (c2!=NULL)
+   if (c2 != NULL)
       c2->next = NULL;
 }
 
@@ -7153,17 +7214,17 @@ void ClusterChildren (RNode *parent, RNode *ch1, RNode *ch2)
    double oldDistance, newDistance=0.0 ;
 
    if (parent->pureStream && parent->pureVecSize) {
-      do {
-         iter+=1;
-         if (iter >= MAX_ITER)
-            break;
+   do {
+      iter+=1;
+      if (iter >= MAX_ITER)
+         break;
          CalcDistance(parent->list, ch1, ch2);
-         if (iter == 1)
-            oldDistance = ((ch1->clusterScore + ch2->clusterScore) / 
-                           (ch1->clustAcc + ch2->clustAcc)) + thresh + 1;
-         else
-            oldDistance = newDistance ;
-         newDistance = (ch1->clusterScore + ch2->clusterScore) / 
+      if (iter == 1)
+         oldDistance = ((ch1->clusterScore + ch2->clusterScore) / 
+            (ch1->clustAcc + ch2->clustAcc)) + thresh + 1;
+      else
+         oldDistance = newDistance ;
+      newDistance = (ch1->clusterScore + ch2->clusterScore) / 
          (ch1->clustAcc + ch2->clustAcc) ;
       if (trace & T_CLUSTERS) {
          if (iter == 1)
@@ -7420,13 +7481,13 @@ int BuildRegClusters (RegNode *rtree, const int nTerminals, Boolean nonSpeechNod
          nStrTerminals[n->list->stream]++;
       
       k++;
-   }
+  }
    
    if (trace&T_BID) {
       for (s=1; s<=hset->swidth[0]; s++)
          printf("stream %d: #terminals=%d\n", s, nStrTerminals[s]);
       fflush(stdout);
-  }
+   }
    
    /* free strTerminals, ch1, and ch2 */
    FreeSet(strTerminals);
@@ -8068,21 +8129,21 @@ void Initialise(char *hmmListFn)
 /* -------------------- Top Level of Editing ---------------- */
 
 
-static int  nCmds = 47;
+static int  nCmds = 48;
 
 static char *cmdmap[] = {"AT","RT","SS","CL","CM","CO","CT","JO","MU","TI","UF","NC",
                          "TC","UT","MT","SH","SU","SW","SK",
                          "RC",
                          "RO","RM","RN","RP",
                          "LS","QS","TB","TR","AU","GQ","MD","ST","LT",
-                         "MM","DP","HK","FC","FA","FV","IX","PX","AX","PS","PR","DR","//","" };
+                         "MM","DP","HK","FC","DV","FA","FV","IX","PX","AX","PS","PR","DR","//","" };
 
-typedef enum           { AT=1, RT , SS , CL , CM , CO , CT , JO , MU , TI , UF , NC ,
+typedef enum           { AT=1,RT , SS , CL , CM , CO , CT , JO , MU , TI , UF , NC ,
                          TC , UT , MT , SH , SU , SW , SK ,
                          RC ,
                          RO , RM , RN , RP ,
                          LS , QS , TB , TR , AU , GQ , MD , ST , LT ,
-                         MM , DP , HK , FC , FA , FV , IX , PX , AX , PS , PR , DR , XX }
+                         MM , DP , HK , FC , DV, FA , FV , IX , PX , AX , PS , PR , DR , XX }
 cmdNum;
 
 /* CmdIndex: return index 1..N of given command */
@@ -8158,6 +8219,7 @@ void DoEdit(char * editFn)
       case UF: UseCommand(); break;
       case FA: FloorAverageCommand(); break;
       case FC: FullCovarCommand(); break;
+      case DV: DiagVarCommand(); break;
       case FV: FloorVectorCommand(); break;
       case PS: PowerSizeCommand(); break;
       case PR: ProjectCommand(); break;

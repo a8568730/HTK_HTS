@@ -37,7 +37,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -72,7 +72,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *arc_version = "!HVER!HArc:   3.4 [CUED 25/04/06]";
-char *arc_vc_id = "$Id: HArc.c,v 1.3 2006/12/29 04:44:55 zen Exp $";
+char *arc_vc_id = "$Id: HArc.c,v 1.6 2007/10/03 07:20:14 zen Exp $";
 
 
 /*
@@ -255,8 +255,8 @@ HArc *CreateArc(MemHeap *mem, Lattice *lat, LArc *la, int start_time, int pos, i
 
 void PrintArc(FILE *f, HArc *a){
    ArcTrans *at;
-   fprintf(f, "Arc{ id=%d, pos=%d, parentLarc=0x%x, t_start=%f, t_end=%f",
-           a->id, a->pos, (int)a->parentLarc, (float)a->t_start, (float)a->t_end);
+   fprintf(f, "Arc{ id=%d, pos=%d, parentLarc=0x%lx, t_start=%f, t_end=%f",
+           a->id, a->pos, (long)a->parentLarc, (float)a->t_start, (float)a->t_end);
    if(a->prec && a->t_end > a->prec->t_end){
       printf("(>%f by %E)\n", (float)a->prec->t_end, (float)(a->t_end - a->prec->t_end));
       if(a->t_end + 0.0 == a->prec->t_end){ printf("****\n"); }
@@ -327,7 +327,7 @@ void SortArcs( ArcInfo *aInfo )
    for ( al = arclist ; al != ale ; ++al )
       {
          (*al)->prec = prec ; prec = *al ; 
-         (*al)->foll = *(al+1) ; 
+         (*al)->foll = (al+1 != ale) ? *(al+1) : NULL; 
          (*al)->id = id++ ;
       }
 

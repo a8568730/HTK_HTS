@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -65,8 +65,8 @@
 /*  ---------------------------------------------------------------  */
 
 char *hmath_version = "!HVER!HMath:   3.3 [CUED 28/04/05]";
-char *hmath_vc_id = "$Id: HMath.c,v 1.5 2006/12/29 04:44:54 zen Exp $";
-/* char *hmath_vc_id = "$Id: HMath.c,v 1.5 2006/12/29 04:44:54 zen Exp $"; */
+char *hmath_vc_id = "$Id: HMath.c,v 1.8 2007/10/02 11:54:38 zen Exp $";
+/* char *hmath_vc_id = "$Id: HMath.c,v 1.8 2007/10/02 11:54:38 zen Exp $"; */
 
 /*
    This library provides math support in the following three areas
@@ -1661,6 +1661,7 @@ static Boolean LUDecompose(Matrix a, int *perm, int *sign)
          for (i=j+1; i<=n;i++) a[i][j] *= yy;
       }
    }
+   FreeVector(&gstack,vv);
    return(TRUE);
 }
 
@@ -1676,7 +1677,7 @@ float MatDet(Matrix c)
    a=CreateMatrix(&gstack,n,n);
    CopyMatrix(c,a);                /* Make a copy of c */
    LUDecompose(a,perm,&sign);      /* Do LU Decomposition */
-   det = sign;                     /* Calc Det(c) */
+   det = (float)sign;              /* Calc Det(c) */
    for (i=1; i<=n; i++) {
       det *= a[i][i];
    }
@@ -1739,6 +1740,7 @@ static Boolean DLUDecompose(DMatrix a, int *perm, int *sign)
          for (i=j+1; i<=n;i++) a[i][j] *= yy;
       }
    }
+   FreeDVector(&gstack,vv);
    return(TRUE);
 }
 
@@ -1754,7 +1756,7 @@ double DMatDet(DMatrix c)
    a=CreateDMatrix(&gstack,n,n);
    CopyDMatrix(c,a);                /* Make a copy of c */
    DLUDecompose(a,perm,&sign);      /* Do LU Decomposition */
-   det = sign;                     /* Calc Det(c) */
+   det = (double)sign;              /* Calc Det(c) */
    for (i=1; i<=n; i++) {
       det *= a[i][i];
    }
@@ -1777,7 +1779,7 @@ static void LinSolve(Matrix a, int *perm, float *b)
       if (ii)
          for (j=ii;j<=i-1;j++) sum -=a[i][j]*b[j];
       else
-         if (sum) ii=i;
+         if (sum!=0.0) ii=i;
       b[i]=sum;
    }
    for (i=n; i>=1; i--) {
@@ -1810,7 +1812,7 @@ float MatInvert(Matrix c, Matrix invc)
       for (i=1; i<=n; i++)
          invc[i][j] = col[i];
    }  
-   det = sign;                /* Calc log(det(c)) */
+   det = (float)sign;         /* Calc log(det(c)) */
    for (i=1; i<=n; i++) {
       det *= a[i][i];
    }
@@ -1863,7 +1865,7 @@ double DMatInvert(DMatrix c, DMatrix invc)
       for (i=1; i<=n; i++)
          invc[i][j] = col[i];
    }  
-   det = sign;                /* Calc log(det(c)) */
+   det = (double)sign;                /* Calc log(det(c)) */
    for (i=1; i<=n; i++) {
       det *= a[i][i];
    }
@@ -1885,7 +1887,7 @@ double DMatCofact(DMatrix c, int r, DVector cofact)
    CopyDMatrix(c,a);                      /* Make a copy of c */
    if (! DLUDecompose(a,perm,&sign))      /* Do LU Decomposition */
      return 0;
-   det = sign;                         /* Calc det(c) */
+   det = (double)sign;                    /* Calc det(c) */
    for (i=1; i<=n; i++) {
       det *= a[i][i];
    }
@@ -1916,7 +1918,7 @@ double MatCofact(Matrix c, int r, Vector cofact)
    CopyDMatrix(b,a);                      /* Make a copy of c */
    if (! DLUDecompose(a,perm,&sign))      /* Do LU Decomposition */
      return 0;
-   det = sign;                         /* Calc det(c) */
+   det = (double)sign;                    /* Calc det(c) */
    for (i=1; i<=n; i++) {
       det *= a[i][i];
    }

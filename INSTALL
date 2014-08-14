@@ -1,27 +1,27 @@
 
-   HMM-based Speech Synthesis System (HTS) version 2.0
+   HMM-based Speech Synthesis System (HTS) version 2.0.1
 
 Install
 =========
 
-This version is released as a patch code to HTK-3.4 and HDecode.
+This version is released as a patch code for HTK-3.4 and HDecode.
 You can download them from 
 
 HTK 3.4 source code:  http://htk.eng.cam.ac.uk/download.shtml
 HDecode source code:  http://htk.eng.cam.ac.uk/extensions/index.shtml
 
-After downloading HTK-3.4.tar.gz and HDecode-3.4.tar.gz, expand them
+After downloading HTK-3.4.tar.gz and HDecode-3.4.tar.gz, expand them as follows:
 
  % tar -zxvf HTK-3.4.tar.gz
  % tar -zxvf HDecode-3.4.tar.gz
 
-And then apply HTS-2.0_for_HTK-3.4.patch
+And then apply HTS-2.0.1_for_HTK-3.4.patch for HTK-3.4 as
 
  % cd htk
- % patch -p1 -d . < HTS-2.0_for_HTK-3.4.patch
+ % patch -p1 -d . < HTS-2.0.1_for_HTK-3.4.patch
 
 Finally configure and compile it.
 
-Please refer "Compiling & Installing HTK under UNIX/Linux, OS X or Cygwin"
+Please refer to "Compiling & Installing HTK under UNIX/Linux, OS X or Cygwin"
 and "Compiling & Installing HTK under Windows" sections in htk/README for details.
 

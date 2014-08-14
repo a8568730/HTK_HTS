@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -123,6 +123,8 @@ typedef struct {
   PruneInfo *pInfo;   /* pruning information */
   HLink *up_qList;    /* array[1..Q] of active HMM defs */
   HLink *al_qList;    /* array[1..Q] of active align HMM defs */
+   HLink *up_dList;    /* array[1..Q] of active dur model defs */
+   HLink *al_dList;    /* array[1..Q] of active align dur model defs */
    MLink *qLink;       /* array[1..Q] of link to active HMM defs */
   LabId  *qIds;       /* array[1..Q] of logical HMM names (in qList) */
   short *qDms;        /* array[1..Q] of minimum model duration */
@@ -142,22 +144,28 @@ typedef struct {
 typedef struct {
   Boolean twoModels;  /* Enable two model reestimation */
    Boolean useAlign;   /* Using model alignment */
-   Boolean calcDur;    /* calcurate duration model */
   HMMSet *up_hset;    /* set of HMMs to be re-estimated */
   HMMSet *al_hset;    /* HMMs to use for alignment */
                       /* these are equal unless 2 model reest */
+   HMMSet *up_dset;    /* set of duration models to be estimated */
+   HMMSet *al_dset;    /* duration models to use for alignment */
+                       /* these are equal unless 2 model reest */
   HSetKind hsKind;    /* kind of the alignment HMM system */
-  UPDSet uFlags;      /* parameter update flags */
+   UPDSet uFlags;      /* parameter update flags for HMMs */
+   UPDSet dur_uFlags;  /* parameter update flags for duration models */
   int skipstart;      /* Skipover region - debugging only */
   int skipend;
   int maxM;           /* maximum number of mixtures in hmmset */
   int maxMixInS[SMAX];/* array[1..swidth[0]] of max mixes */
   AlphaBeta *ab;      /* Alpha-beta structure for this model */
-  AdaptXForm *inXForm;/* current input transform (if any) */
+   
+   AdaptXForm *inXForm;        /* current input transform for HMMs (if any) */
   AdaptXForm *al_inXForm;/* current input transform for al_hset (if any) */
-  AdaptXForm *paXForm;/* current parent transform (if any) */
+   AdaptXForm *paXForm;        /* current parent transform for HMMs (if any) */
+   AdaptXForm *dur_inXForm;    /* current input transform for duration models (if any) */
+   AdaptXForm *dur_al_inXForm; /* current input transform for al_dset (if any) */
+   AdaptXForm *dur_paXForm;    /* current parent transform for duration models (if any) */
 } FBInfo;
-
 
 /* EXPORTED FUNCTIONS-------------------------------------------------*/
 
@@ -171,13 +179,12 @@ void ResetFB(void);
 void SetTraceFB(void);
 
 /* Initialise the forward backward memory stacks etc */
-void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *set, UPDSet uset, 
-                       LogDouble pruneInit, LogDouble pruneInc, 
-                       LogDouble pruneLim, float minFrwdP,
-                       Boolean calcDur, Boolean useAlign);
+void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, UPDSet uFlags, HMMSet *dset, UPDSet dur_uFlags,
+                       LogDouble pruneInit, LogDouble pruneInc, LogDouble pruneLim, 
+                       float minFrwdP, Boolean useAlign);
 
 /* Use a different model set for alignment */
-void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset);
+void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset, HMMSet *al_dset);
 
 /* Initialise the utterance Information */
 void InitUttInfo(UttInfo *utt, Boolean twoFiles );
@@ -205,18 +212,6 @@ Boolean FBUtt(FBInfo *fbInfo, UttInfo *utt);
 
 /* PrLog: print a log value */
 void PrLog(LogDouble x);
-
-/* ------------------------- for duration modeling ---------------------- */
-
-typedef struct {   /* attached to mac->hook */
-   DVector occ;
-   DVector sum;   
-   DVector sqr;
-} DAcc;
-
-/* SaveDuration: save duration distribution */
-void SaveDuration(FBInfo *fbInfo, char *durfn, DurKind dkind);
-
 
 #ifdef __cplusplus
 }

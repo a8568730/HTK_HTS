@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2006                       */
+/*                     Copyright (c) 2001-2007                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hsmooth_version = "!HVER!HSmooth:   3.4 [CUED 25/04/06]";
-char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.3 2006/12/29 04:44:55 zen Exp $";
+char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.5 2007/10/03 07:20:10 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -535,7 +535,7 @@ void StatReport(void)
    px=1;
    do {
       hmm = hss.hmm;
-      PrintStats(f,px,hmm,(int)hmm->hook);
+      PrintStats(f,px,hmm,(int)((long)hmm->hook));
       px++;
    } while (GoNextHMM(&hss));
    EndHMMScan(&hss);
@@ -1080,7 +1080,7 @@ void UpdateModels(void)
    NewHMMScan(&hset,&hss);
    do {
       hmm = hss.hmm;   
-      n = (int)hmm->hook;
+      n = (long)hmm->hook;
       if (n<minEgs && !(trace&T_OPT))
          HError(-2428,"%s copied: only %d egs\n",HMMPhysName(&hset,hmm),n);
       if (n>=minEgs) {
