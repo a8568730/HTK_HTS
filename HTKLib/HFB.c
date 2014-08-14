@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hfb_version = "!HVER!HFB:   3.4 [CUED 25/04/06]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.30 2008/01/18 03:24:56 zen Exp $";
+char *hfb_vc_id = "$Id: HFB.c,v 1.33 2008/03/24 01:31:12 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -134,7 +134,8 @@ static Boolean sharedMix = FALSE; /* true if shared mixtures */
 static Boolean sharedStream = FALSE; /* true if shared streams */
 
 static Boolean semiMarkov = FALSE;  /* HMM or HSMM */
-static int maxstdDevCoef = 5;       /* max duration */
+static int maxstdDevCoef = 10;      /* max duration */
+static int minDur = 5;              /* min duration */
 static MemHeap dprobStack;
 
 /* ------------------------- Min HMM Duration -------------------------- */
@@ -314,6 +315,7 @@ void InitFB(void)
          if (GetConfInt(cParm,nParm,"HSKIPSTART",&i)) skipstartInit = i;
          if (GetConfInt(cParm,nParm,"HSKIPEND",&i)) skipendInit = i;
          if (GetConfInt(cParm,nParm,"MAXSTDDEVCOEF",&i)) maxstdDevCoef = i;
+         if (GetConfInt(cParm,nParm,"MINDUR",&i)) minDur = i;
          if (GetConfFlt(cParm,nParm,"PRUNEINIT", &d)) pruneSetting.pruneInit = d;
          if (GetConfFlt(cParm,nParm,"PRUNEINC", &d)) pruneSetting.pruneInc = d;
          if (GetConfFlt(cParm,nParm,"PRUNELIM", &d)) pruneSetting.pruneLim = d;
@@ -1349,7 +1351,7 @@ void ResetDMMPreComps (HMMSet *dset)
 static void Setdurprob(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
 {
    int q,j,Nq,d,maxDur;
-   double var;
+   double var=0.0;
    LogFloat det;
    Vector dur;
    SVector dprob;
@@ -1382,14 +1384,16 @@ static void Setdurprob(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
             sti = ab->al_dList[q]->svec[2].info->pdf[j-1].info;
             wa = (WtAcc *)sti->hook;
             if (GetHook(wa->c)==NULL) {
+               /* calculate max duration */
                mp = sti->spdf.cpdf[1].mpdf;
-               ApplyCompXForm(mp, fbInfo->al_inXForm_dur, TRUE);  /* transform mp in full form */               
+               ApplyCompXForm(mp, fbInfo->al_inXForm_dur, TRUE);  /* transform mp in full form */
                switch(mp->ckind) {
                case DIAGC:    var = mp->cov.var[1]; break;
                case INVDIAGC: var = 1.0 / mp->cov.var[1]; break;
                case FULLC:    var = 1.0 / mp->cov.inv[1][1]; break;
                }
-               maxDur = (int)(mp->mean[1] + maxstdDevCoef*sqrt(var)) + 2;  /* 2 <- minimum dur to be evaluated */
+               maxDur = (int)(mp->mean[1] + maxstdDevCoef*sqrt(var) + 0.5);
+               maxDur = (maxDur<minDur) ? minDur : maxDur;
                ApplyCompXForm(mp, fbInfo->al_inXForm_dur, fbInfo->xfinfo_dur->inFullC);
                
                /* compute duration prob */
@@ -1404,7 +1408,7 @@ static void Setdurprob(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
             }
             else {
                dprob = (SVector) GetHook(wa->c);
-               maxDur = (int) GetHook(dprob);
+               maxDur = (int)((long)GetHook(dprob));
             }
             ab->maxDur [q][j] = maxDur;
             ab->durprob[q][j] = dprob;
@@ -1494,7 +1498,7 @@ static void SetBeamTaper(PruneInfo *p, short *qDms, int Q, int T)
 /* SetAlign: set start and end frame according to given label */
 static void SetAlign (long *st, long *en, short *qDms, const int Q, const int T)
 {
-   int q, i, minDur;
+   int q, i, mindur;
 
    /* set segment boundaries which can be determined from given label */
    st[1] = 1;
@@ -1520,9 +1524,9 @@ static void SetAlign (long *st, long *en, short *qDms, const int Q, const int T)
 
    /* check length of each segment and #HMM states */
    for (q=1; q<=Q; q++) {
-      for (i=minDur=0; q+i<=Q; i++) {
-         minDur += qDms[q+i];
-         while (en[q+i]-st[q]+1<minDur) {
+      for (i=mindur=0; q+i<=Q; i++) {
+         mindur += qDms[q+i];
+         while (en[q+i]-st[q]+1<mindur) {
             if (st[q]<=1 && en[q+i]>=T) 
                HError(7399,"SetAlign: given data sequence is shorter than given sentence HMM");
             if (st[q]>1)
@@ -1805,7 +1809,7 @@ static Boolean StepBack(FBInfo *fbInfo, UttInfo *utt)
    PruneInfo *p;
    int qt;
    
-   ResetObsCache();  
+   ResetObsCache(fbInfo->xfinfo_hmm);  ResetObsCache(fbInfo->xfinfo_dur); 
    ab = fbInfo->ab;
    pruneThresh=pruneSetting.pruneInit;
    do
@@ -2534,7 +2538,7 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
    }
    }
 
-   ResetObsCache();
+   ResetObsCache(fbInfo->xfinfo_hmm);  ResetObsCache(fbInfo->xfinfo_dur);
 
    for (t=1;t<=utt->T;t++) {
 

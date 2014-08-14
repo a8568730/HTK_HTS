@@ -47,7 +47,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hgen_version = "!HVER!HGen:   2.0.1 [NIT 01/10/07]";
-char *hgen_vc_id = "$Id: HGen.c,v 1.38 2008/01/11 02:58:08 zen Exp $";
+char *hgen_vc_id = "$Id: HGen.c,v 1.40 2008/03/24 01:29:49 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -1010,20 +1010,26 @@ void JointProb (GenInfo *genInfo, UttInfo *utt)
 static void OutProb (GenInfo *genInfo, UttInfo *utt)
 {
    int i, j, d, t;
-   LogFloat prob=0.0;
+   LogFloat prob;
    StateInfo *si;
-     
+   
+   utt->pr = 0.0;
+   
    for (i=1,t=1; i<=genInfo->labseqlen; i++) {
       for (j=1; genInfo->sindex[i][j]!=0; j++) {
          si = genInfo->hmm[i]->svec[genInfo->sindex[i][j]].info;
          
          /* state output prob */
-         for (d=1; d<=genInfo->durations[i][j]; d++,t++)
-            prob += POutP(genInfo->hset, &(utt->o[t]), si);
+         for (d=1; d<=genInfo->durations[i][j]; d++,t++) {
+            prob = POutP(genInfo->hset, &(utt->o[t]), si);
+            if (prob<LSMALL)
+               HError(-9999,"OutProb: output prob at frame %d is 0.0", t);
+            utt->pr += prob;
+         }
       }
    }
-
-   utt->pr = prob;
+   
+   return;
 }
 
 /* -------------------------- Cholesky decomposition-based parameter generation -------------------------- */
@@ -1260,7 +1266,7 @@ static LogDouble Calc_Gradient (PdfStream *pst, const int bias, DVector mean, DV
                                 LogDouble *GVobj, LogDouble *HMMobj, double *norm)
 {
    int m,l,t,i;
-   double inv,h;
+   double inv,h=1.0;
    
    /* constant values */
    const int M = (pst->fullCov) ? pst->order : 1;
@@ -1348,7 +1354,7 @@ static void GV_ParmGen (PdfStream *pst, const int bias)
 {
    int t,iter;
    double norm, step=stepInit;
-   LogDouble obj,prev,GVobj,HMMobj;
+   LogDouble obj,prev=LZERO,GVobj,HMMobj;
    
    /* matrix/vectors */
    Matrix  C = pst->C;
@@ -1753,7 +1759,7 @@ void ParamGen (GenInfo *genInfo, UttInfo *utt, FBInfo *fbInfo, const ParmGenType
 {
    int iter;
    Boolean success=TRUE,converged=FALSE;
-   LogFloat prev, curr;
+   LogFloat prev=LZERO, curr;
 
    /* # of frames */
    const int T = genInfo->tframe;

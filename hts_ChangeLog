@@ -1,3 +1,169 @@
+2008-03-24 10:52  Heiga Zen
+
+	* configure: Remove AC_PROG_CXX.
+
+2008-03-24 10:51  Heiga Zen
+
+	* HTKLib/HModel.c: Small modification of SOutP().
+
+2008-03-24 10:50  Heiga Zen
+
+	* HTKLVRec/HLVRec-outP.c: Support MSD.
+
+2008-03-24 10:50  Heiga Zen
+
+	* HTKLVRec/HDecode.c: Fix copyright year.
+
+2008-03-24 10:32  Heiga Zen
+
+	* configure.ac: Remove AC_PROG_CXX.
+
+2008-03-24 10:31  Heiga Zen
+
+	* HTKLib/HFB.c: Initialize variable to avoid warning.  Cast
+	  variable to avoid warning on 64-bit environments.
+
+2008-03-24 10:29  Heiga Zen
+
+	* HTKLib/HGen.c: Initialize variables to avoid warning.
+
+2008-03-24 10:28  Heiga Zen
+
+	* HTKLVRec/HDecode.c: Use %zd instead of %d for size_t in printf().
+
+2008-03-20 13:44  Heiga Zen
+
+	* configure, configure.ac: Remove hts_engine related parts.  Fix
+	  version number.
+
+2008-03-20 13:13  Heiga Zen
+
+	* HTKLib/HAdapt.c: Fix copyright year.
+
+2008-03-19 20:30  Heiga Zen
+
+	* HTKLib/HAdapt.c: Modify Copyright year.
+
+2008-03-13 05:12  Junichi Yamagishi
+
+	* HTKLib/HAdapt.c:
+
+	  Support CSMAPLR/SMAPLR adaptation algorithms
+
+2008-03-05 13:03  Heiga Zen
+
+	* HTKTools/HHEd.c: Cancel previous commit.
+
+2008-03-05 12:58  Heiga Zen
+
+	* HTKTools/HHEd.c: Convert loaded mmfs to full covariance form
+	  after loading xforms in AdaptXFormCommand().
+
+2008-03-04 01:55  Heiga Zen
+
+	* HTKTools/HHEd.c: Support 'MU *2 {...}' in MixUpCommand().  We can
+	  easily increase the number of mixture components.
+
+2008-03-02 14:53  Heiga Zen
+
+	* HTKTools/HHEd.c: Implement mixture-level occ threshold in mixing
+	  up process.
+
+2008-03-02 14:50  Heiga Zen
+
+	* HTKTools/HMGenS.c: Call InitialiseForBack() only if case 2 or
+	  case 3 parameter generation algorithm is used.
+
+2008-03-02 14:49  Heiga Zen
+
+	* HTKTools/HVite.c: Fix function call.
+
+2008-03-02 14:48  Heiga Zen
+
+	* HTKTools/HERest.c: Update variance floors only if variance update
+	  flag is on.
+
+2008-03-02 14:42  Heiga Zen
+
+	* HTKLib/: HAdapt.c, HAdapt.h, HFB.c, HFBLat.c: Move observation
+	  and accumulator cache list to XFInfo.  Fix bug in variance
+	  flooring for STC.  Set default maxstddevCoef to 10.
+
+2008-03-02 14:37  Heiga Zen
+
+	* HTKLib/HGen.c: Output warning if state output prob is 0.
+
+2008-03-02 14:34  Heiga Zen
+
+	* HTKLib/HMap.c: Call ResetVFloor().
+
+2008-02-22 15:36  Heiga Zen
+
+	* HTKLib/HFB.c: Add a configuration variable "MINDUR" to set
+	  minimum durations in the HSMM forward-backward algorithm.
+
+2008-02-18 12:58  Heiga Zen
+
+	* HTKLib/HAdapt.c: Fix bug: check the full covariance transform
+	  flag in ApplyCompXForm().
+
+2008-02-16 02:20  Heiga Zen
+
+	* HTKTools/HHEd.c: Stop if tree files are loaded before loading
+	  stats file in Dec2RegTreeCommand().
+
+2008-02-16 01:15  Heiga Zen
+
+	* HTKTools/HHEd.c: Support SMAX>10 in FloorVectorCommand().
+
+2008-02-04 01:59  Heiga Zen
+
+	* HTKLib/HModel.c: Do not stop if bclass->ilist[b]==NULL.
+
+2008-02-01 02:56  Heiga Zen
+
+	* HTKTools/HHEd.c: Do not output redundunt model lists in
+	  PrintNodeBaseClass().
+
+2008-01-30 00:36  Heiga Zen
+
+	* HTKTools/HHEd.c: Fix string length.
+
+2008-01-20 18:28  Heiga Zen
+
+	* HTKLib/HAdapt.c: Stream-dependent variance flooring scales for
+	  semi-tied covariance matrices.
+
+2008-01-20 18:02  Heiga Zen
+
+	* configure.ac, Makefile.in: Remove stand-alone hts_engine.
+
+2008-01-18 12:27  Heiga Zen
+
+	* HTKLib/HUtil.c: Store stream-level occupancy counts at sti->hook
+	  in any systems.
+
+2008-01-18 12:26  Heiga Zen
+
+	* HTKLib/HTrain.c: Dump and load state-level occupancy counts if
+	  given HMM set is a shared-stream system.
+
+2008-01-18 12:24  Heiga Zen
+
+	* HTKTools/HERest.c, HTKLib/HFB.c, HTKLib/HFB.h: Remove
+	  fbInfo->stats.
+
+2008-01-18 12:23  Heiga Zen
+
+	* HTKTools/HHEd.c: Fix 3 bugs: Use stream-level occupancy counts in
+	  InitTreeAccs().  Number of initial terminal nodes for regression
+	  class construction in BuildRegCluster().  Initialize pureStream
+	  and putVecSize of root node if nComponenNonSp>0 in InitRegTree().
+
+2008-01-16 13:24  Heiga Zen
+
+	* HTKLVRec/.cvsignore: Update .cvsignore.
+
 2008-01-15 22:41  Heiga Zen
 
 	* HTKTools/Makefile.in: Fix bug reported by Junichi Yamagishi: Use
@@ -529,12 +695,6 @@
 
 	* Makefile.in: Update license.
 
-2007-10-02 03:16  Heiga Zen
-
-	* hts_engine/: global.hpp, hts_engine.cpp, misc.cpp, misc.hpp,
-	  mlpg.cpp, mlpg.hpp, model.cpp, model.hpp, tree.cpp, tree.hpp,
-	  vocoder.cpp, vocoder.hpp: Update license.
-
 2007-10-02 03:07  Heiga Zen
 
 	* HTKLVRec/: HDecode.c, HDecode.mod.c, HLVLM.c, HLVLM.h,
@@ -743,10 +903,6 @@
 
 	* ChangeLog.htk: Add ChangeLog.htk
 
-2007-04-03 12:41  Heiga Zen
-
-	* hts_engine/.cvsignore: Include *.trace in .cvsignore
-
 2007-04-03 12:33  Heiga Zen
 
 	* HTKLib/HFB.c: Properly allocate otprob vector if
@@ -874,12 +1030,7 @@
 	  HTKTools/HCompV.c, HTKTools/HCopy.c, HTKTools/HDMan.c,
 	  HTKTools/HERest.c, HTKTools/HInit.c, HTKTools/HMGenS.c,
 	  HTKTools/HRest.c, HTKTools/HResults.c, HTKTools/HSGen.c,
-	  HTKTools/HSLab.c, HTKTools/Makefile.in, hts_engine/global.hpp,
-	  hts_engine/hts_engine.cpp, hts_engine/misc.cpp,
-	  hts_engine/misc.hpp, hts_engine/mlpg.cpp, hts_engine/mlpg.hpp,
-	  hts_engine/model.cpp, hts_engine/model.hpp, hts_engine/tree.cpp,
-	  hts_engine/tree.hpp, hts_engine/vocoder.cpp,
-	  hts_engine/vocoder.hpp:
+	  HTKTools/HSLab.c, HTKTools/Makefile.in:
 
 	  * Update license
 
@@ -911,17 +1062,12 @@
 
 2006-12-27 19:19  Heiga Zen
 
-	* HTKLib/HAdapt.c, HTKLib/HGen.c, HTKTools/HHEd.c,
-	  hts_engine/mlpg.cpp, hts_engine/vocoder.cpp: Remove register
+	* HTKLib/HAdapt.c, HTKLib/HGen.c, HTKTools/HHEd.c: Remove register
 	  variables.
 
 2006-12-27 19:18  Heiga Zen
 
 	* configure.ac: Use -m32 if CC=gcc*.
-
-2006-12-27 19:16  Heiga Zen
-
-	* hts_engine/mlpg.cpp: remove unused variable.
 
 2006-12-27 18:38  Heiga Zen
 
@@ -931,14 +1077,6 @@
 2006-12-27 18:37  Heiga Zen
 
 	* HTKTools/htk_htktools_nt.mkf, HTKLib/htk_htklib_nt.mkf: Fix CRLF
-
-2006-12-27 18:36  Heiga Zen
-
-	* hts_engine/.cvsignore: Add test2.sh
-
-2006-12-27 18:36  Heiga Zen
-
-	* hts_engine/.cvsignore: Add test2
 
 2006-12-27 18:35  Heiga Zen
 
@@ -969,36 +1107,18 @@
 
 	* HTKTools/HHEd.c: Load AdaptXForm command.
 
-2006-12-26 20:25  Heiga Zen
-
-	* hts_engine/: hts_engine.cpp, mlpg.cpp: Eliminate an assumption
-	  that the static features are always used as the first part of
-	  feature vectors.
-
-2006-12-26 20:20  Heiga Zen
-
-	* hts_engine/.cvsignore: add miscelaneous files.
-
-2006-12-26 19:19  Heiga Zen
-
-	* HLMLib/.cvsignore, .cvsignore: add miscelaneous files.
-
 2006-12-26 19:19  Heiga Zen
 
 	* HLMTools/.cvsignore: [no log message]
 
-2006-12-26 19:15  Heiga Zen
+2006-12-26 19:17  Heiga Zen
 
-	* hts_engine/.cvsignore, HTKTools/.cvsignore, HTKLVRec/.cvsignore,
-	  HTKLib/.cvsignore: add miscelaneous files.
+	* HTKTools/.cvsignore, HTKLVRec/.cvsignore, HTKLib/.cvsignore,
+	  HLMLib/.cvsignore, .cvsignore: add miscelaneous files.
 
 2006-12-26 19:12  Heiga Zen
 
 	* configure, configure.ac: Include checks suggested by autoscan.
-
-2006-12-26 19:11  Heiga Zen
-
-	* hts_engine/misc.hpp: Fix header file names.
 
 2006-12-26 18:30  Heiga Zen
 
@@ -1020,18 +1140,9 @@
 	* configure, configure.ac, HLMLib/Makefile.in, HTKLib/Makefile.in:
 	  Command "ar" should be able to be given.
 
-2006-12-25 16:57  Heiga Zen
-
-	* hts_engine/Makefile.in: Fix a bug.
-
 2006-12-25 16:50  Heiga Zen
 
 	* HTKTools/HERest.c: Fix a bug.
-
-2006-12-25 16:32  Heiga Zen
-
-	* hts_engine/: Makefile.in, misc.cpp: Add #ifdef for future
-	  Festival integration.
 
 2006-12-25 16:32  Heiga Zen
 
@@ -1062,26 +1173,6 @@
 	  HTKTools/HVite.c, HTKTools/Makefile.icc, HTKTools/Makefile.in:
 	  Update from HTK-3.4-alpha to HTK-3.4 release.
 
-2006-12-25 15:46  Heiga Zen
-
-	* hts_engine/: Makefile.in, global.h, global.hpp, hts_engine.cc,
-	  hts_engine.cpp, hts_engine_nt.mkf, misc.cc, misc.cpp, misc.h,
-	  misc.hpp, mlpg.cc, mlpg.cpp, mlpg.h, mlpg.hpp, model.cc,
-	  model.cpp, model.h, model.hpp, tree.cc, tree.cpp, tree.h,
-	  tree.hpp, vocoder.cc, vocoder.cpp, vocoder.h, vocoder.hpp:
-	  * rename from .cc to .cpp * rename from .h to .hpp * add makefile
-	  for MSVC
-
-2006-12-18 12:41  Heiga Zen
-
-	* hts_engine/mlpg.cc:
-	  Coad cleaning.
-
-2006-12-15 15:14  Heiga Zen
-
-	* hts_engine/: tree.cc, tree.h:
-	  Non recursive node search for tree loading.
-
 2006-12-14 20:58  Heiga Zen
 
 	* HTKLVRec/: HDecode-license.txt, HLVLM.c, HLVRec-traceback.c,
@@ -1103,19 +1194,9 @@
 	  HTKRef/HHEd.tex, HTKRef/HLRescore.tex:
 	  Update from HTK-3.4-alpha to HTK-3.4 release.
 
-2006-12-13 13:52  Heiga Zen
-
-	* hts_engine/: hts_engine.cc, mlpg.cc, model.cc, tree.cc,
-	  vocoder.cc, vocoder.h:
-	  * Speeding up vocoder.  * -DHTS_EMBEDDED=1 for embedded
-	  application.	* Switch from Cholesky to LDL factorization.  *
-	  Close file pointers.
-
 2006-12-12 20:08  Heiga Zen
 
-	* Makefile.in, configure, configure.ac, hts_engine/Makefile.in,
-	  hts_engine/configure, hts_engine/configure.in,
-	  hts_engine/tree.cc:
+	* Makefile.in, configure, configure.ac:
 	  Integrate configure for hts_engine into configure of HTK (HTS).
 
 2006-12-12 20:07  Heiga Zen
@@ -1141,27 +1222,6 @@
 	  Generator
 
 	  Do not output state durations if -s option is specified.
-
-2006-12-08 14:36  Heiga Zen
-
-	* hts_engine/hts_engine.cc:
-	  Fix a bug in checking the utterance length.
-
-	  Reported by Alexis Moinet :-)
-
-2006-12-08 14:00  Heiga Zen
-
-	* hts_engine/tree.cc: SearchTree
-
-	  Replace recursive tree search by non-recursive one.
-
-	  Patch contributed by Nicholas Volk
-
-2006-12-05 14:59  Heiga Zen
-
-	* hts_engine/: Makefile.in, configure, configure.in, global.h,
-	  hts_engine.cc, misc.cc, misc.h, mlpg.cc, mlpg.h, model.cc,
-	  model.h, tree.cc, tree.h, vocoder.cc, vocoder.h: Add hts_engine
 
 2006-12-04 17:10  Heiga Zen
 
@@ -1597,264 +1657,8 @@
 	  HTKLVRec/HLVRec-outP.c, HTKLVRec/HLVRec-propagate.c,
 	  HTKLVRec/HLVRec-traceback.c, HTKLVRec/HLVRec.c,
 	  HTKLVRec/HLVRec.h, HTKLVRec/Makefile.icc, HTKLVRec/Makefile.in,
-	  HTKLVRec/config.orig.h, HTKLVRec/config.mod.h, HTKLVRec/config.h,
-	  htkdist/HTKBook/HTKFigs/Tool.decode.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.hedit.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.netdict.eps,
-	  htkdist/HTKBook/HTKFigs/coercions.eps,
-	  htkdist/HTKBook/HTKFigs/headaptrdp.eps,
-	  htkdist/HTKBook/HTKFigs/melfbank.eps,
-	  htkdist/HTKBook/HTKFigs/muacc.eps,
-	  htkdist/HTKBook/HTKFigs/step5.eps,
-	  htkdist/HTKBook/HTKFigs/tcover.eps,
-	  htkdist/HTKBook/HTKFigs/tmixeg.eps,
-	  htkdist/HTKBook/HTKFigs/wdnet.eps,
-	  htkdist/HTKBook/HTKRef/Cluster.tex,
-	  htkdist/HTKBook/HTKRef/HBuild.tex,
-	  htkdist/HTKBook/HTKRef/HCompV.tex,
-	  htkdist/HTKBook/HTKRef/HCopy.tex,
-	  htkdist/HTKBook/HTKRef/HDMan.tex,
-	  htkdist/HTKBook/HTKRef/HEAdapt.tex,
-	  htkdist/HTKBook/HTKRef/HERest.tex,
-	  htkdist/HTKBook/HTKRef/HHEd.tex,
-	  htkdist/HTKBook/HTKRef/HInit.tex,
-	  htkdist/HTKBook/HTKRef/HLEd.tex,
-	  htkdist/HTKBook/HTKRef/HLMCopy.tex,
-	  htkdist/HTKBook/HTKRef/HLRescore.tex,
-	  htkdist/HTKBook/HTKRef/HLStats.tex,
-	  htkdist/HTKBook/HTKRef/HList.tex,
-	  htkdist/HTKBook/HTKRef/HMMIRest.tex,
-	  htkdist/HTKBook/HTKRef/HParse.tex,
-	  htkdist/HTKBook/HTKRef/HQuant.tex,
-	  htkdist/HTKBook/HTKRef/HRest.tex,
-	  htkdist/HTKBook/HTKRef/HResults.tex,
-	  htkdist/HTKBook/HTKRef/HSGen.tex,
-	  htkdist/HTKBook/HTKRef/HSLab.tex,
-	  htkdist/HTKBook/HTKRef/HSmooth.tex,
-	  htkdist/HTKBook/HTKRef/HVite.tex,
-	  htkdist/HTKBook/HTKRef/LAdapt.tex,
-	  htkdist/HTKBook/HTKRef/LBuild.tex,
-	  htkdist/HTKBook/HTKRef/LFoF.tex,
-	  htkdist/HTKBook/HTKRef/LGCopy.tex,
-	  htkdist/HTKBook/HTKRef/LGList.tex,
-	  htkdist/HTKBook/HTKRef/LGPrep.tex,
-	  htkdist/HTKBook/HTKRef/LLink.tex,
-	  htkdist/HTKBook/HTKRef/LMerge.tex,
-	  htkdist/HTKBook/HTKRef/LNewMap.tex,
-	  htkdist/HTKBook/HTKRef/LNorm.tex,
-	  htkdist/HTKBook/HTKRef/LPlex.tex,
-	  htkdist/HTKBook/HTKRef/LSubset.tex,
-	  htkdist/HTKBook/HTKRef/tools.tex,
-	  htkdist/HTKBook/HTKFigs/Blocking.eps,
-	  htkdist/HTKBook/HTKFigs/Config.eps,
-	  htkdist/HTKBook/HTKFigs/HLMoperation.eps,
-	  htkdist/HTKBook/HTKFigs/MMFeg.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.disc.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.labs.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.model.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.shell.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.train.eps,
-	  htkdist/HTKBook/HTKFigs/VQUse.eps,
-	  htkdist/HTKBook/HTKFigs/WordLM.eps,
-	  htkdist/HTKBook/HTKFigs/cover.eps,
-	  htkdist/HTKBook/HTKFigs/dbhier.eps,
-	  htkdist/HTKBook/HTKFigs/dialnet.eps,
-	  htkdist/HTKBook/HTKFigs/egsils.eps,
-	  htkdist/HTKBook/HTKFigs/egtranstie.eps,
-	  htkdist/HTKBook/HTKFigs/endpointer.eps,
-	  htkdist/HTKBook/HTKFigs/herestdp.eps,
-	  htkdist/HTKBook/HTKFigs/hierarch.eps,
-	  htkdist/HTKBook/HTKFigs/hsetdef.eps,
-	  htkdist/HTKBook/HTKFigs/itemtree.eps,
-	  htkdist/HTKBook/HTKFigs/labegs.eps,
-	  htkdist/HTKBook/HTKFigs/markovgen.eps,
-	  htkdist/HTKBook/HTKFigs/memheap.eps,
-	  htkdist/HTKBook/HTKFigs/messencode.eps,
-	  htkdist/HTKBook/HTKFigs/netforcsr.eps,
-	  htkdist/HTKBook/HTKFigs/parher.eps,
-	  htkdist/HTKBook/HTKFigs/recnetlev.eps,
-	  htkdist/HTKBook/HTKFigs/recsys.eps,
-	  htkdist/HTKBook/HTKFigs/regtree1.eps,
-	  htkdist/HTKBook/HTKFigs/segstore.eps,
-	  htkdist/HTKBook/HTKFigs/step1.eps,
-	  htkdist/HTKBook/HTKFigs/step10.eps,
-	  htkdist/HTKBook/HTKFigs/step2.eps,
-	  htkdist/HTKBook/HTKFigs/structshare.eps,
-	  htkdist/HTKBook/HTKFigs/subsmixrep.eps,
-	  htkdist/HTKBook/HTKFigs/sysoview.eps,
-	  htkdist/HTKBook/HTKFigs/useforiso.eps,
-	  htkdist/HTKBook/HTKFigs/vqtohmm.eps,
-	  htkdist/HTKBook/HTKFigs/vtrellis.eps,
-	  htkdist/HTKBook/HTKFigs/wlroper.eps,
-	  htkdist/HTKBook/HTKFigs/xwrdnet.eps,
-	  htkdist/HTKBook/HTKFigs/ClassLM.eps,
-	  htkdist/HTKBook/HTKFigs/HTKFormat.eps,
-	  htkdist/HTKBook/HTKFigs/LTool.eps,
-	  htkdist/HTKBook/HTKFigs/Spmods.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.langmod.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.spio.eps,
-	  htkdist/HTKBook/HTKFigs/clusterset.eps,
-	  htkdist/HTKBook/HTKFigs/decflow.eps,
-	  htkdist/HTKBook/HTKFigs/decinet.eps,
-	  htkdist/HTKBook/HTKFigs/digitnets.eps,
-	  htkdist/HTKBook/HTKFigs/dmaker.eps,
-	  htkdist/HTKBook/HTKFigs/flatst.eps,
-	  htkdist/HTKBook/HTKFigs/headapt.eps,
-	  htkdist/HTKBook/HTKFigs/hinitdp.eps,
-	  htkdist/HTKBook/HTKFigs/hmm1.eps,
-	  htkdist/HTKBook/HTKFigs/hslab.eps,
-	  htkdist/HTKBook/HTKFigs/htktools.eps,
-	  htkdist/HTKBook/HTKFigs/hvalign.eps,
-	  htkdist/HTKBook/HTKFigs/isoprob.eps,
-	  htkdist/HTKBook/HTKFigs/isoword.eps,
-	  htkdist/HTKBook/HTKFigs/mononet.eps,
-	  htkdist/HTKBook/HTKFigs/overview.eps,
-	  htkdist/HTKBook/HTKFigs/qstree.eps,
-	  htkdist/HTKBook/HTKFigs/recipe.eps,
-	  htkdist/HTKBook/HTKFigs/restloop.eps,
-	  htkdist/HTKBook/HTKFigs/sequence.eps,
-	  htkdist/HTKBook/HTKFigs/softarch.eps,
-	  htkdist/HTKBook/HTKFigs/step11.eps,
-	  htkdist/HTKBook/HTKFigs/step3.eps,
-	  htkdist/HTKBook/HTKFigs/step6.eps,
-	  htkdist/HTKBook/HTKFigs/step7.eps,
-	  htkdist/HTKBook/HTKFigs/step8.eps,
-	  htkdist/HTKBook/HTKFigs/step9.eps,
-	  htkdist/HTKBook/HTKFigs/subword.eps,
-	  htkdist/HTKBook/HTKFigs/tiedstate.eps,
-	  htkdist/HTKBook/HTKFigs/toolkit.eps,
-	  htkdist/HTKBook/HTKFigs/tracc.eps,
-	  htkdist/HTKBook/HTKFigs/tsubword.eps,
-	  htkdist/HTKBook/HTKFigs/vaacc.eps,
-	  htkdist/HTKBook/HTKFigs/vmatrep.eps,
-	  htkdist/HTKBook/HTKFigs/vtlnpiecewise.eps,
-	  htkdist/HTKBook/HTKFigs/wdnet0.eps,
-	  htkdist/HTKBook/HTKFigs/wdnet1.eps,
-	  htkdist/HTKBook/HTKFigs/wintnet.eps,
-	  htkdist/HTKBook/HTKFigs/wtacc.eps, htkdist/HTKBook/ChangeLog,
-	  htkdist/HTKBook/ChangeLog.CUHTK, htkdist/HTKBook/HTK.tex,
-	  htkdist/HTKBook/Makefile, htkdist/HTKBook/Makefile.in,
-	  htkdist/HTKBook/README, htkdist/HTKBook/adapt.tex,
-	  htkdist/HTKBook/config.tex, htkdist/HTKBook/decode.tex,
-	  htkdist/HTKBook/discmods.tex, htkdist/HTKBook/errors.tex,
-	  htkdist/HTKBook/exampsys.tex, htkdist/HTKBook/fundaments.tex,
-	  htkdist/HTKBook/hlmfiles.tex, htkdist/HTKBook/hlmfund.tex,
-	  htkdist/HTKBook/hlmtutorial.tex, htkdist/HTKBook/htkbook.out,
-	  htkdist/HTKBook/htkbook.tex, htkdist/HTKBook/htkoview.tex,
-	  htkdist/HTKBook/htkslf.tex, htkdist/HTKBook/labels.tex,
-	  htkdist/HTKBook/models.tex, htkdist/HTKBook/netdict.tex,
-	  htkdist/HTKBook/openviron.tex, htkdist/HTKBook/refine.tex,
-	  htkdist/HTKBook/speechio.tex, htkdist/HTKBook/train.tex,
-	  htkdist/HTKBook/HTKFigs/bmemops.eps,
-	  htkdist/HTKBook/HTKFigs/bobig.eps,
-	  htkdist/HTKBook/HTKFigs/step4.eps,
-	  htkdist/HTKBook/HTKFigs/streams.eps,
-	  htkdist/HTKBook/HTKFigs/vitloop.eps,
-	  htkdist/HTKBook/HTKXFigs/ClassLM.doc,
-	  htkdist/HTKBook/HTKXFigs/HLMoperation.doc,
-	  htkdist/HTKBook/HTKXFigs/LTool.doc,
-	  htkdist/HTKBook/HTKXFigs/Tool.labs.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.model.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.netdict.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.shell.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.spio.fig,
-	  htkdist/HTKBook/HTKXFigs/WordLM.doc,
-	  htkdist/HTKBook/HTKXFigs/cover.fig,
-	  htkdist/HTKBook/HTKXFigs/headapt.fig,
-	  htkdist/HTKBook/HTKXFigs/headaptrdp.fig,
-	  htkdist/HTKBook/HTKXFigs/softarch-big.fig,
-	  htkdist/HTKBook/HTKXFigs/softarch.fig,
-	  htkdist/HTKBook/HTKXFigs/step10.fig,
-	  htkdist/HTKBook/HTKXFigs/sysoview.fig,
-	  htkdist/HTKBook/HTKXFigs/vtlnpiecewise.fig,
-	  htkdist/HTKLVRec/ChangeLog, htkdist/HTKLVRec/HDecode-license.txt,
-	  htkdist/HTKLVRec/HDecode.c, htkdist/HTKLVRec/HDecode.mod.c,
-	  htkdist/HTKLVRec/HLVModel.h, htkdist/HTKLVRec/HLVNet.c,
-	  htkdist/HTKLVRec/HLVRec-GC.c, htkdist/HTKLVRec/HLVRec-LM.c,
-	  htkdist/HTKLVRec/HLVRec-traceback.c, htkdist/HTKLVRec/HLVRec.h,
-	  htkdist/HTKLVRec/Makefile.in, htkdist/HTKLVRec/config.h,
-	  htkdist/HTKTools/ChangeLog, htkdist/HTKTools/HBuild.c,
-	  htkdist/HTKTools/HCompV.c, htkdist/HTKTools/HCopy.c,
-	  htkdist/HTKTools/HDMan.c, htkdist/HTKTools/HERest.c,
-	  htkdist/HTKTools/HHEd.c, htkdist/HTKTools/HInit.c,
-	  htkdist/HTKTools/HLEd.c, htkdist/HTKTools/HLRescore.c,
-	  htkdist/HTKTools/HLStats.c, htkdist/HTKTools/HList.c,
-	  htkdist/HTKTools/HMMIRest.c, htkdist/HTKTools/HParse.c,
-	  htkdist/HTKTools/HQuant.c, htkdist/HTKTools/HRest.c,
-	  htkdist/HTKTools/HResults.c, htkdist/HTKTools/HSGen.c,
-	  htkdist/HTKTools/HSLab.c, htkdist/HTKTools/HSmooth.c,
-	  htkdist/HTKTools/HVite.c, htkdist/HTKTools/Makefile.in,
-	  htkdist/HTKTools/htk_htktools_nt.mkf, htkdist/AUTHORS,
-	  htkdist/ChangeLog, htkdist/FAQ, htkdist/LICENSE,
-	  htkdist/Makefile.in, htkdist/README, htkdist/config.guess,
-	  htkdist/config.sub, htkdist/configure, htkdist/configure.ac,
-	  htkdist/install-sh, htkdist/HLMLib/ChangeLog,
-	  htkdist/HLMLib/LCMap.c, htkdist/HLMLib/LCMap.h,
-	  htkdist/HLMLib/LGBase.c, htkdist/HLMLib/LGBase.h,
-	  htkdist/HLMLib/LModel.c, htkdist/HLMLib/LModel.h,
-	  htkdist/HLMLib/LPCalc.c, htkdist/HLMLib/LPCalc.h,
-	  htkdist/HLMLib/LPMerge.c, htkdist/HLMLib/LPMerge.h,
-	  htkdist/HLMLib/LUtil.c, htkdist/HLMLib/LUtil.h,
-	  htkdist/HLMLib/LWMap.c, htkdist/HLMLib/LWMap.h,
-	  htkdist/HLMLib/Makefile.in, htkdist/HLMLib/htk_hlmlib_nt.mkf,
-	  htkdist/HLMTools/ChangeLog, htkdist/HLMTools/Cluster.c,
-	  htkdist/HLMTools/HLMCopy.c, htkdist/HLMTools/LAdapt.c,
-	  htkdist/HLMTools/LBuild.c, htkdist/HLMTools/LFoF.c,
-	  htkdist/HLMTools/LGCopy.c, htkdist/HLMTools/LGList.c,
-	  htkdist/HLMTools/LGPrep.c, htkdist/HLMTools/LLink.c,
-	  htkdist/HLMTools/LMerge.c, htkdist/HLMTools/LNewMap.c,
-	  htkdist/HLMTools/LNorm.c, htkdist/HLMTools/LPlex.c,
-	  htkdist/HLMTools/LSubset.c, htkdist/HLMTools/Makefile.in,
-	  htkdist/HLMTools/htk_hlmtools_nt.mkf, htkdist/HTKLVRec/HLVLM.c,
-	  htkdist/HTKLVRec/HLVLM.h, htkdist/HTKLVRec/HLVModel.c,
-	  htkdist/HTKLVRec/HLVNet.h, htkdist/HTKLVRec/HLVRec-misc.c,
-	  htkdist/HTKLVRec/HLVRec-outP.c,
-	  htkdist/HTKLVRec/HLVRec-propagate.c, htkdist/HTKLVRec/HLVRec.c,
-	  htkdist/HTKLVRec/Makefile.icc, htkdist/HTKLVRec/README,
-	  htkdist/HTKLVRec/config.mod.h, htkdist/HTKLVRec/config.orig.h,
-	  htkdist/HTKLib/ChangeLog, htkdist/HTKLib/HAdapt.h,
-	  htkdist/HTKLib/HArc.c, htkdist/HTKLib/HArc.h,
-	  htkdist/HTKLib/HAudio.h, htkdist/HTKLib/HDict.c,
-	  htkdist/HTKLib/HExactMPE.c, htkdist/HTKLib/HExactMPE.h,
-	  htkdist/HTKLib/HFB.c, htkdist/HTKLib/HFBLat.h,
-	  htkdist/HTKLib/HGraf.c, htkdist/HTKLib/HGraf.null.c,
-	  htkdist/HTKLib/HGraf_WIN32.c, htkdist/HTKLib/HLM.c,
-	  htkdist/HTKLib/HLabel.h, htkdist/HTKLib/HLat.c,
-	  htkdist/HTKLib/HLat.h, htkdist/HTKLib/HMap.h,
-	  htkdist/HTKLib/HMath.h, htkdist/HTKLib/HMem.c,
-	  htkdist/HTKLib/HModel.h, htkdist/HTKLib/HNet.c,
-	  htkdist/HTKLib/HNet.h, htkdist/HTKLib/HParm.c,
-	  htkdist/HTKLib/HParm.h, htkdist/HTKLib/HRec.c,
-	  htkdist/HTKLib/HShell.c, htkdist/HTKLib/HShell.h,
-	  htkdist/HTKLib/HSigP.h, htkdist/HTKLib/HTrain.c,
-	  htkdist/HTKLib/HTrain.h, htkdist/HTKLib/HUtil.c,
-	  htkdist/HTKLib/HUtil.h, htkdist/HTKLib/HWave.c,
-	  htkdist/HTKLib/HWave.h, htkdist/HTKLib/esig_asc.c,
-	  htkdist/HTKLib/esig_edr.c, htkdist/HTKLib/esignal.h,
-	  htkdist/HTKLib/strarr.c, htkdist/HTKLib/strarr.h,
-	  htkdist/HTK/HTK.dsp, htkdist/HTK/HTK.dsw, htkdist/HTK/HTK.ncb,
-	  htkdist/HTK/HTK.opt, htkdist/HTKLib/HAdapt.c,
-	  htkdist/HTKLib/HAudio.c, htkdist/HTKLib/HDict.h,
-	  htkdist/HTKLib/HFB.h, htkdist/HTKLib/HFBLat.c,
-	  htkdist/HTKLib/HGraf.h, htkdist/HTKLib/HLM.h,
-	  htkdist/HTKLib/HLabel.c, htkdist/HTKLib/HMap.c,
-	  htkdist/HTKLib/HMath.c, htkdist/HTKLib/HMem.h,
-	  htkdist/HTKLib/HModel.c, htkdist/HTKLib/HRec.h,
-	  htkdist/HTKLib/HSigP.c, htkdist/HTKLib/HVQ.c,
-	  htkdist/HTKLib/HVQ.h, htkdist/HTKLib/Makefile.in,
-	  htkdist/HTKLib/esig_nat.c, htkdist/HTKLib/esignal.c,
-	  htkdist/HTKLib/htk_htklib_nt.mkf, htkdist/env/ChangeLog,
-	  htkdist/env/env.decosf_alpha, htkdist/env/env.hp700,
-	  htkdist/env/env.linux, htkdist/env/env.linux-icc8-P4,
-	  htkdist/env/env.sgi, htkdist/env/env.sun4_solaris,
-	  htkdist/env/env.sun4_solaris_cc,
-	  htkdist/env/env.sun4_solaris_gcc, htkdist/env/exp.decosf_alpha,
-	  htkdist/env/exp.hp700, htkdist/env/exp.linux,
-	  htkdist/env/exp.linux-dec, htkdist/env/exp.linux-icc7-P4,
-	  htkdist/env/exp.linux-icc8-P4, htkdist/env/exp.linux_icc,
-	  htkdist/env/exp.sgi, htkdist/env/exp.sun4_solaris,
-	  htkdist/env/exp.sun4_solaris_cc,
-	  htkdist/env/exp.sun4_solaris_gcc: [no log message]
+	  HTKLVRec/config.orig.h, HTKLVRec/config.mod.h, HTKLVRec/config.h:
+	  [no log message]
 
 2006-06-20 13:49  Heiga Zen
 
@@ -1994,264 +1798,7 @@
 	  HTKBook/HTKXFigs/headapt.fig, HTKBook/HTKXFigs/headaptrdp.fig,
 	  HTKBook/HTKXFigs/softarch-big.fig, HTKBook/HTKXFigs/softarch.fig,
 	  HTKBook/HTKXFigs/step10.fig, HTKBook/HTKXFigs/sysoview.fig,
-	  HTKBook/HTKXFigs/vtlnpiecewise.fig, htkdist/AUTHORS,
-	  htkdist/ChangeLog, htkdist/FAQ, htkdist/LICENSE,
-	  htkdist/Makefile.in, htkdist/README, htkdist/config.guess,
-	  htkdist/config.sub, htkdist/configure, htkdist/configure.ac,
-	  htkdist/install-sh, htkdist/HLMLib/ChangeLog,
-	  htkdist/HLMLib/LCMap.c, htkdist/HLMLib/LCMap.h,
-	  htkdist/HLMLib/LGBase.c, htkdist/HLMLib/LGBase.h,
-	  htkdist/HLMLib/LModel.c, htkdist/HLMLib/LModel.h,
-	  htkdist/HLMLib/LPCalc.c, htkdist/HLMLib/LPCalc.h,
-	  htkdist/HLMLib/LPMerge.c, htkdist/HLMLib/LPMerge.h,
-	  htkdist/HLMLib/LUtil.c, htkdist/HLMLib/LUtil.h,
-	  htkdist/HLMLib/LWMap.c, htkdist/HLMLib/LWMap.h,
-	  htkdist/HLMLib/Makefile.in, htkdist/HLMLib/htk_hlmlib_nt.mkf,
-	  htkdist/HLMTools/ChangeLog, htkdist/HLMTools/Cluster.c,
-	  htkdist/HLMTools/HLMCopy.c, htkdist/HLMTools/LAdapt.c,
-	  htkdist/HLMTools/LBuild.c, htkdist/HLMTools/LFoF.c,
-	  htkdist/HLMTools/LGCopy.c, htkdist/HLMTools/LGList.c,
-	  htkdist/HLMTools/LGPrep.c, htkdist/HLMTools/LLink.c,
-	  htkdist/HLMTools/LMerge.c, htkdist/HLMTools/LNewMap.c,
-	  htkdist/HLMTools/LNorm.c, htkdist/HLMTools/LPlex.c,
-	  htkdist/HLMTools/LSubset.c, htkdist/HLMTools/Makefile.in,
-	  htkdist/HLMTools/htk_hlmtools_nt.mkf, htkdist/HTK/HTK.dsp,
-	  htkdist/HTK/HTK.dsw, htkdist/HTK/HTK.ncb, htkdist/HTK/HTK.opt,
-	  htkdist/HTKBook/ChangeLog, htkdist/HTKBook/ChangeLog.CUHTK,
-	  htkdist/HTKBook/HTK.tex, htkdist/HTKBook/Makefile,
-	  htkdist/HTKBook/Makefile.in, htkdist/HTKBook/README,
-	  htkdist/HTKBook/adapt.tex, htkdist/HTKBook/config.tex,
-	  htkdist/HTKBook/decode.tex, htkdist/HTKBook/discmods.tex,
-	  htkdist/HTKBook/errors.tex, htkdist/HTKBook/exampsys.tex,
-	  htkdist/HTKBook/fundaments.tex, htkdist/HTKBook/hlmfiles.tex,
-	  htkdist/HTKBook/hlmfund.tex, htkdist/HTKBook/hlmtutorial.tex,
-	  htkdist/HTKBook/htkbook.out, htkdist/HTKBook/htkbook.tex,
-	  htkdist/HTKBook/htkoview.tex, htkdist/HTKBook/htkslf.tex,
-	  htkdist/HTKBook/labels.tex, htkdist/HTKBook/models.tex,
-	  htkdist/HTKBook/netdict.tex, htkdist/HTKBook/openviron.tex,
-	  htkdist/HTKBook/refine.tex, htkdist/HTKBook/speechio.tex,
-	  htkdist/HTKBook/train.tex, htkdist/HTKBook/HTKFigs/Blocking.eps,
-	  htkdist/HTKBook/HTKFigs/ClassLM.eps,
-	  htkdist/HTKBook/HTKFigs/Config.eps,
-	  htkdist/HTKBook/HTKFigs/HLMoperation.eps,
-	  htkdist/HTKBook/HTKFigs/HTKFormat.eps,
-	  htkdist/HTKBook/HTKFigs/LTool.eps,
-	  htkdist/HTKBook/HTKFigs/MMFeg.eps,
-	  htkdist/HTKBook/HTKFigs/Spmods.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.decode.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.disc.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.hedit.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.labs.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.langmod.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.model.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.netdict.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.shell.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.spio.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.train.eps,
-	  htkdist/HTKBook/HTKFigs/VQUse.eps,
-	  htkdist/HTKBook/HTKFigs/WordLM.eps,
-	  htkdist/HTKBook/HTKFigs/bmemops.eps,
-	  htkdist/HTKBook/HTKFigs/bobig.eps,
-	  htkdist/HTKBook/HTKFigs/clusterset.eps,
-	  htkdist/HTKBook/HTKFigs/coercions.eps,
-	  htkdist/HTKBook/HTKFigs/cover.eps,
-	  htkdist/HTKBook/HTKFigs/dbhier.eps,
-	  htkdist/HTKBook/HTKFigs/decflow.eps,
-	  htkdist/HTKBook/HTKFigs/decinet.eps,
-	  htkdist/HTKBook/HTKFigs/dialnet.eps,
-	  htkdist/HTKBook/HTKFigs/digitnets.eps,
-	  htkdist/HTKBook/HTKFigs/dmaker.eps,
-	  htkdist/HTKBook/HTKFigs/egsils.eps,
-	  htkdist/HTKBook/HTKFigs/egtranstie.eps,
-	  htkdist/HTKBook/HTKFigs/endpointer.eps,
-	  htkdist/HTKBook/HTKFigs/flatst.eps,
-	  htkdist/HTKBook/HTKFigs/headapt.eps,
-	  htkdist/HTKBook/HTKFigs/headaptrdp.eps,
-	  htkdist/HTKBook/HTKFigs/herestdp.eps,
-	  htkdist/HTKBook/HTKFigs/hierarch.eps,
-	  htkdist/HTKBook/HTKFigs/hinitdp.eps,
-	  htkdist/HTKBook/HTKFigs/hmm1.eps,
-	  htkdist/HTKBook/HTKFigs/hsetdef.eps,
-	  htkdist/HTKBook/HTKFigs/hslab.eps,
-	  htkdist/HTKBook/HTKFigs/htktools.eps,
-	  htkdist/HTKBook/HTKFigs/hvalign.eps,
-	  htkdist/HTKBook/HTKFigs/isoprob.eps,
-	  htkdist/HTKBook/HTKFigs/isoword.eps,
-	  htkdist/HTKBook/HTKFigs/itemtree.eps,
-	  htkdist/HTKBook/HTKFigs/labegs.eps,
-	  htkdist/HTKBook/HTKFigs/markovgen.eps,
-	  htkdist/HTKBook/HTKFigs/melfbank.eps,
-	  htkdist/HTKBook/HTKFigs/memheap.eps,
-	  htkdist/HTKBook/HTKFigs/messencode.eps,
-	  htkdist/HTKBook/HTKFigs/mononet.eps,
-	  htkdist/HTKBook/HTKFigs/muacc.eps,
-	  htkdist/HTKBook/HTKFigs/netforcsr.eps,
-	  htkdist/HTKBook/HTKFigs/overview.eps,
-	  htkdist/HTKBook/HTKFigs/parher.eps,
-	  htkdist/HTKBook/HTKFigs/qstree.eps,
-	  htkdist/HTKBook/HTKFigs/recipe.eps,
-	  htkdist/HTKBook/HTKFigs/recnetlev.eps,
-	  htkdist/HTKBook/HTKFigs/recsys.eps,
-	  htkdist/HTKBook/HTKFigs/regtree1.eps,
-	  htkdist/HTKBook/HTKFigs/restloop.eps,
-	  htkdist/HTKBook/HTKFigs/segstore.eps,
-	  htkdist/HTKBook/HTKFigs/sequence.eps,
-	  htkdist/HTKBook/HTKFigs/softarch.eps,
-	  htkdist/HTKBook/HTKFigs/step1.eps,
-	  htkdist/HTKBook/HTKFigs/step10.eps,
-	  htkdist/HTKBook/HTKFigs/step11.eps,
-	  htkdist/HTKBook/HTKFigs/step2.eps,
-	  htkdist/HTKBook/HTKFigs/step3.eps,
-	  htkdist/HTKBook/HTKFigs/step4.eps,
-	  htkdist/HTKBook/HTKFigs/step5.eps,
-	  htkdist/HTKBook/HTKFigs/step6.eps,
-	  htkdist/HTKBook/HTKFigs/step7.eps,
-	  htkdist/HTKBook/HTKFigs/step8.eps,
-	  htkdist/HTKBook/HTKFigs/step9.eps,
-	  htkdist/HTKBook/HTKFigs/streams.eps,
-	  htkdist/HTKBook/HTKFigs/structshare.eps,
-	  htkdist/HTKBook/HTKFigs/subsmixrep.eps,
-	  htkdist/HTKBook/HTKFigs/subword.eps,
-	  htkdist/HTKBook/HTKFigs/sysoview.eps,
-	  htkdist/HTKBook/HTKFigs/tcover.eps,
-	  htkdist/HTKBook/HTKFigs/tiedstate.eps,
-	  htkdist/HTKBook/HTKFigs/tmixeg.eps,
-	  htkdist/HTKBook/HTKFigs/toolkit.eps,
-	  htkdist/HTKBook/HTKFigs/tracc.eps,
-	  htkdist/HTKBook/HTKFigs/tsubword.eps,
-	  htkdist/HTKBook/HTKFigs/useforiso.eps,
-	  htkdist/HTKBook/HTKFigs/vaacc.eps,
-	  htkdist/HTKBook/HTKFigs/vitloop.eps,
-	  htkdist/HTKBook/HTKFigs/vmatrep.eps,
-	  htkdist/HTKBook/HTKFigs/vqtohmm.eps,
-	  htkdist/HTKBook/HTKFigs/vtlnpiecewise.eps,
-	  htkdist/HTKBook/HTKFigs/vtrellis.eps,
-	  htkdist/HTKBook/HTKFigs/wdnet.eps,
-	  htkdist/HTKBook/HTKFigs/wdnet0.eps,
-	  htkdist/HTKBook/HTKFigs/wdnet1.eps,
-	  htkdist/HTKBook/HTKFigs/wintnet.eps,
-	  htkdist/HTKBook/HTKFigs/wlroper.eps,
-	  htkdist/HTKBook/HTKFigs/wtacc.eps,
-	  htkdist/HTKBook/HTKFigs/xwrdnet.eps,
-	  htkdist/HTKBook/HTKRef/Cluster.tex,
-	  htkdist/HTKBook/HTKRef/HBuild.tex,
-	  htkdist/HTKBook/HTKRef/HCompV.tex,
-	  htkdist/HTKBook/HTKRef/HCopy.tex,
-	  htkdist/HTKBook/HTKRef/HDMan.tex,
-	  htkdist/HTKBook/HTKRef/HEAdapt.tex,
-	  htkdist/HTKBook/HTKRef/HERest.tex,
-	  htkdist/HTKBook/HTKRef/HHEd.tex,
-	  htkdist/HTKBook/HTKRef/HInit.tex,
-	  htkdist/HTKBook/HTKRef/HLEd.tex,
-	  htkdist/HTKBook/HTKRef/HLMCopy.tex,
-	  htkdist/HTKBook/HTKRef/HLRescore.tex,
-	  htkdist/HTKBook/HTKRef/HLStats.tex,
-	  htkdist/HTKBook/HTKRef/HList.tex,
-	  htkdist/HTKBook/HTKRef/HMMIRest.tex,
-	  htkdist/HTKBook/HTKRef/HParse.tex,
-	  htkdist/HTKBook/HTKRef/HQuant.tex,
-	  htkdist/HTKBook/HTKRef/HRest.tex,
-	  htkdist/HTKBook/HTKRef/HResults.tex,
-	  htkdist/HTKBook/HTKRef/HSGen.tex,
-	  htkdist/HTKBook/HTKRef/HSLab.tex,
-	  htkdist/HTKBook/HTKRef/HSmooth.tex,
-	  htkdist/HTKBook/HTKRef/HVite.tex,
-	  htkdist/HTKBook/HTKRef/LAdapt.tex,
-	  htkdist/HTKBook/HTKRef/LBuild.tex,
-	  htkdist/HTKBook/HTKRef/LFoF.tex,
-	  htkdist/HTKBook/HTKRef/LGCopy.tex,
-	  htkdist/HTKBook/HTKRef/LGList.tex,
-	  htkdist/HTKBook/HTKRef/LGPrep.tex,
-	  htkdist/HTKBook/HTKRef/LLink.tex,
-	  htkdist/HTKBook/HTKRef/LMerge.tex,
-	  htkdist/HTKBook/HTKRef/LNewMap.tex,
-	  htkdist/HTKBook/HTKRef/LNorm.tex,
-	  htkdist/HTKBook/HTKRef/LPlex.tex,
-	  htkdist/HTKBook/HTKRef/LSubset.tex,
-	  htkdist/HTKBook/HTKRef/tools.tex,
-	  htkdist/HTKBook/HTKXFigs/ClassLM.doc,
-	  htkdist/HTKBook/HTKXFigs/HLMoperation.doc,
-	  htkdist/HTKBook/HTKXFigs/LTool.doc,
-	  htkdist/HTKBook/HTKXFigs/Tool.labs.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.model.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.netdict.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.shell.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.spio.fig,
-	  htkdist/HTKBook/HTKXFigs/WordLM.doc,
-	  htkdist/HTKBook/HTKXFigs/cover.fig,
-	  htkdist/HTKBook/HTKXFigs/headapt.fig,
-	  htkdist/HTKBook/HTKXFigs/headaptrdp.fig,
-	  htkdist/HTKBook/HTKXFigs/softarch-big.fig,
-	  htkdist/HTKBook/HTKXFigs/softarch.fig,
-	  htkdist/HTKBook/HTKXFigs/step10.fig,
-	  htkdist/HTKBook/HTKXFigs/sysoview.fig,
-	  htkdist/HTKBook/HTKXFigs/vtlnpiecewise.fig,
-	  htkdist/HTKLVRec/ChangeLog, htkdist/HTKLVRec/HDecode-license.txt,
-	  htkdist/HTKLVRec/HDecode.c, htkdist/HTKLVRec/HDecode.mod.c,
-	  htkdist/HTKLVRec/HLVLM.c, htkdist/HTKLVRec/HLVLM.h,
-	  htkdist/HTKLVRec/HLVModel.c, htkdist/HTKLVRec/HLVModel.h,
-	  htkdist/HTKLVRec/HLVNet.c, htkdist/HTKLVRec/HLVNet.h,
-	  htkdist/HTKLVRec/HLVRec-GC.c, htkdist/HTKLVRec/HLVRec-LM.c,
-	  htkdist/HTKLVRec/HLVRec-misc.c, htkdist/HTKLVRec/HLVRec-outP.c,
-	  htkdist/HTKLVRec/HLVRec-propagate.c,
-	  htkdist/HTKLVRec/HLVRec-traceback.c, htkdist/HTKLVRec/HLVRec.c,
-	  htkdist/HTKLVRec/HLVRec.h, htkdist/HTKLVRec/Makefile.icc,
-	  htkdist/HTKLVRec/Makefile.in, htkdist/HTKLVRec/README,
-	  htkdist/HTKLVRec/config.h, htkdist/HTKLVRec/config.mod.h,
-	  htkdist/HTKLVRec/config.orig.h, htkdist/HTKLib/ChangeLog,
-	  htkdist/HTKLib/HAdapt.c, htkdist/HTKLib/HAdapt.h,
-	  htkdist/HTKLib/HArc.c, htkdist/HTKLib/HArc.h,
-	  htkdist/HTKLib/HAudio.c, htkdist/HTKLib/HAudio.h,
-	  htkdist/HTKLib/HDict.c, htkdist/HTKLib/HDict.h,
-	  htkdist/HTKLib/HExactMPE.c, htkdist/HTKLib/HExactMPE.h,
-	  htkdist/HTKLib/HFB.c, htkdist/HTKLib/HFB.h,
-	  htkdist/HTKLib/HFBLat.c, htkdist/HTKLib/HFBLat.h,
-	  htkdist/HTKLib/HGraf.c, htkdist/HTKLib/HGraf.h,
-	  htkdist/HTKLib/HGraf.null.c, htkdist/HTKLib/HGraf_WIN32.c,
-	  htkdist/HTKLib/HLM.c, htkdist/HTKLib/HLM.h,
-	  htkdist/HTKLib/HLabel.c, htkdist/HTKLib/HLabel.h,
-	  htkdist/HTKLib/HLat.c, htkdist/HTKLib/HLat.h,
-	  htkdist/HTKLib/HMap.c, htkdist/HTKLib/HMap.h,
-	  htkdist/HTKLib/HMath.c, htkdist/HTKLib/HMath.h,
-	  htkdist/HTKLib/HMem.c, htkdist/HTKLib/HMem.h,
-	  htkdist/HTKLib/HModel.c, htkdist/HTKLib/HModel.h,
-	  htkdist/HTKLib/HNet.c, htkdist/HTKLib/HNet.h,
-	  htkdist/HTKLib/HParm.c, htkdist/HTKLib/HParm.h,
-	  htkdist/HTKLib/HRec.c, htkdist/HTKLib/HRec.h,
-	  htkdist/HTKLib/HShell.c, htkdist/HTKLib/HShell.h,
-	  htkdist/HTKLib/HSigP.c, htkdist/HTKLib/HSigP.h,
-	  htkdist/HTKLib/HTrain.c, htkdist/HTKLib/HTrain.h,
-	  htkdist/HTKLib/HUtil.c, htkdist/HTKLib/HUtil.h,
-	  htkdist/HTKLib/HVQ.c, htkdist/HTKLib/HVQ.h,
-	  htkdist/HTKLib/HWave.c, htkdist/HTKLib/HWave.h,
-	  htkdist/HTKLib/Makefile.in, htkdist/HTKLib/esig_asc.c,
-	  htkdist/HTKLib/esig_edr.c, htkdist/HTKLib/esig_nat.c,
-	  htkdist/HTKLib/esignal.c, htkdist/HTKLib/esignal.h,
-	  htkdist/HTKLib/htk_htklib_nt.mkf, htkdist/HTKLib/strarr.c,
-	  htkdist/HTKLib/strarr.h, htkdist/HTKTools/ChangeLog,
-	  htkdist/HTKTools/HBuild.c, htkdist/HTKTools/HCompV.c,
-	  htkdist/HTKTools/HCopy.c, htkdist/HTKTools/HDMan.c,
-	  htkdist/HTKTools/HERest.c, htkdist/HTKTools/HHEd.c,
-	  htkdist/HTKTools/HInit.c, htkdist/HTKTools/HLEd.c,
-	  htkdist/HTKTools/HLRescore.c, htkdist/HTKTools/HLStats.c,
-	  htkdist/HTKTools/HList.c, htkdist/HTKTools/HMMIRest.c,
-	  htkdist/HTKTools/HParse.c, htkdist/HTKTools/HQuant.c,
-	  htkdist/HTKTools/HRest.c, htkdist/HTKTools/HResults.c,
-	  htkdist/HTKTools/HSGen.c, htkdist/HTKTools/HSLab.c,
-	  htkdist/HTKTools/HSmooth.c, htkdist/HTKTools/HVite.c,
-	  htkdist/HTKTools/Makefile.in,
-	  htkdist/HTKTools/htk_htktools_nt.mkf, htkdist/env/ChangeLog,
-	  htkdist/env/env.decosf_alpha, htkdist/env/env.hp700,
-	  htkdist/env/env.linux, htkdist/env/env.linux-icc8-P4,
-	  htkdist/env/env.sgi, htkdist/env/env.sun4_solaris,
-	  htkdist/env/env.sun4_solaris_cc,
-	  htkdist/env/env.sun4_solaris_gcc, htkdist/env/exp.decosf_alpha,
-	  htkdist/env/exp.hp700, htkdist/env/exp.linux,
-	  htkdist/env/exp.linux-dec, htkdist/env/exp.linux-icc7-P4,
-	  htkdist/env/exp.linux-icc8-P4, htkdist/env/exp.linux_icc,
-	  htkdist/env/exp.sgi, htkdist/env/exp.sun4_solaris,
-	  htkdist/env/exp.sun4_solaris_cc,
-	  htkdist/env/exp.sun4_solaris_gcc: HTS-2.0_for_HTK-3.4
+	  HTKBook/HTKXFigs/vtlnpiecewise.fig: HTS-2.0_for_HTK-3.4
 
 2006-06-20 13:49  Heiga Zen
 
@@ -2391,262 +1938,5 @@
 	  HTKBook/HTKXFigs/headapt.fig, HTKBook/HTKXFigs/headaptrdp.fig,
 	  HTKBook/HTKXFigs/softarch-big.fig, HTKBook/HTKXFigs/softarch.fig,
 	  HTKBook/HTKXFigs/step10.fig, HTKBook/HTKXFigs/sysoview.fig,
-	  HTKBook/HTKXFigs/vtlnpiecewise.fig, htkdist/AUTHORS,
-	  htkdist/ChangeLog, htkdist/FAQ, htkdist/LICENSE,
-	  htkdist/Makefile.in, htkdist/README, htkdist/config.guess,
-	  htkdist/config.sub, htkdist/configure, htkdist/configure.ac,
-	  htkdist/install-sh, htkdist/HLMLib/ChangeLog,
-	  htkdist/HLMLib/LCMap.c, htkdist/HLMLib/LCMap.h,
-	  htkdist/HLMLib/LGBase.c, htkdist/HLMLib/LGBase.h,
-	  htkdist/HLMLib/LModel.c, htkdist/HLMLib/LModel.h,
-	  htkdist/HLMLib/LPCalc.c, htkdist/HLMLib/LPCalc.h,
-	  htkdist/HLMLib/LPMerge.c, htkdist/HLMLib/LPMerge.h,
-	  htkdist/HLMLib/LUtil.c, htkdist/HLMLib/LUtil.h,
-	  htkdist/HLMLib/LWMap.c, htkdist/HLMLib/LWMap.h,
-	  htkdist/HLMLib/Makefile.in, htkdist/HLMLib/htk_hlmlib_nt.mkf,
-	  htkdist/HLMTools/ChangeLog, htkdist/HLMTools/Cluster.c,
-	  htkdist/HLMTools/HLMCopy.c, htkdist/HLMTools/LAdapt.c,
-	  htkdist/HLMTools/LBuild.c, htkdist/HLMTools/LFoF.c,
-	  htkdist/HLMTools/LGCopy.c, htkdist/HLMTools/LGList.c,
-	  htkdist/HLMTools/LGPrep.c, htkdist/HLMTools/LLink.c,
-	  htkdist/HLMTools/LMerge.c, htkdist/HLMTools/LNewMap.c,
-	  htkdist/HLMTools/LNorm.c, htkdist/HLMTools/LPlex.c,
-	  htkdist/HLMTools/LSubset.c, htkdist/HLMTools/Makefile.in,
-	  htkdist/HLMTools/htk_hlmtools_nt.mkf, htkdist/HTK/HTK.dsp,
-	  htkdist/HTK/HTK.dsw, htkdist/HTK/HTK.ncb, htkdist/HTK/HTK.opt,
-	  htkdist/HTKBook/ChangeLog, htkdist/HTKBook/ChangeLog.CUHTK,
-	  htkdist/HTKBook/HTK.tex, htkdist/HTKBook/Makefile,
-	  htkdist/HTKBook/Makefile.in, htkdist/HTKBook/README,
-	  htkdist/HTKBook/adapt.tex, htkdist/HTKBook/config.tex,
-	  htkdist/HTKBook/decode.tex, htkdist/HTKBook/discmods.tex,
-	  htkdist/HTKBook/errors.tex, htkdist/HTKBook/exampsys.tex,
-	  htkdist/HTKBook/fundaments.tex, htkdist/HTKBook/hlmfiles.tex,
-	  htkdist/HTKBook/hlmfund.tex, htkdist/HTKBook/hlmtutorial.tex,
-	  htkdist/HTKBook/htkbook.out, htkdist/HTKBook/htkbook.tex,
-	  htkdist/HTKBook/htkoview.tex, htkdist/HTKBook/htkslf.tex,
-	  htkdist/HTKBook/labels.tex, htkdist/HTKBook/models.tex,
-	  htkdist/HTKBook/netdict.tex, htkdist/HTKBook/openviron.tex,
-	  htkdist/HTKBook/refine.tex, htkdist/HTKBook/speechio.tex,
-	  htkdist/HTKBook/train.tex, htkdist/HTKBook/HTKFigs/Blocking.eps,
-	  htkdist/HTKBook/HTKFigs/ClassLM.eps,
-	  htkdist/HTKBook/HTKFigs/Config.eps,
-	  htkdist/HTKBook/HTKFigs/HLMoperation.eps,
-	  htkdist/HTKBook/HTKFigs/HTKFormat.eps,
-	  htkdist/HTKBook/HTKFigs/LTool.eps,
-	  htkdist/HTKBook/HTKFigs/MMFeg.eps,
-	  htkdist/HTKBook/HTKFigs/Spmods.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.decode.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.disc.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.hedit.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.labs.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.langmod.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.model.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.netdict.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.shell.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.spio.eps,
-	  htkdist/HTKBook/HTKFigs/Tool.train.eps,
-	  htkdist/HTKBook/HTKFigs/VQUse.eps,
-	  htkdist/HTKBook/HTKFigs/WordLM.eps,
-	  htkdist/HTKBook/HTKFigs/bmemops.eps,
-	  htkdist/HTKBook/HTKFigs/bobig.eps,
-	  htkdist/HTKBook/HTKFigs/clusterset.eps,
-	  htkdist/HTKBook/HTKFigs/coercions.eps,
-	  htkdist/HTKBook/HTKFigs/cover.eps,
-	  htkdist/HTKBook/HTKFigs/dbhier.eps,
-	  htkdist/HTKBook/HTKFigs/decflow.eps,
-	  htkdist/HTKBook/HTKFigs/decinet.eps,
-	  htkdist/HTKBook/HTKFigs/dialnet.eps,
-	  htkdist/HTKBook/HTKFigs/digitnets.eps,
-	  htkdist/HTKBook/HTKFigs/dmaker.eps,
-	  htkdist/HTKBook/HTKFigs/egsils.eps,
-	  htkdist/HTKBook/HTKFigs/egtranstie.eps,
-	  htkdist/HTKBook/HTKFigs/endpointer.eps,
-	  htkdist/HTKBook/HTKFigs/flatst.eps,
-	  htkdist/HTKBook/HTKFigs/headapt.eps,
-	  htkdist/HTKBook/HTKFigs/headaptrdp.eps,
-	  htkdist/HTKBook/HTKFigs/herestdp.eps,
-	  htkdist/HTKBook/HTKFigs/hierarch.eps,
-	  htkdist/HTKBook/HTKFigs/hinitdp.eps,
-	  htkdist/HTKBook/HTKFigs/hmm1.eps,
-	  htkdist/HTKBook/HTKFigs/hsetdef.eps,
-	  htkdist/HTKBook/HTKFigs/hslab.eps,
-	  htkdist/HTKBook/HTKFigs/htktools.eps,
-	  htkdist/HTKBook/HTKFigs/hvalign.eps,
-	  htkdist/HTKBook/HTKFigs/isoprob.eps,
-	  htkdist/HTKBook/HTKFigs/isoword.eps,
-	  htkdist/HTKBook/HTKFigs/itemtree.eps,
-	  htkdist/HTKBook/HTKFigs/labegs.eps,
-	  htkdist/HTKBook/HTKFigs/markovgen.eps,
-	  htkdist/HTKBook/HTKFigs/melfbank.eps,
-	  htkdist/HTKBook/HTKFigs/memheap.eps,
-	  htkdist/HTKBook/HTKFigs/messencode.eps,
-	  htkdist/HTKBook/HTKFigs/mononet.eps,
-	  htkdist/HTKBook/HTKFigs/muacc.eps,
-	  htkdist/HTKBook/HTKFigs/netforcsr.eps,
-	  htkdist/HTKBook/HTKFigs/overview.eps,
-	  htkdist/HTKBook/HTKFigs/parher.eps,
-	  htkdist/HTKBook/HTKFigs/qstree.eps,
-	  htkdist/HTKBook/HTKFigs/recipe.eps,
-	  htkdist/HTKBook/HTKFigs/recnetlev.eps,
-	  htkdist/HTKBook/HTKFigs/recsys.eps,
-	  htkdist/HTKBook/HTKFigs/regtree1.eps,
-	  htkdist/HTKBook/HTKFigs/restloop.eps,
-	  htkdist/HTKBook/HTKFigs/segstore.eps,
-	  htkdist/HTKBook/HTKFigs/sequence.eps,
-	  htkdist/HTKBook/HTKFigs/softarch.eps,
-	  htkdist/HTKBook/HTKFigs/step1.eps,
-	  htkdist/HTKBook/HTKFigs/step10.eps,
-	  htkdist/HTKBook/HTKFigs/step11.eps,
-	  htkdist/HTKBook/HTKFigs/step2.eps,
-	  htkdist/HTKBook/HTKFigs/step3.eps,
-	  htkdist/HTKBook/HTKFigs/step4.eps,
-	  htkdist/HTKBook/HTKFigs/step5.eps,
-	  htkdist/HTKBook/HTKFigs/step6.eps,
-	  htkdist/HTKBook/HTKFigs/step7.eps,
-	  htkdist/HTKBook/HTKFigs/step8.eps,
-	  htkdist/HTKBook/HTKFigs/step9.eps,
-	  htkdist/HTKBook/HTKFigs/streams.eps,
-	  htkdist/HTKBook/HTKFigs/structshare.eps,
-	  htkdist/HTKBook/HTKFigs/subsmixrep.eps,
-	  htkdist/HTKBook/HTKFigs/subword.eps,
-	  htkdist/HTKBook/HTKFigs/sysoview.eps,
-	  htkdist/HTKBook/HTKFigs/tcover.eps,
-	  htkdist/HTKBook/HTKFigs/tiedstate.eps,
-	  htkdist/HTKBook/HTKFigs/tmixeg.eps,
-	  htkdist/HTKBook/HTKFigs/toolkit.eps,
-	  htkdist/HTKBook/HTKFigs/tracc.eps,
-	  htkdist/HTKBook/HTKFigs/tsubword.eps,
-	  htkdist/HTKBook/HTKFigs/useforiso.eps,
-	  htkdist/HTKBook/HTKFigs/vaacc.eps,
-	  htkdist/HTKBook/HTKFigs/vitloop.eps,
-	  htkdist/HTKBook/HTKFigs/vmatrep.eps,
-	  htkdist/HTKBook/HTKFigs/vqtohmm.eps,
-	  htkdist/HTKBook/HTKFigs/vtlnpiecewise.eps,
-	  htkdist/HTKBook/HTKFigs/vtrellis.eps,
-	  htkdist/HTKBook/HTKFigs/wdnet.eps,
-	  htkdist/HTKBook/HTKFigs/wdnet0.eps,
-	  htkdist/HTKBook/HTKFigs/wdnet1.eps,
-	  htkdist/HTKBook/HTKFigs/wintnet.eps,
-	  htkdist/HTKBook/HTKFigs/wlroper.eps,
-	  htkdist/HTKBook/HTKFigs/wtacc.eps,
-	  htkdist/HTKBook/HTKFigs/xwrdnet.eps,
-	  htkdist/HTKBook/HTKRef/Cluster.tex,
-	  htkdist/HTKBook/HTKRef/HBuild.tex,
-	  htkdist/HTKBook/HTKRef/HCompV.tex,
-	  htkdist/HTKBook/HTKRef/HCopy.tex,
-	  htkdist/HTKBook/HTKRef/HDMan.tex,
-	  htkdist/HTKBook/HTKRef/HEAdapt.tex,
-	  htkdist/HTKBook/HTKRef/HERest.tex,
-	  htkdist/HTKBook/HTKRef/HHEd.tex,
-	  htkdist/HTKBook/HTKRef/HInit.tex,
-	  htkdist/HTKBook/HTKRef/HLEd.tex,
-	  htkdist/HTKBook/HTKRef/HLMCopy.tex,
-	  htkdist/HTKBook/HTKRef/HLRescore.tex,
-	  htkdist/HTKBook/HTKRef/HLStats.tex,
-	  htkdist/HTKBook/HTKRef/HList.tex,
-	  htkdist/HTKBook/HTKRef/HMMIRest.tex,
-	  htkdist/HTKBook/HTKRef/HParse.tex,
-	  htkdist/HTKBook/HTKRef/HQuant.tex,
-	  htkdist/HTKBook/HTKRef/HRest.tex,
-	  htkdist/HTKBook/HTKRef/HResults.tex,
-	  htkdist/HTKBook/HTKRef/HSGen.tex,
-	  htkdist/HTKBook/HTKRef/HSLab.tex,
-	  htkdist/HTKBook/HTKRef/HSmooth.tex,
-	  htkdist/HTKBook/HTKRef/HVite.tex,
-	  htkdist/HTKBook/HTKRef/LAdapt.tex,
-	  htkdist/HTKBook/HTKRef/LBuild.tex,
-	  htkdist/HTKBook/HTKRef/LFoF.tex,
-	  htkdist/HTKBook/HTKRef/LGCopy.tex,
-	  htkdist/HTKBook/HTKRef/LGList.tex,
-	  htkdist/HTKBook/HTKRef/LGPrep.tex,
-	  htkdist/HTKBook/HTKRef/LLink.tex,
-	  htkdist/HTKBook/HTKRef/LMerge.tex,
-	  htkdist/HTKBook/HTKRef/LNewMap.tex,
-	  htkdist/HTKBook/HTKRef/LNorm.tex,
-	  htkdist/HTKBook/HTKRef/LPlex.tex,
-	  htkdist/HTKBook/HTKRef/LSubset.tex,
-	  htkdist/HTKBook/HTKRef/tools.tex,
-	  htkdist/HTKBook/HTKXFigs/ClassLM.doc,
-	  htkdist/HTKBook/HTKXFigs/HLMoperation.doc,
-	  htkdist/HTKBook/HTKXFigs/LTool.doc,
-	  htkdist/HTKBook/HTKXFigs/Tool.labs.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.model.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.netdict.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.shell.fig,
-	  htkdist/HTKBook/HTKXFigs/Tool.spio.fig,
-	  htkdist/HTKBook/HTKXFigs/WordLM.doc,
-	  htkdist/HTKBook/HTKXFigs/cover.fig,
-	  htkdist/HTKBook/HTKXFigs/headapt.fig,
-	  htkdist/HTKBook/HTKXFigs/headaptrdp.fig,
-	  htkdist/HTKBook/HTKXFigs/softarch-big.fig,
-	  htkdist/HTKBook/HTKXFigs/softarch.fig,
-	  htkdist/HTKBook/HTKXFigs/step10.fig,
-	  htkdist/HTKBook/HTKXFigs/sysoview.fig,
-	  htkdist/HTKBook/HTKXFigs/vtlnpiecewise.fig,
-	  htkdist/HTKLVRec/ChangeLog, htkdist/HTKLVRec/HDecode-license.txt,
-	  htkdist/HTKLVRec/HDecode.c, htkdist/HTKLVRec/HDecode.mod.c,
-	  htkdist/HTKLVRec/HLVLM.c, htkdist/HTKLVRec/HLVLM.h,
-	  htkdist/HTKLVRec/HLVModel.c, htkdist/HTKLVRec/HLVModel.h,
-	  htkdist/HTKLVRec/HLVNet.c, htkdist/HTKLVRec/HLVNet.h,
-	  htkdist/HTKLVRec/HLVRec-GC.c, htkdist/HTKLVRec/HLVRec-LM.c,
-	  htkdist/HTKLVRec/HLVRec-misc.c, htkdist/HTKLVRec/HLVRec-outP.c,
-	  htkdist/HTKLVRec/HLVRec-propagate.c,
-	  htkdist/HTKLVRec/HLVRec-traceback.c, htkdist/HTKLVRec/HLVRec.c,
-	  htkdist/HTKLVRec/HLVRec.h, htkdist/HTKLVRec/Makefile.icc,
-	  htkdist/HTKLVRec/Makefile.in, htkdist/HTKLVRec/README,
-	  htkdist/HTKLVRec/config.h, htkdist/HTKLVRec/config.mod.h,
-	  htkdist/HTKLVRec/config.orig.h, htkdist/HTKLib/ChangeLog,
-	  htkdist/HTKLib/HAdapt.c, htkdist/HTKLib/HAdapt.h,
-	  htkdist/HTKLib/HArc.c, htkdist/HTKLib/HArc.h,
-	  htkdist/HTKLib/HAudio.c, htkdist/HTKLib/HAudio.h,
-	  htkdist/HTKLib/HDict.c, htkdist/HTKLib/HDict.h,
-	  htkdist/HTKLib/HExactMPE.c, htkdist/HTKLib/HExactMPE.h,
-	  htkdist/HTKLib/HFB.c, htkdist/HTKLib/HFB.h,
-	  htkdist/HTKLib/HFBLat.c, htkdist/HTKLib/HFBLat.h,
-	  htkdist/HTKLib/HGraf.c, htkdist/HTKLib/HGraf.h,
-	  htkdist/HTKLib/HGraf.null.c, htkdist/HTKLib/HGraf_WIN32.c,
-	  htkdist/HTKLib/HLM.c, htkdist/HTKLib/HLM.h,
-	  htkdist/HTKLib/HLabel.c, htkdist/HTKLib/HLabel.h,
-	  htkdist/HTKLib/HLat.c, htkdist/HTKLib/HLat.h,
-	  htkdist/HTKLib/HMap.c, htkdist/HTKLib/HMap.h,
-	  htkdist/HTKLib/HMath.c, htkdist/HTKLib/HMath.h,
-	  htkdist/HTKLib/HMem.c, htkdist/HTKLib/HMem.h,
-	  htkdist/HTKLib/HModel.c, htkdist/HTKLib/HModel.h,
-	  htkdist/HTKLib/HNet.c, htkdist/HTKLib/HNet.h,
-	  htkdist/HTKLib/HParm.c, htkdist/HTKLib/HParm.h,
-	  htkdist/HTKLib/HRec.c, htkdist/HTKLib/HRec.h,
-	  htkdist/HTKLib/HShell.c, htkdist/HTKLib/HShell.h,
-	  htkdist/HTKLib/HSigP.c, htkdist/HTKLib/HSigP.h,
-	  htkdist/HTKLib/HTrain.c, htkdist/HTKLib/HTrain.h,
-	  htkdist/HTKLib/HUtil.c, htkdist/HTKLib/HUtil.h,
-	  htkdist/HTKLib/HVQ.c, htkdist/HTKLib/HVQ.h,
-	  htkdist/HTKLib/HWave.c, htkdist/HTKLib/HWave.h,
-	  htkdist/HTKLib/Makefile.in, htkdist/HTKLib/esig_asc.c,
-	  htkdist/HTKLib/esig_edr.c, htkdist/HTKLib/esig_nat.c,
-	  htkdist/HTKLib/esignal.c, htkdist/HTKLib/esignal.h,
-	  htkdist/HTKLib/htk_htklib_nt.mkf, htkdist/HTKLib/strarr.c,
-	  htkdist/HTKLib/strarr.h, htkdist/HTKTools/ChangeLog,
-	  htkdist/HTKTools/HBuild.c, htkdist/HTKTools/HCompV.c,
-	  htkdist/HTKTools/HCopy.c, htkdist/HTKTools/HDMan.c,
-	  htkdist/HTKTools/HERest.c, htkdist/HTKTools/HHEd.c,
-	  htkdist/HTKTools/HInit.c, htkdist/HTKTools/HLEd.c,
-	  htkdist/HTKTools/HLRescore.c, htkdist/HTKTools/HLStats.c,
-	  htkdist/HTKTools/HList.c, htkdist/HTKTools/HMMIRest.c,
-	  htkdist/HTKTools/HParse.c, htkdist/HTKTools/HQuant.c,
-	  htkdist/HTKTools/HRest.c, htkdist/HTKTools/HResults.c,
-	  htkdist/HTKTools/HSGen.c, htkdist/HTKTools/HSLab.c,
-	  htkdist/HTKTools/HSmooth.c, htkdist/HTKTools/HVite.c,
-	  htkdist/HTKTools/Makefile.in,
-	  htkdist/HTKTools/htk_htktools_nt.mkf, htkdist/env/ChangeLog,
-	  htkdist/env/env.decosf_alpha, htkdist/env/env.hp700,
-	  htkdist/env/env.linux, htkdist/env/env.linux-icc8-P4,
-	  htkdist/env/env.sgi, htkdist/env/env.sun4_solaris,
-	  htkdist/env/env.sun4_solaris_cc,
-	  htkdist/env/env.sun4_solaris_gcc, htkdist/env/exp.decosf_alpha,
-	  htkdist/env/exp.hp700, htkdist/env/exp.linux,
-	  htkdist/env/exp.linux-dec, htkdist/env/exp.linux-icc7-P4,
-	  htkdist/env/exp.linux-icc8-P4, htkdist/env/exp.linux_icc,
-	  htkdist/env/exp.sgi, htkdist/env/exp.sun4_solaris,
-	  htkdist/env/exp.sun4_solaris_cc,
-	  htkdist/env/exp.sun4_solaris_gcc: Initial revision
+	  HTKBook/HTKXFigs/vtlnpiecewise.fig: Initial revision
 

@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *herest_version = "!HVER!HERest:   3.4 [CUED 25/04/06]";
-char *herest_vc_id = "$Id: HERest.c,v 1.32 2008/01/18 03:24:15 zen Exp $";
+char *herest_vc_id = "$Id: HERest.c,v 1.33 2008/03/02 05:48:30 zen Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -837,7 +837,7 @@ int main(int argc, char *argv[])
          /* update duration models */
          if (up_durLoaded && (updateMode&UPMODE_UPDATE) && uFlags_dur) {
             /* first estimate variance floor */
-            if (durvarFloorPercent>0.0)
+            if (durvarFloorPercent>0.0 && uFlags_dur&UPVARS)
                UpdateVFloors(&dset, durminVar, durvarFloorPercent);
             if (durmapTau>0.0)
                SetMapTau(durmapTau);
@@ -1989,7 +1989,7 @@ void UpdateModels (HMMSet *hset, XFInfo *xfinfo, ParmBuf pbuf2, UPDSet uFlags)
    }
    
    if (xfinfo->outFullC && (uFlags&UPSEMIT)) {
-      SetXForm(hset,xfinfo->outXForm);
+      SetXForm(hset,xfinfo,xfinfo->outXForm);
       ApplyHMMSetXForm(hset, xfinfo->outXForm, TRUE);
       hset->semiTied = NULL;
    }

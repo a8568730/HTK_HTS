@@ -119,8 +119,7 @@ HTKTOOLS = HTKTools
 HLMTOOLS = HLMTools
 LVREC = HTKLVRec
 HTKBOOK = HTKBook
-HTSENGINE = hts_engine
-SUBDIRS = $(HTKLIB) $(HLMLIB) $(HTKTOOLS) $(HLMTOOLS) $(LVREC) $(BOOK) $(HTSENGINE)
+SUBDIRS = $(HTKLIB) $(HLMLIB) $(HTKTOOLS) $(HLMTOOLS) $(LVREC) $(BOOK) 
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_CLEAN_FILES = 
@@ -162,9 +161,6 @@ hdecode: $(HTKLIB)/HTKLiblv.a
 book: 
 	(cd $(HTKBOOK) && $(MAKE) all) \
 	  || case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
-hts_engine:
-	(cd $(HTSENGINE) && $(MAKE) all) \
-	  || case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
 
 # installation
 install-htktools: htktools
@@ -178,9 +174,6 @@ install-hdecode:
 	|| case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
 install-book: book
 	(cd $(HTKBOOK) && $(MAKE) install) \
-	|| case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
-install-hts_engine: hts_engine
-	(cd $(HTSENGINE) && $(MAKE) install) \
 	|| case "$(MFLAGS)" in *k*) fail=yes;; *) exit 1;; esac;
 
 clean:
@@ -200,6 +193,6 @@ install: @make_install@
 docs: book
 
 .PHONY: all doc install clean distclean htklib-decode \
-	htktools hlmtools hdecode docs book hts_engine \
-	install-htktools install-hlmtools install-hdecode install-book install-hts_engine
+	htktools hlmtools hdecode docs book \
+	install-htktools install-hlmtools install-hdecode install-book
 

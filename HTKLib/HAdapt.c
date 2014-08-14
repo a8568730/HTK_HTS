@@ -40,6 +40,12 @@
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
 /*                     Copyright (c) 2001-2008                       */
+/*                                                                   */
+/*            The Centre for Speech Technology Research              */
+/*                     University of Edinburgh                       */
+/*                                                                   */
+/*                        Copyright (c) 2008                         */
+/*                                                                   */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -60,13 +66,14 @@
 /*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
-/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
-/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
-/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
-/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
-/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
-/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  UNIVERSITY OF EDINBURGH, HTS WORKING GROUP, AND THE CONTRIBUTORS */
+/*  TO THIS WORK DISCLAIM ALL WARRANTIES WITH REGARD TO THIS         */ 
+/*  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY    */
+/*  AND FITNESS, IN NO EVENT SHALL NAGOYA INSTITUTE OF TECHNOLOGY,   */
+/*  TOKYO INSTITUTE OF TECHNOLOGY, UNIVERSITY OF EDINBURGH,          */
+/*  HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE FOR ANY        */
+/*  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES        */
+/*  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,          */
 /*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
@@ -74,7 +81,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hadapt_version = "!HVER!HAdapt:   3.4  [CUED 25/04/06]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.39 2008/01/14 17:27:22 zen Exp $";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.45 2008/03/20 04:13:22 zen Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>
@@ -133,24 +140,10 @@ typedef struct {
    float gConst;
 } MInfo;
 
-typedef struct _ObsCache{
-   int time;
-   Vector obs;
-   float det;
-   struct _ObsCache *next;
-} ObsCache;                        /* observation cache to save rotated observations */
-
-typedef struct _AccCache{
-   int     baseclass;
-   DVector bVector;
-   TriMat  *bTriMat;
-   struct _AccCache *next;
-} AccCache;                       /* acc cache to save accumulators related to parent XForm */  
-
 typedef struct {
-   float occ;
-   Vector spSum;
-   Vector spSumSq;
+   double  occ;
+   DVector spSum;
+   DVector spSumSq;
    TriMat *bTriMat;
    TriMat *bDiagMat;
    DVector bVector;
@@ -186,15 +179,15 @@ static Boolean keepXFormDistinct = TRUE;
 static Boolean swapXForms = FALSE;     /* swap the transforms around after generating transform */
 static Boolean mllrCov2CMLLR= FALSE;   /* apply mllrcov transforms as cmllr transform */ 
 static Boolean mllrDiagCov = FALSE;    /* perform diagonal covariance adaptation */
+static Boolean useSMAPcriterion = FALSE; /* perform SMAPLR and CSMAPLR adaptation */
+static float   sigmascale = 1.0;         /* prior parameter for SMAP creterion*/
 
 static IntVec enableBlockAdapt = NULL;
 
 static int maxXFormIter = 10; /* something big, for CMLLR */ 
-static ObsCache *headoc = NULL; 
-static AccCache *headac = NULL;
 
 /* new variables to support semi-tied transforms */
-static float semiTiedFloorScale = 0.1;
+static Vector semiTiedFloorScale = NULL;  /* stream-dependent flooring scales */
 static int maxSemiTiedIter = 10;
 static char *semiTiedMacro = NULL;
 static Boolean semiTied2InputXForm = FALSE;
@@ -300,13 +293,17 @@ static void CheckAdaptOptions(XFInfo *xfinfo)
       if (xKind != SEMIT) 
          HError(999,"Can only use static semiTied with SEMIT transforms");
    }
+   if (((mllrDiagCov)|| (xKind == MLLRCOV)||(xKind == SEMIT)) && (useSMAPcriterion))
+     HError(999,"Can use only SMAP with MLLRMEAN and CMLLR currently");
+   if ((xfinfo->xformAdaptKind == BASE) && (useSMAPcriterion))
+     HError(999,"Can use only SMAP with TREE currently");
 }
 
 /* EXPORT->CheckAdaptSetUp: check adapt setting */
 void CheckAdaptSetUp (HMMSet *hset, XFInfo *xfinfo)
 {
    int i,s,vsize;
-
+   
    XFormKind xKind = xfinfo->outXKind;
    IntVec *xformBlockSize     = xfinfo->xformBlockSize;
    IntVec *mllrMeanBlockSize  = xfinfo->mllrMeanBlockSize;
@@ -363,8 +360,8 @@ void CheckAdaptSetUp (HMMSet *hset, XFInfo *xfinfo)
          default:
             break;
          }
-      }
    }
+}
 
    /* check band width */
    for (s=1; s<=hset->swidth[0]; s++) {
@@ -406,13 +403,13 @@ void CheckAdaptSetUp (HMMSet *hset, XFInfo *xfinfo)
          }
       }
    }
-   
+
    /* check threshold */
    if (xformSplitThresh==NULL) {
       xfinfo->xformSplitThresh = xformSplitThresh = CreateVector(&infoStack, hset->swidth[0]);
       for (s=1; s<=hset->swidth[0]; s++)
          xformSplitThresh[s] = -1000.0;
-   }
+      }
    switch (xKind) {
    case MLLRMEAN: 
       if (mllrMeanSplitThresh==NULL) {
@@ -438,6 +435,13 @@ void CheckAdaptSetUp (HMMSet *hset, XFInfo *xfinfo)
    case SEMIT:
    default:
       break;
+   }
+   
+   /* check variance flooring scales for semi-tied covariance */
+   if (semiTiedFloorScale==NULL) {
+      semiTiedFloorScale = CreateVector(&infoStack, hset->swidth[0]);
+      for (s=1; s<=hset->swidth[0]; s++)
+         semiTiedFloorScale[s] = 0.1;
    }
    
    return;
@@ -505,12 +509,14 @@ static void InitXFInfo (XFInfo *xfinfo)
       xfinfo->mllrCovBlockSize[s] = xfinfo->cmllrBlockSize   [s] = NULL;
       xfinfo->xformBandWidth  [s] = xfinfo->mllrMeanBandWidth[s] = NULL;
       xfinfo->mllrCovBandWidth[s] = xfinfo->cmllrBandWidth   [s] = NULL;
-      }
+   }
    
    xfinfo->coutspkr[0] = xfinfo->cinspkr[0] = xfinfo->cpaspkr[0] = '\0';
    xfinfo->nspkr = 0;
    
    xfinfo->baseTriMatTime = -1;
+   xfinfo->headoc = NULL;
+   xfinfo->headac = NULL;
 }
 
 /* EXPORT->InitAdapt: initialise configuration parameters */
@@ -544,7 +550,8 @@ void InitAdapt (XFInfo *xfinfo_hmm, XFInfo *xfinfo_dur)
       if (GetConfBool(cParm,nParm,"MLLRDIAGCOV",&b)) mllrDiagCov = b;      
       if (GetConfBool(cParm,nParm,"SWAPXFORMS",&b)) swapXForms = b;      
       if (GetConfBool(cParm,nParm,"MLLRCOV2CMLLR",&b)) mllrCov2CMLLR = b; 
-      if (GetConfFlt(cParm,nParm,"SEMITIEDFLOOR",&d)) semiTiedFloorScale = (float) d;
+      if (GetConfStr (cParm,nParm,"SEMITIEDFLOOR",buf))
+         semiTiedFloorScale = ParseConfVector(&infoStack,buf,TRUE);
       if (GetConfInt(cParm,nParm,"MAXSEMITIEDITER",&i)) maxSemiTiedIter = i;
       if (GetConfStr (cParm,nParm,"SEMITIEDMACRO",buf)) semiTiedMacro = CopyString(&infoStack,buf);
       if (GetConfBool(cParm,nParm,"SEMITIED2INPUTXFORM",&b)) semiTied2InputXForm = b; 
@@ -557,6 +564,8 @@ void InitAdapt (XFInfo *xfinfo_hmm, XFInfo *xfinfo_dur)
       /* Adaptation transformation set-up for HMMs */
       if (xfinfo_hmm!=NULL) {
          if (GetConfBool(cParm,nParm,"SAVEFULLC",&b)) xfinfo_hmm->outFullC = b;
+         if (GetConfBool(cParm,nParm,"USESMAP",&b)) useSMAPcriterion = b;
+         if (GetConfFlt(cParm,nParm,"SMAPSIGMA",&d)) sigmascale = (float) d;
          if (GetConfBool(cParm,nParm,"USEBIAS",&b)) xfinfo_hmm->useBias = b;
          if (GetConfStr (cParm,nParm,"SPLITTHRESH",buf)) 
             xfinfo_hmm->xformSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
@@ -835,7 +844,7 @@ static float GetSplitThresh(XFInfo *xfinfo, float *thresh)
    }
       if (thresh[s]<min)
          min = thresh[s];
-}
+   }
 
    return min;
 }
@@ -1521,7 +1530,7 @@ void UpdateBaseAccs(XFInfo *xfinfo, Vector svec, const int t, RegAcc *regAcc)
    /* store statistics */
    if (t != xfinfo->baseTriMatTime) {
    bclass = outXForm->bclass;
-#pragma omp parallel for private(mp,ra,acc,nblock,bl,cnti,m,bsize,i,tm,j,k)
+      /* #pragma omp parallel for private(mp,ra,acc,nblock,bl,cnti,m,bsize,i,tm,j,k) */
    for (b=1;b<=bclass->numClasses;b++) {
       mp = ((MixtureElem *)(bclass->ilist[b])->item)->mpdf;
       ra = GetRegAcc(mp);
@@ -1546,7 +1555,7 @@ void UpdateBaseAccs(XFInfo *xfinfo, Vector svec, const int t, RegAcc *regAcc)
    if (regAcc==NULL) return;
    if ((regAcc->bTriMat!=NULL) && (regAcc->bVector[1]==0.0) && (svec!=NULL)) {
       nblock = (long)(regAcc->bDiagMat[0]);
-	for (bl=1, cnt=1; bl<=nblock;bl++){
+      for (bl=1,cnt=1; bl<=nblock; bl++) {
          bsize = TriMatSize(regAcc->bDiagMat[bl]);
          m = regAcc->bDiagMat[bl];
          for (i=1,cnti=cnt; i<=bsize; i++,cnti++) {
@@ -1578,8 +1587,8 @@ void UpdateBaseAccsWithPaac(XFInfo *xfinfo)
       ra = GetRegAcc(mp);
 
       if ( ra->bTriMat != NULL) {
-        for (paac = headac; paac!= NULL; paac=paac->next) { 
-            if ((paac->baseclass == b) && (paac->bVector[1]>0.0)) {
+         for (paac=xfinfo->headac; paac!=NULL; paac=paac->next) { 
+            if ((paac->baseclass==b) && (paac->bVector[1]>0.0)) {
             acc = paac->bVector;
                nblock = (long)(ra->bDiagMat[0]);
             for (bl=1,cnti=1;bl<=nblock;bl++) {
@@ -1598,12 +1607,12 @@ void UpdateBaseAccsWithPaac(XFInfo *xfinfo)
    }  
 }
 
-void ResetAccCache(void)
+void ResetAccCache(XFInfo *xfinfo)
 {
    AccCache *ac;
  
-   if ( headac != NULL) {
-      for (ac = headac; ac!= NULL; ac=ac->next) {
+   if (xfinfo->headac != NULL) {
+      for (ac=xfinfo->headac; ac!=NULL; ac=ac->next) {
         ZeroDVector(ac->bVector);
         ZeroBlockTriMat(ac->bTriMat);
       }
@@ -1621,22 +1630,22 @@ static void AccBaseTriMat(XFInfo *xfinfo, double Lr, Vector svec, MixPDF *mp, in
    vsize = VectorSize(mp->mean);
 
       /* Check to see whether this is the very first frame */
-      if (headac == NULL ) 
+   if (xfinfo->headac==NULL) 
       UpdateBaseAccs(xfinfo,svec,t,regAcc);
       else  {
       UpdateBaseAccsWithPaac(xfinfo); 
-        ResetAccCache();   
-      }
+      ResetAccCache(xfinfo);   
+   }
    SetBaseAccsTime(xfinfo,t);
 
-   if  (headac == NULL ) {    
+   if  (xfinfo->headac==NULL) {    
      for (i=1;i<=vsize;i++) {
         if (mp->ckind==INVDIAGC)
             regAcc->bVector[i] += Lr * (double) covar[i];
         else
             regAcc->bVector[i] += Lr / (double) covar[i];
-      }
      }
+   } 
    else  
      UpdateAccCache( Lr, svec, mp);
 }
@@ -1649,13 +1658,13 @@ static RegAcc *CreateRegAcc(MemHeap *x, MixPDF *mp, AdaptXForm *xform)
   regAcc = (RegAcc *)New(x,sizeof(RegAcc));
    regAcc->occ = 0.0;
   if (xform->info->accSum) {
-    regAcc->spSum = CreateVector(x,vsize);
-    ZeroVector(regAcc->spSum);
+      regAcc->spSum = CreateDVector(x,vsize);
+      ZeroDVector(regAcc->spSum);
    } 
    else regAcc->spSum = NULL;
   if (xform->info->accSumSq) {
-    regAcc->spSumSq = CreateVector(x,vsize);
-    ZeroVector(regAcc->spSumSq);
+      regAcc->spSumSq = CreateDVector(x,vsize);
+      ZeroDVector(regAcc->spSumSq);
    } 
    else regAcc->spSumSq = NULL;
 
@@ -1808,8 +1817,8 @@ static void SetSemiTiedAvCov(HMMSet *hset)
    STriMat inv;
    DVector mean;
    DMatrix *mat, *smat, cov;
-   DVector *svec;
-   double occAcc, occ, tmp; 
+   DVector *svec,occAcc;
+   double occ, tmp;
    int k,kk,s,S;
    MuAcc *ma;
    VaAcc *va;
@@ -1820,6 +1829,7 @@ static void SetSemiTiedAvCov(HMMSet *hset)
    mat = (DMatrix *)New(&gstack,(S+1)*sizeof(DMatrix));
    smat = (DMatrix *)New(&gstack,(S+1)*sizeof(DMatrix));
    svec = (DVector *)New(&gstack,(S+1)*sizeof(DVector));
+   occAcc = CreateDVector(&gstack, S);
    avCov = (TriMat *)New(hset->hmem,(S+1)*sizeof(TriMat));
 
    for (s=1;s<=S;s++) {
@@ -1834,9 +1844,9 @@ static void SetSemiTiedAvCov(HMMSet *hset)
       avCov[s] = CreateTriMat(hset->hmem,vsize);  /* create on HMMSet memory heap */
       ZeroDMatrix(mat[s]);
    }
+   ZeroDVector(occAcc);
    
    NewHMMScan(hset,&hss);
-   occAcc = 0.0;
    while(GoNextState(&hss,FALSE)) {
       si = hss.si;
       while (GoNextStream(&hss,TRUE)) {
@@ -1878,7 +1888,7 @@ static void SetSemiTiedAvCov(HMMSet *hset)
                   mat[s][k][kk] += cov[k][kk] - tmp*mean[kk];
             }
          }
-         occAcc += occ;
+         occAcc[s] += occ;
       }
    }
    EndHMMScan(&hss);
@@ -1889,7 +1899,7 @@ static void SetSemiTiedAvCov(HMMSet *hset)
       else vsize = hset->swidth[s];
       for (k=1;k<=vsize;k++)
          for (kk=1;kk<=k;kk++)
-            avCov[s][k][kk] = mat[s][k][kk]/occAcc;
+            avCov[s][k][kk] = mat[s][k][kk]/occAcc[s];
    }
    Dispose(&gstack,mat);
 }
@@ -1991,45 +2001,87 @@ static double SetNodeOcc (RegNode *node, BaseClass *bclass)
    return node->nodeOcc;
 }
 
-static Boolean ParseNode (XFInfo *xfinfo, RegNode *node,  
-			 RegTree *rtree, IntVec classes)
+
+static void SearchLeafNodes (RegNode *node, IntVec classes)
 {
-   int b,c,size;
+   int b,c;
+   
+   if (node->numChild>0) { /* Not a terminal node */
+     for (c=1;c<=node->numChild;c++)
+       SearchLeafNodes(node->child[c], classes);
+   } 
+   else { /* Mark baseclasses for adaptation */
+     for (b=1;b<=IntVecSize(node->baseClasses);b++) 
+       classes[node->baseClasses[b]] = 1;
+   }
+}
+
+
+static Boolean ParseNode (XFInfo *xfinfo, RegNode *node,  
+                          RegTree *rtree, IntVec classes, int xfindex)
+{
+   int b,c,size,parentxfindex=0;
    Boolean genXForm;
    IntVec lclasses;
 
-   void GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes);
+   Boolean GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes, int xfindex);
 
    genXForm = FALSE;
    if (trace&T_TRE) printf("Node %d (stream=%d, vsize=%d, occ=%f)\n",
                            node->nodeIndex,node->stream,node->vsize,node->nodeOcc);
-   if (node->nodeOcc > rtree->thresh[node->stream]) {
+
+   if(useSMAPcriterion){
+
+     if (node->nodeOcc > rtree->thresh[node->stream]) {
+       size = IntVecSize(classes);
+       lclasses = CreateIntVec(&gstack,size); /* temporal */
+       ZeroIntVec(lclasses);
+       SearchLeafNodes(node, lclasses);
+       if (trace&T_TRE) 
+         printf("Prior Transform index: %d\n",xfindex);
+       if(GenXForm(node,xfinfo,lclasses,xfindex)){
+          /* if (node->valid && node->vsize>0) */
+          parentxfindex = xfinfo->outXForm->xformSet->numXForms;
+       }
+       FreeIntVec(&gstack,lclasses);
+     } 
+     if (node->numChild>0) { /* Not a terminal node */
+       for (c=1;c<=node->numChild;c++)
+         ParseNode(xfinfo, node->child[c], rtree, classes, parentxfindex);
+     } 
+     genXForm = TRUE;
+
+   }else{
+
+     if (node->nodeOcc > rtree->thresh[node->stream]) {
       size = IntVecSize(classes);
       lclasses = CreateIntVec(&gstack,IntVecSize(classes));
       ZeroIntVec(lclasses);
       if (node->numChild>0) { /* Not a terminal node */
          for (c=1;c<=node->numChild;c++)
-            if (ParseNode(xfinfo, node->child[c], rtree, lclasses)) genXForm = TRUE;
+           if (ParseNode(xfinfo, node->child[c], rtree, lclasses, xfindex)) genXForm = TRUE;
          /* any of the children need a xform generate it */
-         if (genXForm) GenXForm(node,xfinfo,lclasses);
-      } 
-      else { /* Generate xform for this node */
+         if (genXForm) GenXForm(node,xfinfo,lclasses,xfindex);
+       } 
+       else { /* Generate xform for this node */
          for (b=1;b<=IntVecSize(node->baseClasses);b++) lclasses[node->baseClasses[b]] = 1;
-         GenXForm(node,xfinfo,lclasses);
+         GenXForm(node,xfinfo,lclasses,xfindex);
       }
       FreeIntVec(&gstack,lclasses);
       genXForm = FALSE;
-   } 
-   else {
+     } 
+     else {
       if (node->numChild>0) { /* Not a terminal node */
          for (c=1;c<=node->numChild;c++)
-            ParseNode(xfinfo, node->child[c], rtree, classes);
-      } 
-      else { /* Mark baseclasses for adaptation */
+           ParseNode(xfinfo, node->child[c], rtree, classes, xfindex);
+       } 
+       else { /* Mark baseclasses for adaptation */
          for (b=1;b<=IntVecSize(node->baseClasses);b++) classes[node->baseClasses[b]] = 1;
       }
       genXForm = TRUE;
    }
+   }
+
    return genXForm;
 }
 
@@ -2054,7 +2106,7 @@ static Boolean ParseTree (XFInfo *xfinfo)
    classes = CreateIntVec(&gstack,rtree->bclass->numClasses);
 
          ZeroIntVec(classes);
-   ParseNode(xfinfo, rtree->root, rtree, classes);
+   ParseNode(xfinfo, rtree->root, rtree, classes, 0);
 
    FreeIntVec(&gstack,classes);
 
@@ -2355,8 +2407,64 @@ static void AccNodeStats(RegNode *node, AccStruct *accs, AdaptXForm *xform, IntV
       /* Use last component of the baseclass to access baseclass stats */
          if (AccAdaptBaseTriMat(xform))  
             AccBaseClassStats(mp,accs);
+      }
+   }
+}
+
+/* Add SMAP Prior to the accumulates */ 
+static void AddXFPrior(AccStruct *accs, AdaptXForm *xform, int xfindex)
+{
+   int i,j;
+   int cnt,cnti,b,bsize;
+   Boolean useBias = accs->useBias;
+   LinXForm *pxf;
+   XFormSet *xformSet;
+
+   xformSet = xform->xformSet;
+   pxf = xformSet->xforms[xfindex]; 
+   if(IntVecSize(accs->blockSize) != IntVecSize(pxf->blockSize)){
+     HError(999,"AddXFPrior (%d) does not match block number for transform (%d)",
+        IntVecSize(accs->blockSize),IntVecSize(pxf->blockSize));
+   }
+   if(accs->dim != pxf->vecSize){
+     HError(999,"AddXFPrior (%d) does not match vector size for transform (%d)",
+        accs->dim,pxf->vecSize);
+   }
+
+   for (b=1,cnti=1,cnt=1; b<=IntVecSize(accs->blockSize); b++) {
+      bsize = accs->blockSize[b];
+      if(bsize != pxf->blockSize[b]){
+         HError(999,"AddXFPrior (%d) does not match block size for transform (%d)",
+            accs->blockSize[b],pxf->blockSize[b]);
+      }
+      for (i=1; i<=bsize; i++,cnti++) {
+         for (j=1; j<=bsize; j++) {
+            accs->K[cnti][j] += pxf->xform[b][i][j]*sigmascale;
+            accs->G[cnti][j][j] += sigmascale;
+         }
+         if (useBias) {
+            accs->K[cnti][bsize+1] += pxf->bias[cnti]*sigmascale;
+            accs->G[cnti][bsize+1][bsize+1] += sigmascale;
+         }
+      }
+      cnt += bsize;
+   }
     }
+
+/* Add Piror to the statistics Currently MLLRMEAN and CMLLR are supported */
+static void AddPrior(AccStruct *accs, AdaptXForm *xform, int xfindex)
+{
+  
+   switch (accs->xkind) {
+   case MLLRMEAN:
+   case CMLLR:
+     AddXFPrior(accs,xform,xfindex);
+     break;
+   default :
+     HError(999,"Transform kind not currently supported");
+     break;
   }
+
 }
 
 /* Feature-Space adaptation */
@@ -2387,11 +2495,14 @@ static void FixDet(LinXForm *xf)
 /*------------------------------------------------------------------------*/
 /*     Accummulator Cache for application of parent XForms                */
 /*------------------------------------------------------------------------*/
-static AccCache  *CreateAccCache(IntVec size,  int b)
+static AccCache *CreateAccCache(XFInfo *xfinfo, const int b)
 {
    AccCache *ac;
+   IntVec size;
    int vsize, bl;
 
+   size = GetBlockSize(xfinfo,b),
+   
    vsize = 0;
    for (bl=1;bl<=IntVecSize(size);bl++) vsize += size[bl];
    
@@ -2401,8 +2512,8 @@ static AccCache  *CreateAccCache(IntVec size,  int b)
    ZeroDVector(ac->bVector);
    ac->bTriMat = CreateBlockTriMat(&obcaStack,size);    
    ZeroBlockTriMat(ac->bTriMat);
-   ac->next = headac;
-   headac = ac;
+   ac->next = xfinfo->headac;
+   xfinfo->headac = ac;
    return(ac);
 }
 
@@ -2475,7 +2586,7 @@ static void SetAccCache(XFInfo *xfinfo)
                if (nxflevel > 0) {
                   if (ind > 0) { /* support no transform has been generated */
                     if ( ac[ind] == NULL )  {
-                        ac[ind] = CreateAccCache(GetBlockSize(xfinfo,b), b);
+                        ac[ind] = CreateAccCache(xfinfo,b);
                       nCache++;
                     }
                   }
@@ -2495,7 +2606,7 @@ static void SetAccCache(XFInfo *xfinfo)
 /*      Observation Cache for application of feature-space transform      */
 /*------------------------------------------------------------------------*/
 
-static ObsCache *CreateObsCache(int size)
+static ObsCache *CreateObsCache(XFInfo *xfinfo, const int size)
 {
    ObsCache  *oc;
    
@@ -2505,14 +2616,18 @@ static ObsCache *CreateObsCache(int size)
    ZeroVector(oc->obs);
    oc->det =0;  
  
-   oc->next = headoc;
-   headoc = oc;
+   if (xfinfo!=NULL) {
+      oc->next = xfinfo->headoc;
+      xfinfo->headoc = oc;
+   }
+   else
+      oc->next = NULL;
 
    return(oc);
 }
   
 
-static void SetObsCache(AdaptXForm *xform, Boolean parent)
+static void SetObsCache(XFInfo *xfinfo, AdaptXForm *xform, Boolean parent)
 {
    MixPDF *mp;
    BaseClass *bclass; 
@@ -2577,7 +2692,7 @@ static void SetObsCache(AdaptXForm *xform, Boolean parent)
                   if (ind > 0) { /* support no transform has been generated */
                      size = xform->hset->swidth[s];
                     if ( oc[ind] == NULL )  {
-		      oc[ind] = CreateObsCache(size); 
+                        oc[ind] = CreateObsCache(xfinfo,size); 
 		      nCache++;
 		    }
                   }
@@ -2596,7 +2711,7 @@ static void SetObsCache(AdaptXForm *xform, Boolean parent)
 
 static void UpdateObsCache( ObsCache *oc, Vector svec, LogFloat det, int t)  
 {
-	int i;
+   int i;
 
    if (oc != NULL ) {  
       if (t != oc->time) {
@@ -2608,12 +2723,12 @@ static void UpdateObsCache( ObsCache *oc, Vector svec, LogFloat det, int t)
    }
 }
 
-void ResetObsCache(void)
+void ResetObsCache(XFInfo *xfinfo)
 {
    ObsCache *oc;
       
-   if ( headoc != NULL) {
-      for (oc = headoc; oc!= NULL; oc=oc->next) {
+   if (xfinfo->headoc!=NULL) {
+      for (oc=xfinfo->headoc; oc!= NULL; oc=oc->next) {
          oc->time = -1;
          ZeroVector(oc->obs);
          oc->det = 0.0;
@@ -2817,7 +2932,7 @@ static void ConvFullCov (HMMSet *hset, MixPDF *mp)
    SVector var;
    STriMat inv;
    MInfo *mi;
-   
+
    mi = GetMInfo(mp);
    var = mp->cov.var;
    vsize = VectorSize(var);
@@ -2827,7 +2942,7 @@ static void ConvFullCov (HMMSet *hset, MixPDF *mp)
       inv = CreateSTriMat(hset->hmem,vsize);
       SetHook(mi->cov.var,inv);
       SetHook(inv,var);
-   }
+  }
 
    switch(mp->ckind) {
    case DIAGC:
@@ -2859,25 +2974,25 @@ static void ConvFullCov (HMMSet *hset, MixPDF *mp)
 /* CompFXForm: Feature-Space adaptation */
 static Vector CompFXForm(MixPDF *mp, Vector svec, AdaptXForm *xform, AInfo *ai, LogFloat *det)
 {
-  Vector vec;
-  XFormSet *xformSet;
-  int numXf = 0;
+   Vector vec;
+   XFormSet *xformSet;
+   int numXf = 0;
 
-  if (ai->next != NULL) { /* There's a parent transform */
-    vec = CompFXForm(mp,svec,xform->parentXForm,ai->next,det);
+   if (ai->next != NULL) { /* There's a parent transform */
+      vec = CompFXForm(mp,svec,xform->parentXForm,ai->next,det);
    } 
    else {
       *det = 0.0;
-     vec = svec;
-  }
+      vec = svec;
+   }
    
    if (mp->ckind==FULLC)
       return svec;
    
-  /* Check the kind of the adaptation */
-  if ((xform->akind != BASE) && (xform->akind != TREE))
-    HError(999,"Only BASE and TREE adaptation currently supported");
-  if (HardAssign(xform))
+   /* Check the kind of the adaptation */
+   if ((xform->akind != BASE) && (xform->akind != TREE))
+      HError(999,"Only BASE and TREE adaptation currently supported");
+   if (HardAssign(xform))
     numXf = xform->xformWgts.assign[ai->baseClass];
   else 
     HError(999,"Not currently supported");
@@ -3932,7 +4047,7 @@ static void GetSemiTiedTotCov(AdaptXForm *xform, IntVec classes, TriMat totCov, 
    FreeDMatrix(&gstack,mat);
 }
 
-static void UpdateSemiTiedVFloor(HMMSet *hset, LinXForm *xf, TriMat avCov, SVector vFloor)
+static void UpdateSemiTiedVFloor (HMMSet *hset, LinXForm *xf, TriMat avCov, SVector vFloor, const int s)
 {
    Matrix mat;
    int size,i;
@@ -3942,7 +4057,7 @@ static void UpdateSemiTiedVFloor(HMMSet *hset, LinXForm *xf, TriMat avCov, SVect
       mat = CreateMatrix(&gstack,size,size);
       ApplyXForm2TriMat(xf,avCov,mat);
       DiagApplyMat2TXForm(xf,mat,vFloor);
-      for (i=1;i<=size;i++) vFloor[i] *= semiTiedFloorScale;
+      for (i=1;i<=size;i++) vFloor[i] *= semiTiedFloorScale[s];
    } 
    else
       ZeroVector(vFloor);
@@ -4173,7 +4288,7 @@ static void EstSemiTXForm(AdaptXForm *xform, AccStruct *accs, LinXForm *xf, IntV
          /* compute Fisher ratios to initialise nuisance dimensions */
          InitSemiTiedFR(xform,xf,classes,totCov);
          ixf = xf;
-         if (stream>0) UpdateSemiTiedVFloor(hset,xf,avCov[stream],vFloor);
+         if (stream>0) UpdateSemiTiedVFloor(hset,xf,avCov[stream],vFloor,stream);
          else ZeroVector(vFloor);
          logdet = UpdateSemiTiedVars(hset,xf,xform->bclass,classes,vFloor,totCov);         
       } 
@@ -4200,7 +4315,7 @@ static void EstSemiTXForm(AdaptXForm *xform, AccStruct *accs, LinXForm *xf, IntV
       printf("Iteration %d\n",iter); fflush(stdout);
       
       if (stream>0)
-         UpdateSemiTiedVFloor(hset,xf,avCov[stream],vFloor);
+         UpdateSemiTiedVFloor(hset,xf,avCov[stream],vFloor,stream);
       else 
          ZeroVector(vFloor);
          
@@ -4315,9 +4430,10 @@ static void EstXForm(AccStruct *accs, XFInfo *xfinfo, IntVec classes)
    AdaptXForm *diagCovXForm = xfinfo->diagCovXForm;
   
   xformSet = xform->xformSet;
-  xformSet->numXForms++;
+   (xformSet->numXForms)++;
   xf = xformSet->xforms[xformSet->numXForms] 
-      = CreateLinXForm(xform->mem,accs->dim,accs->blockSize,accs->useBias);
+      = CreateLinXForm(xform->mem,accs->dim,accs->blockSize,accs->useBias); 
+
   switch (accs->xkind) {
   case MLLRMEAN:    
     EstMLLRMeanXForm(accs, xf);
@@ -4350,12 +4466,12 @@ static void EstXForm(AccStruct *accs, XFInfo *xfinfo, IntVec classes)
     printf("Estimated XForm %d using %f observations\n",xformSet->numXForms,accs->occ);
 }
 
-void GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes)
+Boolean GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes, int xfindex)
 {
    AccStruct *accs;
    int class=1,b;
    IntVec blockSize,bandWidth;
-  
+   
    AdaptXForm *xform = xfinfo->outXForm;
    AdaptXForm *diagCovXForm = xfinfo->diagCovXForm;
   
@@ -4376,6 +4492,8 @@ void GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes)
    else 
          accs = CreateAccStruct(&gstack,xfinfo,node->vsize,blockSize,bandWidth);
    AccNodeStats(node,accs,xform,classes);
+      if(xfindex>0)
+         AddPrior(accs,xform, xfindex);
       EstXForm(accs,xfinfo,classes);
    for (b=1;b<=IntVecSize(classes);b++)
       if (classes[b] == 1) {
@@ -4389,9 +4507,10 @@ void GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes)
       }
       
    Dispose(&gstack,accs);
-}
-
-   return;
+      return TRUE;
+   }else{
+      return FALSE;
+   }
 }
 
 static Boolean GenClassXForm(XFInfo *xfinfo)
@@ -4575,8 +4694,13 @@ static AdaptXForm *CreateBaseAdaptXForm(HMMSet *hset, XFInfo *xfinfo, char *xfor
    else 
       HError(999,"Not currently supported");
    /* create space for maximum number of transforms */
+   if(useSMAPcriterion){
+      xformSet->xforms = 
+         (LinXForm **)New(hset->hmem,(xform->rtree->numNodes+xform->rtree->numTNodes+1)*sizeof(LinXForm *));
+   }else{
    xformSet->xforms = 
       (LinXForm **)New(hset->hmem,(xform->bclass->numClasses+1)*sizeof(LinXForm *));
+   }
    /* setup the xform accumulation information */
    xform->info = info = (XFormAccInfo *)New(hset->hmem,sizeof(XFormAccInfo));
    info->accSum = AccAdaptMean(xform);
@@ -4777,8 +4901,8 @@ void ZeroAdaptAccs(HMMSet *hset, AdaptXForm *xform)
             mp = ((MixtureElem *)i->item)->mpdf;
             ra = GetRegAcc(mp);
             ra->occ = 0.0;
-            if (ra->spSum != NULL) ZeroVector(ra->spSum);
-            if (ra->spSumSq != NULL) ZeroVector(ra->spSumSq);
+            if (ra->spSum != NULL) ZeroDVector(ra->spSum);
+            if (ra->spSumSq != NULL) ZeroDVector(ra->spSumSq);
          }
          /* Use last component of the baseclass to access baseclass stats */
          if (ra->bTriMat != NULL) ZeroBaseTriMat(ra->bTriMat);
@@ -4789,12 +4913,12 @@ void ZeroAdaptAccs(HMMSet *hset, AdaptXForm *xform)
 /* ---------------- Applying Transform Functions ------------------------ */
 
 /* EXPORT->SetXForm: set current xform for given hset */
-void SetXForm(HMMSet *hset, AdaptXForm *xform)
+void SetXForm(HMMSet *hset, XFInfo *xfinfo, AdaptXForm *xform)
 {
    if (!(CompareXFormInfo(hset->curXForm, xform))) {
       SetAInfo(hset,xform,FALSE);
    } 
-   SetObsCache(xform,FALSE);  
+   SetObsCache(xfinfo,xform,FALSE);
    if (storeMInfo) {
       if (hset->attMInfo) {
          if (!CompareMInfo(hset,xform))
@@ -4808,12 +4932,12 @@ void SetXForm(HMMSet *hset, AdaptXForm *xform)
 }
 
 /* EXPORT->SetParentXForm: set parent xform for given hset */
-void SetParentXForm(HMMSet *hset, AdaptXForm *xform)
+void SetParentXForm(HMMSet *hset, XFInfo *xfinfo, AdaptXForm *xform)
 {
    if (!(CompareXFormInfo(hset->parentXForm, xform))) {
       SetAInfo(hset,xform,TRUE);
    }
-   SetObsCache(xform, TRUE);
+   SetObsCache(xfinfo, xform, TRUE);
    if (storeMInfo) {
       if (hset->attMInfo) {
          if (!CompareMInfo(hset,xform))
@@ -4831,6 +4955,16 @@ void ApplyCompXForm(MixPDF *mp, AdaptXForm *xform, Boolean full)
 {
    AInfo *ai = NULL;
    HMMSet *hset;
+   AdaptXForm *ax;
+
+   /* Store covariance matrices in full covariance form or not */
+   if (full) {      
+      for (ax=xform,full=FALSE; (ax!=NULL) && (full==FALSE); ax=ax->parentXForm) {
+         full |= ((ax->xformSet->xkind==MLLRCOV) 
+               || (ax->xformSet->xkind==CMLLR) 
+               || (ax->xformSet->xkind==SEMIT));
+      }
+   }
 
    if (xform != NULL) {
       hset = xform->hset;
@@ -5084,11 +5218,11 @@ Boolean GenAdaptXForm(HMMSet *hset, XFInfo *xfinfo)
 void TidyBaseAccs(XFInfo *xfinfo)
 {
    SetBaseAccsTime(xfinfo,-1);
-   if (headac == NULL )
+   if (xfinfo->headac==NULL)
       UpdateBaseAccs(xfinfo,NULL,-1,NULL);
    else { 
       UpdateBaseAccsWithPaac(xfinfo);
-      ResetAccCache();
+      ResetAccCache(xfinfo);
    }
 }
 
@@ -5132,11 +5266,11 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                printf("Generating transform %s (%i)\n",xfinfo->coutspkr,xfinfo->nspkr);
             /* Tidy the statistics of the last frame */
             SetBaseAccsTime(xfinfo,-1);
-            if (headac == NULL )
+            if (xfinfo->headac==NULL)
                UpdateBaseAccs(xfinfo,NULL,-1,NULL);
             else { 
                UpdateBaseAccsWithPaac(xfinfo);
-               ResetAccCache();
+               ResetAccCache(xfinfo);
             }
             /* Generate the new transform */
             MakeFN(xfinfo->coutspkr,NULL,xfinfo->outXFormExt, newMn);
@@ -5159,14 +5293,14 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                   including extension is used to distinguish models.
                   First set the adaptation up.
                */
-               SetXForm(hset,xfinfo->outXForm);
+               SetXForm(hset,xfinfo,xfinfo->outXForm);
                ApplyHMMSetXForm(hset, xfinfo->outXForm, xfinfo->outFullC);
                ForceDiagC(hset);
                SaveHMMSet(hset,xfinfo->outXFormDir,newMn,newMn,xfinfo->saveBinary);
                ConvDiagC(hset,TRUE);
                /* remembering to reset the transform */
-               if (xfinfo->useInXForm) SetXForm(hset,xfinfo->inXForm);
-               else SetXForm(hset,NULL);
+               if (xfinfo->useInXForm) SetXForm(hset,xfinfo,xfinfo->inXForm);
+               else  SetXForm(hset,xfinfo,NULL);
             }
             spkrChange = TRUE;
             ZeroAdaptAccs(hset,xfinfo->outXForm);
@@ -5181,14 +5315,14 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                      MakeFN(xfinfo->cpaspkr,xfinfo->paXFormDir,xfinfo->paXFormExt,newFn);
                      MakeFN(xfinfo->cpaspkr,NULL,xfinfo->paXFormExt,newMn);
                   xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
-                  SetParentXForm(hset,xfinfo->paXForm);
+                     SetParentXForm(hset,xfinfo,xfinfo->paXForm);
                      SetAccCache(xfinfo);
                   }
                   if (xfinfo->al_hset!=NULL && xfinfo->use_alPaXForm) {
                      MakeFN(xfinfo->cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
                      MakeFN(xfinfo->cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
                      xfinfo->al_paXForm = LoadOneXForm(xfinfo->al_hset,newMn,newFn);
-                     SetParentXForm(xfinfo->al_hset,xfinfo->al_paXForm);
+                     SetParentXForm(xfinfo->al_hset,xfinfo,xfinfo->al_paXForm);
                      SetAccCache(xfinfo);
                   }
                   else
@@ -5205,14 +5339,14 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                MakeFN(xfinfo->cpaspkr,xfinfo->paXFormDir,xfinfo->paXFormExt,newFn);
                MakeFN(xfinfo->cpaspkr,NULL,xfinfo->paXFormExt,newMn);
             xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
-            SetParentXForm(hset,xfinfo->paXForm);
+               SetParentXForm(hset,xfinfo,xfinfo->paXForm);
                SetAccCache(xfinfo);
             }
             if (xfinfo->al_hset!=NULL && xfinfo->use_alPaXForm) {
                MakeFN(xfinfo->cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
                MakeFN(xfinfo->cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
                xfinfo->al_paXForm = LoadOneXForm(xfinfo->al_hset,newMn,newFn);
-               SetParentXForm(xfinfo->al_hset,xfinfo->al_paXForm);
+               SetParentXForm(xfinfo->al_hset,xfinfo,xfinfo->al_paXForm);
                SetAccCache(xfinfo);
             }
             else
@@ -5245,13 +5379,13 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
             MakeFN(xfinfo->cpaspkr,xfinfo->paXFormDir,xfinfo->paXFormExt,newFn);
             MakeFN(xfinfo->cpaspkr,NULL,xfinfo->paXFormExt,newMn);
          xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
-         SetParentXForm(hset,xfinfo->paXForm);
+            SetParentXForm(hset,xfinfo,xfinfo->paXForm);
             SetAccCache(xfinfo);
       }
          else if (hset->semiTied != NULL) { /* model set uses a semitied transform */
       if (xfinfo->paXForm == NULL) { /* semi-tied transform is for all files */
          xfinfo->paXForm = hset->semiTied;
-         SetParentXForm(hset,xfinfo->paXForm);
+               SetParentXForm(hset,xfinfo,xfinfo->paXForm);
                SetAccCache(xfinfo);
       }
          }
@@ -5260,13 +5394,13 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                MakeFN(xfinfo->cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
                MakeFN(xfinfo->cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
                xfinfo->al_paXForm = LoadOneXForm(xfinfo->al_hset,newMn,newFn);
-               SetParentXForm(xfinfo->al_hset,xfinfo->al_paXForm);
+               SetParentXForm(xfinfo->al_hset,xfinfo,xfinfo->al_paXForm);
                SetAccCache(xfinfo);
             }
             else if (xfinfo->al_hset->semiTied != NULL) { /* model set uses a semitied transform */
                if (xfinfo->al_paXForm == NULL) { /* semi-tied transform is for all files */
                   xfinfo->al_paXForm = xfinfo->al_hset->semiTied;
-                  SetParentXForm(xfinfo->al_hset,xfinfo->al_paXForm);
+                  SetParentXForm(xfinfo->al_hset,xfinfo,xfinfo->al_paXForm);
                   SetAccCache(xfinfo);
                }
             }
@@ -5285,21 +5419,21 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
          HError(999,"Input xform mask %s does not match filename %s",xfinfo->inSpkrPat,datafn);
       /* if a transform has been changed the input transform must be 
          reapplied */
-      if (((xfinfo->cinspkr!=NULL) && strcmp(spkr,xfinfo->cinspkr)) || (resetHMMSet)) {
+      if (strcmp(spkr,xfinfo->cinspkr) || resetHMMSet) {
          if (trace&T_SXF)
             printf("Using input transform %s\n",spkr);
          strcpy(xfinfo->cinspkr,spkr);      
          if (xfinfo->useInXForm) {  /* input xform for hset */
             MakeFN(xfinfo->cinspkr,NULL,xfinfo->inXFormExt,newMn);
          xfinfo->inXForm = LoadOneXForm(hset,newMn,NULL);
-         SetXForm(hset,xfinfo->inXForm);
+            SetXForm(hset,xfinfo,xfinfo->inXForm);
             ApplyHMMSetXForm(hset,xfinfo->inXForm,xfinfo->inFullC);
          }
          if (xfinfo->al_hset!=NULL && xfinfo->use_alInXForm) {  /* input xform for al_hset */
             MakeFN(xfinfo->cinspkr,xfinfo->al_inXFormDir,xfinfo->al_inXFormExt,newFn);
             MakeFN(xfinfo->cinspkr,NULL,xfinfo->al_inXFormExt,newMn);
             xfinfo->al_inXForm = LoadOneXForm(xfinfo->al_hset,newMn,newFn);
-            SetXForm(xfinfo->al_hset,xfinfo->al_inXForm);
+            SetXForm(xfinfo->al_hset,xfinfo,xfinfo->al_inXForm);
             ApplyHMMSetXForm(xfinfo->al_hset,xfinfo->al_inXForm,FALSE);
          } 
          else 
@@ -5320,12 +5454,12 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
       if ((xfinfo->inXForm == NULL) && (xfinfo->al_inXForm == NULL)) { /* semi-tied transform is for all files */
          if (hset->semiTied != NULL) { /* model set uses a semitied transform */
             xfinfo->inXForm = hset->semiTied;
-            SetXForm(hset,xfinfo->inXForm);
+            SetXForm(hset,xfinfo,xfinfo->inXForm);
          }
          if (xfinfo->al_hset != NULL) {
             if (xfinfo->al_hset->semiTied != NULL) { /* alignment model set uses a semitied transform */
                xfinfo->al_inXForm = xfinfo->al_hset->semiTied;
-               SetXForm(xfinfo->al_hset,xfinfo->al_inXForm);
+               SetXForm(xfinfo->al_hset,xfinfo,xfinfo->al_inXForm);
             }
          } else {
             xfinfo->al_inXForm = xfinfo->inXForm;

@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hhed_version = "!HVER!HHEd:   3.4 [CUED 25/04/06]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.51 2008/01/18 03:23:35 zen Exp $";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.59 2008/03/05 04:03:07 zen Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -192,6 +192,7 @@ static Boolean ignoreStrW = FALSE;            /* ignore stream weight */
 static float minVar = 1.0E-6;                 /* minimum variance for clusterd item */
 static Boolean reduceMem = FALSE;             /* reduce memory requirement for decision-tree clustering */
 static float minLeafOcc = 0.0;                /* minimum occ for each leaf node */
+static float minMixOcc = 0.0;                 /* minimum occ for each mix */
 static Vector shrinkOccThresh=NULL;           /* occupancy threshold for shrinking decision trees */
 
 /* ------------------ Process Command Line -------------------------- */
@@ -218,6 +219,7 @@ void SetConfParms(void)
       if (GetConfFlt(cParm,nParm,"MINVAR",&f)) minVar = f;
       if (GetConfFlt(cParm,nParm,"MDLFACTOR",&f)) MDLfactor = f;
       if (GetConfFlt(cParm,nParm,"MINLEAFOCC",&f)) minLeafOcc = f;
+      if (GetConfFlt(cParm,nParm,"MINMIXOCC",&f)) minMixOcc = f;
       if (GetConfStr (cParm,nParm,"SHRINKOCCTHRESH",buf))
          shrinkOccThresh = ParseConfVector(&gstack,buf,TRUE);
       GetConfStr(cParm,nParm,"TIEDMIXNAME",tiedMixName);
@@ -535,7 +537,7 @@ char *ParseAlpha(char *src, char *s)
 /* ParsePattern: parse given string and return pattern list */
 IPat *ParsePattern (char *pattern)
 {
-   char *p,*r,buf[MAXSTRLEN];
+   char *p,*r,buf[PAT_LEN];
    IPat *ip=NULL, *ipat=NULL;
    
    for (p=pattern;*p && isspace((int) *p);p++);
@@ -841,8 +843,8 @@ Boolean EquivHMM(HMMDef *a, HMMDef *b)
    int i;
    StateInfo *ai,*bi;
    
-   if (a->numStates!=b->numStates ||
-       a->transP!=b->transP) return FALSE;
+   if (a->numStates!=b->numStates) return FALSE;
+
    for (i=2;i<a->numStates;i++) {
       ai=a->svec[i].info; bi=b->svec[i].info;
       if (ai!=bi && (!equivState ||
@@ -2387,28 +2389,35 @@ void SetGCStats(void)
    but if the mix gConst is less than 4 x stddev below average
    then the score is reduced by 5000 making it very unlikely to 
    be selected */
-int HeaviestMix(char *hname, MixtureElem *me, int M)
+int HeaviestMix(char *hname, MixtureElem *me, const int M, Vector mixOcc)
 {
    float max,w,gThresh;
    int m,maxm;
    MixPDF *mp;
    
-   /* find continuous space mixture */
+   /* find first continuous space mixture component */
    for (m=1; m<=M; m++)
       if (VectorSize(me[m].mpdf->mean)>0) /* MSD check */
          break;
    if (m>M)  /* no continuous space in this MixtureElem */
       HError(9999, "HeaviestMix: there is no continuous mixtures");
 
+   /* find first mixture component whose occ count is larger than the threshold */
+   for (m=m; m<=M; m++)
+      if (VectorSize(me[m].mpdf->mean)>0 && mixOcc[m]>minMixOcc) 
+         break;
+   if (m>M)  /* no mixture */
+      return 0;
+
    gThresh = meanGC - 4.0*stdGC;
    maxm = m;  mp = me[m].mpdf;
    max = me[m].weight - (long)mp->hook;
    if ((long)mp->hook < 5000 && mp->gConst < gThresh) {
       max -= 5000.0; mp->hook = (void *)5000;
-      HError(-2637,"HeaviestMix: mix 1 in %s has v.small gConst [%f]",
-             hname,mp->gConst);
+      HError(-2637,"HeaviestMix: mix %d in %s has v.small gConst [%f]",
+             m,hname,mp->gConst);
    }
-   for (m=m+1; m<=M; m++) {   
+   for (m=maxm+1; m<=M; m++) {
       mp = me[m].mpdf;
       w = me[m].weight - (long)mp->hook;
       if (VectorSize(mp->mean) > 0) {  /* MSD check */
@@ -2417,7 +2426,7 @@ int HeaviestMix(char *hname, MixtureElem *me, int M)
          HError(-2637,"HeaviestMix: mix %d in %s has v.small gConst [%f]",
                 m,hname,mp->gConst);
       }
-      if (w>max) {
+         if (w>max && mixOcc[m]>minMixOcc) {
          max = w; maxm = m;
       }
    }
@@ -2432,11 +2441,38 @@ int HeaviestMix(char *hname, MixtureElem *me, int M)
    return maxm;
 }
 
+/* SetMixOcc: set mixture-level occupancy counts */
+void SetMixOcc(StreamInfo *sti, Vector mixOcc)
+{
+   int m;
+   float occ;
+
+   ZeroVector(mixOcc);
+
+   for (m=1; m<=sti->nMix; m++) {
+      if (occStatsLoaded) {
+         memcpy(&occ,&(sti->hook),sizeof(float));
+      }
+      else {
+         if (minMixOcc>0.0)
+            HError(9999,"SetMixOcc: No stats loaded - use LS command");
+         occ = 1.0;
+      }
+      mixOcc[m] = MixWeight(hset,sti->spdf.cpdf[m].weight) * occ;
+   }
+   
+   return;
+}
+
 /* UpMix: increase number of mixes in stream from oldM to newM */
 void UpMix(char *hname, StreamInfo *sti, int oldM, int newM)
 {
    MixtureElem *me,m1,m2;
    int m,count,vSize;
+   Vector mixOcc;
+   
+   mixOcc = CreateVector(&gstack, newM);
+   SetMixOcc(sti,mixOcc);
    
    me = (MixtureElem*) New(&hmmHeap,sizeof(MixtureElem)*newM);
    --me;
@@ -2445,12 +2481,16 @@ void UpMix(char *hname, StreamInfo *sti, int oldM, int newM)
       me[m] = sti->spdf.cpdf[m];
    count=oldM;
    while (count<newM) {
-      m = HeaviestMix(hname,me,count);
+      m = HeaviestMix(hname,me,count,mixOcc);
+      if (m==0) break;
       ++count;
       SplitMix(me+m,&m1,&m2,vSize);
       me[m] = m1; me[count] = m2;
+      mixOcc[m] = mixOcc[count] = mixOcc[m] / 2;
    }
-   sti->spdf.cpdf = me; sti->nMix = newM;
+   sti->spdf.cpdf = me; sti->nMix = count;
+   
+   FreeVector(&gstack,mixOcc);
 }
 
 /* CountDefunctMix: return number of defunct mixtures in given stream */
@@ -2469,17 +2509,24 @@ void FixDefunctMix(char *hname,StreamInfo *sti, int n)
 {
    MixtureElem *me,m1,m2;
    int m,M,l,count,vSize;
+   Vector mixOcc;
+
+   mixOcc = CreateVector(&gstack, sti->nMix);
+   SetMixOcc(sti,mixOcc);
 
    me = sti->spdf.cpdf; M = sti->nMix;
    for (count = 0; count<n; ++count) {
       for (l=1; l<=M; l++)
          if (me[l].weight <= MINMIX)
             break;
-      m = HeaviestMix(hname,me,M);
+      m = HeaviestMix(hname,me,M,mixOcc);
       vSize = VectorSize(me[m].mpdf->mean);
       SplitMix(me+m,&m1,&m2,vSize);
       me[m] = m1; me[l] = m2;
+      mixOcc[m] = mixOcc[l] = mixOcc[m] / 2;
    }
+
+   FreeVector(&gstack,mixOcc);
 }
 
 /* ------------------- MixDown Operations --------------------- */
@@ -2734,7 +2781,7 @@ static int numTreeClust;        /* number of clusters in tree */
 
 /* -------------------- Tree Name Mapping routines ----------------------- */
 
-static char treeName[MAXSTRLEN] = "";
+static char treeName[PAT_LEN] = "";
 static void SetTreeName(char *name) {
    strcpy(treeName,name);
    strcat(treeName,"tree");   
@@ -2753,7 +2800,7 @@ void MapTreeName(char *buf) {
 Tree *CreateTree(ILink ilist,LabId baseId,int state)
 {
    Tree *tree,*t;
-   char buf[MAXSTRLEN];
+   char buf[PAT_LEN];
    int j;
    LabId id;
    HMMDef *hmm;
@@ -3073,7 +3120,7 @@ void IncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes)
    int vSize;
    DVector tsum, tsqr, asum, asqr;
    Boolean first=TRUE; 
-   
+
    const int S = no->nStream;
    
    for (s=1,first=TRUE; s<=S; s++) {
@@ -3292,20 +3339,20 @@ void AddLeafList(Node *node, Tree *tree, double threshold)
       if (p->prev!=NULL) {
          p->prev->next = p->next;
          p->prev = NULL;
-   }
+      }
       if (p->next!=NULL) {
          p->next->prev = p->prev;
          p->next = NULL;
-      }
    }
-   
+}
+
    /* search insert location of given node */
    p=NULL; n=tree->leaf;
    while (n != NULL && imp < n->sProb-n->tProb) {
       if (n->sProb-n->tProb < threshold) break;
       p=n; n=n->next;
-   }
-   
+}
+
    if (p==NULL) tree->leaf = node;
    if (p!=NULL) p->next = node;
    if (n!=NULL) n->prev = node;
@@ -3424,7 +3471,7 @@ void GetCentroidStr (StreamInfo *sti, AccSumStrE *astr, Vector vfloor)
    MixPDF *mp;
    DVector sum, sqr;
    AccSumMixE *amix;
-
+   
    for (m=1; m<=astr->nMix; m++) {
       mp = sti->spdf.cpdf[m].mpdf;
       amix = astr->accme+m;
@@ -3440,7 +3487,7 @@ void GetCentroidStr (StreamInfo *sti, AccSumStrE *astr, Vector vfloor)
             if (applyVFloor && v<vfloor[k])
                v = (double)vfloor[k];
             mp->cov.var[k] = (float)v;
-   }
+         }
          tocc += occ; 
 
          FixDiagGConst(mp);  /* fix gConst */
@@ -3496,8 +3543,8 @@ void TieLeafNodes(Tree *tree, char *macRoot)
    double occ;
    ILink ilist,i;
    CLink cl;
-   char clnum[20];                      /* cluster number */
-   int clidx;                           /* cluster index  */
+   char clnum[20];              /* cluster number */
+   int clidx;                   /* cluster index */
    char buf[MAXSTRLEN],str[MAXSTRLEN];  /* construct mac name in this */
    Node *node;
    int s,j,numItems = 0;
@@ -3555,8 +3602,8 @@ void TieLeafNodes(Tree *tree, char *macRoot)
                if (useLeafStats)
                   GetCentroid(node->macro[j], cl, &no, s);
                j++;
+            }
          }
-      }
          if (tree->nActiveStr>1)
             id=GetLabId(buf,TRUE);
       }
@@ -3574,7 +3621,7 @@ void TieLeafNodes(Tree *tree, char *macRoot)
 void BuildTree (ILink ilist, double threshold, char *macRoot, char *pattern)
 {
    int i,j,l,s,m,N,snum,state,numItems,numParam,count;
-   char buf[MAXSTRLEN];
+   char buf[PAT_LEN];
    HMMDef *hmm;
    CLink clHead,cl;
    ILink p, k;
@@ -3774,7 +3821,7 @@ void BuildTree (ILink ilist, double threshold, char *macRoot, char *pattern)
 Ptr AssignStructure(LabId id, const int state)
 {
    int len=0,stream,nTree,s,j;
-   char buf[MAXSTRLEN];
+   char buf[PAT_LEN];
    LabId tid = NULL;
    Tree *tree;
    Node *node;
@@ -3807,7 +3854,7 @@ Ptr AssignStructure(LabId id, const int state)
              id->name,state);
    if (stream!=hset->swidth[0]) 
       HError(9999,"AssignStructure: incompatible tree");
-
+      
    nTree = NumItems(tlist);
    if (nTree>1) {
       si  = (StateInfo  *) New(&hmmHeap,sizeof(StateInfo));
@@ -3816,7 +3863,7 @@ Ptr AssignStructure(LabId id, const int state)
       si->nUse=0; si->hook=NULL; si->stateCounter=0; si->dur=NULL; si->weights=NULL; 
       si->pdf = ste;
    }
-      
+
    for (i=tlist;i!=NULL;i=i->next) {
       tree = (Tree *)i->item;
    /* Then move down tree until state is found */
@@ -4042,7 +4089,7 @@ void ShowTreesCommand(void)
    Tree *tree;
    int i,s;
    FILE *file;
-   char fn[MAXSTRLEN];
+   char fn[MAXFNAMELEN];
    Boolean isPipe;
   
    ChkedAlpha("ST trees file name",fn);         /* get name of trees file */
@@ -4306,7 +4353,7 @@ Tree *LoadTree(char *name,Source *src)
 void LoadTreesCommand(void)
 {
    Source src;
-   char qname[MAXSTRLEN],buf[1024],info[MAXSTRLEN];
+   char qname[MAXSTRLEN],buf[PAT_LEN],info[MAXSTRLEN];
    char fn[MAXSTRLEN];
   
    ChkedAlpha("LT trees files name",fn);        /* get name of trees file */
@@ -4368,14 +4415,14 @@ void ConvertModelsCommand(void)
 
    /* start conversion */
    strcpy(head,"pdf.");
-
+   
    for (s=1; s<=hset->swidth[0]; s++) {
       nMix = MaxMixInSetS(hset, s);
       if ((hset->msdflag[s] && nMix>2) || (!hset->msdflag[s] && nMix>1)) 
          HError(9999,"ConvertModels: Only single mixture system is supported");
       out[s]=FALSE;
-}
-
+   }
+   
    for (s=1; s<=hset->swidth[0]; s++) {
       if (!out[s]) {
          /* output vector size and number of pdfs for each tree */
@@ -4401,7 +4448,7 @@ void ConvertModelsCommand(void)
                }
             }
          }
-
+         
          /* output pdf (mixture weight, mean vector and covariance matrix) */
          for (i=2; i<=MaxStatesInSet(hset)+1; i++) {
             for (tree=treeList; tree!=NULL; tree=tree->next) {
@@ -5013,7 +5060,7 @@ void RecordTriphone(HLink left, HLink right, MLink ml)
    */
 void MakeTriCommand(void)
 {
-   char fn[MAXSTRLEN], *s;
+   char fn[MAXFNAMELEN], *s;
    HMMSet *tmpSet;
    HLink hmm,left,right;
    MLink q,match;
@@ -5151,15 +5198,21 @@ void MixUpCommand(void)
    if (ch=='+') {
       trg = -ChkedInt("Mix increment",1,INT_MAX);
    }
+   else if (ch=='*') {
+      trg = ChkedInt("Mix multiply",1,INT_MAX);
+   }
    else {
       UnGetCh(ch,&source);
       trg = ChkedInt("Mix target",1,INT_MAX);
    }
+
    if (trace & T_BID) {
-      if (trg>0)
-         printf("\nMU %d {}\n Mixup to %d components per stream\n",trg,trg);
-      else
+      if (trg<0)
          printf("\nMU +%d {}\n Mixup by %d components per stream\n",-trg,-trg);
+      else if (ch=='*')
+         printf("\nMU *%d {}\n Mixup by %d components per stream\n",trg,trg);
+      else
+         printf("\nMU %d {}\n Mixup to %d components per stream\n",trg,trg);
       fflush(stdout);
    }
    if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
@@ -5186,6 +5239,7 @@ void MixUpCommand(void)
             sti->spdf.cpdf[j].mpdf->hook = (void *) 0;
          mDefunct = CountDefunctMix(sti);
          if (trg<0) m=M-trg;
+         else if (ch=='*') m=M*trg;
          else m=trg;
          if (m > M-mDefunct) {
             n2fix = m-M+mDefunct;
@@ -5204,7 +5258,7 @@ void MixUpCommand(void)
          }
          if (m>maxMixes) maxMixes = m;
          if (m>M) UpMix(hname,sti,M,m);
-         totm+=m;totM+=M;
+         totm+=sti->nMix; totM+=M;
          for (j=1; j<=sti->nMix; j++) /* restore the hooks */
             sti->spdf.cpdf[j].mpdf->hook = NULL;
       }
@@ -5433,7 +5487,7 @@ void ClusterCommand(Boolean nCluster)
 /* LoadStatsCommand: loads occupation counts for hmms */
 void LoadStatsCommand(void)
 {
-   char statfile[MAXSTRLEN];
+   char statfile[MAXFNAMELEN];
    
    ChkedAlpha("LS stats file name",statfile);
    if (trace & T_BID) {
@@ -5452,7 +5506,7 @@ void LoadStatsCommand(void)
    */
 void RemOutliersCommand(void)
 {
-   char statfile[MAXSTRLEN];
+   char statfile[MAXFNAMELEN];
    int ch;
    
    outlierThresh = ChkedFloat("Outlier Occupancy Threshold",0.0,FLOAT_MAX);
@@ -5493,7 +5547,7 @@ void CompactCommand(void)
    HLink hmm;
    int h;
    Boolean seenMean,seenVar;
-   char fn[MAXSTRLEN];
+   char fn[MAXFNAMELEN];
    
    ChkedAlpha("CO hmmlist file name",fn);  /* get name of new hmm list */
    if (trace & T_BID) {
@@ -5520,7 +5574,7 @@ void CompactCommand(void)
          if (q->type=='h') {
             hmm=(HLink) q->structure;
             for (i=seen;i!=NULL;i=i->next)
-               if (EquivHMM(hmm,i->owner)) break;
+               if (hmm->transP==i->owner->transP && EquivHMM(hmm,i->owner)) break;
             if (i!=NULL) {
                hmm->hook=i->owner;
                i->owner->nUse++;
@@ -6255,7 +6309,7 @@ void TreeBuildCommand(void)
 
 void AddUnseenCommand(void)
 {
-   char newListFn[MAXSTRLEN];     /* name of hmmList containing unseen models */
+   char newListFn[MAXFNAMELEN];     /* name of hmmList containing unseen models */
    HMMSet newSet;
    int oldL = hset->numLogHMM;
    int oldP = hset->numPhyHMM;
@@ -6286,7 +6340,7 @@ void AddUnseenCommand(void)
 void UseCommand(void)
 {
    MILink mil;
-   char newMMF[MAXSTRLEN];   /* Name of MMF file to store macros in */
+   char newMMF[MAXFNAMELEN];   /* Name of MMF file to store macros in */
 
    ChkedAlpha("UF file name",newMMF);
    if (trace & T_BID) {
@@ -6413,7 +6467,7 @@ void FloorVectorCommand(void)
    char fn[MAXFNAMELEN],mac[MAXSTRLEN],buf[MAXSTRLEN];
    Source src;
    int s,S,n,i;
-   char c,h;
+   char c;
    LabId id;
    SVector v;
    MLink m;
@@ -6439,15 +6493,13 @@ void FloorVectorCommand(void)
          if (!ReadString(&src,buf))
             HError(2613,"FloorVectorCommand: cannot parse file %s",fn);
          strcpy(mac,"varFloor");
-         h=buf[strlen(mac)];
+         s=atoi(buf+strlen(mac));
          buf[strlen(mac)]='\0';
          if (strcmp(mac,buf)!=0) /* not a varFloor */
             continue;
-         assert(SMAX<10); s=h-'0';
          if(s<1||s>S)
             HError(2613,"FloorVectorCommand: undefined stream %d in HMM set",s);
-         mac[strlen(buf)]=h;
-         mac[strlen(buf)+1]='\0';
+         sprintf(mac,"%s%d",mac,s);
          if (trace & T_BID) {
             printf("loading vector %s\n",mac);
          }
@@ -6892,7 +6944,7 @@ int MaxVecSize (CoList *list)
    
    if (list==NULL)
       return 0;
-
+      
    vSize = VectorSize(list->mp->mean);
 
    for (c=list->next; c!=NULL; c=c->next)
@@ -7254,14 +7306,14 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
             c1 = c1->next;
          }
             numLeft++;
-         }
+      }
+      else {
+         if (c2 == NULL)
+            c2 = ch2->list = c;
          else {
-            if (c2==NULL)
-               c2 = ch2->list = c;
-            else {
-               c2->next = c;
-               c2 = c2->next;
-            }
+            c2->next = c;
+            c2 = c2->next;
+         }
             numRight++;
          }
       }
@@ -7275,14 +7327,14 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
                c1 = c1->next;
             }
             numLeft++;
-      }
-      else {
-         if (c2 == NULL)
-            c2 = ch2->list = c;
-         else {
-            c2->next = c;
-            c2 = c2->next;
          }
+         else {
+            if (c2==NULL)
+               c2 = ch2->list = c;
+            else {
+               c2->next = c;
+               c2 = c2->next;
+            }
             numRight++;
          }
       }
@@ -7590,13 +7642,13 @@ int BuildRegClusters (RegNode *rtree, const int nTerminals, Boolean nonSpeechNod
          nStrTerminals[n->list->stream]++;
       
       k++;
-   }
+  }
    
    if (trace&T_BID) {
       for (s=1; s<=hset->swidth[0]; s++)
          printf("stream %d: #terminals=%d\n", s, nStrTerminals[s]);
       fflush(stdout);
-  }
+   }
    
    /* free strTerminals */
    FreeSet(strTerminals);
@@ -7607,8 +7659,8 @@ int BuildRegClusters (RegNode *rtree, const int nTerminals, Boolean nonSpeechNod
 void RegClassesCommand(void) 
 {
   char ch;
-  char buf[MAXSTRLEN], fname[MAXSTRLEN], bname[MAXSTRLEN], tname[MAXSTRLEN];
-  char macroname[MAXSTRLEN], fname2[MAXSTRLEN];
+   char buf[MAXSTRLEN], fname[MAXFNAMELEN], bname[MAXSTRLEN], tname[MAXSTRLEN];
+   char macroname[MAXSTRLEN], fname2[MAXFNAMELEN];
   RegTree *regTree;
   char type = 'p';             /* type of items must be p (pdfs) */
   ILink ilist=NULL;            /* list of items that are non-speech sounds */
@@ -7666,7 +7718,7 @@ void RegClassesCommand(void)
 
 void InputXFormCommand()
 {
-   char fn[MAXSTRLEN], macroname[MAXSTRLEN];
+   char fn[MAXFNAMELEN], macroname[MAXSTRLEN];
    InputXForm *xf;
 
    ChkedAlpha("IX input Xform file name",fn); 
@@ -7683,7 +7735,7 @@ void InputXFormCommand()
 
 void ParentXFormCommand()
 {
-   char fn[MAXSTRLEN], macroname[MAXSTRLEN];
+   char fn[MAXFNAMELEN], macroname[MAXSTRLEN];
    AdaptXForm *xf;
    
    ChkedAlpha("PX parent Xform file name", fn); 
@@ -7692,23 +7744,23 @@ void ParentXFormCommand()
       fflush(stdout);
    }
    xf = LoadOneXForm(hset,NameOf(fn,macroname),fn);
-   SetParentXForm(hset, xf);
+   SetParentXForm(hset, NULL, xf);
 }
 
 /* ----------------- AdaptXForm Command -------------------- */
 
 void AdaptXFormCommand()
 {
-   char fn[MAXSTRLEN], macroname[MAXSTRLEN];
+   char fn[MAXFNAMELEN], macroname[MAXSTRLEN];
    AdaptXForm *xf;
-   
+
    ChkedAlpha("AX adapt Xform file name", fn); 
    if (trace & T_BID) {
       printf("\nAX %s\n Setting HMMSet adapt XForm\n", fn);
       fflush(stdout);
    }
    xf = LoadOneXForm(hset,NameOf(fn,macroname),fn);
-   SetXForm(hset, xf);
+   SetXForm(hset, NULL, xf);
 }
 
 /* ----------------- ReOrderFeatures Command -------------------- */
@@ -7985,36 +8037,35 @@ void PrintNodeBaseClass (FILE *f, ILink ilist, const int state, const int stream
       for (j=((state>0)?state:2); j<=((state>0)?state:hmm->numStates-1); j++) {
          sti = hmm->svec[j].info->pdf[stream].info;
          firstmix=TRUE;
-         
-         /* print baseclass */
          for (m=1; m<=sti->nMix; m++) {
             if (VectorSize(sti->spdf.cpdf[m].mpdf->mean)==vSize) {
-               if (firstmix && !first) fprintf(f,",");
-               if (hset->swidth[0] == 1) { /* single stream case */
-                  if (firstmix) {
-                     fprintf(f,"%s.state[%d].mix[%d", macro->id->name, j, m);
-                     firstmix=FALSE;
+               if (!IsSeen(sti->spdf.cpdf[m].mpdf->nUse)) {
+                  /* print baseclass */
+                  if (firstmix && !first) fprintf(f,",");
+                  if (hset->swidth[0] == 1) { /* single stream case */
+                     if (firstmix) {
+                        fprintf(f,"%s.state[%d].mix[%d", macro->id->name, j, m);
+                        firstmix=FALSE;
+                     }
+                     else
+                        fprintf(f,",%d", m);
                   }
-                  else
-                     fprintf(f,",%d", m);
-               }
-               else {
-                  if (firstmix) { 
-                     fprintf(f,"%s.state[%d].stream[%d].mix[%d", macro->id->name, j, stream, m);
-                     firstmix=FALSE;
+                  else {
+                     if (firstmix) { 
+                        fprintf(f,"%s.state[%d].stream[%d].mix[%d", macro->id->name, j, stream, m);
+                        firstmix=FALSE;
+                     }
+                     else
+                        fprintf(f,",%d", m);
                   }
-                  else
-                     fprintf(f,",%d", m);
+                  first = FALSE;
+                  Touch(&sti->spdf.cpdf[m].mpdf->nUse);
                }
-               first = FALSE;
             }
          }
          if (!firstmix)
             fprintf(f,"]");
       }
-      
-      if (shrinkOccThresh==NULL) /* output first one only */
-         break;
    }
    fprintf(f,"}\n");
    
@@ -8048,11 +8099,11 @@ void ShrinkTree(Tree *tree, Node *node, int *snum, const float threshold)
 
 void DecTrees2RegTreeCommand(void)
 {
-   char buf[MAXSTRLEN], fname1[MAXSTRLEN], fname2[MAXSTRLEN], tname[MAXSTRLEN], bname[MAXSTRLEN], macroname[MAXSTRLEN];
+   char buf[MAXSTRLEN], fname1[MAXFNAMELEN], fname2[MAXFNAMELEN], tname[MAXSTRLEN], bname[MAXSTRLEN], macroname[MAXSTRLEN];
    int i, j, s, snum;
    int bias, tindex, tnodeindex, tmpindex, nclass;
    FILE *f1=NULL, *f2=NULL;
-   Boolean isPipe1, isPipe2;
+   Boolean isPipe1, isPipe2, zeroOcc;
    Tree *tree;
    Node *node, *leaf, **array;
    ILink p, **spaceTree;
@@ -8078,10 +8129,15 @@ void DecTrees2RegTreeCommand(void)
             if (tree->streams.set[s]) break;
 
          /* update occ counts of all nodes */
-         for (leaf=tree->leaf; leaf!=NULL; leaf=leaf->next) {
-            for (node=leaf; node->parent!=NULL; node=node->parent)
+         for (leaf=tree->leaf,zeroOcc=TRUE; leaf!=NULL; leaf=leaf->next) {
+            for (node=leaf; node->parent!=NULL; node=node->parent) {
                node->parent->occ += leaf->occ;
+               if (leaf->occ>0.0)
+                  zeroOcc = FALSE;
+            }
          }
+         if (zeroOcc)
+            HError(9999,"DecTree2RegTree: Load stats file before loading tree files.");
       
          /* shrink tree */
          tree->leaf=NULL; numTreeClust=0; snum=0;  
@@ -8236,6 +8292,7 @@ void DecTrees2RegTreeCommand(void)
          }
       }
    }
+   ClearSeenFlags(hset,CLR_ALL);
    
    ResetDec2Reg(&spaceTree, &vecSize);
    

@@ -518,4 +518,7 @@ void MAPUpdateModels(HMMSet *hset, UPDSet uFlags)
 	     nFloorVar,nFloorVarMix);
     fflush(stdout);
   }
+   
+   /* Reset vfloor */
+   ResetVFloor(hset,vFloor);
 }

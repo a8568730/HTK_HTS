@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hmodel_version = "!HVER!HModel:   3.4 [CUED 25/04/06]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.23 2007/12/28 14:47:58 zen Exp $";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.25 2008/03/24 01:51:39 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1277,8 +1277,11 @@ static int GetStreamClass(BaseClass *bclass, const int b)
    HLink hmm;
    
    /* currently does not check consistency of stream indexes */
-   if ((i=bclass->ilist[b])==NULL)
-      HError(999,"GetStreamClass: class %d has no items",b);
+   if ((i=bclass->ilist[b])==NULL) {
+      HError(-999,"GetStreamClass: class %d has no items",b);
+      return 1;
+   }
+   
    me  = (MixtureElem *)i->item;
    hmm = i->owner;
    
@@ -1418,7 +1421,7 @@ static BaseClass* GetBaseClass(HMMSet *hset,Source *src, Token *tok)
       bclass->stream = CreateIntVec(hset->hmem,bclass->numClasses);
       for (b=1; b<=bclass->numClasses; b++)
          bclass->stream[b] = GetStreamClass(bclass,b); 
-   } 
+   }
    else if (tok->sym==MACRO && tok->macroType=='b') {
     if((bclass=(BaseClass *)GetStructure(hset,src,'b'))==NULL){
       HMError(src,"GetStructure Failed");
@@ -5882,10 +5885,10 @@ LogFloat SOutP(HMMSet *hset, int s, Observation *x, StreamInfo *sti)
       else {
          bx = LZERO;                   /* Multi Mixture Case */
          for (m=1; m<=sti->nMix; m++,me++) {
-            mp = me->mpdf; 
-            if (!hset->msdflag[s] || vSize == VectorSize(mp->mean)) {
             wt=MixLogWeight(hset,me->weight);
             if (wt>LMINMIX) {  
+               mp = me->mpdf; 
+               if (!hset->msdflag[s] || vSize == VectorSize(mp->mean)) {
                   if (vSize == 0) 
                      px = 0.0;
                   else {

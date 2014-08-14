@@ -66,7 +66,7 @@
 #  ---------------------------------------------------------------  #
 
 # After editing this file, run "autoconf" to regenerate "configure".
-AC_INIT(HTS,2.1beta, hts-users@sp.nitech.ac.jp)
+AC_INIT(HTS,2.1RC1, hts-users@sp.nitech.ac.jp)
 AC_COPYRIGHT(Copyright 2003-2005 University of Cambridge)
 AC_COPYRIGHT(Copyright 2001-2008 Nagoya Institute of Technology and Tokyo Institute of Technology)
 
@@ -76,7 +76,6 @@ AC_PREFIX_DEFAULT(/usr/local/HTS-2.1)
 AC_PROG_MAKE_SET
 AC_PROG_AWK
 AC_PROG_CC
-AC_PROG_CXX
 AC_PROG_F77
 AC_PROG_INSTALL
 AC_PROG_LN_S
@@ -151,10 +150,6 @@ AC_ARG_ENABLE(htkbook,
 		AS_HELP_STRING([--enable-htkbook],
 		[build HTK book]))
 
-# Disable building hts_engine
-AC_ARG_ENABLE(hts_engine,
-	AS_HELP_STRING([--disable-hts_engine],
-	[don't build hts_engine]))
 
 # Use -Wall if using gcc/g77
 case "$CC" in
@@ -293,17 +288,6 @@ case "$enable_hslab" in
 	build_notest="$build_notes GUI tool HSLab will be built."
 	;;
 esac
-case "$enable_hts_engine" in
-	no)
-		build_notes="$build_notes hts_engine will not be built. You can build it manually later by running 'make hts_engine install-hts_engine'."
-	;;
-	*)
-		make_all="$make_all hts_engine"
-		make_install="$make_install install-hts_engine"
-		build_notes="$build_notes hts_engine will be built."
-	;;
-esac
-
 AC_SUBST(TRADHTK, $enable_trad_htk)
 AC_SUBST(TRADHTKBIN, $trad_bin_dir)
 AC_SUBST(make_all, $make_all)
@@ -313,7 +297,7 @@ AC_SUBST(HGRAF, $HGRAF)
 AC_SUBST(BINARY_EXTENSION, $BINARY_EXTENSION)
 AC_SUBST(LIBLV)
 
-AC_OUTPUT(HTKLib/Makefile HTKTools/Makefile HLMLib/Makefile HLMTools/Makefile HTKLVRec/Makefile hts_engine/Makefile Makefile)
+AC_OUTPUT(HTKLib/Makefile HTKTools/Makefile HLMLib/Makefile HLMTools/Makefile HTKLVRec/Makefile Makefile)
 
 case "$enable_trad_htk" in
      yes)

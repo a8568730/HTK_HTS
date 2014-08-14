@@ -38,7 +38,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -125,8 +125,13 @@ LogFloat SOutP_ID_mix_Block(HMMSet *hset, int s, Observation *x, StreamInfo *sti
    assert (hset->hsKind == PLAINHS && hset->hsKind == SHAREDHS);
    
    v = x->fv[s];
+   if (hset->msdflag[s]) {
+      vSize = SpaceOrder(v);
+   }
+   else {
    vSize = VectorSize(v);
    assert (vSize == hset->swidth[s]);
+   }
    me = sti->spdf.cpdf+1;
    if (sti->nMix == 1){     /* Single Mixture Case */
       mp = me->mpdf; 
@@ -157,6 +162,7 @@ LogFloat SOutP_ID_mix_Block(HMMSet *hset, int s, Observation *x, StreamInfo *sti
          wt = MixLogWeight(hset,me->weight);
          if (wt>LMINMIX) {  
             mp = me->mpdf; 
+            if (!hset->msdflag[s] || vSize == VectorSize(mp->mean))
             /*       px = IDOutP(v,vSize,mp);   */
             {
                int i;
@@ -341,8 +347,14 @@ static LogFloat SOutP_HMod (HMMSet *hset, int s, Observation *x, StreamInfo *sti
    else {   /* Partial distance elimination */
       wt = MixLogWeight(hset,me->weight);
       mp = me->mpdf;
+      if (!hset->msdflag[s] || hset->SpaceOrder(v)==VectorSize(mp->mean)) {
       otvs = ApplyCompFXForm(mp,v,inXForm,&det,id);
       px = IDOutP(otvs,VectorSize(otvs),mp);
+      }
+      else {
+         px = LZERO;
+         det = 0.0;
+      }
       bx = wt+px+det;
       for (m=2,me=sti->spdf.cpdf+2;m<=sti->nMix;m++,me++) {
          wt = MixLogWeight(hset,me->weight);

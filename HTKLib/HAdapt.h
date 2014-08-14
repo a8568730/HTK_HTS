@@ -80,6 +80,22 @@
 extern "C" {
 #endif
 
+/* observation cache to save rotated observations */
+typedef struct _ObsCache{
+   int time;
+   Vector obs;
+   float det;
+   struct _ObsCache *next;
+} ObsCache;
+
+/* acc cache to save accumulators related to parent XForm */
+typedef struct _AccCache{
+   int     baseclass;
+   DVector bVector;
+   TriMat *bTriMat;
+   struct _AccCache *next;
+} AccCache;  
+
 typedef struct {
   char *outSpkrPat;
   char *inSpkrPat;
@@ -164,6 +180,8 @@ typedef struct {
    /* -1 indicates that this is the first frame of a new file */
    int baseTriMatTime;
 
+   ObsCache *headoc;
+   AccCache *headac;
 } XFInfo;
 
 /* -------------------- Initialisation Functions -------------------------- */
@@ -203,14 +221,14 @@ void ZeroAdaptAccs(HMMSet *hset, AdaptXForm *xform);
 
 /* ---------------- Applying Transform Functions ------------------------ */
 
-void SetXForm(HMMSet *hset, AdaptXForm *xform);
+void SetXForm(HMMSet *hset, XFInfo *xfinfo, AdaptXForm *xform);
 /*
   Set the current transform to xform. This must be executed
   prior to applying any adaptation transforms. Setting xform 
   to NULL turns off the input transformation.
 */
 
-void SetParentXForm(HMMSet *hset, AdaptXForm *xform);
+void SetParentXForm(HMMSet *hset, XFInfo *xfinfo, AdaptXForm *xform);
 /*
   Set the parent transform to xform. If this is not set the
   default functionality is to build a transform on top of
@@ -236,7 +254,7 @@ Vector ApplyCompFXForm(MixPDF *mp, Vector svec, AdaptXForm* xform, LogFloat *det
   IMPORTANT: Do not alter the values of the returned vector
 */
 
-void ResetObsCache(void);
+void ResetObsCache(XFInfo *xfinfo);
 
 void ResetXFormHMMSet(HMMSet *hset);
 /*

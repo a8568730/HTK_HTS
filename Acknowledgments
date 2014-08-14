@@ -7,11 +7,12 @@ It is their work that makes it all possible. In no special order:
       Overall concept and design.
 
     * Heiga Zen
-      Throwing away all old codes of HTS and rewriting them as HTS version 1.0, 1.1, 1.1b, 1.1.1, 2.0, and 2.0.1. 
+      Throwing away all old codes of HTS and rewriting them as HTS version 1.0, 1.1, 1.1b, 1.1.1, 2.0, 2.0.1, and 2.1. 
       He is the current maintainer of HTS.
 
     * Junichi Yamagishi
       Testing out various clustering and adaptation algorithms.
+      Implementation of the CSMAPLR adaptation algorithm.
 
     * Takayoshi Yoshimura
       Development of the first version of HTS.

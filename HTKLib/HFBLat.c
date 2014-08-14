@@ -73,7 +73,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hfblat_version = "!HVER!HFBLat:   3.4 [CUED 25/04/06]";
-char *hfblat_vc_id = "$Id: HFBLat.c,v 1.11 2008/01/08 09:43:49 zen Exp $";
+char *hfblat_vc_id = "$Id: HFBLat.c,v 1.12 2008/03/02 05:42:22 zen Exp $";
 
 /*
   Performs forward/backward alignment
@@ -276,7 +276,7 @@ static void SetCorrectness(FBLatInfo *fbInfo, Lattice *numLat){
    int larcid;
    CorrectArcList **correctArc;
    correctArc=New(&fbInfo->tempStack, sizeof(CorrectArcList*)*(fbInfo->T+1));
-   ResetObsCache();
+   ResetObsCache(fbInfo->xfinfo);
    if(!numLat) HError(-1, "MEE mode and no numLat provided.  FBLat needs to be given both lattices in this mode.");
    for(t=1;t<=fbInfo->T;t++)    correctArc[t]  = NULL;
 
@@ -567,7 +567,7 @@ static void SetCorrectnessAsError(FBLatInfo *fbInfo, Lattice *numLat){    /* re 
    int larcid;
    CorrectArcList **correctArc;
    correctArc=New(&fbInfo->tempStack, sizeof(CorrectArcList*)*(fbInfo->T+1));
-   ResetObsCache();
+   ResetObsCache(fbInfo->xfinfo);
    if(!numLat) HError(-1, "MEE mode and no numLat provided.  FBLat needs to be given both lattices in this mode.");
    for(t=1;t<=fbInfo->T;t++)    correctArc[t]  = NULL;
 
@@ -962,7 +962,7 @@ static void SetBetaPlus()
    /* 
       Columns T-1 -> 1.
    */
-   ResetObsCache();  
+   ResetObsCache(fbInfo->xfinfo);  
    for (t=fbInfo->T;t>=1;t--) {
       Setotprob(t);
       for (q=fbInfo->aInfo->qHi[t];q>=fbInfo->aInfo->qLo[t];q--) { /*MAX(qHi[t],qLo[t]) because of the case for tee models where qHi[t]=qLo[t]-1 .*/
@@ -1433,7 +1433,7 @@ static void StepForward()
    DVector aqt,aqt1,bqt,bqt1,tmp;
    double occ, total_occ;
    HLink hmm, up_hmm;
-   ResetObsCache();
+   ResetObsCache(fbInfo->xfinfo);
    ZeroAlpha(1, fbInfo->Q); /*Zero the alphat column,*/
    for(q=1;q<=fbInfo->Q;q++){ /*And switch: now the alphat1 column is zero.*/
       Acoustic *ac = fbInfo->aInfo->ac + q;

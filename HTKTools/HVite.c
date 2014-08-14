@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hvite_version = "!HVER!HVite:   3.4 [CUED 25/04/06]";
-char *hvite_vc_id = "$Id: HVite.c,v 1.14 2008/01/08 09:36:38 zen Exp $";
+char *hvite_vc_id = "$Id: HVite.c,v 1.15 2008/03/02 05:49:34 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -990,7 +990,7 @@ void DoAlignment(void)
          TidyBaseAccs(&xfInfo);
          GenAdaptXForm(&hset,&xfInfo);
          xfInfo.inXForm = GetMLLRDiagCov(&xfInfo,incXForm);
-	 SetXForm(&hset,xfInfo.inXForm);
+         SetXForm(&hset,&xfInfo,xfInfo.inXForm);
          ApplyHMMSetXForm(&hset,xfInfo.inXForm,FALSE);
       }
       ResetHeap(&netHeap);
@@ -1049,7 +1049,7 @@ void DoRecognition(void)
             TidyBaseAccs(&xfInfo);
             GenAdaptXForm(&hset,&xfInfo);
             xfInfo.inXForm = GetMLLRDiagCov(&xfInfo,incXForm);
-            SetXForm(&hset,xfInfo.inXForm);
+            SetXForm(&hset,&xfInfo,xfInfo.inXForm);
             ApplyHMMSetXForm(&hset,xfInfo.inXForm,FALSE);
          }
       }
@@ -1082,7 +1082,7 @@ void DoRecognition(void)
             TidyBaseAccs(&xfInfo);
             GenAdaptXForm(&hset,&xfInfo);
             xfInfo.inXForm = GetMLLRDiagCov(&xfInfo,incXForm);
-            SetXForm(&hset,xfInfo.inXForm);
+            SetXForm(&hset,&xfInfo,xfInfo.inXForm);
             ApplyHMMSetXForm(&hset,xfInfo.inXForm,FALSE);
          }
       }

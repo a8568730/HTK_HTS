@@ -45,7 +45,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hmgens_version = "!HVER!HMGenS:   2.1beta [NIT 15/01/08]";
-char *hmgens_vc_id = "$Id: HMGenS.c,v 1.42 2008/01/11 03:08:02 zen Exp $";
+char *hmgens_vc_id = "$Id: HMGenS.c,v 1.43 2008/03/02 05:50:14 zen Exp $";
 
 /*  
     This program is used to generate feature vector sequences 
@@ -647,15 +647,16 @@ void Initialise (void)
       ZeroAccs(&dmset, (UPDSet)0);
    }
    
-   InitialiseForBack(fbInfo, &fbInfoStack, &hmset, (UPDSet)0, ((useHMMFB||stateAlign)?NULL:&dmset), (UPDSet)0, pruneInit, pruneInc,
-                     pruneLim, minFrwdP, useAlign, FALSE);
+   if (type!=CHOLESKY)
+      InitialiseForBack(fbInfo, &fbInfoStack, &hmset, (UPDSet)0, ((useHMMFB||stateAlign)?NULL:&dmset), (UPDSet)0, pruneInit, pruneInc,
+                        pruneLim, minFrwdP, useAlign, FALSE);
                      
    /* handle input xform */
    xfInfo_hmm.inFullC = xfInfo_dur.inFullC = TRUE;
    
    /* semi-tied case */
    if (hmset.semiTied!=NULL) {
-      SetXForm(&hmset, hmset.semiTied);
+      SetXForm(&hmset, NULL, hmset.semiTied);
       ApplyHMMSetXForm(&hmset, hmset.semiTied, TRUE);
    }
    

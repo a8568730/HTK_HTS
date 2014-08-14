@@ -38,7 +38,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -73,7 +73,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hdecode_version = "!HVER!HDecode:   3.4 [GE 25/04/06]";
-char *hdecode_sccs_id = "$Id: HDecode.c,v 1.5 2008/01/15 13:18:27 zen Exp $";
+char *hdecode_sccs_id = "$Id: HDecode.c,v 1.7 2008/03/24 01:50:36 zen Exp $";
 
 /* this is just the tool that handles command line arguments and
    stuff, all the real magic is in HLVNet and HLVRec */
@@ -280,7 +280,7 @@ ReportUsage (void)
 #ifdef TSIDOPT
    printf ("TSIDOPT ");
 #endif   
-   printf ("\n  sizes: PronId=%d  LMId=%d \n", sizeof (PronId), sizeof (LMId));
+   printf ("\n  sizes: PronId=%zd  LMId=%zd \n", sizeof (PronId), sizeof (LMId));
 }
 
 int
