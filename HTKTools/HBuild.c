@@ -19,8 +19,53 @@
 /*     File: HBuild.c:  Word-Lattice Building                  */
 /* ----------------------------------------------------------- */
 
-char *hbuild_version = "!HVER!HBuild:   3.2.1 [CUED 15/10/03]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hbuild_version = "!HVER!HBuild:   3.4 [CUED 25/04/06]";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.3 2006/12/29 04:44:56 zen Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.
@@ -85,6 +130,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS\n");
    printf("\nUSAGE: HBuild [options] wordList latFile\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -b      binary lattice output                ASCII\n");
@@ -102,7 +148,7 @@ void ReportUsage(void)
 
 int main(int argc, char *argv[])
 {
-   char *wordListFn,*latFn,*ipFn;
+   char *wordListFn,*latFn,*ipFn=NULL;
    LModel *bigramLm;
    BuildType bType = unknown;
    Boolean saveLatBin = FALSE;
@@ -261,6 +307,15 @@ int main(int argc, char *argv[])
    default:
       HError(3001,"Only Bigram LMs / multiLats currently implemented");
    }
+   
+   ResetLM();
+   ResetNet();
+   ResetDict();
+   ResetMath();
+   ResetLabel();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
@@ -520,7 +575,7 @@ Lattice *ProcessMatBiGram(MemHeap *latHeap, Vocab *voc, MatBiLM *bg)
 /* ProcessBiGram: Convert bigram in biLM into lattice */
 Lattice *ProcessBiGram(MemHeap *latHeap, Vocab *voc, LModel *biLM)
 {
-   Lattice *lat;
+   Lattice *lat = NULL;
 
    switch (biLM->type) {
    case boNGram:
@@ -578,7 +633,7 @@ Boolean SkipHeader(FILE *f)
       ch = getc(f);
    if (ch == '/') {
       ch = getc(f);      
-      inComment = (ch == '*');
+      inComment = (ch == '*') ? TRUE:FALSE;
       if (!inComment)
          HError(3040,"SkipHeader: / char illegal if not in comment or delimiter");  
       else
@@ -586,7 +641,7 @@ Boolean SkipHeader(FILE *f)
             ch = getc(f);
             if (ch == '*') {
                ch = getc(f);
-               inComment = (ch != '/');
+               inComment = (ch != '/') ? TRUE:FALSE;
             }
          }
    }     
@@ -635,7 +690,7 @@ void ReadWPGrammar(WPGrammar *wpg, Vocab * voc, char *gramFn)
    char buf[255];
    int ch;
    Word newWord;
-   GramEntry *newGram;
+   GramEntry *newGram = NULL;
    Boolean newEntry;
    WordFllr *wdfllr; 
    Word sentEnd;   
@@ -650,7 +705,7 @@ void ReadWPGrammar(WPGrammar *wpg, Vocab * voc, char *gramFn)
       HError(3040,"ReadWPGrammar: Unexpected eof while reading %s", gramFn);
    do {
       ch = getc(gf);
-      newEntry = (ch == '>');
+      newEntry = (ch == '>') ? TRUE:FALSE;
       if (wpg->nwords == 0 && !newEntry)
          HError(3040,"ReadWPGrammar: > expected while reading %s", gramFn);
       if (!ReadLabel(gf,buf)) {

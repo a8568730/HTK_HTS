@@ -1,20 +1,16 @@
-<html><head><title>HMM-Based Speech Synthesis System (HTS)</title></head>
+================================================================
+    The HMM-based Speech Synthesis System (HTS) version 2.0 
+                  release December 29, 2006
 
-<body>
 
-<pre>
-          The HMM-based Speech Synthesis System (HTS)
-            version 1.1.1 release December 26, 2003
+The HMM-Based Speech Synthesis System (HTS) 
+(http://hts.ics.nitech.ac.jp/) has been being developed by the 
+HTS working group (see "Who we are" below) and others (see 
+"Acknowledgements" in the separate file).  The training part of 
+HTS was implemented as a modified version of the Hidden Markov 
+Model Toolkit (HTK) (http://htk.eng.cam.ac.uk/).  Major 
+modifications which we made to HTK are listed below:
                                 
-The HMM-Based Speech Synthesis System (HTS)
-(http://hts.ics.nitech.ac.jp/) has been being developed by the
-HTS working group (see "Who we are" below) and others (see
-"Acknowledgments" below).  The training part of HTS was
-implemented as a modified version of the HTK
-(http://htk.eng.cam.ac.uk/) together with the SPTK
-(http://kt-lab.ics.nitech.ac.jp/~tokuda/SPTK/).  Modifications
-which we made to HTK are listed below:
-
  - Context clustering based on MDL criterion (instead of ML one)
  - Stream-dependent context clustering
  - Multi-space probability distribution as state output
@@ -22,404 +18,214 @@ which we made to HTK are listed below:
  - State duration modeling and clustering
 
 Related publications about the techniques and algorithms used in
-HTS can be found at http://hts.ics.nitech.ac.jp/publications.html
+HTS can be found at 
+http://hts.ics.nitech.ac.jp/publications.html
 
-The current version does not include any text analyzer but the
-Festival Speech Synthesis System
-(http://www.festvox.org/festival/) can be used as a text
-analyzer.  HTS version 1.1.1 includes a small run-time synthesis
-engine (less than 1 M byte including HMMs).  Since the synthesis
-engine can run without the HTK library, it is suitable for using
-on the Festival.
+The current version does not include any text analyzer but the 
+Festival Speech Synthesis System 
+(http://www.festvox.org/festival/) can be used as a text 
+analyzer.  Since version 1.1, HTS has included a small run-time 
+synthesis engine called hts_engine 
+(less than 2 Mbytes including HMMs).  Since the synthesis engine 
+can run without the HTK library, it is suitable for using on the 
+Festival and other applications.
 
-This distribution comes with a demo script using "CMU ARCTIC US
-English awb" (http://www.festvox.org/cmu_arctic/dbs_awb.html),
-which generates "voices" for Festival.
 
-Two HTS voices for Festival trained by using 450 utterances of
-"CSTR US KED Timit" (http://www.festvox.org/dbs/dbs_kdt.html)
-and 523 utterances of "CMU Communicator KAL limited domain"
-(http://www.festvox.org/dbs/dbs_com.html), respectively, and
-four HTS voices for Festival trained by using "CMU ARCTIC
-database" (http://www.festvox.org/cmu_arctic/) are also released
-with HTS version 1.1.1.  Each of HTS voices consists of HMMs
-trained by the demo script and the small run-time synthesis
-engine, and can be used as a "voice" of Festival Speech
-Synthesis System without any other HTS tools.
+This distribution comes with demo scripts for training 
+speaker-dependent and speaker-adaptation systems using "CMU ARCTIC 
+databases" (http://www.festvox.org/cmu_arctic/).  These demo 
+scripts generate "voices" for Festival.
+
+Six HTS voices for Festival 1.95 & 1.96 trained by CMU ARCTIC 
+databases are also released with HTS version 2.0.  Each of HTS 
+voices consists of HMMs trained by the demo script, and can be 
+used as a "voice" of Festival Speech Synthesis System without any 
+other HTS tools.
 
 *** Notes for Japanese speech synthesis ***
 
-A demo script using the NIT database for speech synthesis "NIT
-JP ATR503 m001" is also prepared for training Japanese voices.
-
-Voices trained by the demo script can be used on GalateaTalk,
-which is a speech synthesis module of an open-source toolkit for
-anthropomorphic spoken dialogue agents developed in Galatea
-project (http://hil.t.u-tokyo.ac.jp/~galatea/), without any
-other HTS tools.
+A demo script using the Nitech database for speech synthesis 
+"Nitech Jp ATR503 m001" is also prepared for training Japanese 
+voices.  Voices trained by the demo script can be used on 
+GalateaTalk, which is a speech synthesis module of an open-source 
+toolkit for anthropomorphic spoken dialogue agents developed in 
+Galatea project (http://hil.t.u-tokyo.ac.jp/~galatea/), without 
+any other HTS tools.
 
 An HTS voice for GalateaTalk trained by the demo script is also
-released with HTS version 1.1.1.
-
+released with HTS version 2.0.
 
 ****************************************************************
-                   What's new in version 1.1.1
+		   What's new in version 2.0
 ****************************************************************
 
- - Based on HTK-3.2.1
- - Demo script for ARCTIC database
- - Demo script for an original database (Japanese)
- - Variance flooring in demo script
- - Postfiltering in hts-engine
- - Many fixed bugs
+ * Based on HTK-3.4.
+ * Compilation without SPTK.
+ * The license of HTS was slightly modified.
+ * Support gcc4.
+ * Thousands of fixed bugs.
+ * HRest can generate state duration densities (-g option).
+ * Model boundaries can be given to HERest (-e option).
+   We may specify a part of model boundaries (e.g, pause positions).
+ * Reduced-memory implementation of context clustering in HHEd 
+   (-r option).
+ * Each decision tree can have a name with regular expression 
+   (-p option).
+     ex. TB 000 {(*-a+*, *-i+*, *-u+*).state[2]}
+         TB 000 {(*-sil+*, *-pau+*).state[3]}
+   As a result, different two trees can be constructed for 
+   consonants and vowels, respectively.
+ * The interface of HMGenS has been switched from HHEd-style to 
+   HERest-style.
+ * Flexible model structures in HMGenS (in the previous version, 
+   the first stream is assumed as mcep, and the others are assumed 
+    as log F0).  Non-left-to-right models and full covariance 
+    matrices for state output pdfs can also be used.
+ * EM-based parameter generation algorithm (-c option), i.e, 
+   mixture of Gaussians can be used.
+     -c 0: Cholesky decomposition
+     -c 1: EM (with fixed state sequence)
+     -c 2: EM (phone boundaries can be given with -e option)
+ * Random generation algorithm is also supported 
+   (set config. variable RNDPG = TRUE).
+ * Speaker adaptation, adaptive training, and semi-tied covariance i
+   transforms are supported for multi-stream HMMs/MSD-HMMs.
+     - MLLRMEAN, MLLRCOV, and CMLLR-based adaptation.
+     - CMLLR-based adaptive training.
+     - Decision trees for context clustering can be used to define
+       regression classes for adaptation.
+     - HMGenS can read MLLRMEAN, MLLRCOV, CMLLR, and SEMIT transforms i
+       for adaptation.
+ * MAP adaptation is also supported.
+ * Performance improvements in hts_engine.
+ * Miscellaneous changes.
 
 ****************************************************************
                             Copying
 ****************************************************************
 
-The basic core system of HMM-Based Speech Synthesis System (HTS)
-version 1.1.1 (http://hts.ics.nitech.ac.jp/) is released as a
-patch code to HTK version 3.2.1 (http://htk.eng.cam.ac.uk/).
-The patch code is released under a free license, without
-commercial restrictions.  However, it should be noted that once
-you apply the patch to the HTK source code, you must obey the
-license of HTK.
+The basic core system of HTS version 2.0 is released as a patch 
+code to HTK version 3.4.  The patch code is released under a 
+BSD-style license, without commercial restrictions.  However, it 
+should be noted that once you apply the patch to the HTK source 
+code, you must obey the license of HTK.
 
-Although the patch code is free, we still offer no warranties
-and no maintenance.  We will continue to endeavor to fix bugs
-and answer queries when can, but are not in a position to
-guarantee it.  We will consider consultancy if desired, please
+Although the patch code is free, we still offer no warranties 
+and no maintenance.  We will continue to endeavor to fix bugs 
+and answer queries when can, but are not in a position to 
+guarantee it.  We will consider consultancy if desired, please 
 contacts us for details.
 
-If you are using HMM-based Speech Synthesis System (HTS) version
-1.1.1 or Speech Signal Processing Toolkit (SPTK) version 3.0 in
-commercial environment, even though no license is required, we
-would be grateful if you let us know as it helps justify
-ourselves to our various sponsors.
+If you are using HTS version 2.0 in commercial environment, even 
+though no license is required, we would be grateful if you let 
+us know as it helps justify ourselves to our various sponsors.  
+We also strongly encourage you to
+
+ * reference the use of HTS in any publications that use the software
+ * report all bugs, where possible with bug fixes, that are found.
 
 The current copyright on the core system is
 
-----------------------------------------------------------------
-    The HMM-Based Speech Synthesis System (HTS): version 1.1.1
-                      HTS Working Group
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
 
-                 Department of Computer Science
-                 Nagoya Institute of Technology
-                              and
-  Interdisciplinary Graduate School of Science and Engineering
-                 Tokyo Institute of Technology
-                    Copyright (c) 2001-2003
-                      All Rights Reserved.
-                                                                       
-Permission is hereby granted, free of charge, to use and
-distribute this software in the form of patch code to HTK and
-its documentation without restriction, including without
-limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of this work, and to
-permit persons to whom this work is furnished to do so, subject
-to the following conditions:
+Several tools in HTS version 2.0 are independent of HTK (though 
+most of them use the HTK library).  The copyright of these tools 
+is
 
-  1. Once you apply the HTS patch to HTK, you must obey the
-     license of HTK.
-
-  2. The code must retain the above copyright notice, this list
-     of conditions and the following disclaimer.
-
-  3. Any modifications must be clearly marked as such.
-
-NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,
-HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM
-ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT
-SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF
-TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE
-FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
-DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
-WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS
-ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-----------------------------------------------------------------
-
-Several tools in HTS version 1.1.1 are independent of HTK
-(though most of them use the HTK library).  The copyright of
-these tools is
-
-----------------------------------------------------------------
-    The HMM-Based Speech Synthesis System (HTS): version 1.1.1
-                      HTS Working Group
-
-                 Department of Computer Science
-                 Nagoya Institute of Technology
-                              and
-  Interdisciplinary Graduate School of Science and Engineering
-                 Tokyo Institute of Technology
-                    Copyright (c) 2001-2003
-                      All Rights Reserved.
-
-Permission is hereby granted, free of charge, to use and
-distribute this software and its documentation without
-restriction, including without limitation the rights to use,
-copy, modify, merge, publish, distribute, sublicense, and/or
-sell copies of this work, and to permit persons to whom this
-work is furnished to do so, subject to the following conditions:
-
-  1. The code must retain the above copyright notice, this list
-     of conditions and the following disclaimer.
-
-  2. Any modifications must be clearly marked as such.
-                                                                       
-NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,
-HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM
-ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT
-SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF
-TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE
-FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
-DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
-WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS
-ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-----------------------------------------------------------------
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software and its documentation without           */
+/*  restriction, including without limitation the rights to use,     */
+/*  copy, modify, merge, publish, distribute, sublicense, and/or     */
+/*  sell copies of this work, and to permit persons to whom this     */
+/*  work is furnished to do so, subject to the following conditions: */
+/*                                                                   */
+/*    1. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    2. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*    3. Redistributions in binary form must reproduce the above     */
+/*       copyright notice, this list of conditions and the           */
+/*       following disclaimer in the documentation and/or other      */
+/*       materials provided with the distribution.  Otherwise, one   */
+/*       must contact the HTS working group.                         */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
 
 ****************************************************************
                           Installation
 ****************************************************************
 
-HTS needs SPTK and HTK.
-
-*** Installation of HTS ***
-
-1. Installation of SPTK (See "README" file of SPTK)
-
-   0) Download "SPTK-3.0.tar.gz" from
-      http://kt-lab.ics.nitech.ac.jp/~tokuda/SPTK/ and expand it
-      in a directory on your disk.
-
-   1) Enter "src" directory.
-
-   2) Read the comments in "Makefile" and make any necessary
-      changes.
-
-   3) To build and install all tools, type:
-
-        % make
-        % make install
-
-2. Download of HTK
-
-   0) Download "HTK-3.2.1.tar.gz" from
-      http://htk.eng.cam.ac.uk/ and expand it
-      in a directory on your disk.
-
-3. Installation of HTS
-
-   0) Download "HTS-1.1.1_for_HTK-3.2.1.tar.gz" from
-      http://hts.ics.nitech.ac.jp/ and expand it in a directory
-      on your disk.
-
-   1) Copy "HTS-1.1.1/HTS-1.1.1_for_HTK-3.2.1.patch" into
-      ".../HTK-3.2.1/htk"
-
-   2) Move into "HTK-3.2.1/htk", and type:
-
-        % patch -p1 &lt; HTS-1.1.1_for_HTK-3.2.1.patch
-
-   3) According "README" file of HTK, make any necessary changes
-      to "HTK-3.2.1/htk/HTKLib/Makefile" and
-      "HTK-3.2.1/htk/HTKTools/Makefile" (e.g., ${SPTK}, ${CPU},
-      ${BIN}, ${HTKCC}, ${HTKLF}), and compile/install it.
-
-*** Installation of the small synthesis engine ***
-
-   1) enter the directory "hts_engine" and type:
-
-      % ./configure
-      % make
-
-*** Installation of HTS-demo ***
-
-HTS-demo needs Festival speech synthesis system, SPTK, and HTS.
-
-1. Installation of festival
-
-   0) Download "festival-1.4.3-release.tar.gz" from
-      http://www.festvox.org/ and expand it in a directory on
-      your disk.
-  
-   1) According "README" and "INSTALL" of festival, please
-      install festival into your machine.
-
-2. Installation of HTS-demo_CMU-ARCTIC-AWB
-   (HTS-demo_NIT-ATR503-M001 for Japanese can also be used in the same
-   manner.)
-   
-   0) Download "HTS-demo_CMU-ARCTIC-AWB.tar.gz" from
-      http://hts.ics.nitech.ac.jp/ and expand it in a directory
-      on your disk.
-
-   1) Read the comments in "Makefile" and make any necessary
-      changes.  (e.g., ${SPTKDIR}, ${FESTIVALDIR}),
-
-   2) To build HTS-demo_CMU-ARCTIC-AWB, type:
-      
-      % make
-
-3. Installation of HTS-demo
-   
-   0) Download "HTS-demo.tar.gz" from
-      http://hts.ics.nitech.ac.jp/ and expand it in a directory
-      on your disk.
- 
-   1) Read the comments in "Makefile" and make any necessary changes
-      (e.g., ${SPTKBINDIR}, ${HTSBINDIR}, ${DATADIR}, ${SPEAKER},
-      ${DATASET}).
-
-   2) To build HTS-demo, type:
-   
-      % make
-
-*** Test ****
-
-1. Run the training script.  It will train HMMs and synthesize some
-   speech samples from the HMMs.
-
-      % perl scripts/Training_cmu_us_arctic_awb.pl
-
-   or
-
-      % perl scripts/Training_nit_jp_ATR503_m001.pl
-
-****************************************************************
-                        Acknowledgments
-****************************************************************
-
-The following people and organizations have contributed to the
-development of HTS in various ways.  It is their work that makes
-it all possible.  In no special order:
-
-Keiichi Tokuda
-  Overall concept and design.
-Heiga Zen
-  Throwing away all old codes of HTS and rewriting them as HTS
-  version 1.0, 1.1, 1.1b, and 1.1.1.  Current maintainer of HTS.
-Jun-ichi Yamagishi
-  Testing out various clustering algorithms.
-Takayoshi Yoshimura
-  Development of the first version of HTS.
-Masatsune Tamura
-  Implementation of various speaker adaptation algorithms for
-  HMM-based speech synthesis.
-Shinji Sako
-  Applying HMM-based speech synthesis to audio-visual speech.
-Noboru Miyazaki
-  Implementation of the first version of MSD-HMM trainer for
-  pitch pattern modeling.
-Tetsuya Yamada
-  Testing out various HMM training algorithms for HMM-based
-  speech synthesis.
-Takashi Masuko
-  Discussions in detail and implementing speech parameter
-  generation algorithms.
-Takao Kobayashi
-  Discussions and supervising students working on speech
-  synthesis.
-Tadashi Kitamura
-  Discussions and supervising students working on speech
-  synthesis.
-Satoshi Imai
-  Supervising students working on speech synthesis.
-Alan Black
-  Discussions about all aspects of speech synthesis, helping us
-  to use Festival, and supplying speech databases.
-Steve Young and
-Phil Woodland
-  Development of HTK.
-Hisashi Kawai
-  Discussions and comments on prosody modeling and labeling.
-Yuzo Takamido
-  Testing out various training conditions.
-Keikichi Hirose
-  Involving HTS working group in his national research project.
-Members of IPA Galatea Project:
-Yoichi Yamashita,
-Nobuaki Minematsu,
-Atsushi Yamada,
-Takehito Utsuro, and
-Yasuharu Den
-  Discussions and comments.
-Toshiaki Fukada
-  Discussions and various comments.
-Yasuhiro Komori,
-Masayuki Yamada, and
-Hiroki Yamamoto
-  Discussions and explanation of HMM-based speech recognition.
-Toshihiro Wakita and
-Ryuta Terashima
-  Discussions about application of HMM-based speech synthesis.
-Mike Schuster
-  Being interested in the HMM-based speech synthesis approach
-  and recommending to advertise it at speech related sites.
-Rob Donovan
-  Discussions about HMM-based speech synthesis.
-Mari Ostendorf and
-Ivan Bulyko
-  Discussions and supplying speech database.
-ATR, SLT
-  Using HTS as the prosody predictor of XIMERA.
-Yasuhiro Minami
-  Discussions and applying the speech parameter generation
-  algorithm to speech recognition.
-Sadaoki Furui
-  Using the HMM-based speech synthesis scheme in their speech
-  synthesizer.
-Naoto Iwahashi
-  Discussions and using HMM-based speech synthesis scheme in his
-  research.
-Alex Acero and
-Li Deng
-  Discussions about HMM-based speech synthesis.
-Carnegie Mellon University, Language Technologies Institute
-  Accepting the sabbatical stay of K. Tokuda.
-Jun-ichi Takami
-  Discussions and training HMMs using SSS.
-Kengo Shichiri
-  Developing a "eigenvoice system" for HMM-based speech
-  synthesis.
-Nobuaki Mizutani
-  Developing a labeling tool and a unit selection system based
-  on HMM-based speech synthesis system.
-Kikuo Emoto 
-  Developing a labeling tool.
-Takahiro Hoshiya
-  Developing a script for recording speech database.
-Ryosuke Tsuduki
-  Training the system using emotional speech.
-Shunsuke Kataoka
-  Implementation of the "back-off" mechanism.
-Yijian Wu
-  Investigating the effect of variance flooring.
-Ranniery da Silva Maia
-  Implementing a Brazilian Portuguese synthesizer.
-Fernand Gil Viana Resende, Jr.
-  Discussion about Brazilian Portuguese synthesizer.
-Bostjan Vesnicer
-  Reporting bugs and implementing Slovenian speech synthesizer.
-Asahi Kasei:
-Makoto Shozakai,
-Takaaki Kawasaki, and
-Tsuyoshi Masuda
-  Bug report.
-Brother:
-Yoshiaki Komatsu,
-Takashi Ito, and
-Akiko Yamato
-  Bug report.
-PtoPA:
-Li Deheng,
-Gonta Tateishi, and
-Chiaki Oigo
-  Bug report.
-and others.
+Please expand HTS-2.0_for_HTK-3.4.tar.bz2 and see the extracted 
+file "INSTALL".  Note that HTS requires HTK.
 
 ****************************************************************
                            Who we are
@@ -429,21 +235,18 @@ HTS working group is a voluntary group for developing the
 HMM-Based Speech Synthesis System.  Current HTS working group
 members are
 
-  Keiichi Tokuda (Organizer) http://kt-lab.ics.nitech.ac.jp/~tokuda/
-  Heiga Zen (Maintainer)     http://kt-lab.ics.nitech.ac.jp/~zen/
-  Takashi Masuko             http://sp-www.ip.titech.ac.jp/~masuko/
-  Shinji Sako                http://kt-lab.ics.nitech.ac.jp/~sako/
-  Jun-ichi Yamagishi         
-  Daiki Sanno                
-  Masatsune Tamura           
-  Takayoshi Yoshimura        
-  Alan W. Black              http://www.cs.cmu.edu/~awb/
-  Ryosuke Tsuzuki            http://kt-lab.ics.nitech.ac.jp/~ryosuke/
-  Shunsuke Kataoka           http://kt-lab.ics.nitech.ac.jp/~shunsuke/
+ Keiichi Tokuda      http://kt-lab.ics.nitech.ac.jp/~tokuda/
+ (Principle Designer)
+ Heiga Zen           http://kt-lab.ics.nitech.ac.jp/~zen/
+ (Main Maintainer)
+ Jun-ichi Yamagishi  http://www.kbys.ip.titech.ac.jp/yamagishi/
+ Takashi Masuko
+ Shinji Sako         http://hil.t.u-tokyo.ac.jp/~sako/profile.html.en
+ Alan W. Black       http://www.cs.cmu.edu/~awb/
+ Takashi Nose
 
 and the members are dynamically changing.  The current formal
 contact address of HTS working group and a mailing list for HTS
 users can be found at http://hts.ics.nitech.ac.jp/
-</pre>
+================================================================
 
-</body></html>

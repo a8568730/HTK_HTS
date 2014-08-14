@@ -19,10 +19,9 @@
 /* File: HSmooth.c: Perform Parameter Smoothing on a HMM Set   */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -30,7 +29,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -44,10 +44,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -62,12 +63,9 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HSmooth.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen     */
-/*  ---------------------------------------------------------------  */
 
-
-char *hsmooth_version = "!HVER!HSmooth:   3.2.1 [CUED 15/10/03]";
-char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hsmooth_version = "!HVER!HSmooth:   3.4 [CUED 25/04/06]";
+char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.3 2006/12/29 04:44:55 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -101,8 +99,6 @@ static float mixWeightFloor=0.0; /* Floor for mixture weights */
 static int minEgs    = 3;        /* min examples to train a model */
 static int maxStep   = 16;       /* max number of binary chops */
 static float epsilon = 0.0001;   /* binary chop convergence criterion */
-enum _UPDSet{UPMEANS=1,UPVARS=2,UPTRANS=4,UPMIXES=8};
-typedef enum _UPDSet UPDSet;
 static UPDSet uFlags = (UPDSet) (UPMEANS|UPVARS|UPTRANS|UPMIXES);   /* update flags */
 static Boolean stats = FALSE;    /* enable statistics reports */
 static Boolean saveBinary = FALSE;  /* save output in binary  */
@@ -165,7 +161,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.1.1\n");
+   printf("\nModified for HTS\n");
    printf("\nUSAGE: HSmooth [options] hmmList AccFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -b f    set convergence epsilon              0.0001\n");
@@ -297,7 +293,7 @@ int main(int argc, char *argv[])
       if (NextArg()!=STRINGARG)
          HError(2419,"HSmooth: accumulator file name expected");
       accfn = GetStrArg();
-      src=LoadAccs(&hset,accfn);
+      src=LoadAccs(&hset,accfn,uFlags);
       ReadFloat(&src,&tmpFlt,1,ldBinary);
       totalPr += (LogDouble)tmpFlt;
       ReadInt(&src,&tmpInt,1,ldBinary);
@@ -310,6 +306,20 @@ int main(int argc, char *argv[])
    Interpolate();
    if (stats) StatReport();
    UpdateModels();
+   
+   ResetUtil();
+   ResetTrain();
+   ResetParm();
+   ResetModel();
+   ResetVQ();
+   ResetAudio();
+   ResetWave();
+   ResetSigP();
+   ResetMath();
+   ResetLabel();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
@@ -450,8 +460,8 @@ void Initialise(char *hmmListFn)
       HError(2429,"Initialise: MakeHMMSet failed");
    if(LoadHMMSet( &hset,hmmDir,newExt)<SUCCESS)
       HError(2429,"Initialise: LoadHMMSet failed");
-   AttachAccs(&hset, &gstack);
-   ZeroAccs(&hset);   
+   AttachAccs(&hset, &gstack,uFlags);
+   ZeroAccs(&hset,uFlags);   
    nPhyHmms = hset.numPhyHMM;
    nLogHmms = hset.numLogHMM;
    vSize = hset.vecSize;
@@ -751,7 +761,7 @@ float LambdaOpt(StreamInfo *sti, int M)
 void Interpolate(void)
 {
    LabId x;
-   int i,N,p,s,b,j,M;
+   int i,N,p,s,b,j,M=0;
    float l;
    StreamElem *ste;
    
@@ -882,7 +892,7 @@ void FloorDProbs(ShortVec mixes, int M, float floor)
 /* UpdateWeights: use acc values to calc new estimate of mix weights */
 void UpdateWeights(HLink hmm)
 {
-   int i,s,m,M,N;
+   int i,s,m,M=0,N;
    float x,occi;
    WALink wa;
    StateElem *se;
@@ -999,7 +1009,7 @@ void UpdateTMVars(void)
             occim = va->occ;
             mixFloored = FALSE;
             if (occim > 0.0){
-               shared=(GetUse(cov.var)>1 || ma==NULL || ma->occ<=0.0);
+               shared=((GetUse(cov.var)>1 || ma==NULL || ma->occ<=0.0) ? TRUE:FALSE);
                if ((mpdf->ckind==DIAGC)||(mpdf->ckind==INVDIAGC))
                   for (k=1; k<=vSize; k++){
                      muDiffk=(shared)?0.0:ma->mu[k]/ma->occ;
@@ -1095,7 +1105,7 @@ void UpdateModels(void)
       fflush(stdout);
    }
 
-   if(SaveHMMSet(&hset,newDir,newExt,saveBinary)<SUCCESS)
+   if(SaveHMMSet(&hset,newDir,newExt,NULL,saveBinary)<SUCCESS)
       HError(2411,"UpdateModels: SaveHMMSet failed");
    ResetHeaps();                               /* Clean Up */
    if (trace&T_TOP)

@@ -19,10 +19,9 @@
 /*         File: HMath.h:   Math Support                       */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -30,7 +29,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -44,10 +44,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -62,10 +63,8 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*     HMath.h modified for HTS-1.1.1 2003/12/26 by Heiga Zen        */
-/*  ---------------------------------------------------------------  */
 
-/* !HVER!HMath:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HMath:   3.3 [CUED 28/04/05] */
 
 #ifndef _HMATH_H_
 #define _HMATH_H_
@@ -115,6 +114,11 @@ void InitMath(void);
    Initialise the module
 */
 
+void ResetMath(void);
+/*
+   Reset the module
+*/
+
 /* ------------------ Vector Oriented Routines ----------------------- */
 
 void ZeroShortVec(ShortVec v);
@@ -137,6 +141,7 @@ void CopyDVector(DVector v1, DVector v2);
 Boolean ReadShortVec(Source *src, ShortVec v, Boolean binary);
 Boolean ReadIntVec(Source *src, IntVec v, Boolean binary);
 Boolean ReadVector(Source *src, Vector v, Boolean binary);
+Boolean ReadDVector (Source *src, DVector v,  Boolean binary);
 /*
    Read vector v from source in ascii or binary
 */
@@ -144,6 +149,7 @@ Boolean ReadVector(Source *src, Vector v, Boolean binary);
 void WriteShortVec(FILE *f, ShortVec v, Boolean binary);
 void WriteIntVec(FILE *f, IntVec v, Boolean binary);
 void WriteVector(FILE *f, Vector v, Boolean binary);
+void WriteDVector (FILE *f, DVector v,  Boolean binary);
 /*
    Write vector v to stream f in ascii or binary
 */
@@ -162,15 +168,19 @@ void LinTranQuaProd(Matrix Prod, Matrix A, Matrix C);
 /* ------------------ Matrix Oriented Routines ----------------------- */
 
 void ZeroMatrix(Matrix m);
+void ZeroIMatrix(IMatrix m);
 void ZeroDMatrix(DMatrix m);
 void ZeroTriMat(TriMat m);
+void ZeroDTriMat(DTriMat m);
 /*
    Zero the elements of m
 */
 
 void CopyMatrix (Matrix m1,  Matrix m2);
+void CopyIMatrix(IMatrix m1, IMatrix m2);
 void CopyDMatrix(DMatrix m1, DMatrix m2);
 void CopyTriMat (TriMat m1,  TriMat m2);
+void CopyDTriMat(DTriMat m1, DTriMat m2);
 /*
    Copy matrix m1 to m2 which must have identical dimensions
 */
@@ -179,13 +189,18 @@ void Mat2DMat(Matrix m1,  DMatrix m2);
 void DMat2Mat(DMatrix m1, Matrix m2);
 void Mat2Tri (Matrix m1,  TriMat m2);
 void Tri2Mat (TriMat m1,  Matrix m2);
+void DMat2DTri(DMatrix m1, DTriMat m2);
+void DTri2DMat(DTriMat m1, DMatrix m2);
 /*
    Convert matrix format from m1 to m2 which must have identical 
    dimensions
 */
 
 Boolean ReadMatrix(Source *src, Matrix m, Boolean binary);
+Boolean ReadIMatrix(Source *src, IMatrix m, Boolean binary);
+Boolean ReadDMatrix(Source *src, DMatrix m, Boolean binary);
 Boolean ReadTriMat(Source *src, TriMat m, Boolean binary);
+Boolean ReadDTriMat(Source *src, DTriMat m, Boolean binary);
 /*
    Read matrix from source into m using ascii or binary.
    TriMat version expects m to be in upper triangular form
@@ -193,7 +208,10 @@ Boolean ReadTriMat(Source *src, TriMat m, Boolean binary);
 */
    
 void WriteMatrix(FILE *f, Matrix m, Boolean binary);
+void WriteIMatrix(FILE *f, IMatrix m, Boolean binary);
+void WriteDMatrix(FILE *f, DMatrix m, Boolean binary);
 void WriteTriMat(FILE *f, TriMat m, Boolean binary);
+void WriteDTriMat(FILE *f, DTriMat m, Boolean binary);
 /*
     Write matrix to stream in ascii or binary.  TriMat version 
     writes m in upper triangular form even though it is stored
@@ -201,8 +219,10 @@ void WriteTriMat(FILE *f, TriMat m, Boolean binary);
 */
 
 void ShowMatrix (char * title,Matrix m, int maxCols,int maxRows);
+void ShowIMatrix(char *title, IMatrix m, int maxCols, int maxRows);  
 void ShowDMatrix(char * title,DMatrix m,int maxCols,int maxRows);
 void ShowTriMat (char * title,TriMat m, int maxCols,int maxRows);
+void ShowDTriMat(char *title, DTriMat m, int maxCols, int maxRows);
 /*
    Print the title followed by upto maxCols elements of upto
    maxRows rows of m.
@@ -210,16 +230,39 @@ void ShowTriMat (char * title,TriMat m, int maxCols,int maxRows);
 
 /* ------------------- Linear Algebra Routines ----------------------- */
 
+void MatrixMult(Matrix m1, Matrix m2, Matrix m);
+/* 
+   Matrix multiplication
+*/
+
 LogFloat CovInvert(TriMat c, Matrix invc);
+LogDouble DCovInvert(DTriMat c, DMatrix invc);
 /*
    Computes inverse of c in invc and returns the log of Det(c),
    c must be positive definite.
 */
 
 LogFloat CovDet(TriMat c);
+LogDouble DCovDet(DTriMat c);
 /*
    Returns log of Det(c), c must be positive definite.
 */
+
+/* EXPORT->MatDet: determinant of a matrix */
+float MatDet(Matrix c);
+
+/* EXPORT->DMatDet: determinant of a double matrix */
+double DMatDet(DMatrix c);
+
+/* EXPORT-> MatInvert: puts inverse of c in invc, returns Det(c) */
+  float MatInvert(Matrix c, Matrix invc);
+  double DMatInvert(DMatrix c, DMatrix invc);
+ 
+/* DMatCofact: generates the cofactors of row r of doublematrix c */
+double DMatCofact(DMatrix c, int r, DVector cofact);
+
+/* MatCofact: generates the cofactors of row r of doublematrix c */
+double MatCofact(Matrix c, int r, Vector cofact);
 
 /* ------------- Singular Value Decomposition Routines --------------- */
 

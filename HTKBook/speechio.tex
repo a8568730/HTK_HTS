@@ -866,6 +866,7 @@ each of the possible qualifiers\index{qualifiers}.  The basic parameter kind cod
 \>8 \> \texttt{MELSPEC}     \> linear mel-filter bank channel outputs \\
 \>9 \> \texttt{USER}      \> user defined sample kind \\
 \>10 \> \texttt{DISCRETE} \> vector quantised data \\
+\>11 \> \texttt{PLP}     \> PLP cepstral coefficients \\
 \end{tabbing}
 and the bit-encoding for the qualifiers (in octal) is 
 \begin{tabbing}
@@ -878,6 +879,8 @@ and the bit-encoding for the qualifiers (in octal) is
 \>\texttt{\_Z} \> 004000 \> has zero mean static coef. \\
 \>\texttt{\_K} \> 010000 \> has CRC checksum \\
 \>\texttt{\_O} \> 020000 \> has 0'th cepstral coef. \\
+\>\texttt{\_V} \> 040000 \> has VQ data  \\
+\>\texttt{\_T} \> 100000 \> has third differential coef. \\
 \end{tabbing}\index{qualifiers!codes}
 The \texttt{\_A} qualifier can only be specified when \texttt{\_D}
 is also specified.
@@ -1855,6 +1858,7 @@ Kind &  Meaning  \\ \hline
 \texttt{MELSPEC} & linear filter-bank parameters  \\
 \texttt{USER} & user defined parameters  \\
 \texttt{DISCRETE} &  vector quantised codebook symbols  \\
+\texttt{PLP} &  perceptual linaer prediction coefficients  \\
 \texttt{ANON} & matches actual parameter kind \\ \hline
 \end{tabular}
 \tabcap{parmkinds}{Supported Parameter Kinds}

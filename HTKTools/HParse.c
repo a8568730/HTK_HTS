@@ -19,8 +19,53 @@
 /*     File: HParse.c: HParse based word-network definition    */
 /* ----------------------------------------------------------- */
 
-char *hparse_version = "!HVER!HParse:   3.2.1 [CUED 15/10/03]";
-char *hparse_vc_id = "$Id: HParse.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hparse_version = "!HVER!HParse:   3.4 [CUED 25/04/06]";
+char *hparse_vc_id = "$Id: HParse.c,v 1.3 2006/12/29 04:44:55 zen Exp $";
 
 /* The HParse program reads in a set of HTK  HParse rewrite rules
    (as used in HTK V1.x) and writes out an HTK V2 lattice and
@@ -189,6 +234,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS\n");
    printf("\nUSAGE: HParse [options] netFile latFile\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -b      output lattice in binary             ascii\n");   
@@ -263,6 +309,14 @@ int main(int argc, char *argv[])
    if (trace&T_HPNET) 
       PrintHParseNetwork(&theNet);
    ConvertHParseNetwork(&theNet,latFn,dictFn);
+
+   ResetNet();
+   ResetDict();
+   ResetMath();
+   ResetLabel();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
@@ -927,7 +981,7 @@ static Boolean SameLinks(int a1, int a2)
 
 static Boolean IsJoined(int a, int b)
 {
-   return (jmat[a][b/8] & (1 <<(b&7))) != 0;
+   return ( ((jmat[a][b/8] & (1 <<(b&7))) != 0) ? TRUE:FALSE );
 }
 
 static int NumJSuccs(int a)
@@ -1344,7 +1398,7 @@ static void PGetIdent(void)
       if (ch==ESCAPE) PGetCh();
       if (i<MAXIDENT) id[i++]=ch;
       PGetCh();
-   } while ( !isspace(ch) && ch!='{' && ch!='}' && ch!='[' && ch!=']' &&
+   } while ( !isspace((int) ch) && ch!='{' && ch!='}' && ch!='[' && ch!=']' &&
              ch!='<' && ch!='>' && ch!='(' && ch!=')' && ch!='=' && 
              ch!=';' && ch!='|' && ch!='/' && ch!='%');
    id[i]='\0';
@@ -1354,8 +1408,8 @@ static void PGetIdent(void)
 /* PGetSym: get next symbol -> symbol */
 static void PGetSym(void)
 {
-   while (isspace(ch) || (ch=='/' && inlyne[curpos]=='*') ) {
-      if (isspace(ch))  /* skip space */
+   while (isspace((int) ch) || (ch=='/' && inlyne[curpos]=='*') ) {
+      if (isspace((int) ch))  /* skip space */
          PGetCh();
       else {            /* skip comment */
          PGetCh(); PGetCh();
@@ -1714,17 +1768,17 @@ static Boolean CanCompact(Link p)
 
    for (i=1; (i <= p->succ->numLinks) && ok ; i++) {
       succNode = p -> succ->links[i];
-      ok = (succNode -> modelName != NULL);
+      ok = (succNode -> modelName != NULL) ? TRUE:FALSE;
    }
    if (!ok) {
       ok = TRUE;    
       for (i=1; (i <= p->pred->numLinks) && ok ; i++) {
          predNode = p -> pred->links[i];
-         ok = (predNode -> modelName != NULL);
+         ok = (predNode -> modelName != NULL) ? TRUE:FALSE;
       }
    }
    if (!ok)
-      ok = ((p->succ->numLinks == 1) && (p->pred->numLinks == 1));
+      ok = ((p->succ->numLinks == 1) && (p->pred->numLinks == 1)) ? TRUE:FALSE;
    return ok;
 }
 

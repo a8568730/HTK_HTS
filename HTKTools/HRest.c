@@ -32,10 +32,9 @@
 /*         File: HRest.c: HMM initialisation program           */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -43,7 +42,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -57,10 +57,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -75,12 +76,9 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HRest.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen       */
-/*  ---------------------------------------------------------------  */
 
-
-char *hrest_version = "!HVER!HRest:   3.2.1 [CUED 15/10/03]";
-char *hrest_vc_id = "$Id: HRest.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hrest_version = "!HVER!HRest:   3.4 [CUED 25/04/06]";
+char *hrest_vc_id = "$Id: HRest.c,v 1.4 2006/12/29 04:44:56 zen Exp $";
 
 /*
    This program is used to estimate the transition parameters,
@@ -129,11 +127,13 @@ static LabId  segId  = NULL;     /* and its index */
 static char * labDir = NULL;     /* label file directory */
 static char * labExt = "lab";    /* label file extension */
 static char * outDir = NULL;     /* output macro file directory, if any */
+static char * durFN  = NULL;     /* output duration file */
 static int  maxIter  = 20;       /* max iterations in parameter estimation */
 static float epsilon = 1.0E-4;   /* convergence criterion */
 static int minSeg    = 3;        /* min segments to train a model */
 static Boolean firstTime = TRUE; /* Flag used to enable InitSegStore */
 static Boolean saveBinary = FALSE;  /* save output in binary  */
+static Boolean calcDuration = FALSE; /* save duration */
 static FileFormat dff=UNDEFF;    /* data file format */
 static FileFormat lff=UNDEFF;    /* label file format */
 static float minVar  = 0.0;      /* minimum variance */
@@ -141,8 +141,6 @@ static float mixWeightFloor=0.0; /* Floor for mixture weights */
 static float tMPruneThresh = 10.0;    /* tied mix prune threshold */
 static char *hmmfn;              /* HMM definition file name */
 static char *outfn=NULL;         /* output definition file name */
-enum _UPDSet{UPMEANS=1,UPVARS=2,UPTRANS=4,UPMIXES=8};
-typedef enum _UPDSet UPDSet;
 static UPDSet uFlags = (UPDSet) (UPMEANS|UPVARS|UPTRANS|UPMIXES);     /* update flags */
 static int  trace    = 0;        /* Trace level */
 static ConfParam *cParm[MAXGLOBS];   /* configuration parameters */
@@ -163,6 +161,9 @@ static int nTokUsed;       /* actual number of tokens used */
 static int maxT,minT,T;    /* max,min and current segment lengths */
 static DMatrix alpha;      /* array[1..nStates][1..maxT] of forward prob */
 static DMatrix beta;       /* array[1..nStates][1..maxT] of backward prob */
+static DVector durOcc;     /* array[1..nStates] of duration counter (occ) */
+static DVector durSum;     /* array[1..nStates] of duration counter (sum) */
+static DVector durSqr;     /* array[1..nStates] of duration counter (sqr) */
 static Matrix outprob;     /* array[2..nStates-1][1..maxT] of output prob */
 static Vector **stroutp;   /* array[1..maxT][2..nStates-1][1..nStreams] ...*/
                            /* ... of streamprob */
@@ -201,13 +202,15 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.1.1\n");
+   printf("\nModified for HTS\n");
    printf("\nUSAGE: HRest [options] hmmFile trainFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -e f    Set convergence factor epsilon       1.0E-4\n");
+   printf(" -g s    output duration model to file s                   none\n");
    printf(" -i N    Set max iterations to N              20\n");
    printf(" -l s    Set segment label to s               none\n");
    printf(" -m N    Set min segments needed              3\n");
+   printf(" -o fn   Store new hmm def in fn (name only)               outDir/srcfn\n");
    printf(" -t      Disable short segment rejection      on\n");
    printf(" -u tmvw Update t)rans m)eans v)ars w)ghts    tmvw\n");
    printf(" -v f    Set minimum variance to f            0.0\n");
@@ -267,6 +270,11 @@ int main(int argc, char *argv[])
       switch(s[0]){      
       case 'e':
          epsilon = GetChkedFlt(0.0,1.0,s); break;
+      case 'g':
+         calcDuration = TRUE;
+         if (NextArg()!=STRINGARG)
+            HError(2219,"HRest: duration model file name expected");
+         durFN = GetStrArg(); break;
       case 'i':
          maxIter = GetChkedInt(1,100,s); break;
       case 'l':
@@ -285,6 +293,9 @@ int main(int argc, char *argv[])
          minVar = GetChkedFlt(0.0,100.0,s); break;
       case 'c':
          tMPruneThresh = GetChkedFlt(0.0,1000.0,s); break;
+      case 'o':
+         outfn = GetStrArg();
+         break;
       case 'w':
          mixWeightFloor = MINMIX * GetChkedFlt(0.0,10000.0,s); break;
       case 'B':
@@ -352,8 +363,22 @@ int main(int argc, char *argv[])
    }
    ReEstimateModel();
 
-   if(SaveHMMSet(&hset,outDir,NULL,saveBinary)<SUCCESS)
+   if(SaveHMMSet(&hset,outDir,NULL,NULL,saveBinary)<SUCCESS)
       HError(2211,"HRest: SaveHMMSet failed");
+   
+   ResetUtil();
+   ResetTrain();
+   ResetParm();
+   ResetModel();
+   ResetVQ();
+   ResetAudio();
+   ResetWave();
+   ResetSigP();
+   ResetMath();
+   ResetLabel();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
@@ -420,7 +445,7 @@ void Initialise1(void)
    CreateHeap(&accsStack,"AccsStore", MSTAK, 1, 0.0, 1000, 1000);
    CreateHeap(&transStack,"TransStore", MSTAK, 1, 0.0, 1000, 1000);
    CreateHeap(&bufferStack,"BufferStore", MSTAK, 1, 0.0, 1000, 1000);
-   AttachAccs(&hset, &accsStack);
+   AttachAccs(&hset, &accsStack, uFlags);
 
    SetVFloor( &hset, vFloor, minVar);
 
@@ -471,6 +496,12 @@ void Initialise2(void)
    }
    occr = CreateVector(&gstack,nStates-1);
    zot = CreateVector(&gstack,hset.vecSize);
+   
+   if (calcDuration) {
+      durOcc = CreateDVector(&accsStack, nStates);
+      durSum = CreateDVector(&accsStack, nStates);
+      durSqr = CreateDVector(&accsStack, nStates);
+   }
 }
 
 /* ---------------------------- Load Data ------------------------- */
@@ -499,7 +530,7 @@ void InitSegStore(BufferInfo *info)
 
    SetStreamWidths(info->tgtPK,info->tgtVecSize,hset.swidth,&eSep);
    obs = MakeObservation(&gstack,hset.swidth,info->tgtPK,
-                         hset.hsKind==DISCRETEHS,eSep);
+                         ((hset.hsKind==DISCRETEHS) ? TRUE:FALSE),eSep);
    segStore = CreateSegStore(&segmentStack,obs,10);
    firstTime = FALSE;
 }
@@ -589,7 +620,7 @@ void LoadFile(char *fn)
 /* ------------------------ Trace Functions -------------------- */
 
 /* ShowSegNum: if not already printed, print seg number */
-void ShowSegNum(int seg)
+void ShowSegNum(const int seg)
 {
    static int lastseg = -1;
    
@@ -602,9 +633,9 @@ void ShowSegNum(int seg)
 /* ------------------------- Alpha-Beta ------------------------ */
 
 /* SetOutP: Set the output and mix prob matrices */                        
-void SetOutP(int seg)
+void SetOutP(const int seg)
 {
-   int i,t,m,mx,s,nMix;
+   int i,t,m,mx,s,nMix=0;
    StreamElem *ste;
    StreamInfo *sti;
    MixtureElem *me;
@@ -614,8 +645,8 @@ void SetOutP(int seg)
    Vector strp = NULL;
    Observation obs;
    TMixRec *tmRec = NULL;
-   float wght,tmp;
-   MixPDF *mpdf;
+   float wght=0.0,tmp;
+   MixPDF *mpdf=NULL;
    PreComp *pMix;
    
    for (t=1;t<=T;t++) {
@@ -725,7 +756,7 @@ void SetOutP(int seg)
 }
 
 /* SetAlpha: compute alpha matrix and return prob of given sequence */
-LogDouble SetAlpha(int seg)
+LogDouble SetAlpha(const int seg)
 {
    int i,j,t;
    LogDouble x,a;
@@ -769,7 +800,7 @@ LogDouble SetAlpha(int seg)
 }
 
 /* SetBeta: compute beta matrix */
-LogDouble SetBeta(int seg)
+LogDouble SetBeta(const int seg)
 {
    int i,j,t;
    LogDouble x,a;
@@ -808,7 +839,7 @@ LogDouble SetBeta(int seg)
 /* --------------------- Record Statistics ---------------- */
 
 /* SetOccr: set the global occupation counters occr for current seg */
-void SetOccr(LogDouble pr, int seg)
+void SetOccr(const LogDouble pr, const int seg)
 {
    int i,t;
    DVector alpha_i,beta_i;
@@ -835,7 +866,7 @@ void SetOccr(LogDouble pr, int seg)
 }
 
 /* UpTranCounts: update the transition counters in ta */
-void UpTranCounts(LogDouble pr,int seg)
+void UpTranCounts(const LogDouble pr, const int seg)
 {
    int i,j,t;
    Matrix tran;
@@ -894,15 +925,16 @@ void UpTranCounts(LogDouble pr,int seg)
 }
 
 /* UpStreamCounts: update mean, cov & mixweight counts for given stream */
-void UpStreamCounts(int j, int s, StreamInfo *sti, int vSize, LogDouble pr, int seg,
+void UpStreamCounts(const int j, const int s, StreamInfo *sti, 
+                    int vSize, const LogDouble pr, const int seg,
                     DVector alphj, DVector betaj)
 {
-   int i,m,nMix,k,l,t,ss,idx;
+   int i,m,nMix=0,k,l,t,ss,idx;
    MixtureElem *me;
-   MixPDF *mpdf;
-   MuAcc *ma;
+   MixPDF *mpdf=NULL;
+   MuAcc *ma=NULL;
    WtAcc *wa;
-   VaAcc *va;
+   VaAcc *va=NULL;
    Matrix *mixp_j;
    Vector ot, strpt;
    LogFloat a_ij,w;
@@ -910,7 +942,7 @@ void UpStreamCounts(int j, int s, StreamInfo *sti, int vSize, LogDouble pr, int 
    double y;
    Observation obs;
    TMixRec *tmRec = NULL;
-   float wght;
+   float wght=0.0;
    
    wa = (WtAcc *)sti->hook;
    switch (hsKind){       /* Get nMix */
@@ -1041,7 +1073,7 @@ void UpStreamCounts(int j, int s, StreamInfo *sti, int vSize, LogDouble pr, int 
 }
    
 /* UpPDFCounts: update output PDF counts for each stream of each state */
-void UpPDFCounts(LogDouble pr, int seg)
+void UpPDFCounts(const LogDouble pr, const int seg)
 {
    int j,s;
    StateInfo *si;
@@ -1056,14 +1088,69 @@ void UpPDFCounts(LogDouble pr, int seg)
    }
 }
 
+/* UpDurCounts: update duration counts */
+void UpDurCounts(const LogDouble pr, const int seq)
+{
+   int j,k,t0,t1;
+   LogDouble x,x0,Sumx;
+   
+   for (j=2;j<nStates;j++) { 
+      for (t0=1;t0<=T;t0++) {
+         if (t0 == 1) x0 = hmm->transP[1][j]; 
+         else {
+            x0 = LZERO;
+            for (k=2; k<nStates; k++)
+               if (k!=j && hmm->transP[k][j]>LSMALL)
+                  x0 = LAdd(x0, alpha[k][t0-1]+hmm->transP[k][j]);
+         }
+               
+         Sumx = x0;
+              
+         /* from t0 to t1 */ 
+         for (t1=t0; t1<=T; t1++) {  
+            if (Sumx>LSMALL) {
+               Sumx += outprob[j][t1];
+               if (t1!=t0) 
+                  Sumx += (double)hmm->transP[j][j];
+
+               if (t1==T) { 
+                  x = hmm->transP[j][nStates];
+   }
+               else {
+                  x = LZERO;
+                  for (k=2; k<nStates; k++)
+                     if (k!=j && hmm->transP[j][k]>LSMALL)
+                        x = LAdd(x, (double)hmm->transP[j][k]
+                                   +(double)outprob[k][t1+1]+beta[k][t1+1]);
+}
+
+               x = x+Sumx-pr;
+                  
+               /* update statistics */
+               if (x>LSMALL) {
+                  durSqr[j-1] = LAdd(durSqr[j-1], x+2*log(t1-t0+1)); 
+                  durSum[j-1] = LAdd(durSum[j-1], x+log(t1-t0+1)); 
+                  durOcc[j-1] = LAdd(durOcc[j-1], x);
+               }      
+            } 
+            else 
+               break; 
+         }
+      } 
+   }  
+} 
+ 
+
 /* UpdateCounters: update the various counters */
-void UpdateCounters(LogDouble pr, int seg)
+void UpdateCounters(const LogDouble pr, const int seg)
 {
    SetOccr(pr,seg);
    if (uFlags&UPTRANS) 
       UpTranCounts(pr,seg);
    if (uFlags&(UPMEANS|UPVARS|UPMIXES))
       UpPDFCounts(pr,seg);
+   if (calcDuration)
+      UpDurCounts(pr,seg);
 }
 
 /* ------------------------- Model Update ----------------------- */
@@ -1097,7 +1184,7 @@ void RestTransP(void)
 }
 
 /* FloorMixes: apply floor to given mix set */
-void FloorMixes(MixtureElem *mixes, int M, float floor)
+void FloorMixes(MixtureElem *mixes, const int M, const float floor)
 {
    float sum,fsum,scale;
    MixtureElem *me;
@@ -1124,7 +1211,7 @@ void FloorMixes(MixtureElem *mixes, int M, float floor)
 }  
 
 /* FloorTMMixes: apply floor to given tied mix set */
-void FloorTMMixes(Vector mixes, int M, float floor)
+void FloorTMMixes(Vector mixes, const int M, const float floor)
 {
    float sum,fsum,scale,fltWt;
    int m;
@@ -1151,7 +1238,7 @@ void FloorTMMixes(Vector mixes, int M, float floor)
 }
 
 /* FloorDProbs: apply floor to given discrete prob set */
-void FloorDProbs(ShortVec mixes, int M, float floor)
+void FloorDProbs(ShortVec mixes, const int M, const float floor)
 {
    float sum,fsum,scale,fltWt;
    int m;
@@ -1178,10 +1265,10 @@ void FloorDProbs(ShortVec mixes, int M, float floor)
 }
 
 /* RestMixWeights: reestimate the mixture weights */
-void RestMixWeights(int state, int s, StreamInfo *sti)
+void RestMixWeights(const int state, const int s, StreamInfo *sti)
 {
    WtAcc *wa;
-   int m,M;
+   int m,M=0;
    float x;
    MixtureElem *me;
    
@@ -1219,7 +1306,7 @@ void RestMixWeights(int state, int s, StreamInfo *sti)
 }
 
 /* RestMean: reestimate the given mean vector */
-void RestMean(Vector mean, int vSize)
+void RestMean(Vector mean, const int vSize)
 {
    int k;
    MuAcc *ma;
@@ -1239,8 +1326,8 @@ void RestMean(Vector mean, int vSize)
 
 /* RestCoVar: reestimate the given covariance and return FALSE
               if any diagonal component == 0.0 */
-Boolean RestCoVar(MixPDF *mp, int vSize, Vector minV,
-                  Vector oldMean, Vector newMean, Boolean shared)
+Boolean RestCoVar(MixPDF *mp, const int vSize, const Vector minV,
+                  Vector oldMean, Vector newMean, const Boolean shared)
 {
    int k,l;
    VaAcc *va;
@@ -1281,7 +1368,7 @@ Boolean RestCoVar(MixPDF *mp, int vSize, Vector minV,
 }
 
 /* RestStream: reestimate stream parameters */
-void RestStream(int state, int s, StreamInfo *sti, int vSize)
+void RestStream(const int state, const int s, StreamInfo *sti, int vSize)
 {
    int m,M;
    MixtureElem *me;
@@ -1308,7 +1395,7 @@ void RestStream(int state, int s, StreamInfo *sti, int vSize)
                RestMean(mp->mean,vSize);
             /* NB old mean left in ma->mu */
             if (uFlags&UPVARS){
-               shared = GetUse(mp->cov.var) > 1;
+               shared = (GetUse(mp->cov.var)>1) ? TRUE : FALSE;
                ma = (MuAcc *)GetHook(mp->mean);
                if ( !RestCoVar(mp,vSize,vFloor[s],ma->mu,mp->mean,shared)) {
                   if (M > 1) {
@@ -1360,6 +1447,60 @@ void UpdateTheModel(void)
       FixAllGConsts(&hset);
 }
 
+/* SaveDuration: save duration distribution */ 
+void SaveDuration(void) 
+{ 
+   int i; 
+   double mean, var; 
+   char base[MAXSTRLEN];
+   FILE *fp;
+   LabId hmmId;
+   
+   /* Get HMM name */
+   BaseOf(hmmfn,base);
+   hmmId = GetLabId(base,FALSE);
+   
+   if ((fp=fopen(durFN,"w")) == NULL)
+      HError(2260,"SaveDuration: Can not open duration model file %s.\n", durFN);
+
+   /* ---- Output duration model ---- */
+   /* output model definition */
+   fprintf(fp,"~o\n<VECSIZE> %d<GEND><USER><DIAGC>\n",nStates-2);
+   fprintf(fp,"~h \"%s\"\n",hmmId->name);
+   fprintf(fp,"<BEGINHMM>\n<NUMSTATES> 3\n<STATE> 2\n");
+
+   /* output mean */
+   fprintf(fp,"<MEAN> %d\n",nStates-2);
+   for (i=2;i<nStates;i++){
+      if (durOcc[i-1]<=LSMALL) mean = 0;
+      else mean = L2F(durSum[i-1]-durOcc[i-1]);
+      fprintf(fp,"%e ",mean);
+   }
+
+   /* output variance */
+   fprintf(fp,"\n<VARIANCE> %d\n",nStates-2);
+   for (i=2;i<nStates;i++){
+      if ( (durOcc[i-1]<=LSMALL) 
+         ||(durSqr[i-1]-durOcc[i-1]<2*(durSum[i-1]-durOcc[i-1])) )
+         var = minVar;
+      else {
+         var = LSub(durSqr[i-1]-durOcc[i-1], 2*(durSum[i-1]-durOcc[i-1]));
+         var = L2F(var);
+      }
+      /* floor variance */
+      if (var<minVar) var = minVar;
+         fprintf(fp,"%e ",var);
+   }
+
+   /* output dummy transP */
+   fprintf(fp,"\n<TRANSP> 3\n");
+   fprintf(fp,"0 1 0\n0 0 1\n0 0 0\n");
+   fprintf(fp,"<ENDHMM>\n");
+
+   fclose(fp);
+   
+   return;
+}
 /* ------------------------- Top Level Control ----------------------- */
 
 
@@ -1368,13 +1509,17 @@ void ReEstimateModel(void)
 {
    LogFloat segProb,oldP,newP,delta;
    LogDouble ap,bp;
-   int converged,iteration,seg;
+   int i,converged,iteration,seg;
 
    iteration=0; 
    oldP=LZERO;
    do {        /*main re-est loop*/   
-      ZeroAccs(&hset); newP = 0.0; ++iteration;
+      ZeroAccs(&hset, uFlags); newP = 0.0; ++iteration;
       nTokUsed = 0;
+      if (calcDuration)
+         for (i=1;i<DVectorSize(durOcc);i++) 
+            durOcc[i] = durSum[i] = durSqr[i] = LZERO;
+      
       for (seg=1;seg<=nSeg;seg++) {
          T=SegLength(segStore,seg);
          SetOutP(seg);
@@ -1404,6 +1549,11 @@ void ReEstimateModel(void)
          fflush(stdout);
       }
    } while ((iteration < maxIter) && !converged);
+   
+   if (calcDuration) {
+      SaveDuration();
+   }
+   
    if (trace&T_TOP) {
       if (converged)
          printf("Estimation converged at iteration %d\n",iteration);

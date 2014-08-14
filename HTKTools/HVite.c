@@ -21,7 +21,7 @@
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
 /*                                                             */
-/*              2001  Cambridge University                     */
+/*          2001-2004 Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -32,10 +32,9 @@
 /*      File: HVite.c: recognise or align file or audio        */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -43,7 +42,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -57,10 +57,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -75,12 +76,9 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HVite.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen       */
-/*  ---------------------------------------------------------------  */
 
-
-char *hvite_version = "!HVER!HVite:   3.2.1 [CUED 15/10/03]";
-char *hvite_vc_id = "$Id: HVite.c,v 1.13 2003/10/15 08:10:13 ge204 Exp $";
+char *hvite_version = "!HVER!HVite:   3.4 [CUED 25/04/06]";
+char *hvite_vc_id = "$Id: HVite.c,v 1.6 2006/12/29 04:44:55 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -95,6 +93,7 @@ char *hvite_vc_id = "$Id: HVite.c,v 1.13 2003/10/15 08:10:13 ge204 Exp $";
 #include "HUtil.h"
 #include "HTrain.h"
 #include "HAdapt.h"
+#include "HMap.h"
 #include "HFB.h"
 #include "HDict.h"
 #include "HNet.h"
@@ -109,8 +108,7 @@ char *hvite_vc_id = "$Id: HVite.c,v 1.13 2003/10/15 08:10:13 ge204 Exp $";
 #define T_MMU 00020      /* Memory usage after each utterance */
 
 static int trace = 0;
-Boolean traceHFB = FALSE;        /* pass to HFB to retain top-level tracing */
-Boolean calcDuration = FALSE;    /* duration modeling */
+Boolean keepOccm = FALSE;        /* keep mixture-level occ prob */
 
 /* -------------------------- Global Variables etc ---------------------- */
 
@@ -164,6 +162,7 @@ static int maxActive = 0;         /* max active phone instances */
 
 /* Global variables */
 static Observation obs;           /* current observation */
+static Boolean eSep;              /* stream width information */
 static HMMSet hset;               /* the HMM set */
 static Vocab vocab;               /* the dictionary */
 static Lattice *wdNet;            /* the word level recognition network */
@@ -173,19 +172,12 @@ static int maxM = 0;              /* max mixtures in any model */
 static int maxMixInS[SMAX];       /* array[1..swidth[0]] of max mixes */
 
 /* Global adaptation variables */
-static char *transFile=NULL;      /* MLLR transform file */
-static char *outTransFile=NULL;   /* output an MLLR transform file */
-static RegTransInfo *rt;          /* Regression classes transforms storage */
 static int update = 0;            /* Perfom MLLR & update every n utts */
 static UttInfo *utt;              /* utterance info for state/frame align */
 static FBInfo *fbInfo;            /* forward-backward info for alignment */
 static PSetInfo *alignpsi;        /* Private data used by HRec */
 static VRecInfo *alignvri;        /* Visible HRec Info */
 static Boolean saveBinary=FALSE;  /* Save tmf in binary format */
-static char *uid=NULL;            /* User id in tmf */
-static char *uname=NULL;          /* User name in tmf */
-static char *chan=NULL;           /* User channel in tmf */
-static char *desc=NULL;           /* User general description in tmf */
 
 /* Heaps */
 static MemHeap ansHeap;
@@ -194,6 +186,9 @@ static MemHeap netHeap;
 static MemHeap bufHeap;
 static MemHeap repHeap;
 static MemHeap regHeap;
+
+/* information about transforms */
+static XFInfo xfInfo;
 
 /* ---------------- Configuration Parameters --------------------- */
 
@@ -223,7 +218,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.1.1\n");
+   printf("\nModified for HTS\n");
    printf("\nUSAGE: HVite [options] VocabFile HMMList DataFiles...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -a      align from label files               off\n");
@@ -233,10 +228,11 @@ void ReportUsage(void)
    printf(" -e      save direct audio rec output         off\n");
    printf(" -f      output full state alignment          off\n");
    printf(" -g      enable audio replay                  off\n");
+   printf(" -h s    set speaker name pattern             *.mfc\n");
    printf(" -i s    Output transcriptions to MLF s       off\n"); 
    printf(" -j i    Online MLLR adaptation               off\n");
    printf("         Perform update every i utterances      \n");
-   printf(" -k s1 s2  Save s2 for field s1 in tmf        defaults saved\n");
+   printf(" -k      use an input transform               off\n");
    printf(" -l s    dir to store label/lattice files     current\n");
    printf(" -m      output model alignment               off\n");
    printf(" -n i [N] N-best recognition (using i tokens) off\n");
@@ -252,14 +248,13 @@ void ReportUsage(void)
    printf(" -x s    extension for hmm files              none\n");
    printf(" -y s    output label file extension          rec\n");
    printf(" -z s    generate lattices with extension s   off\n");
-   PrintStdOpts("BFGHIJKLPSX");
+   PrintStdOpts("BEFGHIJKLPSX");
    printf("\n\n");
 }
 
 int main(int argc, char *argv[])
 {
-   char *s, *c;
-   char fmt[MAXSTRLEN];
+   char *s;
 
    void Initialise(void);
    void DoRecognition(void);
@@ -278,7 +273,8 @@ int main(int argc, char *argv[])
 
    InitDict();
    InitNet();   InitRec();
-   InitAdapt(); 
+   InitUtil(); 
+   InitAdapt(&xfInfo); InitMap();
 
    if (!InfoPrinted() && NumArgs() == 0)
       ReportUsage();
@@ -324,32 +320,7 @@ int main(int argc, char *argv[])
          update = GetChkedInt(1,256,s);
          break;
       case 'k':
-         if (NextArg()!=STRINGARG)
-            HError(3219,"HVite: TMF description type expected");
-         strcpy(fmt,GetStrArg());
-         for (c=fmt; *c!=0; *c++=toupper(*c));
-         if (strcmp(fmt,"UID")==0) {
-            if (NextArg()!=STRINGARG)
-               HError(3219,"HVite: user id string expected");
-            uid = GetStrArg();
-         }
-         else if (strcmp(fmt,"UNAME")==0) {
-            if (NextArg()!=STRINGARG)
-               HError(3219,"HVite: user name string expected");
-            uname = GetStrArg();
-         }
-         else if (strcmp(fmt,"CHAN")==0) {
-            if (NextArg()!=STRINGARG)
-               HError(3219,"HVite: channel description string expected");
-            chan = GetStrArg();
-         }
-         else if (strcmp(fmt,"DESC")==0){
-            if (NextArg()!=STRINGARG)
-               HError(3219,"HVite: a general description string expected");
-            desc = GetStrArg();
-         }
-         else
-            HError(3219,"HVite: Unrecognised format, should be one of [uid,uname,chan,desc]");
+         xfInfo.useInXForm = TRUE;
          break;
       case 'l':
          if (NextArg()!=STRINGARG)
@@ -358,7 +329,7 @@ int main(int argc, char *argv[])
       case 'm':
          models=TRUE; break;
       case 'n':
-         nToks = GetChkedInt(2,128,s);
+         nToks = GetChkedInt(2,MAX_TOKS,s);
          if (NextArg()==FLOATARG || NextArg()==INTARG)
             nTrans = GetChkedInt(1,10000,s);
          else
@@ -380,8 +351,8 @@ int main(int argc, char *argv[])
          lmScale = GetChkedFlt(0.0,1000.0,s);  break;
       case 't':
          genBeam = GetChkedFlt(0,1.0E20,s); 
-      if (genBeam == 0.0)
-         genBeam = -LZERO;
+	 if (genBeam == 0.0)
+	    genBeam = -LZERO;
          if (NextArg()==FLOATARG || NextArg()==INTARG) {
              genBeamInc = GetChkedFlt(0.0,1.0E20,s);
              genBeamLim = GetChkedFlt(0.0,1.0E20,s);
@@ -445,14 +416,6 @@ int main(int argc, char *argv[])
          if (NextArg() != STRINGARG)
             HError(3219,"HVite: MLF file name expected");
          LoadMasterFile(GetStrArg()); break;
-      case 'J':
-         if (NextArg()!=STRINGARG)
-            HError(3219,"HVite: MLLR transform file expected");
-         transFile = GetStrArg(); break;
-      case 'K':
-         if (NextArg()!=STRINGARG)
-            HError(3219,"HVite: MLLR transform output filename expected");
-         outTransFile = GetStrArg(); break;
       case 'L':
          if (NextArg()!=STRINGARG)
             HError(3219,"HVite: Label/network file directory expected");
@@ -472,13 +435,52 @@ int main(int argc, char *argv[])
          if (NextArg()!=STRINGARG)
             HError(3219,"HVite: Input label/network file extension expected");
          labInExt = GetStrArg(); break;
+      case 'h':
+	if (NextArg()!=STRINGARG)
+	  HError(1,"Speaker name pattern expected");
+	xfInfo.outSpkrPat = GetStrArg();
+	if (NextArg()==STRINGARG) {
+	  xfInfo.inSpkrPat = GetStrArg();
+	  if (NextArg()==STRINGARG)
+	    xfInfo.paSpkrPat = GetStrArg(); 
+	}
+	if (NextArg() != SWITCHARG)
+	  HError(2319,"HERest: cannot have -h as the last option");	  
+	break;
+      case 'E':
+         if (NextArg()!=STRINGARG)
+            HError(2319,"HERest: parent transform directory expected");
+	 xfInfo.usePaXForm = TRUE;
+         xfInfo.paXFormDir = GetStrArg(); 
+         if (NextArg()==STRINGARG)
+	   xfInfo.paXFormExt = GetStrArg(); 
+	 if (NextArg() != SWITCHARG)
+	   HError(2319,"HVite: cannot have -E as the last option");	  
+         break;              
+      case 'J':
+         if (NextArg()!=STRINGARG)
+            HError(2319,"HERest: input transform directory expected");
+         AddInXFormDir(&hset,GetStrArg());
+         if (NextArg()==STRINGARG)
+	   xfInfo.inXFormExt = GetStrArg(); 
+	 if (NextArg() != SWITCHARG)
+	   HError(2319,"HVite: cannot have -J as the last option");	  
+         break;              
+      case 'K':
+         if (NextArg()!=STRINGARG)
+            HError(2319,"HVite: output transform directory expected");
+         xfInfo.outXFormDir = GetStrArg(); 
+	 xfInfo.useOutXForm = TRUE;
+         if (NextArg()==STRINGARG)
+	   xfInfo.outXFormExt = GetStrArg(); 
+	 if (NextArg() != SWITCHARG)
+	   HError(2319,"HVite: cannot have -K as the last option");	  
+         break;              
       default:
          HError(3219,"HVite: Unknown switch %s",s);
       }
    }
    
-   if (outTransFile != NULL && uid == NULL)
-      HError(3219,"HVite: User identifier expected when saving a TMF");
    if (NextArg()!=STRINGARG)
       HError(3219,"HVite: Dictionary file name expected");
    dictFn = GetStrArg();
@@ -494,6 +496,10 @@ int main(int argc, char *argv[])
       HError(3230,"HVite: Must choose either alignment from network or labels");
    if (nToks>1 && latExt==NULL && nTrans==1)
       HError(-3230,"HVite: Performing nbest recognition with no nbest output");
+   if (nToks > 1 && latExt != NULL && nTrans > 1) 
+      HError(-3230,"HVite: Performing nbest recognition with 1-best and latttices output");
+   if ((update>0) && (!xfInfo.useOutXForm))
+      HError(3230,"HVite: Must use -K option with incremental adaptation");
 
 
    Initialise();
@@ -516,11 +522,27 @@ int main(int argc, char *argv[])
    DeleteVRecInfo(vri);
    ResetHeap(&netHeap);
    FreePSetInfo(psi);
-   if (outTransFile != NULL)
-      SaveTransformSet(&hset, rt, outTransFile, NULL, uid, uname, 
-                       chan, desc, FALSE, FALSE, saveBinary);
+   UpdateSpkrStats(&hset,&xfInfo, NULL); 
    ResetHeap(&regHeap);
    ResetHeap(&modelHeap);
+   
+   ResetMap();
+   ResetAdapt();
+   ResetUtil();
+   ResetRec();
+   ResetNet();
+   ResetDict();
+   ResetParm();
+   ResetModel();
+   ResetVQ();
+   ResetAudio();
+   ResetWave();
+   ResetSigP();
+   ResetMath();
+   ResetLabel();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
@@ -530,14 +552,11 @@ int main(int argc, char *argv[])
 /* Initialise: set up global data structures */
 void Initialise(void)
 {
-   Boolean loadTransStats=FALSE;
-   Boolean eSep;
    int s;
 
    /* Load hmms, convert to inverse DiagC */
    if(MakeHMMSet(&hset,hmmListFn)<SUCCESS) 
       HError(3228,"Initialise: MakeHMMSet failed");
-   SetParmHMMSet(&hset);
    if(LoadHMMSet(&hset,hmmDir,hmmExt)<SUCCESS) 
       HError(3228,"Initialise: LoadHMMSet failed");
    ConvDiagC(&hset,TRUE);
@@ -545,54 +564,33 @@ void Initialise(void)
    /* Create observation and storage for input buffer */
    SetStreamWidths(hset.pkind,hset.vecSize,hset.swidth,&eSep);
    obs=MakeObservation(&gstack,hset.swidth,hset.pkind,
-                       hset.hsKind==DISCRETEHS,eSep);
+                       ((hset.hsKind==DISCRETEHS) ? TRUE:FALSE),eSep);
 
-   if (transFile != NULL || update > 0) {
+   /* sort out masks just in case using adaptation */
+   if (xfInfo.inSpkrPat == NULL) xfInfo.inSpkrPat = xfInfo.outSpkrPat; 
+   if (xfInfo.paSpkrPat == NULL) xfInfo.paSpkrPat = xfInfo.outSpkrPat; 
+
+   if (xfInfo.useOutXForm || (update>0)) {
       CreateHeap(&regHeap,   "regClassStore",  MSTAK, 1, 0.5, 1000, 8000 );
-      rt = (RegTransInfo *) New(&regHeap, sizeof(RegTransInfo));
-      rt->nBlocks = 0;
-      rt->classKind = DEF_REGCLASS;
-      rt->adptSil = TRI_UNDEF;
-      rt->nodeOccThresh = 0.0;
-
-      /* if online adaptation then initailise some extra structures */
-      if (update > 0) {
-         InitialiseTransform(&hset, &regHeap, rt, TRUE);
-         /* initialise structures for the f-b frame-state alignment pass */
-         utt = (UttInfo *) New(&regHeap, sizeof(UttInfo));
-         fbInfo = (FBInfo *) New(&regHeap, sizeof(FBInfo));
-     
-         /* initialise a recogniser for frame/state alignment purposes */
-         alignpsi=InitPSetInfo(&hset);
-         alignvri=InitVRecInfo(alignpsi,1,TRUE,FALSE);
-         SetPruningLevels(alignvri,0,genBeam,-LZERO,0.0,tmBeam);
-         /* initialise core structures and memory for the adaptation process */
-         InitialiseAdapt(&hset, &regHeap, rt);
-         InitUttInfo(utt, FALSE);
-         InitialiseForBack(fbInfo, &regHeap, &hset, rt,
-                           (UPDSet) (UPADAPT|UPMIXES), genBeam*2.0, genBeam*2.0, 
-                           genBeam*4.0+1.0, 10.0);
-         utt->twoDataFiles = FALSE;
-         utt->S = hset.swidth[0]; 
-      }
-      else
-         InitialiseTransform(&hset, &regHeap, rt, FALSE);
+      /* This initialises things - temporary hack - THINK!! */
+      CheckAdaptSetUp(&hset);
+      CreateAdaptXForm(&hset, "tmp");
+      /* initialise structures for the f-b frame-state alignment pass */
+      utt = (UttInfo *) New(&regHeap, sizeof(UttInfo));
+      fbInfo = (FBInfo *) New(&regHeap, sizeof(FBInfo));
+      /* initialise a recogniser for frame/state alignment purposes */
+      alignpsi=InitPSetInfo(&hset);
+      alignvri=InitVRecInfo(alignpsi,1,TRUE,FALSE);
+      SetPruningLevels(alignvri,0,genBeam,-LZERO,0.0,tmBeam);
+      InitUttInfo(utt, FALSE);
+      InitialiseForBack(fbInfo, &regHeap, &hset,
+                        (UPDSet) (UPXFORM), genBeam*2.0, genBeam*2.0, 
+                        genBeam*4.0+1.0, 10.0, FALSE, FALSE);
+      utt->twoDataFiles = FALSE;
+      utt->S = hset.swidth[0]; 
+      AttachPreComps(&hset,hset.hmem);
    }
     
-   if (transFile != NULL) {
-      if (rt->rtree == NULL)
-         HError(3232, "Main: Error loading the MLLR transforms!\n");
-      LoadTransformSet(&hset, transFile, uid, rt, &loadTransStats);
-      if (rt->transId->name != NULL && rt->transId->uid != NULL)
-         printf("Loaded speaker transforms for %s (%s)\n", rt->transId->name,
-                rt->transId->uid);
-      ApplyTransforms(rt);
-   }
-
-   /* Create observation and storage for input buffer */
-   SetStreamWidths(hset.pkind,hset.vecSize,hset.swidth,&eSep);
-   obs=MakeObservation(&gstack,hset.swidth,hset.pkind,
-                       hset.hsKind==DISCRETEHS,eSep);
    CreateHeap(&bufHeap,"Input Buffer heap",MSTAK,1,0.0,50000,50000);
    CreateHeap(&repHeap,"Replay Buffer heap",MSTAK,1,0.0,50000,50000);
    
@@ -643,7 +641,7 @@ int DoOnlineAdaptation(Lattice *lat, ParmBuf pbuf, int nFrames)
    BufferInfo pbinfo;
    Lattice *alignLat, *wordNet;
    Network *alignNet;
-   int i;
+   int t;
 
    GetBufferInfo(pbuf,&pbinfo);
    trans=TranscriptionFromLattice(&netHeap,lat,1);
@@ -653,10 +651,13 @@ int DoOnlineAdaptation(Lattice *lat, ParmBuf pbuf, int nFrames)
 
    StartRecognition(alignvri,alignNet,0.0,0.0,0.0);     
 
-   /* do forced alignment */
-   for (i = 0; i < nFrames; i++) {
-      ReadAsTable(pbuf, i, &obs);
-      ProcessObservation(alignvri,&obs,-1);
+   /* do forced alignment and store obs to utt->o for the follwoing forward-backward */
+   utt->o = (Observation *) New(&gstack, nFrames*sizeof(Observation));
+   utt->o--;           
+   for (t=1; t<=nFrames; t++) {
+      utt->o[t] = MakeObservation(&gstack, hset.swidth, hset.pkind, ((hset.hsKind==DISCRETEHS) ? TRUE:FALSE), eSep);
+      ReadAsTable(pbuf, t-1, &utt->o[t]);
+      ProcessObservation(alignvri, &utt->o[t], -1, xfInfo.inXForm); 
    }
     
    alignLat=CompleteRecognition(alignvri,
@@ -680,12 +681,19 @@ int DoOnlineAdaptation(Lattice *lat, ParmBuf pbuf, int nFrames)
    utt->pbuf = pbuf;
    utt->Q = CountLabs(utt->tr->head);
    utt->T = nFrames;
-   utt->ot = obs;
   
    /* do frame state alignment and accumulate statistics */
-   if (!FBFile(fbInfo, utt, NULL))
+   if (!FBUtt(fbInfo, utt))
      nFrames = 0;
 
+   /* reset each observation */
+   for (t=nFrames; t>0; t--) {
+      ResetObservation(&gstack, &utt->o[t], hset.swidth, hset.pkind);
+   }
+   utt->o++;
+   Dispose(&gstack, utt->o);
+   
+   /* reset netHeap */
    Dispose(&netHeap, trans);
 
    if (trace&T_TOP) {
@@ -710,7 +718,7 @@ Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam,
    LogFloat lmlk,aclk;
    int s,j,tact,nFrames;
    LatFormat form;
-   char *p,lfn[255],buf1[80],buf2[80],thisFN[MAXSTRLEN];
+   char *p,lfn[MAXSTRLEN],buf1[MAXSTRLEN],buf2[MAXSTRLEN],thisFN[MAXSTRLEN];
    Boolean enableOutput = TRUE, isPipe;
 
    if (fn!=NULL)
@@ -747,7 +755,7 @@ Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam,
          }
       }
 
-      ProcessObservation(vri,&obs,-1);
+      ProcessObservation(vri,&obs,-1,xfInfo.inXForm);
       
       if (trace & T_FRS) {
          for (d=vri->genMaxNode,j=0;j<30;d=d->links[0].node,j++)
@@ -769,7 +777,7 @@ Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam,
    lat=CompleteRecognition(vri,pbinfo.tgtSampRate/10000000.0,&ansHeap);
    
    if (lat==NULL) {
-      if ((trace & T_TOP) && fn != NULL) {
+      if ((trace & T_TOP) && fn != NULL){
          if (restartable)
             printf("No tokens survived to final node of network at beam %.1f\n", currGenBeam);
          else
@@ -821,7 +829,7 @@ Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam,
    
    /* accumulate stats for online unsupervised adaptation 
       only if a token survived */
-   if ((lat != NULL) &&  (!vri->noTokenSurvived) && (update > 0))
+   if ((lat != NULL) &&  (!vri->noTokenSurvived) && ((update > 0) || (xfInfo.useOutXForm)))
       DoOnlineAdaptation(lat, pbuf, nFrames);
 
    if (enableOutput){
@@ -853,14 +861,22 @@ Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam,
          FClose(file,isPipe);
       }
 
+      /* only output 1-best transcription if generating lattices */
+      if (nTrans > 1 && latExt != NULL) 
+         trans=TranscriptionFromLattice(&ansHeap,lat,1);
+      /* output N-best transcriptions as usual */
+      else
       trans=TranscriptionFromLattice(&ansHeap,lat,nTrans);
       
       if (labForm!=NULL)
          FormatTranscription(trans,pbinfo.tgtSampRate,states,models,
-                             strchr(labForm,'X')!=NULL,
-                             strchr(labForm,'N')!=NULL,strchr(labForm,'S')!=NULL,
-                             strchr(labForm,'C')!=NULL,strchr(labForm,'T')!=NULL,
-                             strchr(labForm,'W')!=NULL,strchr(labForm,'M')!=NULL);
+                             ((strchr(labForm,'X')!=NULL) ? TRUE:FALSE),
+                             ((strchr(labForm,'N')!=NULL) ? TRUE:FALSE),
+                             ((strchr(labForm,'S')!=NULL) ? TRUE:FALSE),
+                             ((strchr(labForm,'C')!=NULL) ? TRUE:FALSE),
+                             ((strchr(labForm,'T')!=NULL) ? TRUE:FALSE),
+                             ((strchr(labForm,'W')!=NULL) ? TRUE:FALSE),
+                             ((strchr(labForm,'M')!=NULL) ? TRUE:FALSE));
 
       MakeFN(thisFN,labDir,labExt,lfn);
       /* if(LSave(lfn,trans,ofmt)<SUCCESS)
@@ -875,7 +891,7 @@ Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam,
       PrintAllHeapStats();
    }
 
-   return !vri->noTokenSurvived;
+   return ((!vri->noTokenSurvived) ? TRUE:FALSE);
 }
 
 /* --------------------- Top Level Processing --------------------- */
@@ -884,12 +900,13 @@ Boolean ProcessFile(char *fn, Network *net, int utterNum, LogDouble currGenBeam,
 void DoAlignment(void)
 {
    FILE *nf;
-   char lfn[255];
+   char lfn[MAXSTRLEN];
    Transcription *trans;
    Network *net;
    Boolean isPipe;
    int n=0;
    LogDouble currGenBeam;
+   AdaptXForm *incXForm;
 
    if (trace&T_TOP) {
       if (loadNetworks) 
@@ -920,9 +937,15 @@ void DoAlignment(void)
          }
       }
       else {
+         LabList *ll = NULL;
+
          trans=LOpen(&netHeap,lfn,ifmt);
-         wdNet=LatticeFromLabels(GetLabelList(trans,1),bndId,
-                                 &vocab,&netHeap);
+         if (trans->numLists >= 1)
+            ll = GetLabelList(trans,1);
+         if (!ll && !bndId)
+            HError(3233, "DoAlignment: cannot align empty transcription");
+
+         wdNet=LatticeFromLabels(ll, bndId, &vocab,&netHeap);
          if (trace&T_TOP) {
             printf("Created lattice with %d nodes / %d arcs from label file\n",
                    wdNet->nn,wdNet->na);
@@ -933,6 +956,11 @@ void DoAlignment(void)
 
       ++n;
       currGenBeam = genBeam;
+      /* This handles the initial input transform, parent transform setting
+	 and output transform creation */
+      if (UpdateSpkrStats(&hset, &xfInfo, datFN) && (!(xfInfo.useInXForm)) && (hset.semiTied == NULL)) {
+         xfInfo.inXForm = NULL;
+      }
       if (genBeamInc == 0.0)
          ProcessFile (datFN, net, n, currGenBeam, FALSE);
       else {
@@ -953,8 +981,17 @@ void DoAlignment(void)
             printf("Transforming model set\n");
             fflush(stdout);
          }
-         DoAdaptation(rt, FALSE);
-         ClearRegCompStats(&hset, rt);
+	 /* 
+	    at every stage a new transform is created - fix?? 
+	    Estimate transform and then set it up as the 
+	    input XForm
+	 */
+	 incXForm = CreateAdaptXForm(&hset,"inc");
+         TidyBaseAccs();
+	 GenAdaptXForm(&hset,incXForm);
+         xfInfo.inXForm = GetMLLRDiagCov(incXForm);;
+	 SetXForm(&hset,xfInfo.inXForm);
+         ApplyHMMSetXForm(&hset,xfInfo.inXForm,FALSE);
       }
       ResetHeap(&netHeap);
    }
@@ -967,6 +1004,7 @@ void DoRecognition(void)
    Network *net;
    Boolean isPipe;
    int n=0;
+   AdaptXForm *incXForm;
 
    if ( (nf = FOpen(wdNetFn,NetFilter,&isPipe)) == NULL)
       HError(3210,"DoRecognition: Cannot open Word Net file %s",wdNetFn);
@@ -995,14 +1033,24 @@ void DoRecognition(void)
    if (NumArgs()==0) {      /* Process audio */
       while(TRUE){
          printf("\nREADY[%d]>\n",++n); fflush(stdout);
+	 /* no input transform possible for audio input .... */
          ProcessFile(NULL,net,n,genBeam, FALSE);
          if (update > 0 && n%update == 0) {
             if (trace&T_TOP) {
                printf("Transforming model set\n");
                fflush(stdout);
             }
-            DoAdaptation(rt, FALSE);
-            ClearRegCompStats(&hset, rt);
+	    /* 
+	       at every stage a new transform is created - fix?? 
+	       Estimate transform and then set it up as the 
+	       input XForm
+	    */
+	    incXForm = CreateAdaptXForm(&hset,"inc");
+            TidyBaseAccs();
+	    GenAdaptXForm(&hset,incXForm);
+            xfInfo.inXForm = GetMLLRDiagCov(incXForm);;
+            SetXForm(&hset,xfInfo.inXForm);
+            ApplyHMMSetXForm(&hset,xfInfo.inXForm,FALSE);
          }
       }
    }
@@ -1014,14 +1062,28 @@ void DoRecognition(void)
          if (trace&T_TOP) {
             printf("File: %s\n",datFN); fflush(stdout);
          }
+	 /* This handles the initial input transform, parent transform setting
+	    and output transform creation */
+         if (UpdateSpkrStats(&hset, &xfInfo, datFN) && (!(xfInfo.useInXForm))) {
+            xfInfo.inXForm = NULL;
+         }
          ProcessFile(datFN,net,n++,genBeam,FALSE);
          if (update > 0 && n%update == 0) {
             if (trace&T_TOP) {
                printf("Transforming model set\n");
                fflush(stdout);
             }
-            DoAdaptation(rt, FALSE);
-            ClearRegCompStats(&hset, rt);
+	    /* 
+	       at every stage a new transform is created - fix?? 
+	       Estimate transform and then set it up as the 
+	       input XForm
+	    */
+	    incXForm = CreateAdaptXForm(&hset,"inc");
+            TidyBaseAccs();
+	    GenAdaptXForm(&hset,incXForm);
+            xfInfo.inXForm = GetMLLRDiagCov(incXForm);;
+            SetXForm(&hset,xfInfo.inXForm);
+            ApplyHMMSetXForm(&hset,xfInfo.inXForm,FALSE);
          }
       }
    }

@@ -59,38 +59,40 @@ adaptation data becomes available, and this is termed
 % \htool{HVite} can provide unsupervised incremental adaptation.
 
 \HTK\ provides two tools to adapt continuous density HMMs. 
-\htool{HEAdapt}\index{headapt@\htool{HEAdapt}} 
-performs offline supervised adaptation
-using maximum likelihood linear regression (MLLR) and/or 
-maximum a-posteriori (MAP) adaptation, while  
-unsupervised adaptation is supported by \htool{HVite} (using only MLLR).
-In this case \htool{HVite} not only performs recognition, but
-simultaneously adapts the model set as the data becomes available
-through recognition. Currently, MLLR adaptation can be applied in both
-incremental and static modes while MAP supports only static
-adaptation. If MLLR and MAP adaptation is to be performed
-simultaneously using 
-\htool{HEAdapt} in the same pass, 
-then the restriction is that the entire
-adaptation must be performed statically\footnote{
-By using two passes,
-one could perform incremental MLLR in the first pass (saving the new
-model or transform), followed by a second pass, this time using MAP 
-adaptation.}.
+\htool{HERest}\index{headapt@\htool{HERest}} 
+performs offline supervised adaptation using various forms of linear
+transformation and/or maximum a-posteriori (MAP) adaptation, while
+unsupervised adaptation is supported by \htool{HVite} (using only
+linear transformations).  In this case \htool{HVite} not only performs
+recognition, but simultaneously adapts the model set as the data
+becomes available through recognition. Currently, linear
+transformation adaptation can be applied in both incremental and
+static modes while MAP supports only static adaptation.
 
-This chapter describes the supervised adaptation tool \htool{HEAdapt}.
-The first sections of the chapter
-give an overview of MLLR and MAP adaptation and 
-this is followed by a section describing the general
-usages of \htool{HEAdapt} to build simple and more complex adapted
-systems. The chapter concludes with a section detailing the various
-formulae used by the adaptation tool.
-The use of \htool{HVite} to perform unsupervised adaptation is 
-discussed in section~\ref{s:unsup_adapt}. 
+This chapter describes the operation of supervised adaptation with the
+\htool{HERest} tools.  The first sections of the chapter give an
+overview of linear transformation schemes and MAP adaptation and this
+is followed by a section describing the general usages of
+\htool{HERest} to build simple and more complex adapted systems. The
+chapter concludes with a section detailing the various formulae used
+by the adaptation tool.  The use of \htool{HVite} to perform
+unsupervised adaptation is described in the RM Demo. 
 
-\mysect{Model Adaptation using MLLR}{mllr}
+\mysect{Model Adaptation using Linear Transformations}{mllr}
 
-\mysubsect{Maximum Likelihood Linear Regression}{whatismllr}
+\mysubsect{Linear Transformations}{whatismllr}
+
+This section briefly discusses the forms of transform available. Note
+that this form of adaptation is only available with diagonal
+continuous density HMMs.
+
+The transformation matrices are all obtained by solving a maximisation
+problem using the \textit{Expectation-Maximisation} (EM)
+technique. Using EM results in the maximisation of a standard
+\textit{auxiliary function}. (Full details are available in
+section~\ref{s:mllrformulae}.)
+
+\mysubsub{Maximum Likelihood Linear Regression ({\tt MLLRMEAN})}{mumllr}
 
 Maximum likelihood linear regression or MLLR\index{adaptation!MLLR}
 computes a set of transformations that will reduce the mismatch
@@ -107,9 +109,6 @@ The effect of these transformations is to shift the
 component means and alter the variances in the initial system 
 so that each state in the HMM system is more likely to generate the 
 adaptation data.
-Note that due to computational reasons, MLLR is only implemented
-within \HTK\ for diagonal covariance, single stream, continuous density
-HMMs.
 
 The transformation matrix used to give a new estimate of the adapted mean is
 given by
@@ -128,20 +127,173 @@ Hence $\bm{W}$ can be decomposed into
         \bm{W} = \left[\mbox{ }\bm{b}\mbox{ }\bm{A}\mbox{ }\right]
 }{decompmtrans}
 where $\bm{A}$ represents an $n \times n$
+transformation matrix and $\bm{b}$ represents a bias vector. This
+form of transform is referred to in the code as {\tt MLLRMEAN}.
+
+\mysubsub{Variance MLLR ({\tt MLLRVAR} and {\tt MLLRCOV})}{vmllr}
+
+There are two standard forms of linear adaptation of the variances. The first
+is of the form
+\[
+        \hat{\bm{\Sigma}} = \bm{B}^T\bm{H}\bm{B}
+\]
+where $\bm{H}$ is the linear transformation to be estimated and
+$\bm{B}$ is the inverse of the Choleski factor of $\bm{\Sigma}^{-1}$,
+so
+\[ 
+        \bm{\Sigma}^{-1} = \bm{C}\bm{C}^T
+\]
+and
+\[
+        \bm{B}= \bm{C}^{-1}
+\]
+This form of transform results in an effective full covariance matrix if
+the transform matrix $\bm{H}$ is full. This makes likelihood calculations
+highly inefficient. This form of transform is only available with a 
+diagonal transform and in conjunction with estimating an MLLR transform. The
+MLLR transform is used as a parent transform for estimating $\bm{H}$.
+This form of transform is referred to in the code as {\tt MLLRVAR}.
+
+An alternative more efficient form of variance transformation is also available.
+Here, the transformation of the covariance matrix is  of the form
+\hequation{ 
+        \hat{\bm{\Sigma}} = \bm{H}\bm{\Sigma}\bm{H}, 
+}{covtrans}
+where $\bm{H}$ is the $n\times n$ covariance transformation matrix.
+This form of transformation, referred to in the code as {\tt MLLRCOV}
+can be efficiently implemented as a transformation of the means and 
+the features.
+\hequation{ 
+       {\cal N}(\bm{o};\bm{\mu},\bm{H}\bm{\Sigma}\bm{H}) = 
+       \frac{1}{|\bm{H}|}{\cal N}(\bm{H}^{-1}\bm{o};\bm{H}^{-1}\bm{\mu},\bm{\Sigma}) = 
+       {|\bm{A}|}{\cal N}(\bm{A}\bm{o};\bm{A}\bm{\mu},\bm{\Sigma})
+} {covlike}
+where $\bm{A}=\bm{H}^{-1}$.
+Using this form it is possible to estimate and efficiently apply full transformations.
+{\tt MLLRCOV} transformations are normally estimated using {\tt MLLRMEAN} transformations
+as the parent transform.
+
+\mysubsub{Constrained MLLR ({\tt CMLLR})}{cmllr}
+
+Constrained maximum likelihood linear regression or CMLLR\index{adaptation!CMLLR}
+computes a set of transformations that will reduce the mismatch
+between an initial model set and the adaptation data\footnote{
+MLLR can also be used to perform environmental compensation by
+reducing the mismatch due to channel or additive noise effects.}.
+More specifically CMLLR is a feature adaptation technique
+that estimates a set of linear transformations for the features. 
+The effect of these transformations is to shift the
+feature vector in the initial system 
+so that each state in the HMM system is more likely to generate the 
+adaptation data.
+Note that due to computational reasons, CMLLR is only implemented
+within \HTK\ for diagonal covariance, continuous density
+HMMs.
+
+The transformation matrix used to give a new estimate of the adapted mean is
+given by
+\hequation{ 
+        \hat{\bm{o}} = \bm{W}\bm{\zeta}, 
+}{mtrans2}
+where $\bm{W}$ is the $n \times \left( n + 1 \right)$
+transformation matrix (where $n$ is the dimensionality of the data)
+and $\bm{\zeta}$ is the extended observation vector,
+\[
+        \bm{\zeta} = \left[\mbox{ }w\mbox{ }o_1\mbox{ }o_2\mbox{ }\dots\mbox{ }o_n\mbox{ }\right]^T
+\]
+where $w$ represents a bias offset whose value is fixed (within \HTK) at 1.\\
+Hence $\bm{W}$ can be decomposed into
+\hequation{
+        \bm{W} = \left[\mbox{ }\bm{b}\mbox{ }\bm{A}\mbox{ }\right]
+}{decompmtrans2}
+where $\bm{A}$ represents an $n \times n$
 transformation matrix and $\bm{b}$ represents a bias vector.
+This form of transform is referred to in the code as {\tt CMLLR}.
 
-The transformation matrix $\bm{W}$ is obtained by solving a
-maximisation problem using the \textit{Expectation-Maximisation}
-(EM) technique. This technique is also used to compute the variance
-transformation matrix. Using EM results in the maximisation of a
-standard \textit{auxiliary function}. (Full details are available in
-section~\ref{s:mllrformulae}.)
+Since multiple \texttt{CMLLR} transforms may be used it is important to 
+include the Jacobian in the likelihood calculation. 
+\hequation{ 
+       {\cal L}(\bm{o};\bm{\mu},\bm{\Sigma}, \bm{A}, \bm{b}) = 
+       {|\bm{A}|}{\cal N}(\bm{A}\bm{o}+\bm{b};\bm{\mu},\bm{\Sigma})
+} {cmllrlike}
+This is the implementation used in the code.
 
-\mysubsect{MLLR and Regression Classes}{reg_classes}
+
+\mysubsect{Input/Output/Parent Transformations}{whattransform}
+There are three types of linear transform that may be used with 
+the HTKTools.
+\begin{itemize}
+
+\item {\it Input transform}: the input transform is used to determine
+the forward-backward probabilities, hence the component posteriors,
+for estimating model and transform parameters. MLLR transforms can be
+iteratively estimated by refining the posteriors using a newly
+estimated transform.
+
+\item {\it Output transform}: the output transform is the transform
+that is generated. The form of the transform is specified using the 
+appropriate configuration options.
+
+\item {\it Parent transform}: the parent transform determines the 
+model, or features, on which the model set or transform is to be 
+generated. For transform estimation this allows {\em cascades} of transforms
+to be used to adapt the model parameters. For model estimation this 
+supports {\em speaker adaptive training}. Note the current implementation 
+only supports adaptive training with CMLLR. Any parent transform can be
+used when generating transforms.
+\end{itemize}
+
+There is no difference in the storage of the transform parameters, whether it is to be a parent transform or an input transform. There is
+also no restrictions on the base classes, or regression classes, that 
+are used for each transform.
+
+\mysubsect{Base Class Definitions}{base_classes}
+The first requirement to allow adaptation is to specify the set of
+the components that share the same transform. This is achieved using a
+baseclass.  The baseclass definition files uses the same syntax for
+defining components as the \htool{HHEd} command. However, for
+baseclass definitions the components must always be specified.
+
+\begin{figure}[htbp]
+\begin{verbatim}
+  ~b ``global''
+  <MMFIDMASK> CUED_WSJ* 
+  <PARAMETERS> MIXBASE
+  <NUMCLASSES> 1
+    <CLASS> 1  {*.state[2-4].mix[1-12]}      
+\end{verbatim}
+\caption{Global base class definition}
+\label{fig:globbase}
+\end{figure}
+The simplest form of transform uses a global transformation for all
+components.  Figure~\ref{fig:globbase} shows a global transformation
+for a system where there are upto 3 emitting states and upto 12
+Gaussian components per state.
+
+\begin{figure}[htbp]
+\begin{verbatim}
+  ~b ``baseclass_4.base''
+  <MMFIDMASK> CUED_WSJ*
+  <PARAMETERS> MIXBASE
+  <NUMCLASSES> 4
+    <CLASS> 1  {(one,sil).state[2-4].mix[1-12]}
+    <CLASS> 2  {two.state[2-4].mix[1-12]}
+    <CLASS> 3  {three.state[2-4].mix[1-12]}
+    <CLASS> 4  {four.state[2-4].mix[1-12]}
+\end{verbatim}
+\caption{Four base classes definition}
+\end{figure}
+
+These baseclasses may be directly used to determine which components
+share a particular transform. However a more general approach
+is to use a regression class tree.
+
+\mysubsect{Regression Class Trees}{reg_classes}
 \index{adaptation!regression tree}
-This adaptation method can be applied in a very flexible manner,
-depending on the amount of adaptation data that is available. If a
-small amount of data is available then a \textit{global} adaptation transform 
+To improve the flexibility of the adaptation process it is possible to
+determine the appropriate set of baseclasses depending on the amount
+of adaptation data that is available. If a small amount of data is
+available then a \textit{global} adaptation transform
 \index{adaptation!global transforms} can be generated. A global transform 
 (as its name suggests) is applied
 to every Gaussian component in the model set. However as more
@@ -163,43 +315,39 @@ available. The tying of each transformation across a number of mixture
 components makes it possible to adapt distributions for which there
 were no observations at all. With this process all models can be
 adapted and the adaptation process is dynamically refined when more
-adaptation data becomes available.\\
+adaptation data becomes available.
 
-The regression class tree 
-is constructed so as to cluster
-together components that are close in acoustic
-space, so that similar components can be transformed in a similar way.
-Note that the tree is built using the original speaker independent
-model set, and is thus independent of any new speaker.
-The tree is constructed with a centroid splitting algorithm, which uses 
-a Euclidean distance measure. For more details see
-section~\ref{s:hhedregtree}.
-The terminal nodes or leaves of the tree specify the final component
-groupings, and are termed the \textit{base
-(regression) classes}. Each Gaussian component of a model set belongs 
-to one particular base class. The tool \htool{HHEd} can
-be used to build a binary regression class tree, and to label each
-component with a base class number.  Both the tree and component base
-class numbers are saved automatically as part of the MMF. Please refer to
-section~\ref{s:regtreemods} and section~\ref{s:hhedregtree} for
-further details.
+The regression class tree is constructed so as to cluster together
+components that are close in acoustic space, so that similar
+components can be transformed in a similar way.  Note that the tree is
+built using the original speaker independent model set, and is thus
+independent of any new speaker.  The tree is constructed with a
+centroid splitting algorithm, which uses a Euclidean distance
+measure. For more details see section~\ref{s:hhedregtree}.  The
+terminal nodes or leaves of the tree specify the final component
+groupings, and are termed the \textit{base (regression) classes}. Each
+Gaussian component of a model set belongs to one particular base
+class. The tool \htool{HHEd} can be used to build a binary regression
+class tree, and to label each component with a base class number.
+Both the tree and component base class numbers can be saved as part of
+the MMF, or simply stored separately. Please refer to
+section~\ref{s:hhedregtree} for further details.
 
 \sidefig{regtree1}{55}{A binary regression tree}{4}{}
 Figure~\ref{f:regtree1} shows a simple example of a binary regression
 tree with four base classes, denoted as $\{C_4, C_5, C_6,
-C_7\}$. During ``dynamic'' adaptation, the
-occupation counts are accumulated for each of the regression base
-classes. The diagram shows a solid arrow and circle
-(or node), indicating that there is sufficient data for a transformation
-matrix to be generated using the data associated with that class. A
-dotted line and circle indicates that there is insufficient
-data. For example neither node 6 or 7 has sufficient data; however
-when pooled at node 3, there is sufficient adaptation data.
- The amount of data that is ``determined'' as sufficient is set
-by the user as a command-line option to \htool{HEAdapt} (see reference
-section~\ref{s:HEAdapt}).
+C_7\}$. During ``dynamic'' adaptation, the occupation counts are
+accumulated for each of the regression base classes. The diagram shows
+a solid arrow and circle (or node), indicating that there is
+sufficient data for a transformation matrix to be generated using the
+data associated with that class. A dotted line and circle indicates
+that there is insufficient data. For example neither node 6 or 7 has
+sufficient data; however when pooled at node 3, there is sufficient
+adaptation data.  The amount of data that is ``determined'' as
+sufficient is set as a configuration option for \htool{HERest} (see
+reference section~\ref{s:HERest}).
 
-\htool{HEAdapt} uses a top-down approach to traverse the regression
+\htool{HERest} uses a top-down approach to traverse the regression
 class tree. Here the search starts at the root node and progresses
 down the tree generating transforms only for those nodes which
 \begin{enumerate}
@@ -228,121 +376,194 @@ At this point it is interesting to note that the global adaptation
 case is the same as a tree with just a root node, and is in fact
 treated as such.
 
-\mysubsect{Transform Model File Format}{tmfs}
+\begin{center}
+\begin{figure}
+\begin{verbatim}
+    ~r "regtree_4.tree"
+    <BASECLASS>~b "baseclass_4.base"
+    <NODE> 1 2 2 3 
+    <NODE> 2 2 4 5 
+    <NODE> 3 2 6 7 
+    <TNODE> 4 1 1
+    <TNODE> 5 1 2
+    <TNODE> 6 1 3
+    <TNODE> 7 1 4
+\end{verbatim}
+\caption{Regression class tree example}
+\label{fig:regtree}
+\end{figure}
+\end{center}
+An example of a regression class tree is shown in figure~\ref{fig:regtree}.
+This uses the four baseclasses from the baseclass macro ``baseclass\_4.base''.
+A binary regression tree is shown, thus there are 4 terminal nodes. 
 
-\htool{HEAdapt} estimates the required transformation statistics and can
-either output a transformed MMF or a transform model file 
-(TMF)\index{adaptation!transform model file}. The
-advantage in storing the transforms as opposed to an adapted
-MMF is that the TMFs are considerably smaller than MMFs (especially
-triphone MMFs). This
-section describes the format of the transform model file in detail.
+\mysubsect{Linear Transform Format}{tmfs}
 
-
-The mean transformation matrix is stored as a block diagonal
-transformation matrix.
-The example block diagonal matrix ${\bf A}$ shown below contains three
-blocks. The first block represents the transformation for only the
-static components of the feature vector, while the second represents
-the deltas and the third the accelerations. This block diagonal matrix
-example makes the assumption that for the transformation, there is no
-correlation between the statics, deltas and delta deltas. In practice
-this assumption works quite well.
-\[
-        {\bf A} \; = \; \left(
-                        \begin{array}{ccc}
-                        {\bf A}_s & {\bf 0}        & {\bf 0}       \\
-                        {\bf 0}   & {\bf A}_\Delta & {\bf 0}       \\
-                        {\bf 0}   & {\bf 0}        & {\bf A}_{\Delta^2}
-                        \end{array}
-                        \right)
-\]
-
-This format reduces the number of transformation parameters required
-to be learnt, making the adaptation process faster. It also reduces
-the adaptation data required per transform when compared with the full
-case. When comparing the storage requirements, the 3 block diagonal
-matrix requires much less storage capacity than the full transform matrix.
-Note that for convenience a full transformation matrix is also stored 
-as a block diagonal matrix, only in this case there is a single block.
-
-The variance transformation is a diagonal matrix and as such is simply
-stored as a vector.
+\htool{HERest} estimates the required transformation statistics and can
+either output a set of transformation models, or a single transform
+model file (TMF)\index{adaptation!transform model file}. The advantage
+in storing the transforms as opposed to an adapted MMF is that the
+TMFs are considerably smaller than MMFs (especially triphone
+MMFs). This section dgives examples of the format that the transforms
+are stored in. For a description of the transform definition see
+section~\ref{s:hmmdef}.
 
 \noindent
-Figure~\ref{f:exampletmf} shows a simple example of a TMF. In this
-case the feature vector has nine dimensions, and the mean transform has
-three diagonal blocks. 
-The TMF can be saved in ASCII or binary format. The user header is
-always output in ascii.
-The first two fields are speaker descriptor fields. The next field
-\texttt{<MMFID>}, the MMF identifier, is obtained from the global
-options macro in the MMF, while the regression class tree identifier
-\texttt{<RCID>} is obtained from the regression tree macro name in the
-MMF.
-If global adaptation is being performed, then the \texttt{<RCID>} will
-contain the identifier \texttt{global}, since a tree is unnecessary in
-the global case.
-Note that the MMF and regression class tree identifiers are set within the
-MMF using the tool \htool{HHEd}. 
-The final two fields are optional, but \htool{HEAdapt} outputs these
-anyway for the user's convenience. These can be edited at any time (as
-can all the fields if desired, but editing \texttt{<MMFID>} and
-\texttt{<RCID>} fields should be avoided). The \texttt{<CHAN>} field
-should represent the adaptation data recording environment. Examples
-could be a particular microphone name, telephone channel or various
-background noise conditions. The \texttt{<DESC>} allow the user to
-enter any other information deemed useful. An example could be the
-speaker's dialect region.
 
-\sideprog{exampletmf}{70}{A Simple example of a TMF}{
-\hmkw{UID} djk \\
-\hmkw{NAME} Dan Kershaw \\
-\hmkw{MMFID} ECRL\_UK\_XWRD \\
-\hmkw{RCID} global \\
-\hmkw{CHAN} Standard \\
-\hmkw{DESC} None \\
-\hmkw{NBLOCKS} 3 \\
-\hmkw{NODETHRESH} 700.0 \\
-\hmkw{NODEOCC} 1 24881.8 \\
-\hmkw{TRANSFORM} 1 \\
-\> \hmkw{MEAN\_TR} 3 \\
-\>\>\hmkw{BLOCK} 1 \\
-\>\>\> \mbox{ }0.942 -0.032 -0.001 \\
-\>\>\> -0.102  \mbox{ }0.922 -0.015 \\
-\>\>\> -0.016  \mbox{ }0.045  \mbox{ }0.910 \\
-\>\>\hmkw{BLOCK} 2 \\                          
-\>\>\> \mbox{ }1.021 -0.032 -0.011 \\
-\>\>\> -0.017  \mbox{ }1.074 -0.043 \\
-\>\>\> -0.099  \mbox{ }0.091  \mbox{ }1.050 \\
-\>\>\hmkw{BLOCK} 3 \\            
-\>\>\>  \mbox{ }1.028  \mbox{ }0.032  \mbox{ }0.001 \\
-\>\>\> -0.012  \mbox{ }1.014 -0.011 \\
-\>\>\> -0.091 -0.043  \mbox{ }1.041 \\
-\>\hmkw{BIASOFFSET} 9 \\
-\>\> -0.357 \mbox{ }0.001 -0.002 \mbox{ }0.132 \mbox{ }0.072 \\
-\>\>\mbox{ }0.006 \mbox{ }0.150 \mbox{ }0.138 \mbox{ }0.198 \\
-\>\hmkw{VARIANCE\_TR} 9  \\
-\>\> \mbox{ }0.936 \mbox{ }0.865 \mbox{ }0.848 \mbox{ }0.832 \mbox{ }0.829 \\
-\>\>\mbox{ }0.786 \mbox{ }0.947 \mbox{ }0.869 \mbox{ }0.912
-}{}
-Whenever a TMF is being used (in conjunction with an MMF), the MMF
-identifier in the MMF is checked against that in the TMF. These
-\textbf{must} match since the TMF is dependent on the model set it was
-constructed from. Also unless the \texttt{<RCID>} field is set to
-\texttt{global}, it is also checked for consistency against the
-regression tree identifier in the MMF.
+\begin{figure}[htbp]
+\begin{verbatim}
+    ~a ``cued''
+    <ADAPTKIND> BASE
+    <BASECLASSES> ~b ``global''
+    <XFORMSET>  
+      <XFORMKIND> CMLLR
+      <NUMXFORMS> 1
+      <LINXFORM> 1 <VECSIZE> 5
+        <OFFSET> 
+        <BIAS> 5
+            -0.357 0.001 -0.002 0.132 0.072
+        <LOGDET> -0.3419
+        <BLOCKINFO> 2 3 2
+        <BLOCK> 1
+          <XFORM> 3 3
+             0.942 -0.032 -0.001
+            -0.102  0.922 -0.015
+            -0.016  0.045  0.910
+        <BLOCK> 2
+          <XFORM> 2 2
+             1.028 -0.032
+            -0.017  1.041 
+    <XFORMWGTSET>
+      <CLASSXFORM> 1 1
+\end{verbatim}
+\caption{Example Constrained MLLR transform using hard weights}
+\end{figure}
+Figure~\ref{fig:hiermllr} shows the format of a single transform. In
+the same fashion as HMMs all transforms are stored as macros. The
+header information gives how the transform was estimated, currently
+either with a regression class tree {\tt TREE} or directly using the
+base classes {\tt BASE}. The base class macro is then specified. The
+form of transformation is then described in the transformset. The code
+currently supports constrained MLLR (illustrated), MLLR mean
+adaptation, MLLR full variance adaptation and diagonal variance
+adaptation.  Arbitrary block structures are allowable.  The assignment
+of base class to transform number is specified at the end of the file.
 
-The rest of the TMF contains a further information header, followed by
-all the transforms. The information header contains necessary
-transform set information such as the number of blocks used, node occupation
-threshold used, and the node occupation counts. Each
-transform has a regression class identifier number, the mean
-transformation matrix ${\bf A}$, an optional bias vector ${\bf b}$ (as
-in equation~\ref{e:decompmtrans}) and
-an optional variance transformation diagonal matrix ${\bf H}$ 
-(stored as a vector). The example has both a bias offset and a
-variance transform.
+The {\tt LOGDET} value stored with the transform is {\em twice} the 
+log-determinant of the transform\footnote{There is no advantge in storing 
+twoce the log determininat, however this is maintained for backward
+compatibility with internal HTK releases.}.
+
+\mysubsect{Hierarchy of Transform}{hieradapt}
+It is possible to specify a hierarchy of transformations. This results
+from using a parent transform during the training process.
+\begin{figure}[htbp]
+\begin{verbatim}
+  ~a ``mjfg''
+  <ADAPTKIND> TREE
+  <BASECLASSES> ~b ``baseclass_4.base''
+  <PARENTXFORM> ~a ``cued''
+  <XFORMSET>  
+  <XFORMKIND> MLLRMEAN
+  <NUMXFORMS> 2
+  <LINXFORM> 1 <VECSIZE> 5
+    <OFFSET> 
+      <BIAS> 5
+        -0.357 0.001 -0.002 0.132 0.072
+    <BLOCKINFO> 2 3 2
+    <BLOCK> 1
+      <XFORM> 3 3
+         0.942 -0.032 -0.001
+        -0.102  0.922 -0.015
+        -0.016  0.045  0.910
+    <BLOCK> 2
+      <XFORM> 2 2
+         1.028 -0.032
+        -0.017  1.041 
+  <LINXFORM> 2 <VECSIZE> 5
+    <OFFSET> 
+      <BIAS> 5
+        -0.357 0.001 -0.002 0.132 0.072
+    <BLOCKINFO> 2 3 2
+    <BLOCK> 1
+      <XFORM> 3 3
+         0.942 -0.032 -0.001
+        -0.102  0.922 -0.015
+        -0.016  0.045  0.910
+    <BLOCK> 2
+      <XFORM> 2 2
+         1.028 -0.032
+        -0.017  1.041 
+  <XFORMWGTSET>
+    <CLASSXFORM> 1 1
+    <CLASSXFORM> 2 1
+    <CLASSXFORM> 3 1
+    <CLASSXFORM> 4 2
+\end{verbatim}
+\caption{Example of an MLLR transform using with a parent transform}
+\label{fig:hiermllr}
+\end{figure}
+Figure~\ref{fig:hiermllr} shows the use of a set of MLLR transforms
+generated using a parent CMLLR transform stored in the macro ``cued''. The
+action of this transform is
+\begin{enumerate}
+\item Apply transform {\tt cued}
+\item Apply transform {\tt mjfg}
+\end{enumerate}
+The parent transform is always applied {\it before} the transform
+itself.
+
+Hierarchy of transforms automatically result from using a parent transform
+when estimating a transform. 
+
+\mysubsect{Mutiple Stream Systems}{streamadapt}
+The specification of the base-class components are given in terms
+of the Gaussian component. In HTK this is specified for a particular
+stream of the HMM state. When multiple streams are used there are two 
+situations to consider\footnote{The current code in \htool{HHEd} for 
+generating decision trees does not support generating trees for multiple 
+streams. However, the code does support adaptation for hand generated 
+trees.}.
+
+First, if the streams have the same number of components, then transforms
+may be shared between different streams. For example it may be decided that
+the same linear transform is to be used by the static stream, the delta
+stream and the delta-delta stream.
+
+Second, if the streams have different dimensions associated with them. For
+this case the root node is a special node for which a transform cannot be 
+generated. It is required to partition the Gaussian components so that 
+all subsequent nodes have the same dimensionality associated with them.
+
+
+\mysect{Adaptive Training with Linear Transforms}{adapttrain}
+In order to improve the performance of systems when there are multiple
+speakers, or acoustic environments, present in the training corpus 
+adaptive training may be used. Here, rather than using adaptation
+transformations only during test, adaptation transforms are estimated
+for each training speaker. The model, sometimes referred to as a {\em canonical
+model}, is then estimated given the set of speaker transforms. In the
+same fashion as standard training, the whole process can then be repeated.
+
+In the current implementation, adaptive training is only supported
+with constrained MLLR as the transform for each speaker. As CMLLR is
+implemented as one, or more, feature-space transformations. The
+estimation formulae in section~\ref{s:bwformulae} are simplified
+modified to accumulate statistics using
+$\bm{A}^{(i)}\bm{o}+\bm{b}^{(i)}$ for all the data from speaker $i$
+rather than $\bm{o}$. The update formula for $\bm{\mu}_{jsm}$ then
+becomes
+\newcommand{\satliksum}[1]{
+                  \sum_{i=1}^I\sum_{r=1}^{R^i}  \sum_{t=1}^{T_r} L^r_{#1}(t)
+}
+\[
+   \hat{\bm{\mu}}_{jsm} = \frac{
+                \satliksum{jsm}(\bm{A}^{(i)}\bm{o}^r_{st}+\bm{b}^{(i)})}{\satliksum{jsm}}
+\]
+
+Specifying that adaptive training is to be used simply requires specifying
+the parent transform that the model set should be built on. Note that usually
+the parent transform will also be used as an input transform.
 
 \mysect{Model Adaptation using MAP}{mapadapt}
 
@@ -413,150 +634,9 @@ data, (and hence would not change much using MAP alone) have been
 adapted using a regression class transform in MLLR. An example usage
 is shown in the following section. 
 
-\pagebreak
-\mysect{Using \htool{HEAdapt}}{UsingHEAdapt}
-
-At the outset \htool{HEAdapt} operates in a very similar fashion to
-\htool{HERest}. Both use a frame/state alignment
-in order to accumulate various statistics about the data. In
-\htool{HERest} these statistics are used to estimate new model
-parameters whilst in \htool{HEAdapt} they are used to estimate 
-the transformations for each regression base class, or new model
-parameters. \htool{HEAdapt} will
-currently only produce transforms with single stream data and
-\texttt{PLAINHS} or \texttt{SHAREDHS} HMM systems (see
-section~\ref{s:hmmsets} on HMM set kinds).
-
-In outline, \htool{HEAdapt} works as follows. On startup, \htool{HEAdapt} 
-loads in a complete set of HMM definitions, including, the
-regression class tree and the base class number of each Gaussian
-component. Note that \htool{HEAdapt} requires the MMF to contain a
-regression class tree. Every training file must
-have an associated label file which gives a transcription for that
-file.  Only the sequence of labels is used by \htool{HEAdapt},
-and any boundary location information is ignored.  Thus, these
-transcriptions can be generated automatically from the known
-orthography of what was said and a pronunciation dictionary.
-
-\centrefig{headaptrdp}{120}{File Processing in HEAdapt}
-
-\htool{HEAdapt}\index{hvite@\htool{HEAdapt}}
-processes each training file in turn.
-After loading it into memory, it uses the associated transcription to 
-construct a  composite HMM which spans the whole utterance.
-This composite HMM is made by concatenating instances of the phone HMMs 
-corresponding to each label in the transcription. The Forward-Backward
-algorithm is then applied to obtain a frame/state alignment and the
-information  necessary to form the standard 
-auxiliary function is accumulated at the Gaussian component
-level. Note that this information is
-different from that required in \htool{HERest} (see
-section~\ref{s:mllrformulae}).
-When all of the training files have been processed (within the static
-or incremental block), the regression
-base class statistics are accumulated using the component level
-statistics. 
-Next the regression class tree is traversed and the new regression class 
-transformations are calculated for those regression classes containing
-a sufficient occupation count at the lowest level in the tree,
-as described in section~\ref{s:reg_classes}. Finally
-either the updated (i.e. adapted) HMM set or the transformations are output.
-Note that \htool{HEAdapt} produces a transforms model file (TMF) that 
-contains transforms that are estimated to \textit{transform from the
-input MMF} to a new environment/speaker based on the adaptation data  
-presented.
-
-%\index{forward-backward!embedded}
-
-The mathematical details of the Forward-Backward algorithm are given
-in section~\ref{s:bwformulae}, while the mathematical details for the
-MLLR mean and variance transformation calculations can be found in
-section~\ref{s:mllrformulae}.
-
-\htool{HEAdapt} is typically invoked by a command line of the form
-\begin{verbatim}
-    HEAdapt -S adaptlist -I labs -H dir1/hmacs -M dir2 hmmlist
-\end{verbatim}
-where \texttt{hmmlist} contains the list of HMMs.  
-%On startup, \htool{HEAdapt} will 
-%load the HMM master macro file (MMF) \texttt{hmacs} (there may be
-%several of these).  It then searches for a definition for each
-%HMM listed in the \texttt{hmmlist}, if any HMM name is not found, 
-%it attempts to open a file of the same name in the current directory
-%(or a directory designated by the \texttt{-d} option).
-%Usually in large subword systems, however, all of the HMM definitions
-%will be stored in MMFs.  Similarly, all of the required transcriptions
-%will be stored in one or more Master Label Files
-%\index{master label files} (MLFs), and in the
-%example, they are stored in the single MLF called \texttt{labs}.
-
-
-Once all MMFs and MLFs have been loaded, 
-\htool{HEAdapt} processes each file in the
-\texttt{adaptlist}, and accumulates the required statistics as described
-above.  On completion, an updated  MMF is output to the directory
-\texttt{dir2}.
-
-If the following form of the command  is used
-\begin{verbatim}
-    HEAdapt -S adaptlist -I labs -H dir1/hmacs -K dir2/tmf hmmlist
-\end{verbatim}
-then on completion a transform model file (TMF) \texttt{tmf} is 
-output to the directory \texttt{dir2}.
-This process is illustrated by Fig~\href{f:headaptrdp}.
-Section~\ref{s:tmfs} describes the TMF format in more
-detail. The output \texttt{tmf} contains transforms that transform the
-MMF \texttt{hmacs}.
-Once this is saved, \htool{HVite} can be used to perform recognition
-for the adapted speaker either using a transformed MMF or by using the
-speaker independent MMF together with a speaker specific TMF.
-
-\htool{HEAdapt} employs the same pruning mechanism as \htool{HERest}
-during the forward-backward computation. As such the pruning on the
-backward path is under the user's control, and the beam is set
-using the \texttt{-t} option.
-
-\htool{HEAdapt} can also be run several times in block or static
-fashion. For instance a first pass
-might entail a global adaptation (forced using the \texttt{-g} option), 
-producing the TMF \texttt{global.tmf} by invoking
-\begin{verbatim}
-    HEAdapt -g -S adaptlist -I labs -H mmf -K tmfs/global.tmf \ 
-            hmmlist
-\end{verbatim}
-The second pass could load in the global transformations (and tranform
-the model set) using the \texttt{-J} option, performing a better 
-frame/state alignment than the speaker independent model set, 
-and output a set of regression class transformations,
-\begin{verbatim}
-    HEAdapt -S adaptlist -I labs -H mmf -K tmfs/rc.tmf \
-            -J tmfs/global.tmf hmmlist
-\end{verbatim}
-Note again that the number of transformations is selected
-automatically and is
-dependent on the node occupation threshold setting and the amount of
-adaptation data available. Finally when producing a TMF, \htool{HEAdapt}
-always generates a TMF to transform the input MMF in all cases. 
-In the last example the input MMF is 
-transformed by the global transform file \texttt{global.tmf} in order 
-to obtain the frame/state alignment only. The final TMF that is output, 
-\texttt{rc.tmf}, contains the set of transforms to transform the input
-MMF \texttt{mmf}, based on this frame/state alignment.
-
-As an alternative, the second pass could entail MLLR together with
-MAP adaptation, outputing a new model set. Note that with MAP adaptation a
-transform can not be saved and a full HMM set must be output.  
-\begin{verbatim}
-    HEAdapt -S adaptlist -I labs -H mmf -M dir2 -k -j 12.0
-            -J tmfs/global.tmf hmmlist
-\end{verbatim}
-Note that MAP alone could be used by removing the \texttt{-k}
-option. The argument to the \texttt{-j} option represents the MAP
-adaptation scaling factor.
-
 %\pagebreak
 
-\mysect{MLLR Formulae}{mllrformulae}
+\mysect{Linear Transformation Estimation Formulae}{mllrformulae}
 
 For reference purposes, this section lists the various formulae
 employed within the \HTK\ adaptation tool\index{adaptation!MLLR
@@ -568,10 +648,12 @@ The following notation is used in this section
 \begin{tabbing}
 ++ \= ++++++++ \= \kill
 \> $\mathcal{M}$ \> the model set\\
+\> $\hat{\mathcal{M}}$ \> the adapted model set\\
 \> $T$ \> number of observations \\
 \> $m$ \> a mixture component \\
-\> $\bm{O}$      \> a sequence of observations \\
-\> $\bm{o}(t)$    \> the observation at time $t$, $1 \leq t \leq T $
+\> $\bm{O}$      \> a sequence of $d$-dimensional observations \\
+\> $\bm{o}(t)$    \> the observation at time $t$, $1 \leq t \leq T $\\
+\> $\bm{\zeta}(t)$\> extended observation at time $t$, $1 \leq t \leq T $
 \\
 \> $\bm{\mu}_{m_r}$  \> mean vector for the mixture component $m_r$\\
 \> $\bm{\xi}_{m_r}$  \> extended mean vector for the mixture component $m_r$\\
@@ -580,124 +662,235 @@ The following notation is used in this section
 \>              \>   at time $t$        
 \end{tabbing}
 
-\newcommand{\like}{L_{m_r}(t)}
-
-\mysubsect{Estimation of the Mean Transformation Matrix}{mtransest}
-
 To enable robust transformations to be trained, the transform matrices
 are tied across a number of Gaussians. The set of Gaussians which
-share a transform is referred to as a regression class.
-For a particular transform case $\bm{W_m}$, the $R$ Gaussian
-components $\left\{m_1, m_2, \dots, m_R\right\}$ will be tied
-together, as determined by the regression class tree (see
-section~\ref{s:reg_classes}).
-By formulating the standard auxiliary function, and then maximising it
-with respect to the transformed mean, and considering only these tied
-Gaussian components, the following is obtained,
-\hequation{
-\sum_{t=1}^{T} 
-\sum_{r=1}^{R} \like\bm{\Sigma}_{m_r}^{-1}\bm{o}(t)\bm{\xi}_{m_r}^T 
-        =
-\sum_{t=1}^{T} 
-\sum_{r=1}^{R} \like\bm{\Sigma}_{m_r}^{-1}\bm{W_m}
-        \bm{\xi}_{m_r}\bm{\xi}_{m_r}^T 
-}{meantrans1}
-and $\like$, the occupation likelihood, is defined as,
+share a transform is referred to as a regression class.  For a
+particular transform case $\bm{W_r}$, the $M_r$ Gaussian components
+$\left\{m_1, m_2, \dots, m_{M_r}\right\}$ will be tied together, as
+determined by the regression class tree (see
+section~\ref{s:reg_classes}).  The standard auxiliary
+function shown below is used to estimate the transforms.
+\newcommand{\like}{L_{m_r}(t)}
+\begin{eqnarray}
+{\cal Q}({\cal M},{\hat{\cal M}}) = 
+- \frac{1}{2}
+\sum_{r=1}^R
+\sum_{m_r=1}^{M_r}
+\sum_{t=1}^T
+\like\left[
+K^{(m)}+\log(|{\hat{\bm\Sigma}}_{m_r}|)+({\bm o}(t)-
+{\hat{\bm\mu}}_{m_r})^T{{\hat{\bm\Sigma}}}_{m_r}^{-1}({\bm o}(t)-{\hat{\bm\mu}}_{m_r})
+\right] \nonumber
+\end{eqnarray}
+where $K^{(m)}$ subsumes all constants and $\like$, the occupation likelihood, is defined as,
 \[ 
          \like = p(q_{m_r}(t)\;|\;\mathcal{M}, \bm{O}_T)
 \]
-where $q_{m_r}(t)$ indicates the Gaussian component $m_r$ at time $t$,
+and $q_{m_r}(t)$ indicates the Gaussian component $m_r$ at time $t$,
 and $\bm{O}_T = \left\{\bm{o}(1),\dots,\bm{o}(T)\right\}$ is the
 adaptation data. The occupation likelihood is obtained from the
 forward-backward process described in section~\ref{s:bwformulae}.
 
-To solve for $\bm{W}_m$, two new terms are defined.
-\begin{enumerate}
-\item
-The left hand side of equation~\ref{e:meantrans1} is independent of
-the transformation matrix and is referred to as $\bm{Z}$, where
+
+\mysubsect{Mean Transformation Matrix ({\tt MLLRMEAN})}{mtransest}
+Substituting the for expressions for MLLR mean adaptation 
+\begin{eqnarray}
+\hat{\bm{\mu}}_{m_r} = \bm{W}_r\bm{\xi}_{m_r}, \:\:\:\: 
+\hat{\bm{\Sigma}}_{m_r} = {\bm{\Sigma}}_{m_r}
+\end{eqnarray}
+into the auxiliary function, and using the fact that the covariance
+matrices are diagonal, yields
+\begin{eqnarray}
+{\cal Q}({\cal M},{\hat{\cal M}}) = K
+- \frac{1}{2}
+\sum_{r=1}^R
+\sum_{j=1}^d{
+\left({\bm{w}}_{rj}{\bf G}^{(j)}_r{\bm{w}}^T_{rj} -2 {\bm{w}}_{rj}{\bf k}^{(j)T}_r
+\right)} \nonumber
+\end{eqnarray}
+where ${\bm{w}}_{rj}$ is the $j^{th}$ {\em row} of $\bm{W}_r$,
+\begin{eqnarray}
+{\bf G}^{(i)}_r=\sum_{m_r=1}^{M_r}
+\frac{1}{\sigma_{m_ri}^{2}}{\bm\xi}_{m_r}{\bm\xi}^{T}_{m_r}
+\sum_{t=1}^T\like
+\label{eq:gi_mllr}
+\end{eqnarray}
+and
+\begin{eqnarray}
+{\bf k}^{(i)}_{r} =  \sum_{m_r=1}^{M_r}\sum\limits_{t=1}^T
+\like\frac{1}{\sigma^{2}_{m_ri}} 
+o_i(t){\bm\xi}^{T}_{m_r}
+\end{eqnarray}
+Differentiating the auxiliary function with respect to the transform
+${\bm W}_r$ , and then maximising it with respect to the transformed mean
+yields the following update
+\begin{eqnarray}
+{{\bm{w}}}_{ri} = {\bf k}_r^{(i)}{\bf G}_r^{(i)-1} \label{eq:mllrmeansol}
+\end{eqnarray}
+
+The above expressions assume that each base regression class $r$ has a
+separate transform. If regression class trees are used then the shared
+transform parameters may be simply estimated by combining the
+statistics of the base regression classes.  The regression class tree
+is used to generate the classes dynamically, so it is not known
+a-priori which regression classes will be used to estimate the
+transform. This does not present a problem, since $\bm{G}^{(i)}$ and
+$\bm{k}^{(i)}$ for the chosen regression class may be obtained from its
+child classes (as defined by the tree). If the parent node $R$ has
+children $\left\{R_1,\dots,R_C\right\}$ then
 \[
-        \bm{Z} = \sum_{t=1}^{T} 
-        \sum_{r=1}^{R}
-        \like\bm{\Sigma}_{m_r}^{-1}\bm{o}(t)\bm{\xi}_{m_r}^T
+        {\bf k}^{(i)} = \sum_{c=1}^{C} {\bf k}^{(i)}_{R_c}
 \]
-\item
-A new variable $\bm{G}^{(i)}$ is defined with elements
-\[ 
-        g_{jq}^{(i)} = \sum_{r=1}^{R} v_{ii}^{(r)} d_{jq}^{(r)}
-\]
-where
-\[
-        \bm{V}^{(r)} = \sum_{t=1}^{T} \like \bm{\Sigma}_{m_r}^{-1}
-\]      
 and
 \[
-        \bm{D}^{(r)} = \bm{\xi}_{m_r}\bm{\xi}_{m_r}^T 
+        {\bf G}^{(i)} = \sum_{c=1}^{C} {\bf G}^{(i)}_{R_c}
 \]
-\end{enumerate}
- 
-It can be seen that from these two new terms, $\bm{W}_m$ can be
-calculated from
-\[
-        \bm{w}_i^T = \bm{G}_i^{-1} \bm{z}_i^T
-\]
-where $\bm{w}_i$ is the $i^{th}$ vector of $\bm{W}_m$ and $\bm{z}_i$
-is the $i^{th}$ vector of $\bm{Z}$.
+The same approach of combining statistics from multiple children can
+be applied to all the estimation formulae in this section.
 
-The regression class tree is used to generate the classes dynamically,
-so it is not known a-priori which regression classes will be used to
-estimate the transform. This does not present a problem, since
-$\bm{G}^{(i)}$ and $\bm{Z}$ for the chosen regression class may be
-obtained from its child classes (as defined by the tree). If the
-parent node $R$ has children $\left\{R_1,\dots,R_C\right\}$ then
-\[
-        \bm{Z} = \sum_{c=1}^{C} \bm{Z}^{(R_c)}
-\]
-and
-\[
-        \bm{G}^{(i)} = \sum_{c=1}^{C} \bm{G}^{(iR_c)}
-\]
+\mysubsect{Variance Transformation Matrix ({\tt MLLRVAR}, {\tt MLLRCOV})}{vtransest}
 
-From this it is clear that it is only necessary to calculate
-$\bm{G}^{(i)}$ and $\bm{Z}$ for only the most specific regression
-classes possible -- i.e. the base classes.
-
-\mysubsect{Estimation of the Variance Transformation Matrix}{vtransest}
-
-Estimation of the variance transformation matrices is only available
-for diagonal covariance Gaussian systems. The Gaussian covariance is
-transformed using,
+Estimation of the first variance transformation matrices is only available
+for diagonal covariance Gaussian systems in the current implementation,
+though full transforms can in theory be estimated. The Gaussian covariance is
+transformed using\footnote{In the current implementation of the code this
+form of transform can only be estimated in addition to the {\tt MLLRMEAN} 
+transform},
 \[
-        \hat{\bm{\Sigma}}_{m} = \bm{B}_m^T\bm{H}_m\bm{B}_m
+        \hat{\bm{\mu}}_{m_r} = \bm{\mu}_{m_r}, \:\:\:\: 
+        \hat{\bm{\Sigma}}_{r} = \bm{B}_{m_r}^T\bm{H}_r\bm{B}_{m_r}
 \]
 where $\bm{H}_m$ is the linear transformation to be estimated and
-$\bm{B}_m$ is the inverse of the Choleski factor of $\bm{\Sigma}_{m}^{-1}$,
+$\bm{B}_m$ is the inverse of the Choleski factor of $\bm{\Sigma}_{m_r}^{-1}$,
 so
 \[ 
-        \bm{\Sigma}_{m}^{-1} = \bm{C}_m\bm{C}_m^T
+        \bm{\Sigma}_{m_r}^{-1} = \bm{C}_{m_r}\bm{C}_{m_r}^T
 \]
 and
 \[
-        \bm{B}_m = \bm{C}_m^{-1}
+        \bm{B}_{m_r} = \bm{C}_{m_r}^{-1}
 \]
-
 After rewriting the auxiliary function, the transform matrix $\bm{H}_m$
 is estimated from,
 \[
-        \bm{H}_m = \frac{ \sum_{r=1}^{R_c}\bm{C}_{m_r}^T 
-                          \left[
-                            \like(\bm{o}(t) - \bm{\mu}_{m_r})
-                                   (\bm{o}(t) - \bm{\mu}_{m_r})^T
-                          \right]
-                          \bm{C}_{m_r}
-                        }
-                        { \like }
+        \bm{H}_r = \frac{ \sum_{m_r=1}^{M_r}\bm{C}_{m_r}^T \left[
+                          \like(\bm{o}(t) - \hat{\bm{\mu}}_{m_r})
+                          (\bm{o}(t) - \hat{\bm{\mu}}_{m_r})^T \right]
+                          \bm{C}_{m_r} } { \like }
 \]
-
-Here, $\bm{H}_m$ is forced to be a diagonal transformation by setting
+Here, $\bm{H}_r$ is forced to be a diagonal transformation by setting
 the off-diagonal terms to zero, which ensures that
-$\hat{\bm{\Sigma}}_{m}$ is also diagonal.
+$\hat{\bm{\Sigma}}_{m_r}$ is also diagonal.
 
+The alternative form of variance adaptation us supported for full,
+block and diagonal transforms. Substituting the for expressions for
+variance adaptation
+\begin{eqnarray}
+\hat{\bm{\mu}}_{m_r} = \bm{\mu}_{m_r}, \:\:\:\: 
+\hat{\bm{\Sigma}}_{m_r} = {\bm H}_r{\bm{\Sigma}}_{m_r}{\bm H}_r^T
+\end{eqnarray}
+into the auxiliary function, and using the fact that the covariance
+matrices are diagonal yields
+\begin{eqnarray}
+{\cal Q}({\cal M},{\hat{\cal M}}) = K + 
+\sum_{r=1}^R
+\beta_r\log({\bf c}_{ri}{\bf a}_{ri}^T)-
+\frac{1}{2}
+\sum_{j=1}^d{
+\left({\bf a}_{rj}{\bf G}^{(j)}_r{\bf a}^T_{rj}
+\right)} \nonumber
+\end{eqnarray}
+where 
+\begin{eqnarray}
+\beta_r &=& \sum_{m_r=1}^{M_r}\sum_{t=1}^T\like\\
+{\bm A}_r &=& {\bm H}_r^{-1}
+\end{eqnarray}
+${\bf a}_{ri}$ is $i^{th}$ row of ${\bm
+A}_r$, the $1\times n$ row vector ${\bf c}_{ri}$ is the vector of
+cofactors of ${\bm A}_r$, $c_{rij}={\mbox{cof}}({\bf A}_{rij})$,
+and  ${\bf G}^{(i)}_r$ is defined as
+\begin{eqnarray}
+{\bf G}^{(i)}_r=\sum_{m_r=1}^{M_r}
+\frac{1}{\sigma_{m_ri}^{2}}
+\sum_{t=1}^T\like(\bm{o}(t)-\hat{\bm{\mu}}_{m_r})
+(\bm{o}(t)-\hat{\bm{\mu}}_{m_r})^T
+\label{eq:gi_mllr2}
+\end{eqnarray}
+Differentiating the auxiliary function with respect to the transform
+${\bm A}_r$ , and then maximising it with respect to the transformed mean
+yields the following update
+\begin{eqnarray}
+{\bf a}_{ri} ={\bf c}_{ri}{\bf G}^{(i)-1}_r
+\sqrt{\left(\frac{\beta_r}{{\bf
+c}_{ri}{\bf G}_r^{(i)-1}{\bf c}^T_{ri}}\right)}
+\end{eqnarray}
+This is an iterative optimisation scheme as the cofactors mean the estimate
+of row $i$ is dependent on all the other rows (in that block). For the 
+diagonal transform case it is of course non-iterative and simplifies to
+the same form as the {\tt MLLRVAR} transform.
+
+\mysubsect{Constrained MLLR Transformation Matrix ({\tt CMLLR})}{cmllrest}
+
+Substituting the for expressions for CMLLR adaptation where\footnote{For
+efficiency this transformation is implemented as
+\begin{eqnarray}
+\hat{\bm o}_r(t) = \bm{A}_r\bm{o}(t) + \bm{b}_r = \bm{W}_r\bm{\zeta}(t)
+\end{eqnarray}
+}
+\begin{eqnarray}
+\hat{\bm{\mu}}_{m_r} = \bm{H}_r\bm{\mu}_{m_r} + \tilde{\bm{b}}_r, \:\:\:\: 
+\hat{\bm{\Sigma}}_{m_r} = {\bm H}_r{\bm{\Sigma}}_{m_r}{\bm H}_r^T
+\end{eqnarray}
+into the auxiliary function, and using the fact that the covariance
+matrices are diagonal yields
+\begin{eqnarray}
+{\cal Q}({\cal M},{\hat{\cal M}}) = K + 
+\sum_{r=1}^R\left[
+\beta\log({\bf p}_{ri}\bm{w}_{ri}^T)-
+\frac{1}{2}
+\sum_{j=1}^d{
+\left(\bm{w}_{rj}{\bf G}^{(j)}_r\bm{w}^T_{rj} - 2\bm{w}_{rj}{\bf k}^{(j)}_r
+\right)}\right] \nonumber
+\end{eqnarray}
+where 
+\begin{eqnarray}
+\bm{W}_r = \left[\begin{array}{c c}
+-\bm{A}_r\tilde{\bm{b}}_r & \bm{H}_r^{-1} \end{array}
+\right] =  \left[\begin{array}{c c}
+\bm{b} & \bm{A} \end{array}
+\right]
+\end{eqnarray}
+$\bm{w}_{ri}$ is $i^{th}$ row of $\bm{W}_r$, the $1\times n$ row vector ${\bf p}_{ri}$ is the zero  
+extended vector of cofactors of ${\bf A}_r$, ${\bf G}^{(i)}_r$ and ${\bf k}^{(i)}_r$ are defined as
+\begin{eqnarray}
+{\bf G}^{(i)}_r=\sum_{m_r=1}^{M_r}
+\frac{1}{\sigma_{m_ri}^{2}}
+\sum_{t=1}^T\like{\bm\zeta}(t){\bm\zeta}^{T}(t)
+\label{eq:gi_mllr3}
+\end{eqnarray}
+and 
+\begin{eqnarray}
+{\bf k}^{(i)}_r=\sum_{m_r=1}^{M_r}
+\frac{\mu_{m_ri}}{\sigma_{m_ri}^{2}}
+\sum_{t=1}^T\like{\bm\zeta}^{T}(t)
+\label{eq:gi_mllr4}
+\end{eqnarray}
+Differentiating the auxiliary function with respect to the transform
+$\bm{W}_r$ , and then maximising it with respect to the transformed mean
+yields the following update
+\begin{eqnarray}
+\bm{w}_{ri} = \left(\alpha{{\bf p}_{ri}} + {\bf k}^{(i)}_r\right){\bf G}^{(i)-1}_r
+\end{eqnarray}
+where $\alpha$ satisfies
+\begin{eqnarray}
+\alpha^2{\bf p}_{ri}{\bf G}^{(i)-1}_r{\bf p}_{ri}^T +
+\alpha{\bf p}_{ri}{\bf G}^{(i)-1}_r{\bf k}^{(i)T}_r - \beta=0\label{eq:alpha_quad}
+\end{eqnarray}
+There are thus two possible solutions for $\alpha$. The solutions that
+yields the maximum increase in the auxiliary function (obtained by
+simply substituting in the two options) is used. This is an iterative
+optimisation scheme as the cofactors mean the estimate of row $i$ is
+dependent on all the other rows (in that block).
 
 %%% Local Variables: 
 %%% mode: plain-tex

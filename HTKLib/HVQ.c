@@ -19,8 +19,53 @@
 /*         File: HVQ.c:   Vector Quantisation                  */
 /* ----------------------------------------------------------- */
 
-char *hvq_version = "!HVER!HVQ:   3.2.1 [CUED 15/10/03]";
-char *hvq_vc_id = "$Id: HVQ.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hvq_version = "!HVER!HVQ:   3.4 [CUED 25/04/06]";
+char *hvq_vc_id = "$Id: HVQ.c,v 1.2 2006/12/29 04:44:54 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -52,6 +97,14 @@ void InitVQ(void)
       if (GetConfInt(cParm,numParm,"TRACE",&i)) trace = i;
    }
    CreateHeap(&vqHeap,"vqHeap",MSTAK,1,0.2,2000,10000);
+}
+
+/* EXPORT->ResetVQ: reset a heap created in InitVQ */
+void ResetVQ (void)
+{
+   ResetHeap(&vqHeap);
+   
+   return;
 }
 
 /* CKCheck: check that ck is one of NULLC,INVDIAGC or FULLC */
@@ -195,6 +248,9 @@ static VQNode GetNode(Source *src, CovKind ck, short width)
                 SrcPosition(*src, buf));
       n = CreateVQNode(vqidx,nid,lid,rid,mean,ck,cov);
       break;
+   default:
+      n = CreateVQNode(vqidx,nid,lid,rid,mean,ck,cov);
+      break;   
    }
    return n;
 }
@@ -455,7 +511,7 @@ float VQNodeScore(VQNode n, Vector v, int size, CovKind ck)
 /* EXPORT->GetVQ: get vq indices for vectors in fv */
 void GetVQ(VQTable vqTab, int numS, Vector *fv, short *vq)
 {
-   short s,idx,size;
+   short s,idx=0,size;
    float bestx, x,xl,xr;
    VQNode n,bestn;
    Vector v;

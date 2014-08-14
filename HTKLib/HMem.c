@@ -19,10 +19,9 @@
 /*         File: HMem.c:   Memory Management Module            */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -30,7 +29,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -44,10 +44,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -62,11 +63,9 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HMem.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen        */
-/*  ---------------------------------------------------------------  */
 
-char *hmem_version = "!HVER!HMem:   3.2.1 [CUED 15/10/03]";
-char *hmem_vc_id = "$Id: HMem.c,v 1.11 2003/10/15 08:10:12 ge204 Exp $";
+char *hmem_version = "!HVER!HMem:   3.4 [CUED 25/04/06]";
+char *hmem_vc_id = "$Id: HMem.c,v 1.3 2006/12/29 04:44:54 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -247,11 +246,19 @@ void InitMem(void)
    }
 }
 
+/* EXPORT->ResetMem: reset module */
+void ResetMem(void)
+{
+   ResetHeap(&gstack);
+   
+   return;
+}
+
 /* EXPORT->CreateHeap: create a memory heap with given characteristics */
 void CreateHeap(MemHeap *x, char *name, HeapType type, size_t elemSize, 
                 float growf, size_t numElem, size_t maxElem)
 {
-   char c;
+   char c=0;
 
    if (growf<0.0)
       HError(5170,"CreateHeap: -ve grow factor in heap %s",name);
@@ -369,7 +376,7 @@ void *New(MemHeap *x,size_t size)
          HError(5173,"New: MHEAP req for %u size elem from heap %s size %u",
                 size,x->name,x->elemSize);
 
-      noSpace = x->totUsed == x->totAlloc;
+      noSpace = (x->totUsed == x->totAlloc) ? TRUE : FALSE;
       if (noSpace || (q=GetElem(x->heap,x->elemSize,x->type)) == NULL) {
          if (!noSpace) BlockReorder(&(x->heap),1);
          if (noSpace || (q=GetElem(x->heap,x->elemSize,x->type)) == NULL) {
@@ -463,8 +470,7 @@ void Dispose(MemHeap *x, void *p)
       size = x->elemSize;
       while (cur != NULL && !found) {
          num = cur->numElem;
-         found = cur->data <= p && 
-            (((void*)((ByteP)cur->data+(num-1)*size)) >= p);
+         found = (cur->data <= p && (((void*)((ByteP)cur->data+(num-1)*size)) >= p)) ? TRUE : FALSE;
          if (!found) {
             prev=cur; cur=cur->next;
          }   
@@ -504,8 +510,7 @@ void Dispose(MemHeap *x, void *p)
       while (cur != NULL && !found){
          /* check current block */
          num = cur->numElem;
-         found = cur->data <= p && 
-            (((void*)((ByteP)cur->data+num)) > p);
+         found = (cur->data <= p && (((void*)((ByteP)cur->data+num)) > p)) ? TRUE : FALSE;
          if (!found) {     /* item not in cur block so delete it */
             x->heap = cur->next;
             x->totAlloc -= cur->numElem;
@@ -521,7 +526,7 @@ void Dispose(MemHeap *x, void *p)
          HError(5175,"Dispose: Item to free in MSTAK %s not found",x->name);
       /* finally cut back the stack in the current block */
       size = ((ByteP)cur->data + cur->firstFree) - (ByteP)p;
-      if (size < 0)
+      if (((ByteP)cur->data + cur->firstFree) < (ByteP)p)
          HError(5175,"Dispose: item to free in MSTAK %s is above stack top",
                 x->name);
       cur->firstFree -= size;
@@ -545,7 +550,7 @@ void Dispose(MemHeap *x, void *p)
 /* EXPORT->PrintHeapStats: print summary stats for given memory heap */
 void PrintHeapStats(MemHeap *x)
 {
-   char tc;
+   char tc=0;
    BlockP p;
    int nBlocks = 0;
    
@@ -593,7 +598,7 @@ size_t ShortVecElemSize(int size) { return (size+1)*sizeof(short); }
 size_t IntVecElemSize(int size) { return (size+1)*sizeof(int); }
 size_t VectorElemSize(int size) { return (size+1)*sizeof(float); }
 size_t DVectorElemSize(int size){ return (size+1)*sizeof(double);}
-size_t SVectorElemSize(int size){ return (size+1)*sizeof(float)+4*sizeof(Ptr); }
+size_t SVectorElemSize(int size){ return (size+1)*sizeof(float)+2*sizeof(Ptr); }
 
 /* EXPORT->CreateShortVec:  Allocate space for short array v[1..size] */
 ShortVec CreateShortVec(MemHeap *x,int size)
@@ -647,7 +652,7 @@ Vector CreateSVector(MemHeap *x, int size)
    int *i;
    
    p = (Ptr *)New(x,SVectorElemSize(size));
-   v = (SVector) (p+4);
+   v = (SVector) (p+2);
    i = (int *) v; *i = size;
    SetHook(v,NULL);
    SetUse(v,0);
@@ -738,6 +743,11 @@ size_t TriMatElemSize(int size)
    return size*(VectorElemSize(0)*2 + (size+1)*sizeof(float))/2
       + (size+1)*sizeof(Vector);
 }
+size_t DTriMatElemSize(int size)
+{
+   return size*(DVectorElemSize(0)*2 + (size+1)*sizeof(double))/2
+      + (size+1)*sizeof(DVector);
+}
 size_t STriMatElemSize(int size)
 {
    return size*(VectorElemSize(0)*2 + (size+1)*sizeof(float))/2
@@ -821,6 +831,24 @@ DMatrix CreateDMatrix(MemHeap *x, int nrows,int ncols)
    return m;
 }
 
+/* EXPORT->CreateDTriMat:  Allocate space for double matrix m[1..size][1..i] */
+DTriMat CreateDTriMat(MemHeap *x,int size)
+{
+   int *i,j;
+   DVector *m;   
+   char *p;
+      
+   p = (char *) New(x,DTriMatElemSize(size)); 
+   i = (int *)p; *i = size;
+   m = (DVector *)p;
+   p += (size+1)*sizeof(DVector);
+   for (j=1;j<=size; j++) {
+      i = (int *) p; *i = j;
+      m[j] = (DVector) p; p += DVectorElemSize(j);
+   }
+   return m;
+}
+
 /* EXPORT->CreateSMatrix:  Allocate space for matrix m[1..nrows][1..ncols] */
 Matrix CreateSMatrix(MemHeap *x, int nrows,int ncols)
 {
@@ -871,6 +899,17 @@ Boolean IsTriMat(Matrix m)
    n=NumRows(m);
    for(i=1;i<=n;i++)
       if (VectorSize(m[i])!=i) return(FALSE);
+   return(TRUE);
+}
+
+/* EXPORT->IsDTriMat: True if double matrix is lower triangular */
+Boolean IsDTriMat(DMatrix m)
+{
+   int i,n;
+
+   n=NumDRows(m);
+   for(i=1;i<=n;i++)
+      if (DVectorSize(m[i])!=i) return(FALSE);
    return(TRUE);
 }
 
@@ -937,6 +976,15 @@ int TriMatSize(TriMat m)
    return *nrows;
 }
 
+/* EXPORT->DTriMatSize: number of rows/cols in double triangular matrix m */
+int DTriMatSize(DTriMat m)
+{
+   int *nrows;
+   
+   nrows = (int *) m;
+   return *nrows;
+}
+
 /* EXPORT->FreeMatrix: Free space allocated for matrix m */
 void FreeMatrix(MemHeap *x, Matrix m)
 {
@@ -965,6 +1013,12 @@ void FreeSMatrix(MemHeap *x, Matrix m)
 
 /* EXPORT->FreeTriMat: Free space allocated for tri matrix m */
 void FreeTriMat(MemHeap *x,TriMat m)
+{
+   Dispose(x,m);
+}
+
+/* EXPORT->FreeDTriMat: Free space allocated for double tri matrix m */
+void FreeDTriMat(MemHeap *x,DTriMat m)
 {
    Dispose(x,m);
 }
@@ -1032,7 +1086,11 @@ Boolean IsSeenV(Ptr m)
    int i;
    
    p = (Ptr *) m; --p; i = *((int *)p);
-   return i<0;
+   
+   if (i<0) 
+      return TRUE;
+   else
+      return FALSE;
 }
 
 /* EXPORT->TouchV: mark use flag as seen */

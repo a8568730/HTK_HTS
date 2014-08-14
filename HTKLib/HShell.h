@@ -32,10 +32,9 @@
 /*         File: HShell.h:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -43,7 +42,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -57,10 +57,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -75,10 +76,8 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HShell.h modified for HTS-1.1.1 2003/12/26 by Heiga Zen      */
-/*  ---------------------------------------------------------------  */
 
-/* !HVER!HShell:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HShell:   3.3 [CUED 28/04/05] */
 
 #ifndef _HSHELL_H_
 #define _HSHELL_H_
@@ -99,6 +98,10 @@
 #include <errno.h>
 #include <signal.h>
 #include <assert.h>
+#ifdef CYGWIN
+#include <asm/socket.h>
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +119,7 @@ extern "C" {
 
 #define MAXSTRLEN 256    /* max length of a string */
 #define MAXFNAMELEN 1034 /* max length of a file name */
+#define PAT_LEN 2048     /* max length of pattern */
 #define SMAX      8      /* max num data streams + 1 */
 #define MAXGLOBS  256    /* max num global config parms */
 
@@ -226,6 +230,12 @@ New function - print error message on stderr and don't abort.
 
 /* ------------------------ Initialisation --------------------------- */
 
+ReturnStatus SetScriptFile(char *fn); 
+/* 
+    Allows more than one script file to be used by an HTK Tool
+    For example, with the -S and -f options in HDistance
+*/
+
 
 extern Boolean vaxOrder;  
 /* 
@@ -247,6 +257,11 @@ ReturnStatus InitShell(int argc, char *argv[], char *ver, char *sccs);
    current tool.
 */
 
+void ResetShell(void);
+/* 
+   reset module
+*/
+
 void Register(char *ver, char *sccs);
 /*
    Register module version and sccs info.
@@ -261,6 +276,9 @@ Boolean InfoPrinted(void);
    immediately after Initialising all modules since it executes
    a pending -V request, if any.
 */
+
+char * RegisterExtFileName(char *s);
+/* Record details of fn extended attributed if any in circular buffer */
 
 void PrintStdOpts(char *opts);
 /*
@@ -472,16 +490,18 @@ void SkipComment(Source *src);
 Boolean ReadShort(Source *src, short *s, int n, Boolean binary);
 Boolean ReadInt  (Source *src, int *i,   int n, Boolean binary);
 Boolean ReadFloat(Source *src, float *x, int n, Boolean binary);
+Boolean ReadDouble(Source *src, double *x, int n, Boolean binary);
 /*
-   Read n short/int/float(s) from the given source, return 
+   Read n short/int/float/double(s) from the given source, return 
    TRUE if no error.  If binary then binary read is performed - 
    byte swapping is controlled by HShell config variables.
 */
 Boolean RawReadShort(Source *src, short *s, int n, Boolean bin, Boolean swap);
 Boolean RawReadInt(Source *src, int *i, int n, Boolean bin, Boolean swap);
 Boolean RawReadFloat(Source *src, float *x, int n, Boolean bin, Boolean swap);
+Boolean RawReadDouble(Source *src, double *x, int n, Boolean bin, Boolean swap);
 /*
-   Read n short/int/float(s) from the given source, return 
+   Read n short/int/float/double(s) from the given source, return 
    TRUE if no error.  
    If binary then binary read is performed.
    If swap then values are byte swapped after reading.
@@ -489,6 +509,7 @@ Boolean RawReadFloat(Source *src, float *x, int n, Boolean bin, Boolean swap);
 
 void SwapShort(short *p);
 void SwapInt32(int32 *p);
+void SwapDouble(double *p);
 /* 
    Byte swap various types
 */
@@ -503,8 +524,9 @@ Boolean KeyPressed(int tWait);
 void WriteShort(FILE *f, short *s, int n, Boolean binary);
 void WriteInt  (FILE *f, int *i,   int n, Boolean binary);
 void WriteFloat(FILE *f, float *x, int n, Boolean binary);
+void WriteDouble(FILE *f, double *x, int n, Boolean binary);
 /*
-   Write n short/int/float(s) to the given file.  
+   Write n short/int/float/double(s) to the given file.  
    If binary then binary Write is performed.
 */
 
@@ -584,21 +606,6 @@ char *RetrieveCommandLine(void);
 }
 #endif
 
-
-/* ----------------------- Timing functions for diagnostics ----------- */
-#ifndef WIN32
-typedef struct TimeStruct_s {
-   char timestr[50];
-   struct timeval time;
-   clock_t clock_time;
-} TimeStruct;
-
-void SetTime(TimeStruct *t);
-
-char *GiveTime(TimeStruct *t);  /* Gives CPU and clock time elapsed in seconds
-                                   since SetTime was called on t,
-                                   in format "?.????/clock ?.????" . */
-#endif  /* WIN32 */
 #endif  /* _HSHELL_H_ */
 
 /* ----------------------- End of HShell.h --------------------------- */

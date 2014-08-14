@@ -32,8 +32,53 @@
 /*         File: HWave.c:   Speech Wave File Input/Output      */
 /* ----------------------------------------------------------- */
 
-char *hwave_version = "!HVER!HWave:   3.2.1 [CUED 15/10/03]";
-char *hwave_vc_id = "$Id: HWave.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hwave_version = "!HVER!HWave:   3.4 [CUED 25/04/06]";
+char *hwave_vc_id = "$Id: HWave.c,v 1.3 2006/12/29 04:44:54 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -143,6 +188,12 @@ void InitWave(void)
       if (GetConfBool(cParm,numParm,"NATURALREADORDER",&b)) natReadOrder = b;
       if (GetConfBool(cParm,numParm,"NATURALWRITEORDER",&b)) natWriteOrder = b;
    }
+}
+
+/* EXPORT->RestWave: reset module */
+void ResetWave(void)
+{
+   return;  /* do nothing */
 }
 
 /* --------------- Wave Record Memory Management ---------------- */
@@ -719,7 +770,7 @@ static int GetShortPackBlock(char **inData, short **outData)
    char *in;   /* dereferenced forms of the arguments */
    short *out;
    unsigned char nSamp, nBits;
-   unsigned char buf;
+   unsigned char buf = '\0';
    int i,k;
    Boolean negative;
    int charBits=0;  
@@ -806,6 +857,7 @@ static void DecodeIMuLaw(Wave w)
    /* Convert data */
    src = (unsigned char *) w->data;
    tgt = w->data;  
+   sample = 0;
    for (i=1; i<=w->nSamples; i++,tgt++) {
       lchan = NISTmutab[*src++];
       rchan = NISTmutab[*src++];
@@ -1002,6 +1054,8 @@ static long GetAIFFHeaderInfo(FILE *f, Wave w, InputAction *ia)
    const long ccid = 0x434f4d4d;  /* 'COMM' */
    const long scid = 0x53534e44;  /* 'SSND' */
    
+   commchunk2.nSamples = 0;  /* to avoid gcc4 warning */
+
    if (w->isPipe){
       HRError(6201,"GetAIFFHeaderInfo: cannot pipe an AIFF file");
       return -1;
@@ -1174,6 +1228,7 @@ ReturnStatus ConvertWAVData(Wave w, InputAction *ia)
       }
       srcs = (short *) w->data;
       tgt = w->data;  
+	  sample = 0;
       for (i=1; i<=w->nSamples; i++,tgt++) {
          lchan = *srcs++;
          rchan = *srcs++;

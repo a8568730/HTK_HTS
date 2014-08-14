@@ -32,8 +32,53 @@
 /*         File: HSLab.c:   The Speech Label Editor            */
 /* ----------------------------------------------------------- */
 
-char *hslab_version = "!HVER!HSLab:   3.2.1 [CUED 15/10/03]";
-char *hslab_vc_id = "$Id: HSLab.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hslab_version = "!HVER!HSLab:   3.4 [CUED 25/04/06]";
+char *hslab_vc_id = "$Id: HSLab.c,v 1.3 2006/12/29 04:44:56 zen Exp $";
 
 /* 
    --------------------------------------------------------------
@@ -230,6 +275,7 @@ static char spcl_str[SLEN] = "Command";   /* special button string */
 void ReportUsage(void)
 {
    printf("\nUSAGE: HSLab [options] waveformFile\n\n");
+   printf("\nModified for HTS\n");
    printf(" Option                                       Default\n\n");
    printf(" -a      auto-increment global label          off\n");
    printf(" -i s    Output transcriptions to MLF s       off\n");  
@@ -322,6 +368,15 @@ int main(int argc, char *argv[])
       strcpy(spfn, ospfn=GetStrArg());
    Initialise(); LoadFiles(); hRedrawWindow(); 
    DecodeCommands(); TermHGraf();
+   
+   ResetGraf();
+   ResetAudio();
+   ResetLabel();
+   ResetWave();
+   ResetMath();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
@@ -745,7 +800,7 @@ LLink GetLabT(LabList *ll, long t)
 /* Intersect: returns TRUE if the regions (a,b):{a<=b} and (a1,b1):{a1<=b1} intersect */
 Boolean Intersect(long a, long b, long a1, long b1)
 {
-   return !(((a1 < a) && (b1 < a)) || ((a1 >= b) && (b1 >= b)));
+   return ( (!(((a1 < a) && (b1 < a)) || ((a1 >= b) && (b1 >= b))) ) ? TRUE:FALSE);
 }
 
 
@@ -949,7 +1004,7 @@ void InvertRegion(RectWin *win, int a, int b)
    HSetXMode(GINVERT);
    HFillRectangle(a, win->y+1, b, win->y + win->h - 1);
    HSetXMode(GCOPY);
-   regnMarked = !regnMarked;
+   regnMarked = (!regnMarked) ? TRUE:FALSE;
    if (wasOn) WPtrOn();
 }
 
@@ -1111,7 +1166,7 @@ void MouseMark(int x, int *markA, int *markB)
    mmWPos = -1;
    do {
       hev = HGetEvent(TRUE, Drag);
-      done = (hev.event==HMOUSEUP);
+      done = (hev.event==HMOUSEUP) ? TRUE:FALSE;
    } while (!done);
    if (mmWPos >=0) PlotWaveWinPtr(mmWPos);
    *markB = hev.x;
@@ -1200,7 +1255,7 @@ Boolean GetString(RectWin *win, char *str, short minlen, short maxlen)
       }
    } while (!done);
    DrawRectWin(win);
-   return (!hitesc) && (strlen(str) > minlen); 
+   return ( ((!hitesc) && (strlen(str) > minlen) ) ? TRUE:FALSE); 
 }
 
 /* FileExists: check to see if a file exsists */
@@ -1678,7 +1733,7 @@ void IncLabStr(void)
 
    strcpy(sbuf,labstr);
    for (p=sbuf; *p != '\0'; p++)
-      if (isdigit(*p)){
+      if (isdigit((int) *p)){
          isNum = TRUE; break;
       }
    if (isNum){    
@@ -1929,7 +1984,7 @@ void CheckForSave(void)
    do { 
       strcpy(sbuf, prompt);
       do 
-         is0 = !GetString(&io_Win, sbuf, strlen(prompt), MAX_LAB_LEN); 
+         is0 = (!GetString(&io_Win, sbuf, strlen(prompt), MAX_LAB_LEN)) ? TRUE:FALSE; 
       while (is0);
       c = sbuf[strlen(prompt)];
    } while ((c!='y') && (c!='Y') && (c!='n') && (c!='N'));

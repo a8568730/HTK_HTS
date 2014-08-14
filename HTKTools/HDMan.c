@@ -32,8 +32,53 @@
 /*    File: HDMan:   pronunciation dictionary manager          */
 /* ----------------------------------------------------------- */
 
-char *hdman_version = "!HVER!HDMan:   3.2.1 [CUED 15/10/03]";
-char *hdman_vc_id = "$Id: HDMan.c,v 1.13 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hdman_version = "!HVER!HDMan:   3.4 [CUED 25/04/06]";
+char *hdman_vc_id = "$Id: HDMan.c,v 1.4 2006/12/29 04:44:56 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -60,8 +105,8 @@ static int nParm = 0;               /* total num params */
 
 #define MAXARGS  100    /* max args in any command */
 /* MAXPHONES (max phones in any pronunciation) is defined in HDict.h */
-#define MAXPRONS 100     /* max number of pronunciations per word */
-#define MAXDICTS 20     /* max number of source dictionaries */
+#define MAXPRONS 200     /* max number of pronunciations per word */
+#define MAXDICTS 100     /* max number of source dictionaries */
 #define MAXCONS  20     /* max number of contexts per script */
 #define MAXPVOC  500    /* max num distinct phones */
 
@@ -206,6 +251,7 @@ void Summary(void)
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS\n");
    printf("\nUSAGE: HDMan [options] newDict srcDict1 srcDict2 ... \n\n");
    printf(" Option                                       Default\n\n");
    printf(" -a s    chars in s start comment lines       #\n");
@@ -222,7 +268,7 @@ void ReportUsage(void)
    printf(" -p f    load phone list stored in f\n");
    printf(" -t      tag output words with source         off\n");
    printf(" -w f    load word list stored in f\n");
-   PrintStdOpts("Q");
+   PrintStdOpts("QS");
    printf("\n\n");
 }
 
@@ -330,9 +376,12 @@ int main(int argc, char *argv[])
    if (NextArg() != STRINGARG)
       HError(1419,"HDMan: Output dictionary file name expected");
    CreateBuffer(GetStrArg(),FALSE);
+   i = 0;
    while (NumArgs()>0){
       if (NextArg() != STRINGARG)
          HError(1419,"HDMan: Input dictionary file name expected");
+      if( ++i > MAXDICTS )
+         HError(1430,"HDMan: Number of srcDicts exceeded %d",MAXDICTS);
       CreateBuffer(GetStrArg(),TRUE);
    }
    if (wListFN != NULL) LoadWordList();
@@ -340,6 +389,13 @@ int main(int argc, char *argv[])
    EditAndMerge();
    if (isLogging)
       PrintLog();
+
+   ResetLabel();
+   ResetWave();
+   ResetMath();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
@@ -783,7 +839,7 @@ void LoadWordList(void)
       ReadString(&src,buf);
       wList[i] = GetLabId(buf,TRUE);
       if (!mustSort && i>0)  /* check in sort order */
-         mustSort = strcmp(wList[i-1]->name,buf) > 0;
+         mustSort = (strcmp(wList[i-1]->name,buf) > 0) ? TRUE:FALSE;
       SkipLine(&src);
    }
    CloseSource(&src);
@@ -960,7 +1016,7 @@ void WriteEntry(FILE *f, LabId word, LabId outsym, Pronunciation *p, int margin,
          fprintf(f," %-15s",buf);
       }
       if (incProbs) {
-         if (p->prob<1.0)
+         if (p->prob<=1.0)
             fprintf(f," %8.6f",p->prob);
          else
             fprintf(f,"         ");
@@ -1115,7 +1171,7 @@ int DeleteSourceOp(WordBuf *wb, LabId *args)
 /* DelDefOp: Delete Word Command - marks by setting nPron to zero */
 void DelDefOp(WordBuf *wb, LabId *args)
 {
-   int i,j,idx;
+   int i,j,idx=0;
    Boolean found = FALSE;
    Pronunciation *p;
    LabId *ph;
@@ -1224,12 +1280,12 @@ void ContextRep(Pronunciation *p, LabId *args, DBuffer *db)
          if (lcList != NULL)
             ltrue = IsInIdList(p->phone[i-1],lcList);
          else
-            ltrue = (lc == asterix || lc == p->phone[i-1] );
+            ltrue = (lc == asterix || lc == p->phone[i-1] ) ? TRUE:FALSE;
          if (ltrue){
             if (rcList != NULL)
                replace = IsInIdList(p->phone[i+1],rcList);
             else
-               replace = (rc == asterix || rc == p->phone[i+1] );
+               replace = (rc == asterix || rc == p->phone[i+1] ) ? TRUE:FALSE;
          }
       }
       if (replace) p->phone[i] = *args;
@@ -1492,7 +1548,7 @@ void RemStress(WordBuf *wb, LabId *args)
          if (mode == cmuId) {
             strcpy(buf,p->phone[i]->name);
             j = strlen(buf) - 1;
-            if (isdigit(buf[j])){
+            if (isdigit((int) buf[j])){
                buf[j] = '\0';
                p->phone[i] = GetLabId(buf,TRUE);
             }
@@ -1659,7 +1715,7 @@ Boolean ScanDict(DBuffer *db, LabId reqd)
    }
    if (scmp==0)
       ReadDictProns(db);
-   return scmp==0;
+   return ((scmp==0) ? TRUE:FALSE);
 }
 
 /* FillInputs: scan inputs until current word in each is >= required word.

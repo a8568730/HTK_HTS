@@ -53,9 +53,10 @@ search controlled by a user specified threshold (see \texttt{-t} option).
 When fully tied mixture models are used, observation pruning is also provided
 (see the  \texttt{-c} option).
 Speaker adaptation is also supported by \htool{HVite} both in terms of 
-recognition using an adapted model set or a TMF (see the \texttt{-J} option),  
-and in the estimation of a transform by unsupervised adaptation using maximum 
-likelihood linear regression (MLLR) (see the \texttt{-j} option). 
+recognition using an adapted model set or a TMF (see the \texttt{-k} option),  
+and in the estimation of a transform by unsupervised adaptation using 
+linear transformation  in an incremental mode (see the \texttt{-j} option) or 
+in a batch mode (\texttt{-K} option).
 
 \mysubsect{Use}{HVite-Use}
 
@@ -123,13 +124,14 @@ command line options
   \ttitem{-g} When using direct audio input, this option enables audio
         replay of each input utterance after it has been recognised.
 
+  \ttitem{-h mask} Set the mask for determining which transform names are 
+	to be used for the input transforms. 
+
   \ttitem{-i s} Output transcriptions to MLF \texttt{s}.
 
   \ttitem{-j i} Perform incremental MLLR adaptation every i utterances      
 
-  \ttitem{-k s1 s2} Set the description field {\tt s1} in the
-        transform model file to {\tt s2}. Currently the choices for
-        {\tt field} are {\tt uid}, {\tt uname}, {\tt chan} and {\tt desc}.
+  \ttitem{-k} Use an input transform (default off).
 
   \ttitem{-l dir} This specifies the directory to store the  output label 
         files.  If this option is not used then \htool{HVite} will store 
@@ -230,7 +232,7 @@ command line options
   \ttitem{-X s} Set the extension for the input label or network files 
         to be \texttt{s}  (default value \texttt{lab}).
 
-\stdoptF
+\stdoptE
 \stdoptG
 \stdoptH
 \stdoptI

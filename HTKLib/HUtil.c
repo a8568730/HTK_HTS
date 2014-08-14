@@ -32,10 +32,9 @@
 /*         File: HUtil.c      HMM utility routines             */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -43,7 +42,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -57,10 +57,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -75,11 +76,9 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HUtil.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen       */
-/*  ---------------------------------------------------------------  */
 
-char *hutil_version = "!HVER!HUtil:   3.2.1 [CUED 15/10/03]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+char *hutil_version = "!HVER!HUtil:   3.4 [CUED 25/04/06]";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.8 2006/12/29 04:44:54 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -100,6 +99,7 @@ char *hutil_vc_id = "$Id: HUtil.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
 #define T_OCC  0004       /* Occupancy statistics tracing */
 
 static int trace = 0;
+static Boolean parsePhysicalHMM = FALSE;
 
 static MemHeap setHeap;
 static MemHeap itemHeap;
@@ -116,12 +116,35 @@ void InitUtil(void)
 
    Register(hutil_version,hutil_vc_id);
    nParm = GetConfig("HUTIL", TRUE, cParm, MAXGLOBS);
-   if (nParm>0) {
+   if (nParm>0){
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
    }
    CreateHeap(&itemHeap,"HUtil: ItemList Heap",MHEAP,sizeof(ItemRec),
               1.0,200,8000);
    CreateHeap(&setHeap,"HUtil: IntSet Heap",MSTAK,1,1.0,2000,16000);
+}
+
+/* EXPORT->ResetUtil: reset created heaps in InitUtil */
+void ResetUtil(void)
+{
+   ResetHeap(&setHeap);
+   ResetHeap(&itemHeap);
+   
+   return;
+}
+
+/* EXPORT->ResetUtilItemList: frees all the memory from the ItemlList heap */
+void ResetUtilItemList(void)
+{
+   DeleteHeap(&itemHeap);
+   CreateHeap(&itemHeap,"HUtil: ItemList Heap",MHEAP,sizeof(ItemRec),
+             1.0,200,8000);
+}
+
+/* EXPORT->SetParsePhysicalHMM: only parse physical HMMs */
+void SetParsePhysicalHMM(Boolean parse)
+{
+   parsePhysicalHMM = parse;
 }
 
 /* -------------------- Clone Routines ------------------------ */
@@ -184,7 +207,7 @@ MixPDF *CloneMixPDF(HMMSet *hset, MixPDF *s, Boolean sharing)
    t->nUse = 0; t->hook = NULL; t->gConst = s->gConst;
    t->mean = CloneSVector(hset->hmem,s->mean,sharing);
    t->ckind = s->ckind;
-   switch (s->ckind) {
+   switch(s->ckind) {
    case DIAGC: 
    case INVDIAGC: 
       t->cov.var = CloneSVector(hset->hmem,s->cov.var,sharing);
@@ -216,12 +239,12 @@ StreamInfo *ClonePDF(HMMSet *hset, int s,
    tsti = (StreamInfo *)New(hset->hmem,sizeof(StreamInfo));
    tsti->nUse = 0;    tsti->nMix = ssti->nMix; 
    tsti->hook = NULL; tsti->stream = s;
-   tme = (MixtureElem *)New(hset->hmem,M*sizeof(MixtureElem));
+      tme = (MixtureElem *)New(hset->hmem,M*sizeof(MixtureElem));
    tsti->spdf.cpdf = tme-1; sme = ssti->spdf.cpdf + 1;
    
-   for (m=1; m<=M; m++,sme++,tme++) {
-      tme->weight = sme->weight;
-      if (tme->weight > MINMIX || hset->msdflag[s])
+      for (m=1; m<=M; m++,sme++,tme++){
+         tme->weight = sme->weight;
+      if ((MixWeight(hset,tme->weight)>MINMIX) || hset->msdflag[s])
          tme->mpdf = CloneMixPDF(hset,sme->mpdf,sharing);
       else 
          tme->mpdf = NULL;
@@ -280,7 +303,7 @@ void NewHMMScan(HMMSet *hset, HMMScanState *hss)
 {
    hss->hset = hset;
    hss->S = hset->swidth[0];
-   hss->isCont = (hset->hsKind == PLAINHS) || (hset->hsKind == SHAREDHS);
+   hss->isCont = ((hset->hsKind == PLAINHS) || (hset->hsKind == SHAREDHS)) ? TRUE : FALSE;
    hss->h = -1;
    hss->mac=NULL;
    if (!GoNextHMM(hss))
@@ -291,7 +314,13 @@ void NewHMMScan(HMMSet *hset, HMMScanState *hss)
 void EndHMMScan(HMMScanState *hss)
 {
    ClearSeenFlags(hss->hset,CLR_ALL);
-   hss->hmm = NULL; hss->se = NULL; hss->ste = NULL; hss->me = NULL;
+   hss->hmm = NULL;
+   hss->se  = NULL;
+   hss->si  = NULL;
+   hss->ste = NULL;
+   hss->sti = NULL;
+   hss->me  = NULL;
+   hss->mp  = NULL;
 }
 
 /* EXPORT->GoNextHMM: Move to next unseen HMM in HMM set */
@@ -300,7 +329,11 @@ Boolean GoNextHMM(HMMScanState *hss)
    int M;
    MLink mac;
 
-   mac=((hss->mac!=NULL)?mac=hss->mac->next:NULL);
+   if (hss->mac!=NULL)
+      mac = hss->mac->next;
+   else
+      mac = NULL;
+      
    if (mac==NULL) hss->h++;
    for (;hss->h<MACHASHSIZE;hss->h++)
       for (mac=((mac==NULL)?hss->hset->mtab[hss->h]:mac);
@@ -315,9 +348,13 @@ Boolean GoNextHMM(HMMScanState *hss)
             hss->sti = hss->ste->info;
             M = hss->sti->nMix;
             hss->M = (M<0)?-M:M; hss->m=1;
-            if (hss->isCont) {
+            if (hss->isCont){
                hss->me = hss->sti->spdf.cpdf+1;
                hss->mp = hss->me->mpdf;
+            } 
+            else if  (hss->hset->hsKind == TIEDHS) {
+               hss->mp = hss->hset->tmRecs[hss->s].mixes[hss->m];
+               hss->me = NULL;
             }
             return TRUE;
          }
@@ -332,7 +369,7 @@ Boolean GoNextState(HMMScanState *hss, Boolean noSkip)
    Boolean stepping = FALSE, ok = TRUE;
    int M;
    
-   while (IsSeen(hss->si->nUse) && ok) {
+   while (IsSeen(hss->si->nUse) && ok){
       if (hss->i < hss->N-1) {
          ++hss->i; ++hss->se; stepping = TRUE;
          hss->si = hss->se->info;
@@ -345,14 +382,18 @@ Boolean GoNextState(HMMScanState *hss, Boolean noSkip)
    }
    if (ok) {
       Touch(&hss->si->nUse);
-      if (stepping) {
+      if (stepping){
          hss->ste = hss->si->pdf+1; hss->sti=hss->ste->info;
          hss->s=1;
          M = hss->sti->nMix;
          hss->M = (M<0)?-M:M; hss->m=1;
-         if (hss->isCont) {
+         if (hss->isCont){
             hss->me = hss->sti->spdf.cpdf+1;
             hss->mp = hss->me->mpdf;
+         } 
+         else if  (hss->hset->hsKind == TIEDHS) {
+            hss->mp = hss->hset->tmRecs[hss->s].mixes[1];
+            hss->me = NULL;
          }
       }
       return TRUE;
@@ -383,9 +424,13 @@ Boolean GoNextStream(HMMScanState *hss, Boolean noSkip)
       if (stepping) {
          M = hss->sti->nMix;
          hss->M = (M<0)?-M:M; hss->m=1;
-         if (hss->isCont) {
+         if (hss->isCont){
             hss->me = hss->sti->spdf.cpdf+1;
             hss->mp = hss->me->mpdf;
+         }
+         else if  (hss->hset->hsKind == TIEDHS) {
+            hss->mp = hss->hset->tmRecs[hss->s].mixes[1];
+            hss->me = NULL;
          }
       }
       return TRUE;
@@ -399,12 +444,20 @@ Boolean GoNextMix(HMMScanState *hss, Boolean noSkip)
 {
    Boolean ok = TRUE;
    
-   if (hss->isCont) {
-      while (IsSeen(hss->mp->nUse) && ok) {
+   if (hss->isCont || (hss->hset->hsKind == TIEDHS)) {
+      while (IsSeen(hss->mp->nUse) && ok){
          if (hss->m < hss->M) {
-            ++hss->m; ++hss->me; 
-            hss->mp = hss->me->mpdf;
-         } else if (noSkip)
+            ++hss->m; 
+            if (hss->isCont) {
+               ++hss->me; 
+               hss->mp = hss->me->mpdf;
+            } 
+            else {
+               hss->mp = hss->hset->tmRecs[hss->s].mixes[hss->m];
+               hss->me = NULL;
+            }
+         } 
+         else if (noSkip)
             return FALSE;
          else
             ok = GoNextStream(hss,FALSE);
@@ -413,14 +466,9 @@ Boolean GoNextMix(HMMScanState *hss, Boolean noSkip)
          Touch(&hss->mp->nUse);
          return TRUE;
       }
-   } else {
-      if (hss->m < hss->M) {
-         ++hss->m;
-      } else if (noSkip)
-         return FALSE;
-      else
-         ok = GoNextStream(hss,FALSE);
-      if (ok) return TRUE;
+   } 
+   else { /* There are no components in a DISCRETEHS system - use GoNextSt     394 ream instead */
+      HError(7231,"GoNextMix: Cannot specify mixture components unless conti     395 nuous");
    }
    hss->me = NULL;
    return FALSE;
@@ -447,9 +495,9 @@ void ConvDiagC(HMMSet *hset, Boolean convData)
       return;
    NewHMMScan(hset, &hss);
    while (GoNextMix(&hss,FALSE)) {
-      if (hss.mp->ckind == DIAGC || hss.mp->ckind == INVDIAGC) {
+      if (hss.mp->ckind == DIAGC || hss.mp->ckind == INVDIAGC){
          hss.mp->ckind = (hss.mp->ckind == DIAGC)?INVDIAGC:DIAGC;
-         if (convData) {
+         if (convData){
             v = hss.mp->cov.var;
             if (! IsSeenV(v)) {
                for (k=1; k<=VectorSize(v); k++) {
@@ -464,6 +512,65 @@ void ConvDiagC(HMMSet *hset, Boolean convData)
    }
    EndHMMScan(&hss);
    ClearSeenFlags(hset,CLR_ALL);
+}
+
+/* EXPORT->ForceDiagC Convert Diagonal Covariance Kind
+   Converts all the HMMs in hset to DIAGC from INVDIAGC */
+void ForceDiagC(HMMSet *hset)
+{
+   HMMScanState hss;
+   SVector v;
+   int k;
+
+   if (hset->hsKind == DISCRETEHS || hset->hsKind == TIEDHS) 
+      return;
+   NewHMMScan(hset, &hss);
+   while (GoNextMix(&hss,FALSE)) {
+      if (hss.mp->ckind == INVDIAGC){
+         hss.mp->ckind = DIAGC;
+         v = hss.mp->cov.var;
+         if (! IsSeenV(v)) {
+            for (k=1; k<=VectorSize(hss.mp->mean); k++) {
+               if (v[k] > MAXVAR) v[k] = MAXVAR;
+               if (v[k] < MINVAR) v[k] = MINVAR;
+               v[k] = 1/v[k];
+            }
+            TouchV(v);
+         }
+      }
+   }
+   EndHMMScan(&hss);
+   ClearSeenFlags(hset,CLR_ALL);
+}
+
+/* ----------------------- LogWt conversions ----------------------------- */
+
+/* EXPORT->ConvLogWt Converts all mixture weights into log-weights. */
+void ConvLogWt(HMMSet *hset)
+{
+   HMMScanState hss;
+
+   if (hset->hsKind == DISCRETEHS || hset->hsKind == TIEDHS || hset->logWt == TRUE) 
+      return;
+   NewHMMScan(hset, &hss);
+   while (GoNextMix(&hss,FALSE))
+      hss.me->weight = MixLogWeight(hset,hss.me->weight);
+   EndHMMScan(&hss);
+   hset->logWt = TRUE;
+}
+
+/* EXPORT->ConvExpWt Converts all mixture log-weights into weights. */
+void ConvExpWt(HMMSet *hset)
+{
+   HMMScanState hss;
+
+   if (hset->hsKind == DISCRETEHS || hset->hsKind == TIEDHS  || hset->logWt == FALSE) 
+      return;
+   NewHMMScan(hset, &hss);
+   while (GoNextMix(&hss,FALSE))
+      hss.me->weight = exp(hss.me->weight);
+   EndHMMScan(&hss);
+   hset->logWt = FALSE;
 }
 
 /* ---------------------- HMM Identification ------------------- */
@@ -498,7 +605,7 @@ int NumItems(ILink list)
 {
    int n=0;
    
-   while (list!=NULL) {
+   while(list!=NULL) {
       n++;
       list=list->next;
    }
@@ -637,23 +744,23 @@ static char *GetAlpha(char *s)
 {
    static char term[]=".,)}";
    Boolean wasQuoted;
-   int i,n,q;
+   int i,n,q=0;
 
    wasQuoted=FALSE;
    SkipSpaces();
-   if (ch == DBL_QUOTE || ch == SING_QUOTE) {
+   if (ch == DBL_QUOTE || ch == SING_QUOTE){
       wasQuoted = TRUE; q = ch;
       ReadCh();
    }
-   for (i=0; i<MAXSTRLEN ; i++) {
-      if (wasQuoted) {
+   for (i=0; i<MAXSTRLEN ; i++){
+      if (wasQuoted){
          if (ch == q) {
             ReadCh();
             s[i] = '\0';
             return s;
          }
       } else {
-         if (isspace(ch) || strchr(term,ch)) {
+         if (isspace(ch) || strchr(term,ch)){
             s[i] = '\0';
             return s;
          }
@@ -807,7 +914,7 @@ static void PMix(ILink models, ILink *ilist, char *type,
    what = TMIX;
    if (ch == '.') {
       ReadCh();
-      switch (GetKey()) {
+      switch(GetKey()) {
       case MEAN_KEY:
          what = TMEAN; ChkType('u',type); break;
       case COV_KEY:
@@ -829,7 +936,7 @@ static void PMix(ILink models, ILink *ilist, char *type,
                if (IsMember(streams,s)) {
                   me = sti->spdf.cpdf+1;
                   for (m=1; m<=sti->nMix; m++,me++) 
-                     if (me->weight>MINMIX && IsMember(mixes,m)) {
+                     if ((MixWeight(hset,me->weight) > MINMIX) && IsMember(mixes,m)) {
                         switch (what) {
                         case TMIX: /* tie ->mpdf */
                            if (trace & T_ITM)
@@ -861,10 +968,10 @@ static void PMix(ILink models, ILink *ilist, char *type,
                            AddItem(hmm,me->mpdf,ilist); 
                            break;
                         }
+                     }
                }
-            }
          }
-      }
+   }
    }
    FreeSet(mixes);
 }
@@ -879,23 +986,29 @@ static void PStatecomp(ILink models, ILink *ilist, char *type,
    Keyword kw;
    IntSet str;
    
-   switch (kw=GetKey()) {
+   switch(kw=GetKey()) {
    case MIX_KEY:
+      if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
+         HError(7231,"PStatecomp: Cannot specify streams or mixes unless continuous");
+      str = CreateSet(SMAX);
+      AddMember(str,1);
+      SkipSpaces();
+      if (ch == '[')
+         PMix(models,ilist,type,states,str,hset);
+      FreeSet(str);
+      break;
    case STREAM_KEY:
       if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
          HError(7231,"PStatecomp: Cannot specify streams or mixes unless continuous");
       str = CreateSet(SMAX);
-      if (kw==STREAM_KEY)  
-         PIndex(str);
-      else
-         AddMember(str,1);
-      SkipSpaces();
+      PIndex(str);
+         SkipSpaces();
       if (ch == '.') {
          ReadCh();
          if (GetKey() != MIX_KEY)
             EdError("Mix expected");
-         SkipSpaces();
-         if (ch=='[')
+      SkipSpaces();
+      if (ch=='[')
             PMix(models,ilist,type,states,str,hset);
          else {
             ChkType('p',type);
@@ -924,15 +1037,15 @@ static void PStatecomp(ILink models, ILink *ilist, char *type,
                      AddItem(hmm,hmm->svec+j,ilist);
                   }
                   else
-                     for (s=1; s<=hset->swidth[0];s++)   
+                  for (s=1; s<=hset->swidth[0];s++)   
                         if (IsMember(str,s)) { /* tie -> spdf */
-                           if (trace & T_ITM)
-                              printf(" %12s.state[%d].stream[%d]\n",
-                                     HMMPhysName(hset,hmm),j,s);
-                           AddItem(hmm,hmm->svec[j].info->pdf+s,ilist);
-                        }
-               }
+                        if (trace & T_ITM)
+                           printf(" %12s.state[%d].stream[%d]\n",
+                                  HMMPhysName(hset,hmm),j,s);
+                        AddItem(hmm,hmm->svec[j].info->pdf+s,ilist);
+                     }
          }
+      }
       }
       if (streams != NULL)
          for (s=1;s<=SMAX;s++)
@@ -997,7 +1110,7 @@ static void PState(ILink models, ILink *ilist, char *type, IntSet *streams, HMMS
             }
       }
    }  
-   FreeSet(states);
+   FreeSet(states);  
 }
 
 /* PHIdent: parse a hmm ident and do pattern match */
@@ -1006,18 +1119,38 @@ static void PHIdent(ILink *models, HMMSet *hset)
    char pattern[MAXSTRLEN];
    int h; 
    MLink q;
+   LabId hmmId;
+   Boolean fullName=TRUE; /* are there wildcards in the name */
+   char *p;
    
    SkipSpaces();
    GetAlpha(pattern);
-   for (h=0; h<MACHASHSIZE; h++)
-      for (q=hset->mtab[h]; q!=NULL; q=q->next)
-         if (q->type=='l') {
-            if (DoMatch(q->id->name,pattern)) {
-               if (trace & T_ITM)
-                  printf("%s ",q->id->name);
-               AddItem((HLink) q->structure, q->structure, models);
-            }
+   p = pattern; h=0;
+   while ((*p != '\0') && (h<MAXSTRLEN) && (fullName)) {
+     if ((*p=='*')||(*p=='?')||(*p=='%')) fullName=FALSE;
+     h++; 
+     p = pattern+h;
+   }
+   if (fullName) { /* this is the name of the model */
+      hmmId = GetLabId(pattern,FALSE);
+      q = FindMacroName(hset,'l',hmmId);
+      if (q != NULL) {
+         if (trace & T_ITM)
+            printf("%s ",hmmId->name);
+         AddItem((HLink) q->structure, q->structure, models);
+      }
+   } 
+   else { /* need to search for all models that match */
+     for (h=0; h<MACHASHSIZE; h++)
+       for (q=hset->mtab[h]; q!=NULL; q=q->next)
+         if (((q->type=='h') && (parsePhysicalHMM)) || ((q->type=='l') && (!parsePhysicalHMM))) {
+	   if (DoMatch(q->id->name,pattern)) {
+	     if (trace & T_ITM)
+	       printf("%s ",q->id->name);
+	     AddItem((HLink) q->structure, q->structure, models);
+	   }
          }
+   }
 }
 
 /* PHName: parse hname and return list of matching models */
@@ -1031,7 +1164,7 @@ static void PHName(ILink *models,HMMSet *hset)
       ReadCh();
       PHIdent(models,hset);
       SkipSpaces();
-      while (ch == ',') {
+      while(ch == ',') {
          ReadCh();
          PHIdent(models,hset);
          SkipSpaces();
@@ -1052,6 +1185,9 @@ static void PItemSet(ILink *ilist, char *type, IntSet *streams, HMMSet *hset)
 {
    ILink models = NULL;         /* list of hmms in item set */
    ILink p;
+   
+   if (ch == '}')   /* no list is specified */
+      return;
    
    PHName(&models,hset);        /* parse hname and get list of models */
    SkipSpaces();
@@ -1081,8 +1217,8 @@ static void PItemSet(ILink *ilist, char *type, IntSet *streams, HMMSet *hset)
 }
 
 /* EXPORT->PItemList: parse items in item list setting ilist and type */
-char *PItemList(ILink *ilist, char *type, HMMSet *hset,
-                Source *s, IntSet *streams, Boolean itrace)
+char *PItemList (ILink *ilist, char *type, HMMSet *hset, Source *s, IntSet *streams, 
+                 const int maxM, const int maxS, const Boolean itrace)
 {
    int rtrace;
 
@@ -1091,8 +1227,8 @@ char *PItemList(ILink *ilist, char *type, HMMSet *hset,
    if (itrace)
       trace|=T_ITM;
    source = s;
-   maxMixes = MaxMixInSet(hset);
-   maxStates = MaxStatesInSet(hset);
+   maxMixes  = (maxM==0) ? MaxMixInSet(hset)    : maxM;
+   maxStates = (maxS==0) ? MaxStatesInSet(hset) : maxS;
    position=pattern;
    *position=0;
 
@@ -1126,7 +1262,7 @@ Ptr GetMacroHook(MLink ml)
 {
    Ptr hook;
 
-   switch (ml->type) {
+   switch(ml->type) {
    case 'l': /* HLink */
    case 'h': /* HLink */
       hook=((HLink)(ml->structure))->hook; break;
@@ -1158,7 +1294,7 @@ Ptr GetMacroHook(MLink ml)
 /* EXPORT->SetMacroHook: Set value of hook field for any macro */
 void SetMacroHook(MLink ml,Ptr hook)
 {
-   switch (ml->type) {
+   switch(ml->type) {
    case 'l': /* HLink */
    case 'h': /* HLink */
       ((HLink)(ml->structure))->hook=hook; break;
@@ -1178,7 +1314,9 @@ void SetMacroHook(MLink ml,Ptr hook)
    case 'v': /* SVector */
       SetHook(ml->structure,hook); break;
    case 'r': /* fake */
+   case 'b':
    case 'j':
+   case 'a':
       break;
    case '*': /* deleted */
    case 'o': /* fake */
@@ -1193,7 +1331,7 @@ int GetMacroUse(MLink ml)
 {
    int use;
 
-   switch (ml->type) {
+   switch(ml->type) {
    case 'l': /* HLink */
    case 'h': /* HLink */
       use=((HLink)(ml->structure))->nUse; break;
@@ -1215,6 +1353,7 @@ int GetMacroUse(MLink ml)
    case 'v': /* SVector */
       use=GetUse(ml->structure); break;
    case '*': /* deleted */
+   case 'b':
    case 'r':    
       use=-1; break;
    case 'o': /* fake */
@@ -1228,7 +1367,7 @@ int GetMacroUse(MLink ml)
 /* EXPORT->SetMacroUse: Set value of use field for any macro */
 void SetMacroUse(MLink ml,int use)
 {
-   switch (ml->type) {
+   switch(ml->type) {
    case 'l': /* HLink */
    case 'h': /* HLink */
       ((HLink)(ml->structure))->nUse=use; break;
@@ -1251,6 +1390,7 @@ void SetMacroUse(MLink ml,int use)
       SetUse(ml->structure,use); break;
    case '*': /* deleted */
    case 'o': /* fake */
+   case 'b':
    case 'r': 
       break;
    default:
@@ -1290,9 +1430,9 @@ void LoadStatsFile(char *statfile,HMMSet *hset,Boolean otrace)
    StateInfo *si;
    Boolean bin=FALSE;
 
-   if (InitSource(statfile,&src,NoFilter)<SUCCESS)
+   if(InitSource(statfile,&src,NoFilter)<SUCCESS)
       HError(7210,"LoadStatsFile: Can't open file %s", statfile);
-   while (ReadInt(&src,&idx,1,bin)) {
+   while(ReadInt(&src,&idx,1,bin)) {
       ++lnum;
       if (!ReadString(&src,hname) || !ReadInt(&src,&count,1,bin))
          HError(7250,"LoadStatsFile: Format error in file %s line %d",

@@ -1,3 +1,4 @@
+
 %/* ----------------------------------------------------------- */
 %/*                                                             */
 %/*                          ___                                */
@@ -20,7 +21,7 @@
 % HTKBook - Steve Young 1/12/97
 %
 
-\mychap{Decoding}{decode}
+\mychap{Decoding with \htool{HVite}}{decode}
 
 \sidepic{Tool.decode}{80}{ }
 The previous chapter has described how to construct a recognition
@@ -648,68 +649,6 @@ Although the above information can be useful for some purposes, for example
 in bootstrap training, only the model names are required.
 The formatting option \texttt{-o SWT} in the above suppresses all output
 except the model names.\index{decoder!output formatting}
-
-\mysect{Decoding and Adaptation}{dec_adapt}
-
-Speaker adaptation techniques allow speaker independent model 
-sets to be adapted to better fit the characteristics of individual 
-speakers using a small amount of adaptation data. 
-Chapter~\ref{c:Adapt} described how the \htool{HEAdapt} tool can be 
-used to perform offline supervised adaptation 
-(using the true transcription of the data).  
-
-This section describes how adapted model sets are used in 
-the recognition process and also how \htool{HVite} can be used to 
-perform unsupervised adaptation on a model set 
-(when no transcription is available).
-
-\mysubsect{Recognition with Adapted HMMs}{rec_adapt}
-\index{decoder!using adapted HMMs}
-As described in section~\ref{s:tmfs}, 
-\htool{HEAdapt}\index{headapt@\htool{HEAdapt}} can produce either a
-MMF containing the newly adapted model set or a TMF containing just
-the adaptation transform.
-If a transformed MMF has been constructed, then 
-\htool{HVite}\index{hvite@\htool{HVite}} 
-can be used in the usual way. If a TMF has been produced however, 
-this needs to be passed to 
-\htool{HVite} (using the \texttt{-J} option) along with the model set from 
-which the transform was estimated.
-\htool{HVite} then transforms the model set using the TMF and recognises the
-input speech using the transformed model set.
-Thus, a common form of invocation would be
-\begin{verbatim}
-    HVite -S test.scp -H hmmset -J trans.tmf -i results \ 
-          -w wdnet dict hmmlist
-\end{verbatim} 
-
-\mysubsect{Unsupervised Adaptation}{unsup_adapt}
-
-\index{adaptation!unsupervised adaptation}
-Unsupervised adaptation occurs when no transcription of the adaptation 
-data exists and one must be generated. In this case \htool{HVite} can be used
-to create a transcription of the adaptation data and use this to estimate a 
-transformation using MLLR. The transformation can then be saved 
-to a TMF using the \texttt{-K} option.
-
-Unsupervised adaptation is signalled by the use of the \texttt{-j} 
-option and this also controls the mode of adaptation by 
-specifying the number of utterances to be processed before 
-a transform is estimated. 
-Thus, the adaptation can be varied between static (adaptation only performed 
-after recognition of all utterances) and incremental adaptation.
-As soon as a transform has been estimated during incremental adaptation, it is used 
-to adapt the model set to improve performance for any subsequent utterances. 
-Note however that only the final transformation is saved.
-To use \htool{HVite} for this purpose it is invoked with a command line of 
-the form 
-\begin{verbatim}
-    HVite -S adapt.scp -H hmmset -K trans.tmf -j 10 -i results \ 
-          -w wdnet dict hmmlist
-\end{verbatim}
-where \texttt{adapt.scp} contains a list of coded adaptation sentences, 
-adaptation is being performed incrementally every 10 utterances and the final 
-transform is stored in \texttt{trans.tmf} 
 
 \mysect{Recognition using Direct Audio Input}{recaudio}
 

@@ -418,7 +418,7 @@ estimates derived from the raw statistics of a specific corpus, into a
 sensible estimate of the real world is addressed by various standard
 methods, all of which aim to create more robust language models.
 
-\subsection{Estimating probabilities}\label{discounting_and_other_fun_things}
+\mysubsect{Estimating probabilities}{HLMdiscounts}\label{discounting_and_other_fun_things}
 Language models seek to estimate the probability of each possible word
 sequence event occurring. In order to calculate maximum likelihood
 estimates this set of events must be finite so that the language model
@@ -481,7 +481,7 @@ is
 $\frac{1}{c_0} \; ( 1\;-$ $\frac{1}{A}\sum_{a\ge 1}$ $d_a\,.\,c_a\,.\,a)$.
 %\end{eqnarray}
 
-\subsubsection{Discounting}
+\subsubsection{Good-Turing discounting}
 In [Good 1953]\footnote{I.J. Good, \textbf{``The Population Frequencies
 of Species and the Estimation of Population Parameters''};
 \textit{Biometrika} 1953, vol. 40 (3,4) pp. 237-264}

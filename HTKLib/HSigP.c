@@ -32,8 +32,53 @@
 /*      File: HSigP.c:   Signal Processing Routines            */
 /* ----------------------------------------------------------- */
 
-char *hsigp_version = "!HVER!HSigP:   3.2.1 [CUED 15/10/03]";
-char *hsigp_vc_id = "$Id: HSigP.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hsigp_version = "!HVER!HSigP:   3.4 [CUED 25/04/06]";
+char *hsigp_vc_id = "$Id: HSigP.c,v 1.2 2006/12/29 04:44:54 zen Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"
@@ -69,6 +114,14 @@ void InitSigP(void)
       if (GetConfInt(cParm,numParm,"TRACE",&i)) trace = i;
    }
    CreateHeap(&sigpHeap,"sigpHeap",MSTAK,1,0.0,5000,5000);
+}
+
+/* EXPORT->ResetSigP: reset the module */
+void ResetSigP (void)
+{
+   ResetHeap(&sigpHeap);
+   
+   return;
 }
 
 /* --------------- Windowing and PreEmphasis ---------------------*/
@@ -150,6 +203,7 @@ static float AutoCorrelate(Vector s, Vector r, int p, int frameSize)
    float sum,energy;
    int   i,j;
 
+   energy = 0.0;
    for (i=0;i<=p;i++) {
       sum = 0.0;
       for (j=1;j<=frameSize-i;j++)
@@ -715,7 +769,7 @@ float MatrixIDFT(Vector as, Vector ac, DMatrix cm)
 
    nFreq = VectorSize(as);
    nAuto = VectorSize(ac);
-
+   E=0.0;
    for (i=0; i<nAuto; i++) {
       acc = cm[i+1][1] * (double)as[1];
       for (j=1; j<nFreq; j++)

@@ -32,8 +32,53 @@
 /*      File: HList.c: List a Speech File or Audio Source      */
 /* ----------------------------------------------------------- */
 
-char *hlist_version = "!HVER!HList:   3.2.1 [CUED 15/10/03]";
-char *hlist_vc_id = "$Id: HList.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hlist_version = "!HVER!HList:   3.4 [CUED 25/04/06]";
+char *hlist_vc_id = "$Id: HList.c,v 1.3 2006/12/29 04:44:55 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -95,6 +140,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS\n");
    printf("\nUSAGE: HList [options] file ...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -d      Coerce observation to VQ symbols     off\n");
@@ -108,7 +154,7 @@ void ReportUsage(void)
    printf(" -s N    Start at sample N                    0\n");
    printf(" -t      Print target header info             off\n");
    printf(" -z      Suppress printing data               on\n");
-   PrintStdOpts("F");
+   PrintStdOpts("FS");
    printf("\n\n");
 }
    
@@ -183,6 +229,18 @@ int main(int argc, char *argv[])
             HError(1119,"HList: List file name expected");
          ListSpeech(GetStrArg());
       }
+   
+   ResetParm();
+   ResetModel();
+   ResetLabel();
+   ResetVQ();
+   ResetAudio();
+   ResetWave();
+   ResetSigP();
+   ResetMath();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
@@ -303,7 +361,7 @@ Boolean IsWave(char *srcFile)
    /* Read all configuration params and get target */
    if (GetConfStr(cParm,nParm,"TARGETKIND",buf))
       tgtPK = Str2ParmKind(buf);
-   isWave = tgtPK == WAVEFORM;
+   isWave = (tgtPK == WAVEFORM) ? TRUE:FALSE;
    if (tgtPK == ANON){
       if ((srcFF == HTK || srcFF == ESIG) && srcFile != NULL){
          strncpy (actfname, srcFile, MAXFNAMELEN);
@@ -324,9 +382,10 @@ Boolean IsWave(char *srcFile)
                       srcFile);
             break;
          }
-         isWave = kind == WAVEFORM;
+         isWave = (kind == WAVEFORM) ? TRUE:FALSE;
          FClose(f,isPipe);
-      } else
+      } 
+      else
          isWave = TRUE;
    }
    return isWave;
@@ -468,7 +527,7 @@ void ListParms(char *src)
       HError(1150,"ListParms: Config parameters invalid");
    GetBufferInfo(pbuf,&info);
    SetBarWidth(8);
-   hi.isAudio = src==NULL;
+   hi.isAudio = (src==NULL) ? TRUE:FALSE;
    if (replay && hi.isAudio)
       AttachReplayBuf(info.a,100000);
    if (srcHdr) {

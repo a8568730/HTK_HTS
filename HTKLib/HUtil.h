@@ -19,10 +19,9 @@
 /*         File: HUtil.h      HMM utility routines             */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -30,7 +29,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -44,10 +44,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -62,11 +63,8 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HUtil.h modified for HTS-1.1.1 2003/12/26 by Heiga Zen       */
-/*  ---------------------------------------------------------------  */
 
-
-/* !HVER!HUtil:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HUtil:   3.3 [CUED 28/04/05] */
 
 #ifndef _HUTIL_H_
 #define _HUTIL_H_
@@ -75,8 +73,6 @@
 extern "C" {
 #endif
 
-#define PAT_LEN 2048
-   
 typedef struct{   /* HMMSet Scan State */
    HMMSet *hset;     /* HMM set */
    Boolean isCont;   /* true PLAINHS or SHAREDHS */
@@ -104,6 +100,17 @@ void InitUtil(void);
    Initialise the module
 */
 
+void ResetUtil (void);
+/*
+   Reset the module
+*/
+
+/* EXPORT->ResetUtilItemList: frees all the memory from the ItelList heap */
+void ResetUtilItemList(void);
+
+/* EXPORT->SetParsePhysicalHMM: only parse physical HMMs */
+void SetParsePhysicalHMM(Boolean parse);
+
 /* ---------------- General Purpose Routines ----------------- */
 
 SVector CloneSVector(MemHeap *hmem, SVector s, Boolean sharing);
@@ -127,6 +134,21 @@ void ConvDiagC(HMMSet *hset, Boolean convData);
   or vice versa. If convData is TRUE then each variance element is
   replaced by its reciprocal - otherwise only the CovKind in each HMM
   is changed and no data conversions are performed.
+*/
+
+void ForceDiagC(HMMSet *hset);
+/*
+  Converts all the HMMs in the HMMSet hset to DIAGC from INVDIAGC.
+*/
+
+void ConvLogWt(HMMSet *hset);
+/*
+  Converts all the mixture weights into log-weights.
+*/
+
+void ConvExpWt(HMMSet *hset);
+/*
+  Converts all the mixture log-weights into weights.
 */
 
 /* ------------------ HMM Scan Routines -------------------- */
@@ -199,14 +221,6 @@ char *HMMPhysName(HMMSet *hset,HLink hmm);
    any order.
 */
 
-typedef struct _ItemRec *ILink;
-
-typedef struct _ItemRec {
-   HLink owner;      /* HMM owning this item */
-   Ptr item;         /* -> to a HMM structure */
-   ILink next;
-}ItemRec;
-
 void AddItem(HLink owner, Ptr item, ILink *list);
 int NumItems(ILink list);
 void FreeItems(ILink *list);
@@ -222,9 +236,9 @@ void FreeItems(ILink *list);
    in the order in which they were created.
 */
 
-typedef struct {     /* Defines a set of integers */
-   int nMembers;     /* cardinality of set */
-   Boolean *set;     /* array[1..nMembers] of Boolean */
+typedef struct {		/* Defines a set of integers */
+   int nMembers;		/* cardinality of set */
+   Boolean *set;		/* array[1..nMembers] of Boolean */
 }IntSet;
 
 IntSet CreateSet(int size);
@@ -277,8 +291,8 @@ void DupSet(IntSet oldSet, IntSet newSet);
    
 */
 
-char *PItemList(ILink *ilist, char *type, HMMSet *h,
-                Source *s, IntSet *streams, Boolean itrace);
+char *PItemList(ILink *ilist, char *type, HMMSet *h, Source *s, IntSet *streams, 
+                const int maxM, const int maxS, const Boolean itrace);
 
 /* 
    Parse source s and convert into itemlist ilist and type holding

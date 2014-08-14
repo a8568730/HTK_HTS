@@ -29,8 +29,8 @@
 /*      File: LPCalc: probability calculation                  */
 /* ----------------------------------------------------------- */
 
-char *lpcalc_version = "!HVER!LPCalc:   3.2.1 [CUED 15/10/03]";
-char *lpcalc_vc_id = "$Id: LPCalc.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
+char *lpcalc_version = "!HVER!LPCalc:   3.4 [CUED 25/04/06]";
+char *lpcalc_vc_id = "$Id: LPCalc.c,v 1.1.1.1 2006/10/11 09:54:43 jal58 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"

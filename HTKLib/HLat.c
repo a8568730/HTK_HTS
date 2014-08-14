@@ -16,7 +16,7 @@
 /* author: Gunnar Evermann <ge204@eng.cam.ac.uk>               */
 /* ----------------------------------------------------------- */
 /*         Copyright:                                          */
-/*         2001-2002  Cambridge University                     */
+/*         2001-2004  Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -27,6 +27,51 @@
 /*       File: HLat.c:  Lattice Manipulation                   */
 /* ----------------------------------------------------------- */
 
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
 /*#### todo:
 
      - implement lattice oracle WER calculation
@@ -34,8 +79,8 @@
 */
 
 
-char *hlat_version = "!HVER!HLat:   3.2.1 [CUED 15/10/03]";
-char *hlat_vc_id = "$Id: HLat.c,v 1.4 2003/10/15 08:10:12 ge204 Exp $";
+char *hlat_version = "!HVER!HLat:   3.4 [CUED 25/04/06]";
+char *hlat_vc_id = "$Id: HLat.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 
 #include "HShell.h"
@@ -60,6 +105,8 @@ char *hlat_vc_id = "$Id: HLat.c,v 1.4 2003/10/15 08:10:12 ge204 Exp $";
 #define T_EXP  00010
 #define T_MEM  00020
 #define T_TRAN 00040
+#define T_LLF  00100
+#define T_MRG  00200
 
 static int trace=0;
 static ConfParam *cParm[MAXGLOBS];      /* config parameters */
@@ -72,8 +119,13 @@ static LabId endWord;           /* word at end of Lattice (!SENT_END) */
 static LabId startLMWord;       /* word at start in LM (<s>) */
 static LabId endLMWord;         /* word at end in LM (</s>) */
 static LabId nullWord;          /* null word in Lattices (!NULL) */
+static Boolean beamPruneArcs = TRUE; /* apply beam pruning to arcs (rather than just nodes) */
+static Boolean compressMerge = TRUE; /* compressing lattice scores when merging duplicates */
+static char *llfExt = "LLF";    /* extension for LLF lattice files */
 
+#ifndef NO_LAT_LM
 static MemHeap slaHeap, slnHeap;/* MHEAPs for use in LatExpand() */
+#endif
 
 /* --------------------------- Prototypes ---------------------------- */
 
@@ -99,25 +151,199 @@ struct _SubLArc {
 };
 #endif
 
+/* --------------------------- LLF processing ---------------------- */
+
+typedef struct _LLFInfo LLFInfo;
+struct _LLFInfo {
+   LLFInfo *next;
+   char name[MAXFNAMELEN];
+   Source source;
+   int lastAccess;
+};
+
+
+static int numLLFs = 0; 
+static int maxLLFs = 5; 
+static int numLatsLoaded = 0;
+static LLFInfo *llfInfo = NULL;
+
+static MemHeap llfHeap;
+
+
+void CloseLLF (LLFInfo *llf)
+{
+   if (trace&T_LLF)
+      printf ("Closing LLF %s\n", llf->name);
+   CloseSource (&llf->source);
+   llf->name[0] = '\0';
+   llf->lastAccess = 0;
+}
+
+
+LLFInfo *OpenLLF (char *fn)
+{
+   LLFInfo *llf;
+   Source s;
+   char buf[MAXFNAMELEN];
+
+   if (trace&T_LLF)
+      printf ("Opening LLF %s\n", fn);
+
+   if (InitSource (fn, &s, NetFilter) < SUCCESS) {
+      HError(-8630,"OpenLLF: Cannot open LLF %s", fn);
+      return NULL;
+   }
+   if (!ReadStringWithLen (&s, buf, MAXFNAMELEN) ||
+       strcmp (buf, "#!LLF!#")) {   /* no LLF header or read from pipe failed */
+      HError(-8630,"OpenLLF: Cannot read from LLF %s", fn);
+      return NULL;
+   }
+
+   if (numLLFs < maxLLFs) {
+      ++numLLFs;
+      llf = New (&llfHeap, sizeof (LLFInfo));
+      llf->next = llfInfo;
+      llfInfo = llf;
+   }
+   else {
+      LLFInfo *l;
+
+      /* find oldest (least recently accessed) LLF */
+      llf = llfInfo;
+      for (l = llfInfo->next; l; l = l->next)
+         if (l->lastAccess < llf->lastAccess)
+            llf = l;
+
+      CloseLLF (llf);
+   }
+
+   strcpy (llf->name, fn);
+   llf->source = s;
+
+   return llf;
+}
+
+Boolean ScanLLF (LLFInfo *llf, char *fn, char *ext)
+{
+   char buf[MAXFNAMELEN];
+   char latfn[MAXFNAMELEN];
+
+   llf->lastAccess = numLatsLoaded;
+   MakeFN (fn, NULL, ext, latfn);
+
+   while (ReadStringWithLen (&llf->source, buf, MAXFNAMELEN)) {
+      if (!strcmp(buf, latfn)) {   /* found name */
+         return TRUE;
+      }
+      if (trace&T_LLF)
+         printf ("ScanLLF: skipping '%s'\n", buf);
+      ReadUntilLine (&llf->source, ".");   /* skip this lattice */
+   }
+   HError (-1, "ScanLLF: lattice '%s' not found in LLF '%s'\n", latfn, llf->name);
+   return FALSE;
+}
+
+
+Lattice *GetLattice (char *fn, char *path, char *ext,
+                     /* arguments of ReadLattice() below */
+                     MemHeap *heap, Vocab *voc, 
+                     Boolean shortArc, Boolean add2Dict)
+{
+   Lattice *lat;
+   LLFInfo *llf;
+   char llfName[MAXFNAMELEN];
+   char buf[MAXSTRLEN];
+
+   MakeFN (path, NULL, llfExt, llfName);
+
+   /* check whether LLF is open already */
+   for (llf = llfInfo; llf; llf = llf->next) {
+      if (!strcmp (llfName, llf->name))
+         break;
+   }
+
+   if (!llf) {   /* not found -> try to open LLF */
+      llf = OpenLLF (llfName);
+
+      if (!llf) {       /* can't find LLF -> fall back to single file lattices */
+         char latfn[MAXFNAMELEN];
+         FILE *f;
+         Boolean isPipe;
+
+         MakeFN (fn, path, ext, latfn);
+         if ((f = FOpen(latfn, NetFilter, &isPipe)) == NULL)
+            HError(8632,"GetLattice: Cannot open Lattice file %s", latfn);
+         lat = ReadLattice (f, heap, voc, shortArc, add2Dict);
+         FClose(f, isPipe);
+         return lat;
+      }
+   }
+
+   /* scan for lattice with requested name in LLF */
+   ++numLatsLoaded;
+   if (!ScanLLF (llf, fn, ext)) {
+      /* this may be because it's missing, or there's an error in the order */
+      CloseSource (&llf->source);
+      /* LLF must exist open and try again */
+      if (InitSource (llfName, &llf->source, NetFilter) < SUCCESS) {   
+         HError(8630,"OpenLLF: Cannot open LLF %s", llfName);
+      }
+      if (!ReadStringWithLen (&llf->source, buf, MAXFNAMELEN) ||
+          strcmp (buf, "#!LLF!#")) {   /* no LLF header or read from pipe failed */
+         HError(-8630,"OpenLLF: Cannot read from LLF %s", fn);
+         return NULL;
+      }
+      if (!ScanLLF (llf, fn, ext)) {
+         /* is not definitely missing */ 
+         HError (8632, "ScanLLF: lattice not found in LLF\n");
+      }
+   }
+
+   /* note we do not support sub lattices here, thus call ReadOneLattice()  directly */
+   lat = ReadOneLattice (&llf->source, heap, voc, shortArc, add2Dict);
+
+   return lat;
+}
+
+
 /* --------------------------- Initialisation ---------------------- */
 
 /* EXPORT->InitLat: register module & set configuration parameters */
 void InitLat(void)
 {
    int i;
+   Boolean b;
+   char buf[MAXSTRLEN];
 
    Register(hlat_version,hlat_vc_id);
    nParm = GetConfig("HLAT", TRUE, cParm, MAXGLOBS);
    if (nParm>0){
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
+      if (GetConfBool(cParm,nParm,"BEAMPRUNEARCS",&b)) 
+         beamPruneArcs = b;
+      if (GetConfStr(cParm,nParm,"LLFEXT",buf))
+         llfExt = CopyString(&gstack,buf);
+      if (GetConfInt(cParm,nParm,"MAXLLFS",&i)) maxLLFs = i;
    }
 
+   CreateHeap (&llfHeap, "LLF stack", MSTAK, 1, 1.0, 1000, 10000);
 #ifndef NO_LAT_LM
    CreateHeap (&slaHeap, "LatExpand arc heap", MHEAP, sizeof (SubLArc), 1.0, 1000, 128000);
    CreateHeap (&slnHeap, "LatExpand node heap", MHEAP,sizeof (SubLNode), 1.0, 1000, 32000);
 #endif
 }
 
+/* EXPORT->ResetLat: reset the module */
+void ResetLat (void)
+{
+#ifndef NO_LAT_LM
+   ResetHeap(&slnHeap);
+   ResetHeap(&slaHeap);
+#endif
+   ResetHeap(&llfHeap);
+   
+   return;
+}
 
 /* --------------------------- Lattice processing ------------------- */
 
@@ -510,6 +736,27 @@ Transcription *LatFindBest (MemHeap *heap, Lattice *lat, int N)
    return trans;
 }
 
+/* EXPORT->LatSetScores
+
+     set ln->score values to node posterior to make WriteLattice() deterministic
+*/
+void LatSetScores (Lattice *lat)
+{
+   LogDouble best;
+   LNode *ln;
+   int i;
+
+   LatAttachInfo (&gcheap, sizeof (FBinfo), lat);
+
+   best = LatForwBackw (lat, LATFB_MAX);
+
+   for (i = 0, ln = lat->lnodes; i < lat->nn; ++i, ++ln) {
+      ln->score = LNodeFw (ln) + LNodeBw (ln);
+   }
+
+   LatDetachInfo (&gcheap, lat);
+}
+
 
 /* EXPORT->LatPrune
 
@@ -571,16 +818,6 @@ Lattice *LatPrune (MemHeap *heap, Lattice *lat, LogDouble thresh, float arcsPerS
    }
 
    nn = na = 0;
-   /* scan arcs and count survivors */
-   for (i = 0, la = lat->larcs; i < lat->na; ++i, ++la) {
-      score = LNodeFw (la->start) + LArcTotLike (lat, la) + LNodeBw (la->end);
-      if (score >= limit) {     /* keep */
-         la->score = (float) na;
-         ++na;
-      }
-      else                   /* remove */
-         la->score = -1.0;
-   }
 
    /* scan nodes, count survivors and verify consistency */
    for (i = 0, ln = lat->lnodes; i < lat->nn; ++i, ++ln) {
@@ -591,7 +828,35 @@ Lattice *LatPrune (MemHeap *heap, Lattice *lat, LogDouble thresh, float arcsPerS
       }
       else {                    
          ln->n = -1;
-         /* check that there are no arcs to keep attached to ln */
+      }
+   }
+
+   /* scan arcs and count survivors */
+   for (i = 0, la = lat->larcs; i < lat->na; ++i, ++la) {
+      if (beamPruneArcs) {
+         score = LNodeFw (la->start) + LArcTotLike (lat, la) + LNodeBw (la->end);
+         if (score >= limit) {     /* keep */
+            la->score = (float) na;
+            ++na;
+         }
+         else                   /* remove */
+            la->score = -1.0;
+      }
+      else {                    /* only prune arc if either node is dead */
+         if (la->start->n != -1 && la->end->n != -1) {  /* both nodes are alive => keep arc */
+            la->score = (float) na;
+            ++na;
+         }
+         else                   /* remove */
+            la->score = -1.0;
+      }
+   }
+
+#if 0
+   /*   SANITY check */
+   for (i = 0, ln = lat->lnodes; i < lat->nn; ++i, ++ln) {
+      if (ln->n == -1) {
+         /* check that there are no live arcs attached to dead nodes */
          for (la = ln->foll; la; la = la->farc) {
             if (la->score >= 0.0)
                HError (8691, "LatPrune: arc score (%f) better than node score (%f)\n", 
@@ -600,6 +865,7 @@ Lattice *LatPrune (MemHeap *heap, Lattice *lat, LogDouble thresh, float arcsPerS
          }
       }
    }
+#endif 
    
    if (trace & T_PRUN)
       printf ("lattice pruned from %d/%d to %d/%d\n", lat->nn, lat->na, nn, na);
@@ -626,7 +892,6 @@ Lattice *LatPrune (MemHeap *heap, Lattice *lat, LogDouble thresh, float arcsPerS
          *newla = *la;
          newla->start = newlat->lnodes + ((int) la->start->n);
          newla->end = newlat->lnodes + ((int) la->end->n);
-         
          /* insert newla into foll list */
          newla->farc = newla->start->foll;
          newla->start->foll = newla;
@@ -991,3 +1256,620 @@ Lattice *LatExpand (MemHeap *heap, Lattice *lat, LModel *lm)
 
 #endif
 
+
+/* 
+   MergeArcs : merge two active acrs by deactivating 
+   the one with a lower total likelihood
+*/
+void MergeArcs(Lattice *lat, LArc *la1, LArc *la2)
+{
+   /* doing nothing if one is deactivated */
+   if (la1->score < 0 || la2->score < 0) 
+      return;
+
+   /* doing nothing for identical arcs */
+   if (la1 == la2) {
+      if (trace & T_MRG) {
+         fprintf(stdout, "merging identical arcs (%d %s)->(%d %s):%f and (%d %s)->(%d %s):%f ...\n", 
+                 la1->start->n, la1->start->word->wordName->name, la1->end->n, 
+                 la1->end->word->wordName->name, la1->lmlike,
+                 la2->start->n, la2->start->word->wordName->name, la2->end->n, 
+                 la2->end->word->wordName->name, la2->lmlike);
+         fflush(stdout);         
+      }
+      return;
+   }
+
+   if (trace & T_MRG) {
+      fprintf(stdout, "merging arcs (%d %s)->(%d %s):%f and (%d %s)->(%d %s):%f ...\n", 
+              la1->start->n, la1->start->word->wordName->name, la1->end->n, 
+              la1->end->word->wordName->name, la1->lmlike,
+              la2->start->n, la2->start->word->wordName->name, la2->end->n, 
+              la2->end->word->wordName->name, la2->lmlike);
+      fflush(stdout);   
+   }
+     
+   /* deactivate the arc with a lower total likelihood */
+   (LArcTotLike(lat, la1) >= LArcTotLike(lat, la2)) ? 
+      (la2->score = -1.0) : (la1->score = -1.0);
+   
+}
+
+/* 
+   MergeArcsForNode: merge all inbound and outbound acrs of 
+   a node that have the same LM information
+*/
+void MergeArcsForNode(Lattice *lat, LNode *ln)
+{
+   LArc *la1, *la2;
+
+   /* merge following arcs */
+   for (la1 = ln->foll; la1; la1 = la1->farc) {
+      for (la2 = la1->farc; la2; la2 = la2->farc) {
+         if (strcmp(la1->end->word->wordName->name, la2->end->word->wordName->name) == 0
+             && la1->lmlike == la2->lmlike) {
+            assert(la1->lmlike == la2->lmlike);
+            MergeArcs(lat, la1, la2);
+         }
+      }
+   }
+
+   /* merge preceding ars */
+   for (la1 = ln->pred; la1; la1 = la1->parc) {
+      for (la2 = la1->parc; la2; la2 = la2->parc) {
+         if (strcmp(la1->start->word->wordName->name, la2->start->word->wordName->name) == 0
+             && la1->lmlike == la2->lmlike) {
+            assert(la1->lmlike == la2->lmlike);
+            MergeArcs(lat, la1, la2);
+         }
+      }
+   }  
+}
+
+/* 
+   RecoverArcsForNode: recover inbound and/or outbound acrs of a
+   node if no inbound and/or outbound arc is active for this node 
+*/
+void RecoverArcsForNode(Lattice *lat, LNode *ln)
+{
+   Boolean in, out; 
+   LArc *la1, *la2;
+
+   /* checking inbound arcs */
+   in = FALSE;
+   for (la1 = ln->pred; la1; la1 = la1->parc) {      
+      if (la1->score >= 0) {
+         in = TRUE;
+         break;
+      }
+   }
+
+   /* checking outbound arcs */
+   out = FALSE;
+   for (la1 = ln->foll; la1; la1 = la1->farc) {
+      if (la1->score >= 0) {
+         out = TRUE;
+         break;
+      }
+   }
+
+   /* doing nothing if the node is fully connected */
+   if (in && out) return;
+   
+   /* recovering inbound arcs */
+   if (!in) {
+      for (la1 = ln->pred; la1; la1 = la1->parc) { 
+         la1->score = 0;
+      }
+      for (la1 = ln->pred; la1; la1 = la1->parc) { 
+         for (la2 = la1->parc; la2; la2 = la2->parc) {
+            if (strcmp(la1->start->word->wordName->name, la2->start->word->wordName->name) == 0
+               && la1->lmlike == la2->lmlike) {
+               la2->score = -1.0;
+            }
+         }
+      }
+   }
+
+   /* recovering outbound arcs */
+   if (!out) {
+      for (la1 = ln->foll; la1; la1 = la1->farc) {
+         la1->score = 0;
+      }
+      for (la1 = ln->foll; la1; la1 = la1->farc) {
+         for (la2 = la1->farc; la2; la2 = la2->farc) {
+            if (strcmp(la1->end->word->wordName->name, la2->end->word->wordName->name) == 0
+                && la1->lmlike == la2->lmlike) {
+               la2->score = -1.0;
+            }
+         }
+      }          
+   }
+}
+
+/*
+  MergeNodes: merge two nodes in a lattice
+*/
+static LNode *MergeNodes(Lattice *lat, LNode *ln1, LNode *ln2)
+{
+   LArc *la;  
+   
+   /* doing nothing */
+   if (ln1 == ln2) {
+      if (trace & T_MRG) {
+         fprintf(stdout, "merging identical nodes (%d %s) and (%d %s) ...\n", 
+                 ln1->n, ln1->word->wordName->name, ln2->n, ln2->word->wordName->name);
+         fflush(stdout);
+      }
+      return ln1;
+   }
+
+   if (trace & T_MRG) {
+      fprintf(stdout, "merging nodes (%d %s) and (%d %s) ...\n", 
+              ln1->n, ln1->word->wordName->name, ln2->n, ln2->word->wordName->name);
+      fflush(stdout);
+   }
+   
+   /* setting start word of follwoing arcs of node ln2 */
+   for (la = ln2->foll; la; la = la->farc) {
+      la->start = ln1;      
+   }
+   /* setting end word of preceding arcs of node ln2 */
+   for (la = ln2->pred; la; la = la->parc) {
+      la->end = ln1;      
+   }
+   
+   /* moving following arcs of node ln2 to ln1 */
+   if (ln1->foll) {      
+      for (la = ln1->foll; la->farc; la = la->farc);
+      la->farc = ln2->foll;
+   }
+   else {
+      ln1->foll = ln2->foll;
+   }
+   ln2->foll = NULL;
+
+   /* moving preceding arcs of node ln2 to ln1 */
+   if (ln1->pred) {      
+      for (la = ln1->pred; la->parc; la = la->parc);
+      la->parc = ln2->pred;
+   }
+   else {
+      ln1->pred = ln2->pred;
+   }
+   ln2->pred = NULL;
+
+   /* activate and deactivate */
+   ln1->score = 0;   
+   ln2->score = -1.0;
+   
+   return ln1;
+}
+
+/*
+  ToMergeLatNodesForw: checking if forword merge is needed between 
+  a node and other active nodes that are connected to this node
+*/
+Boolean ToMergeLatNodesForw(Lattice *lat, LNode *ln)
+{
+   Boolean isFound = FALSE;
+   LArc *la1, *la2;
+      
+   for (la1 = ln->foll; la1; la1 = la1->farc) {
+      for (la2 = la1->farc; la2; la2 = la2->farc) {
+         if (strcmp(la1->end->word->wordName->name, la2->end->word->wordName->name) == 0
+             && la1->score >= 0 && la1->end->score >= 0 && la2->score >= 0 && la2->end->score >= 0) {
+            isFound = TRUE;
+            return isFound;
+         }
+      }
+   }
+   
+   return isFound;
+}
+
+/* 
+   MergeLatNodesForw: recursively merge a node and other 
+   forward active nodes that are connected to this node 
+*/
+void MergeLatNodesForw(Lattice *lat, LNode *ln)
+{
+   int i, n;
+   LNode **ntab;
+   LArc *la1, *la2;
+   
+   for (la1 = ln->foll; la1; la1 = la1->farc) {
+      for (la2 = la1->farc; la2; la2 = la2->farc) {
+         if (strcmp(la1->end->word->wordName->name, la2->end->word->wordName->name) == 0) {
+            /* if lattice contains cycles */
+            if ((la1->end == ln || la2->end == ln) && la1->end != la2->end) {
+               ln = MergeNodes(lat, la1->end, la2->end);
+            }
+            /* merge indentical following words */
+            else {
+               MergeNodes(lat, la1->end, la2->end);
+            }
+         }         
+      }
+   }
+   
+   /* checking all connected and active nodes to merge */ 
+   n = 0;
+   for (la1 = ln->foll; la1; la1 = la1->farc) {
+      if (la1->score >= 0 && la1->end->score >= 0 && ToMergeLatNodesForw(lat, la1->end)) {
+         n++;
+      }
+   }
+   if (n == 0) return;
+
+   /* recording all connected and active nodes to merge */ 
+   ntab = (LNode **)New(lat->heap, n * sizeof(LNode *));
+   
+   n = 0;
+   for (la1 = ln->foll; la1; la1 = la1->farc) {
+      if (la1->score >= 0 && la1->end->score >= 0 && ToMergeLatNodesForw(lat, la1->end)) {
+         ntab[n++] = la1->end;
+      }
+   }
+   
+   /* merge arcs */
+   for(i = 0; i < n; i++) {
+      MergeArcsForNode(lat, ntab[i]);
+   }
+   
+   /* recursively merge forward nodes */
+   for(i = 0; i < n; i++) {
+      MergeLatNodesForw(lat, ntab[i]);
+   }
+
+   Dispose(lat->heap, ntab);
+}    
+
+/*
+  ToMergeLatNodesBackw: checking if backward merge is needed between 
+  a node and other active nodes that are connected to this node
+*/
+Boolean ToMergeLatNodesBackw(Lattice *lat, LNode *ln)
+{
+   Boolean isFound = FALSE;
+   LArc *la1, *la2;
+      
+   for (la1 = ln->pred; la1; la1 = la1->parc) {
+      for (la2 = la1->parc; la2; la2 = la2->parc) {
+         if (strcmp(la1->start->word->wordName->name, la2->start->word->wordName->name) == 0
+             && la1->score >= 0 && la1->start->score >= 0 && la2->score >= 0 && la2->start->score >= 0) {
+            isFound = TRUE;
+            return isFound;
+         }
+      }
+   }
+   
+   return isFound;
+}
+
+/* 
+   MergeLatNodesBackw: recursively merge a node and other 
+   backward active nodes that are connected to this node 
+*/
+void MergeLatNodesBackw(Lattice *lat, LNode *ln)
+{
+   int i, n;
+   LNode **ntab;
+   LArc *la1, *la2;
+   
+   for (la1 = ln->pred; la1; la1 = la1->parc) {
+      for (la2 = la1->parc; la2; la2 = la2->parc) {
+         if (strcmp(la1->start->word->wordName->name, la2->start->word->wordName->name) == 0) {
+            /* if lattice contains cycles */
+            if ((la1->start == ln || la2->start == ln) && la1->start != la2->start) {
+               ln = MergeNodes(lat, la1->start, la2->start);
+            }
+            /* merge indentical following words */
+            else {
+               MergeNodes(lat, la1->start, la2->start);
+            }
+         }         
+      }
+   }
+   
+   /* checking all connected and active nodes to merge */ 
+   n = 0;
+   for (la1 = ln->pred; la1; la1 = la1->parc) {
+      if (la1->score >= 0 && la1->start->score >= 0 && ToMergeLatNodesBackw(lat, la1->start)) {
+         n++;
+      }
+   }
+   if (n == 0) return;
+
+   /* recording all connected and active nodes to merge */ 
+   ntab = (LNode **)New(lat->heap, n * sizeof(LNode *));
+   
+   n = 0;
+   for (la1 = ln->pred; la1; la1 = la1->parc) {
+      if (la1->score >= 0 && la1->start->score >= 0 && ToMergeLatNodesBackw(lat, la1->start)) {
+         ntab[n++] = la1->start;
+      }
+   }
+   
+   /* merge arcs */
+   for(i = 0; i < n; i++) {
+      MergeArcsForNode(lat, ntab[i]);
+   }
+   
+   /* recursively merge forward nodes */
+   for(i = 0; i < n; i++) {
+      MergeLatNodesBackw(lat, ntab[i]);
+   }
+
+   Dispose(lat->heap, ntab);   
+}    
+
+/* 
+   ShowLattice: show a lattice for debugging purpose
+*/
+void ShowLattice(Lattice *lat)
+{
+   int i;
+   LNode *ln;
+   LArc *la;
+   
+   fprintf(stdout, "Utterance: %s\n", lat->utterance);
+   fprintf(stdout, "N=%-4d L=%-5d\n", lat->nn, lat->na);
+
+   for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
+      fprintf(stdout, "I=%-4d  t=%-5.2f %-19s\n", ln->n, ln->time, ln->word->wordName->name);
+   }
+
+   for (i = 0, la = lat->larcs; i < lat->na; i++, la++) {
+      fprintf(stdout, "J=%-4d S=%-4d %-19s E=%-4d %-19s a=%-9.2f l=%-7.3f\n", i,
+              la->start->n, la->start->word->wordName->name, la->end->n,
+              la->end->word->wordName->name, la->aclike, la->lmlike);
+   }
+
+   fflush(stdout);
+}
+
+/* EXPORT->MergeLatNodesArcs
+
+     Merge duplicate lattice nodes and arcs caused by different phonetic 
+     contexts or pronunciation variants in a lattice for acoutic rescoring.
+     The converted word graph retains the original LM information.
+*/
+Lattice *MergeLatNodesArcs(Lattice *lat, MemHeap *heap, Boolean mergeFwd)
+{
+   int i, nn, na;
+   LNode *ln, *newln;
+   LArc *la, *newla;
+   Lattice *newlat;
+
+   /* resetting all the score values for nodes and arcs */
+   for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
+      ln->score = 0;
+   }
+   for (i = 0, la = lat->larcs; i < lat->na; i++, la++) {
+      la->score = 0;
+   }
+
+   /* merging arcs */
+   for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
+      MergeArcsForNode(lat, ln);
+   }
+
+   /* merging nodes */
+   if (mergeFwd) {
+      for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
+         MergeLatNodesForw(lat, ln);      
+      }
+      /* have to merge the remaining active nodes backward 
+      for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
+         if (ln->score >= 0) {
+            MergeLatNodesBackw(lat, ln);
+         }
+      }
+      */
+   }
+   else {
+      for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
+         MergeLatNodesBackw(lat, ln);
+      }
+      /* have to merge the remaining active nodes forward 
+      for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
+         if (ln->score >= 0) {
+            MergeLatNodesForw(lat, ln);
+         }
+      }
+      */
+   }
+      
+   /* getting the number of remaining nodes and acrs */
+   nn = 0; na = 0;
+   for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
+      if (ln->score >= 0) {
+         nn++;
+         /* this might not be needed but just in case */
+         RecoverArcsForNode(lat, ln);
+      }
+   }
+   for (i = 0, la = lat->larcs; i < lat->na; i++, la++) {
+      if (la->score >= 0) {
+         na++;
+      }
+   }
+   
+   /* build new lattice from remaining nodes/arcs */
+   newlat = NewILattice (heap, nn, na, lat);
+
+   /* copy all the nodes we want to keep */
+   nn = 0;
+   newln = newlat->lnodes;
+   for (i = 0, ln = lat->lnodes; i < lat->nn; i++, ln++) {
+      if (ln->score >= 0) {
+         /* keep */
+         *newln = *ln;
+         /* update the ordering index */
+         newln->n = ln->n = nn;
+         ++newln; 
+         nn++;
+      }
+   }
+   assert (newln == newlat->lnodes + nn);
+
+   /* copy all the arcs we want to keep */
+   newla = newlat->larcs; 
+   for (i = 0, la = lat->larcs; i < lat->na; i++, la++) {
+      if (la->score >= 0) {
+         /* keep */
+         *newla = *la;
+
+         newla->start = &newlat->lnodes[la->start->n];
+         newla->end = &newlat->lnodes[la->end->n];
+         
+         /* insert newla into foll list */
+         newla->farc = newla->start->foll;
+         newla->start->foll = newla;
+
+         /* ...and into pred list */
+         newla->parc = newla->end->pred;
+         newla->end->pred = newla;
+
+         if (compressMerge) {
+            newla->aclike = 0;
+            newla->prlike = 0;
+         }
+         ++newla;
+      }
+   }
+   assert (newla == newlat->larcs + na);
+
+   if (trace & T_MRG) 
+      ShowLattice(newlat);
+   
+   if (trace & T_TOP) {
+      fprintf(stdout, "\nAverage density nodes/sec : %-4.4f -> %-4.4f\n", 
+              lat->nn/lat->lnodes[lat->nn - 1].time, newlat->nn/newlat->lnodes[newlat->nn - 1].time); 
+      fprintf(stdout, "\nAverage density links/sec : %-4.4f -> %-4.4f\n\n", 
+              lat->na/lat->lnodes[lat->nn - 1].time, newlat->na/newlat->lnodes[newlat->nn - 1].time); 
+      fflush(stdout);
+   }
+
+   return newlat;   
+}
+
+/* 
+   ApplyWPNetLM2LabLat: apply word pair LM network to a 
+   lattice created from a single sequence of word labels 
+*/
+void ApplyWPNet2LabLat(Lattice *lat, Lattice *wdNet)
+{
+   int i, j; 
+   Boolean isFound;
+   LArc *la, *lmla;
+
+   /* label lattice must contain NULL node at the start and end */
+   if (lat->lnodes[0].word != lat->voc->nullWord 
+       || lat->lnodes[lat->nn - 1].word != lat->voc->nullWord)
+      HError(9999, "HLat: Sentence start or end NULL node missing in label lattice!");
+
+   /* for all arcs except [NULL -> SENT_START] and [SENT_END -> NULL] */
+   for (i = 1, la = lat->larcs + 1; i < lat->na - 1; i++, la++) {            
+      isFound = FALSE;             
+      for (j = 0, lmla = wdNet->larcs; j < wdNet->na; j++, lmla++) {
+         if (strcmp(la->start->word->wordName->name, lmla->start->word->wordName->name) == 0
+             && strcmp(la->end->word->wordName->name, lmla->end->word->wordName->name) == 0) {
+            /* this checks if the LM network is deterministic */
+            if (isFound && (la->lmlike != (lmla->lmlike * wdNet->lmscale) / lat->lmscale)) {
+               HError(8696, "HLat: Word pair LM network is undeterministic: [%s -> %s] : %f and [%s -> %s] : %f !\n", 
+                      la->start->word->wordName->name, la->end->word->wordName->name, la->lmlike,
+                      la->start->word->wordName->name, la->end->word->wordName->name, 
+                      (lmla->lmlike * wdNet->lmscale) / lat->lmscale);
+            }
+            la->lmlike = (lmla->lmlike * wdNet->lmscale) / lat->lmscale;
+            isFound = TRUE;
+         }                  
+         if (j == wdNet->na - 1 && !isFound) 
+            HError(8696, "HLat: LM score for arc [%s -> %s] not found in word pair LM!", 
+                   la->start->word->wordName->name, la->end->word->wordName->name);
+      }         
+   }   
+   
+   /* for the first and last arcs [NULL -> SENT_START] 
+      and [SENT_END -> NULL] */
+   lat->larcs[0].lmlike = lat->larcs[lat->na - 1].lmlike = 0;
+}
+
+
+#ifndef NO_LAT_LM
+/* 
+   ApplyNGram2LabLat: apply N-gram LM to a 
+   lattice created from a single sequence of word labels 
+*/
+void ApplyNGram2LabLat(Lattice *lat, LModel *lm)
+{
+   int i, j;
+   LabId *revlab;
+   LNode *ln;
+   LArc *la;
+
+   /* label lattice must contain NULL node at the start and end */
+   if (lat->lnodes[0].word != lat->voc->nullWord 
+       || lat->lnodes[lat->nn - 1].word != lat->voc->nullWord)
+      HError(9999, "HLat: Sentence start or end NULL node missing in label lattice!");
+      
+   /* create label array in revere order for N-gram histories 
+      it size is the total number of non NULL words in the label 
+      lattice plus maxium N-gram history length */
+   revlab = (LabId *)New(lat->heap, (lat->nn - 2 + NSIZE - 1) * sizeof(LabId));   
+   for (j = 0; j < lat->nn - 2 + NSIZE - 1; j++) {      
+      revlab[j] = NULL;
+   }
+
+   /* all the words in the label lattice are store in a reverse order in 
+      as [W_n, W_n-1, ..., W_2, W_1] in the array excluding NULL word. 
+      LM vocab word Id is also assigned to each word to access LM */ 
+   for (i = 0, ln = &lat->lnodes[1]; i < lat->nn - 2; i++, ln++) {
+      revlab[lat->nn - 3 - i] = ln->word->wordName;
+      for (j = 1; j <= lm->data.ngram->vocSize; j++) {
+         if (strcmp(lm->data.ngram->wdlist[j]->name, revlab[lat->nn - 3 - i]->name) == 0) {
+            revlab[lat->nn - 3 - i]->aux = (Ptr) lm->data.ngram->wdlist[j]->aux;
+         }
+      }
+   }
+   
+   if (trace & T_EXP) {
+      fprintf(stdout, "\n Word labels: ");
+      for (j = 0; j < lat->nn - 2; j++) {
+         fprintf(stdout, "%s ", revlab[j]->name);
+      }
+      fprintf(stdout, "\n");
+      fprintf(stdout, "\n Vocab entries: ");
+      for (j = 0; j < lat->nn - 2; j++) {
+         fprintf(stdout, "%s ", lm->data.ngram->wdlist[(int) revlab[j]->aux]->name);
+      }
+      fprintf(stdout, "\n\n");
+      fflush(stdout);
+   }
+
+   /* for all arcs except [NULL -> SENT_START] and [SENT_END -> NULL] */   
+   for (i = 1, la = lat->larcs + 1; i < lat->na - 1; i++, la++) {            
+
+      la->lmlike = GetLMProb(lm, &revlab[lat->nn - 2 - i], la->end->word->wordName);
+
+      if (trace & T_EXP) {
+         fprintf(stdout, "\n LM likelihood for arc [%s -> %s] from N-gram entry:",
+                 la->start->word->wordName->name, la->end->word->wordName->name);
+         fprintf(stdout, " ( ");
+         for (j = lat->nn - 3; j > lat->nn - 3 - i; j--) {
+            fprintf(stdout, "%s ", revlab[j]->name);
+         }
+         fprintf(stdout, ") -> %s : %f\n", la->end->word->wordName->name, la->lmlike);
+         fflush(stdout);
+      }
+   }   
+
+   /* for the first and last arcs [NULL -> SENT_START] 
+      and [SENT_END -> NULL] */
+   lat->larcs[0].lmlike = lat->larcs[lat->na - 1].lmlike = 0;
+
+   Dispose(lat->heap, revlab);
+}
+#endif

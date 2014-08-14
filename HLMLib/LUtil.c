@@ -29,8 +29,8 @@
 /*      File: LUtil:    General Utility Routines               */
 /* ----------------------------------------------------------- */
 
-char *lutil_version = "!HVER!LUtil:   3.2.1 [CUED 15/10/03]";
-char *lutil_vc_id = "$Id: LUtil.c,v 1.2 2003/10/15 08:10:12 ge204 Exp $";
+char *lutil_version = "!HVER!LUtil:   3.4 [CUED 25/04/06]";
+char *lutil_vc_id = "$Id: LUtil.c,v 1.1.1.1 2006/10/11 09:54:43 jal58 Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -120,8 +120,8 @@ static void GetHeaderStr(char *s, char *buf)
    int i=0,j=0,k,l=0,len;
 
    len = strlen(s); j = len-1;
-   while (isspace(s[i]) && i<len) i++;
-   while (isspace(s[j]) && j>i) j--;
+   while (isspace((int) s[i]) && i<len) i++;
+   while (isspace((int) s[j]) && j>i) j--;
    for (k=i; k<=j; k++)
       buf[l++] = s[k];
    buf[l] = '\0';
@@ -198,7 +198,7 @@ Boolean GetLMHdrInt(char *name, int *value, LMFileHdr hdr)
    s = GetLMHdrStr(name,hdr,FALSE);
    if (s==NULL) return FALSE;
    if (strlen(s) == 0) return FALSE;
-   if (! ( isdigit(s[0]) || s[0] == '-' || s[0] == '+') ) return FALSE;
+   if (! ( isdigit((int) s[0]) || s[0] == '-' || s[0] == '+') ) return FALSE;
    *value = atoi(s);
    return TRUE;
 }
@@ -218,7 +218,7 @@ Boolean BlankString(char *s)
 {
    int i;
    for (i=0; i<strlen(s); i++)
-      if (!isspace(s[i])) return FALSE;
+      if (!isspace((int) s[i])) return FALSE;
    return TRUE;
 }
 

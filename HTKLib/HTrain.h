@@ -32,7 +32,52 @@
 /*         File: HTrain.h   HMM Training Support Routines      */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HTrain:   3.2.1 [CUED 15/10/03] */
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+/* !HVER!HTrain:   3.3 [CUED 28/04/05] */
 
 #ifndef _HTRAIN_H_
 #define _HTRAIN_H_
@@ -40,6 +85,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+enum _UPDSet{UPMEANS=1,UPVARS=2,UPTRANS=4,UPMIXES=8,UPXFORM=16,UPMAP=32,UPSEMIT=64};
+typedef enum _UPDSet UPDSet;
 
 /* Win32 modification */
 #ifdef WIN32
@@ -49,6 +97,11 @@ extern "C" {
 void InitTrain(void);
 /*
    Initialise the module
+*/
+
+void ResetTrain(void);
+/*
+   Reset the module
 */
 
 /* ------------------ Generic Sequence Type --------------- */
@@ -214,7 +267,7 @@ typedef struct {     /* attached to transP */
 typedef struct {     /* attached to StreamElem */
    Vector c;         /* array[1..M] of mixture weight */
    float occ;        /* occ for states sharing this pdf */
-   LogFloat prob;    /* PreComputed stream Log Prob */
+   float *prob;      /* PreComputed mixture Log Probs */
    int   time;       /* time for which prob is valid */
 } WtAcc;
 
@@ -240,21 +293,21 @@ typedef struct {     /* attached to MixPDF */
 } PreComp;
 
 
-void AttachAccsParallel(HMMSet *hset, MemHeap *x, int indx);
-void AttachAccs(HMMSet *hset, MemHeap *x);
+void AttachAccsParallel(HMMSet *hset, MemHeap *x, UPDSet uFlags, int indx);
+void AttachAccs(HMMSet *hset, MemHeap *x, UPDSet uFlags);
 /*
    Attach zeroed accumulators to given HMM set, also attaches PreComps
    Equals AttachAccsParallel (hset,x,1).
 */
 
-void ZeroAccsParallel(HMMSet *hset, int indx); /* if indx +ve, does 0.. indx-1; else does -indx. */
-void ZeroAccs(HMMSet *hset);
+void ZeroAccsParallel(HMMSet *hset, UPDSet uFlags, int indx); /* if indx +ve, does 0.. indx-1; else does -indx. */
+void ZeroAccs(HMMSet *hset, UPDSet uFlags);
 /*
    Zero all accumulators in given HMM set.
 */
 
-void ShowAccsParallel(HMMSet *hset, int index);
-void ShowAccs(HMMSet *hset);
+void ShowAccsParallel(HMMSet *hset, UPDSet uFlags, int index);
+void ShowAccs(HMMSet *hset, UPDSet uFlags);
 /*
    Show all accumulators attached to given HMM set
 */
@@ -276,8 +329,14 @@ void ResetHMMPreComps(HLink hmm, int nStreams);
    given HMM.
 */
 
-FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, int index);
-FILE * DumpAccs(HMMSet *hset, char *fname, int n);
+void ResetHMMWtAccs(HLink hmm, int nStreams);
+/*
+   Reset all the wt accs associated with a
+   given HMM.
+*/
+
+FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, UPDSet uFlags, int index);
+FILE * DumpAccs(HMMSet *hset, char *fname, UPDSet uFlags, int n);
 /* 
    Dump a copy of the accumulators attached to hset
    in file fname.  Any occurrence of the $ symbol in
@@ -285,8 +344,8 @@ FILE * DumpAccs(HMMSet *hset, char *fname, int n);
    and returned to allow extra info to be written.
 */ 
 
-Source LoadAccsParallel(HMMSet *hset, char *fname, int index);
-Source LoadAccs(HMMSet *hset, char *fname);
+Source LoadAccsParallel(HMMSet *hset, char *fname, UPDSet uFlags, int index);
+Source LoadAccs(HMMSet *hset, char *fname, UPDSet uFlags);
 /* 
    Increment the accumulators attached to hset by adding
    the values stored in fname.   Accs must be newly 
@@ -304,6 +363,12 @@ double ScaleAccsParallel(HMMSet *hset, float weight, int index);
 double ScaleAccs(HMMSet *hset, float weight);
 /*
    Scales all the accumulators.  Returns summed occupancy.
+*/
+
+extern Boolean strmProj;
+/* 
+   Controls whether an  stream projection transform is generated.
+   Not elegant, but saves multiple config specifications etc.
 */
 
 #ifdef __cplusplus

@@ -32,9 +32,11 @@ the following operations on them:
 
 \begin{itemize}
 \item finding 1-best path through lattice
-\item pruning lattice using forward-bacward scores
+\item pruning lattice using forward-backward scores
 \item expanding lattices with new language model
+\item converting lattices to equivalent word networks
 \item calculating various lattice statistics
+\item converting word MLF files to lattices with a language model
 \end{itemize}
 
 A typical scenario for the use of \htool{HLRescore} is the application
@@ -59,6 +61,14 @@ transcriptions can then be scored (using \htool{HResults}) and the
 parameter setting that yields the lowest word error rate can be
 selected. 
 
+Lattices produced by standard HTK decoders, for example,
+\htool{HVite} and \htool{HDecode}, may still contain duplicate word
+paths corresponding to different phonetic contexts caused by
+pronunciation variants or optional between word short pause silence
+models. These duplicate lattice nodes and arcs must be merged to
+ensure that the finite state grammar created from the lattices by HTK
+decoders are deterministic, and therefore usable for recognition. 
+This function is also supported by HLRescore.
 
 
 \mysubsect{Use}{HLRescore-Use}
@@ -68,7 +78,7 @@ selected.
    HLRescore [options] vocabFile LatFiles......
 \end{verbatim}
 
-\htool{HLRescore} reads each of the lattice files and performs te
+\htool{HLRescore} reads each of the lattice files and performs the
 requested operation(s) on them. At least one of the following
 operations must be selected: find 1-best (\texttt{-f}), write lattices
 (\texttt{-w}), calculate statistics (\texttt{-c}).
@@ -82,15 +92,25 @@ command line options
 
   \ttitem{-l s} Directory in which to store label/lattice files.
 
+  \ttitem{-m s} Direction of merging duplicate nodes and arcs of
+  lattices. The default value is \texttt{b}, indicating a merging in
+  a backward direction starting from the sentence end node of the
+  lattice will be performed. If using direction \texttt{f}, then the
+  forward merging will be performed instead. 
+
   \ttitem{-n lm} Load ARPA-format n-gram language model from file
   \texttt{lm} and expand lattice with this LM. All acoustic scores are
   unchanged but the LM scores are replaced and lattices nodes (i.e.\
   contexts) are expanded as required by the structure of the LM.
 
+  \ttitem{-wn lm} Load Resource Management format word pair language
+  model from file \texttt{lm} and apply this LM to a lattice converted
+  from a word MLF file. 
+
   \ttitem{-o s} Choose how the output labels should be formatted.
         \texttt{s} is a string with certain letters (from \texttt{NSCTWM})
         indicating binary flags that control formatting options.
-        \texttt{N} normalise acoustic scores by dividing by the duration
+        \texttt{N} normalize acoustic scores by dividing by the duration
         (in frames) of the segment.
         \texttt{S} remove scores from output label.  By default 
         scores will be set to the total likelihood of the segment.

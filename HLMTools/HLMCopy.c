@@ -29,8 +29,8 @@
 /*   File: HLMCopy.c  LM conversion/normalisation utility      */
 /* ----------------------------------------------------------- */
 
-char *prog_version = "!HVER!HLMCopy:   3.2.1 [CUED 15/10/03]";
-char *prog_vc_id = "$Id: HLMCopy.c,v 1.3 2003/10/15 08:10:12 ge204 Exp $";
+char *prog_version = "!HVER!HLMCopy:   3.4 [CUED 25/04/06]";
+char *prog_vc_id = "$Id: HLMCopy.c,v 1.1.1.1 2006/10/11 09:54:44 jal58 Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>

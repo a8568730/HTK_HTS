@@ -29,8 +29,8 @@
 /*      File: LPMerge.c: probability merging                   */
 /* ----------------------------------------------------------- */
 
-char *lpmerge_version = "!HVER!LPMerge:   3.2.1 [CUED 15/10/03]";
-char *lpmerge_vc_id = "$Id: LPMerge.c,v 1.2 2003/10/15 08:10:12 ge204 Exp $";
+char *lpmerge_version = "!HVER!LPMerge:   3.4 [CUED 25/04/06]";
+char *lpmerge_vc_id = "$Id: LPMerge.c,v 1.1.1.1 2006/10/11 09:54:43 jal58 Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"

@@ -1,7 +1,7 @@
 export HTKCF='-DNDEBUG -DOSS_AUDIO -O3 -ip -tpp6 '
-export HTKLF='-static -L/usr/X11R6/lib'
+export HTKLF='-L/usr/X11R6/lib'
 export HTKCC='icc'
-export Arch=LINUX
+export Arch=linux
 export Objcopy="echo"
 export PRILF='-x'
 export CPU=linux

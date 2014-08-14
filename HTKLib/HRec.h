@@ -19,7 +19,52 @@
 /*         File: HRec.h  Viterbi Recognition Engine Library    */
 /* ----------------------------------------------------------- */
 
-/* !HVER!HREC:   3.2.1 [CUED 15/10/03] */
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+/* !HVER!HREC:   3.3 [CUED 28/04/05] */
 
 #ifndef _HREC_H_
 #define _HREC_H_
@@ -29,7 +74,7 @@ extern "C" {
 #endif
 
 /* LIMITS - Only the maximum total number of tokens that can be used */
-#define MAX_TOKS 24
+#define MAX_TOKS 1024
 
 
 /* Each HMMSet that is used for recognition needs to be    */
@@ -124,6 +169,11 @@ void InitRec(void);
    Initialise module
 */
 
+void ResetRec(void);
+/* 
+   Reset module 
+*/
+
 /*
    Functions specific to HMMSet
 
@@ -178,7 +228,7 @@ void StartRecognition(VRecInfo *vri,Network *net,
    supplied network and language model scale and word insertion penalty
 */
 
-void ProcessObservation(VRecInfo *vri,Observation *obs,int id);
+void ProcessObservation(VRecInfo *vri,Observation *obs,int id, AdaptXForm *xform);
 /*
    Process a single observation updating traceback and status
    information in vri.  Each call to ProcessObservation should

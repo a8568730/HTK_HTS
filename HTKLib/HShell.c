@@ -32,8 +32,53 @@
 /*         File: HShell.c:   Interface to the Shell            */
 /* ----------------------------------------------------------- */
 
-char *hshell_version = "!HVER!HShell:   3.2.1 [CUED 15/10/03]";
-char *hshell_vc_id = "$Id: HShell.c,v 1.14 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hshell_version = "!HVER!HShell:   3.4 [CUED 25/04/06]";
+char *hshell_vc_id = "$Id: HShell.c,v 1.7 2006/12/29 04:44:54 zen Exp $";
 
 #include "HShell.h"
 
@@ -82,12 +127,15 @@ static int extFileUsed = 0;             /* total ext files in buffer */
 
 /* ------------- Extended File Name Handling ---------------- */
 
-/* RegisterExtFileName: record details of fn exts if any in circ buffer */
-static char * RegisterExtFileName(char *s)
+/* EXPORT->RegisterExtFileName: record details of fn exts if any in circ buffer */
+char * RegisterExtFileName(char *s)
 {
    char *eq,*rb,*lb,*co;
    char buf[1024];
    ExtFile *p;
+
+   if (!extendedFileNames)
+      return s;
 
    strcpy(buf,s);
    eq = strchr(buf,'=');
@@ -334,9 +382,9 @@ static ConfigEntry *FindConfEntry(char *user, char *name)
 static Boolean NumHead(char *s)
 {
    if (*s!='\0')
-      if (isdigit(*s))
+      if (isdigit((int) *s))
          return TRUE;
-   if (((*s=='-') || (*s=='+')) && (isdigit(*(s+1))))
+   if (((*s=='-') || (*s=='+')) && (isdigit((int) *(s+1))))
       return TRUE;
    return FALSE;
 }
@@ -407,7 +455,7 @@ static ReturnStatus ReadConfigFile(char *fname)
    hasUser=FALSE;
    gotParam = ReadConfName(&src,name);
    while (gotParam) {
-      while (isspace(c=GetCh(&src)));  
+      while (isspace((int) (c=GetCh(&src))));  
       if (c==':') {  /* user field given */
          hasUser = TRUE; strcpy(user,name);
          if (!ReadConfName(&src,name)){
@@ -416,7 +464,7 @@ static ReturnStatus ReadConfigFile(char *fname)
             recurse--;
             return(FAIL);
          }
-         while (isspace(c=GetCh(&src)));  
+         while (isspace((int) (c=GetCh(&src))));  
       }
       if (c != '='){
          HRError(5050,"ReadConfigFile: = expected %s",
@@ -564,7 +612,10 @@ static int FindConfParm(ConfParam **list,int size,char *name,ConfKind kind)
 /* EXPORT->HasConfParm: true if parameter exists with given name */
 Boolean HasConfParm(ConfParam **list, int size, char *name)
 {
-   return (FindConfParm(list,size,name,AnyCKind) != -1);
+   if (FindConfParm(list,size,name,AnyCKind) != -1)
+      return TRUE;
+   else
+      return FALSE;
 }
 
 /* EXPORT->GetConfStr: return string parameter with given name */
@@ -856,7 +907,8 @@ Boolean GetIntEnvVar(char *envVar, int *value)
 static char *CheckFn(char *fn);
 
 /* SetScriptFile: open script file and count words in it */
-static ReturnStatus SetScriptFile(char *fn)
+
+ReturnStatus SetScriptFile(char *fn)
 {
    CheckFn(fn);
    if ((script = fopen(fn,"r")) == NULL){  /* Don't care if text/binary */
@@ -1056,7 +1108,10 @@ Boolean SkipLine(Source *src)
    
    c = GetCh(src);
    while (c != EOF && c != '\n') c = GetCh(src);
-   return(c!=EOF);
+   if (c!=EOF)
+      return TRUE;
+   else
+      return FALSE;
 }
 
 /* EXPORT->ReadLine: read to next newline in source */
@@ -1067,13 +1122,13 @@ Boolean ReadLine(Source *src,char *s)
    c = GetCh(src);
    while (c != EOF && c != '\n') *s++=c,c=GetCh(src);
    *s=0;
-   return(c!=EOF);
+   return((c!=EOF) ? TRUE:FALSE);
 }
 
 /* EXPORT->ReadUntilLine: read to next occurrence of string */
 void ReadUntilLine (Source *src, char *s)
 {
-   char buf[MAXSTRLEN];
+   char buf[20*MAXSTRLEN];
    
    do {
       if (!ReadLine (src, buf))
@@ -1120,8 +1175,8 @@ char *ParseString(char *src, char *s)
    Boolean wasQuoted;
    int c,q;
 
-   wasQuoted=FALSE; *s=0;
-   while (isspace(*src)) src++;
+   wasQuoted=FALSE; *s=0; q=0;
+   while (isspace((int) *src)) src++;
    if (*src == DBL_QUOTE || *src == SING_QUOTE){
       wasQuoted = TRUE; q = *src;
       src++;
@@ -1131,7 +1186,7 @@ char *ParseString(char *src, char *s)
       if (wasQuoted) {
          if (*src == q) return (src+1);
       } else {
-         if (*src==0 || isspace(*src)) return (src);
+         if (*src==0 || isspace((int) *src)) return (src);
       }
       if (*src==ESCAPE_CHAR) {
          src++;
@@ -1157,6 +1212,7 @@ Boolean ReadString(Source *src, char *s){
    int i,c,n,q;
 
    src->wasQuoted=FALSE;
+   q=0;
    while (isspace(c=GetCh(src)));
    if (c == EOF) return FALSE;
    if (c == DBL_QUOTE || c == SING_QUOTE){
@@ -1201,6 +1257,7 @@ Boolean ReadStringWithLen(Source *src, char *s, int buflen)
    int i,c,n,q;
 
    src->wasQuoted=FALSE;
+   q=0;
    while (isspace(c=GetCh(src)));
    if (c == EOF) return FALSE;
    if (c == DBL_QUOTE || c == SING_QUOTE){
@@ -1343,7 +1400,20 @@ static Boolean IsVAXOrder(void)
    px = &x;
    pc = (unsigned char *) px;
    *pc = 1; *(pc+1) = 0;         /* store bytes 1 0 */
-   return x==1;          /* does it read back as 1? */
+   
+   return ((x==1) ? TRUE:FALSE);          /* does it read back as 1? */
+}
+
+/* EXPORT->SwapDouble: swap byte order of double data value *p */
+void SwapDouble(double *p)
+{
+   char temp, *q;
+   
+   q = (char *) p;
+   temp = *(q+0); *(q+0) = *(q+7); *(q+7) = temp;
+   temp = *(q+1); *(q+1) = *(q+6); *(q+6) = temp;
+   temp = *(q+2); *(q+2) = *(q+5); *(q+5) = temp;
+   temp = *(q+3); *(q+3) = *(q+4); *(q+4) = temp;
 }
 
 /* SwapInt32: swap byte order of int32 data value *p */
@@ -1449,22 +1519,56 @@ Boolean RawReadFloat(Source *src, float *x, int n, Boolean bin, Boolean swap)
    return TRUE;
 }
 
+/* EXPORT->RawReadDouble: read n doubles from src in ascii or binary */
+Boolean RawReadDouble(Source *src, double *x, int n, Boolean bin, Boolean swap)
+{
+   int k,count=0,j;
+   double *p;
+   
+   if (bin){
+      if (fread(x,sizeof(double),n,src->f) != n)
+         return FALSE;
+      if (swap)
+         for(p=x,j=0;j<n;p++,j++)
+            SwapDouble(p);  /* Read in SUNSO unless natReadOrder=T */
+
+      count += n*sizeof(double);     
+   } else {
+      if (src->pbValid) {
+         ungetc(src->putback, src->f); src->pbValid = FALSE;
+      }
+      for (j=1; j<=n; j++){
+         if (fscanf(src->f,"%lf%n",x,&k) != 1)
+            return FALSE;
+         x++; count += k;
+      }
+   }
+   src->chcount += count;
+   return TRUE;
+}
+
 /* EXPORT->ReadShort: read n short's from src in ascii or binary */
 Boolean ReadShort(Source *src, short *s, int n, Boolean binary)
 {
-   return(RawReadShort(src,s,n,binary,(vaxOrder && !natReadOrder)));
+   return(RawReadShort(src,s,n,binary,((vaxOrder && !natReadOrder) ? TRUE:FALSE)));
 }
 
 /* EXPORT->ReadInt: read n ints from src in ascii or binary */
 Boolean ReadInt(Source *src, int *i, int n, Boolean binary)
 {
-   return(RawReadInt(src,i,n,binary,(vaxOrder && !natReadOrder)));
+   return(RawReadInt(src,i,n,binary,((vaxOrder && !natReadOrder) ? TRUE:FALSE)));
 }
 
 /* EXPORT->ReadFloat: read n floats from src in ascii or binary */
 Boolean ReadFloat(Source *src, float *x, int n, Boolean binary)
 {
-   return(RawReadFloat(src,x,n,binary,(vaxOrder && !natReadOrder)));
+   return(RawReadFloat(src,x,n,binary,((vaxOrder && !natReadOrder) ? TRUE:FALSE)));
+}
+
+/* EXPORT->ReadDouble: read n doubles from src in ascii or binary */
+Boolean ReadDouble(Source *src, double *x, int n, Boolean binary)
+{
+   return(RawReadDouble(src,x,n,binary,((vaxOrder && !natReadOrder) ? TRUE:FALSE)));
 }
 
 /* EXPORT->KeyPressed: returns TRUE if input is pending on stdin */
@@ -1567,7 +1671,8 @@ void HRError(int errcode, char *message, ...)
       vfprintf(f, message, ap);
       va_end(ap);
       fprintf(f," in %s\n", arglist[0]);
-   }else{
+   } 
+   else{
       fprintf(stderr,"  ERROR [%+d]  ",errcode);
       f = stderr;
       vfprintf(f, message, ap);
@@ -1644,6 +1749,30 @@ void WriteFloat (FILE *f, float *x, int n, Boolean binary)
       if (vaxOrder && !natWriteOrder){
          for(p=x,j=0;j<n;p++,j++)
             SwapInt32((int32*)p);  /* Swap Back */
+      }
+   } else {
+      for (j=1; j<=n; j++){
+         fprintf(f," %e",*x++);
+      }
+   }
+}
+
+/* EXPORT->WriteDouble: write n doubles to f */
+void WriteDouble (FILE *f, double *x, int n, Boolean binary)
+{
+   int j;
+   double *p;
+   
+   if (binary){
+      if (vaxOrder && !natWriteOrder){
+         for(p=x,j=0;j<n;p++,j++)
+            SwapDouble(p);  /* Write in SUNSO unless natWriteOrder=T */
+      }
+      if (fwrite(x,sizeof(double),n,f) != n)
+         HError(5014,"WriteDouble: cant write to file");
+      if (vaxOrder && !natWriteOrder){
+         for(p=x,j=0;j<n;p++,j++)
+            SwapDouble(p);  /* Swap Back */
       }
    } else {
       for (j=1; j<=n; j++){
@@ -1732,7 +1861,7 @@ char * ExtnOf(char *fn, char *s)
 /* EXPORT->MakeFN: construct a filename from fn */
 char * MakeFN(char *fn, char *path, char *ext, char *s)
 {
-   char newPath[255], base[64], newExt[20];  /* components of new fn */
+   char newPath[MAXFNAMELEN], base[MAXSTRLEN], newExt[MAXSTRLEN];  /* components of new fn */
    int i;
    
    CheckFn(path);
@@ -1778,7 +1907,7 @@ char * CounterFN(char *prefix, char* suffix, int count, int width, char *s)
 /* RMatch: recursively match s against pattern p, minplen
    is the min length string that can match p and
    numstars is the number of *'s in p */
-Boolean RMatch(char *s,char *p,int slen,int minplen,int numstars)
+Boolean RMatch(const char *s, const char *p, const int slen, const int minplen, const int numstars)
 {
    if (slen==0 && minplen==0)
       return TRUE;
@@ -1786,10 +1915,11 @@ Boolean RMatch(char *s,char *p,int slen,int minplen,int numstars)
       return FALSE;
    if (minplen>slen)
       return FALSE;
+   
    if (*p == '*')
-      return RMatch(s+1,p+1,slen-1,minplen,numstars-1) ||
+      return ((RMatch(s+1,p+1,slen-1,minplen,numstars-1) ||
          RMatch(s,p+1,slen,minplen,numstars-1) ||
-         RMatch(s+1,p,slen-1,minplen,numstars);
+               RMatch(s+1,p,slen-1,minplen,numstars)) ? TRUE:FALSE);
    if (*p == *s || *p == '?')
       return RMatch(s+1,p+1,slen-1,minplen-1,numstars);
    else
@@ -1806,6 +1936,16 @@ Boolean DoMatch(char *s, char *p)
    minplen = 0; numstars = 0; q = p;
    while ((c=*q++))
       if (c == '*') ++numstars; else ++minplen;
+      
+   if (numstars==2 && *p=='*' && *(q-2)=='*' && strchr(p,'?')==NULL) {
+      char str[PAT_LEN];
+      strncpy(str, p+1, minplen);  str[minplen] = '\0';
+      if (strstr(s, str)!=NULL) 
+         return TRUE; 
+      else 
+         return FALSE;
+   }
+   else   
    return RMatch(s,p,slen,minplen,numstars);
 }
 
@@ -1814,8 +1954,7 @@ Boolean DoMatch(char *s, char *p)
    is the min length string that can match p and
    numstars is the number of *'s in p 
 	   spkr is next character of the spkr name */
-static Boolean SpRMatch(char *s,char *p,char *spkr,
-			int slen,int minplen,int numstars)
+static Boolean SpRMatch(char *s,char *p,char *spkr, int slen,int minplen,int numstars)
 {
    Boolean match;
    
@@ -1824,9 +1963,9 @@ static Boolean SpRMatch(char *s,char *p,char *spkr,
    else if ((numstars==0 && minplen!=slen) || minplen>slen)
       match=FALSE;
    else if (*p == '*') {
-      match=(SpRMatch(s+1,p,spkr,slen-1,minplen,numstars) ||
+      match=((SpRMatch(s+1,p,spkr,slen-1,minplen,numstars) ||
 	     SpRMatch(s,p+1,spkr,slen,minplen,numstars-1) ||
-	     SpRMatch(s+1,p+1,spkr,slen-1,minplen,numstars-1));
+	           SpRMatch(s+1,p+1,spkr,slen-1,minplen,numstars-1))) ? TRUE:FALSE;
    }
    else if (*p == '%') {
       *spkr=*s,spkr[1]=0;
@@ -1967,7 +2106,7 @@ ReturnStatus InitShell(int argc, char *argv[], char *ver, char *sccs)
       if (GetConfBool(cParm,nParm,"EXTENDFILENAMES",&b)) extendedFileNames = b;
       if (GetConfInt(cParm,nParm,"MAXTRYOPEN",&i)) {
          maxTry = i;
-         if (maxTry<1 || maxTry>25){
+         if (maxTry<1 || maxTry>3){
             HRError(5073,"InitShell: MAXTRYOPEN out of range (%d)",maxTry);
             maxTry=1;
          }
@@ -1978,30 +2117,13 @@ ReturnStatus InitShell(int argc, char *argv[], char *ver, char *sccs)
    return(SUCCESS);
 }
 
-#ifndef WIN32
-void SetTime(TimeStruct *t)
+/* EXPORT->ResetShell: reset module */
+void ResetShell (void)
 {
-   if(gettimeofday(&(t->time),NULL)) 
-      HError(1, "Error getting time of day.");
-   t->clock_time = clock();
+   free(arglist);
+   
+   return;
 }
-
-
-char *GiveTime(TimeStruct *t)
-{
-   struct timeval time;
-   clock_t clock_time;
-   int tenth_millisecs,clock_tenth_millisecs;
-   if(gettimeofday(&time,NULL)) 
-      HError(1, "Error getting time of day.");
-   clock_time = clock();
-   tenth_millisecs = (time.tv_sec-t->time.tv_sec)*10000 + (time.tv_usec-t->time.tv_usec)/100;
-   clock_tenth_millisecs = (clock_time - t->clock_time)/100;
-
-   sprintf(t->timestr, "%d.%04d/clock %d.%04d", tenth_millisecs/10000, tenth_millisecs % 10000, clock_tenth_millisecs/10000, clock_tenth_millisecs % 10000);
-   return t->timestr;
-}
-#endif
 
 /* EXPORT->PrintStdOpts: print standard options */
 void PrintStdOpts(char *opt)
@@ -2011,6 +2133,10 @@ void PrintStdOpts(char *opt)
       printf(" -B      Save HMMs/transforms as binary       off\n");
    printf(" -C cf   Set config file to cf                default\n");
    printf(" -D      Display configuration variables      off\n");
+   if (strchr(opt,'E')) {
+      printf(" -E s [s] set dir for parent xform to s       off\n");
+      printf("         and optional extension                 \n");
+   }
    if (strchr(opt,'F'))
       printf(" -F fmt  Set source data format to fmt        as config\n");
    if (strchr(opt,'G'))
@@ -2019,10 +2145,14 @@ void PrintStdOpts(char *opt)
       printf(" -H mmf  Load HMM macro file mmf\n");
    if (strchr(opt,'I'))
       printf(" -I mlf  Load master label file mlf\n");
-   if (strchr(opt,'J'))
-      printf(" -J tmf  Load transform model file tmf\n");
-   if (strchr(opt,'K'))
-      printf(" -K tmf  Save transform model file tmf\n");
+   if (strchr(opt,'J')) {
+      printf(" -J s [s] set dir for input xform to s        none\n");
+      printf("         and optional extension                 \n");
+   }
+   if (strchr(opt,'K')) {
+      printf(" -K s [s] set dir for output xform to s       none\n");
+      printf("         and optional extension                 \n");
+   }
    if (strchr(opt,'L'))
       printf(" -L dir  Set input label (or net) dir         current\n");
    if (strchr(opt,'M'))
@@ -2033,6 +2163,7 @@ void PrintStdOpts(char *opt)
       printf(" -P      Set target label format to fmt       as config\n");
    if (strchr(opt,'Q'))
       printf(" -Q      Print command summary\n");
+   if (strchr(opt,'S'))
    printf(" -S f    Set script file to f                 none\n");
    printf(" -T N    Set trace flags to N                 0\n");
    printf(" -V      Print version information            off\n");

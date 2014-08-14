@@ -19,8 +19,53 @@
 /*      File: HCopy.c: Copy one Speech File to another         */
 /* ----------------------------------------------------------- */
 
-char *hcopy_version = "!HVER!HCopy:   3.2.1 [CUED 15/10/03]";
-char *hcopy_vc_id = "$Id: HCopy.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hcopy_version = "!HVER!HCopy:   3.4 [CUED 25/04/06]";
+char *hcopy_vc_id = "$Id: HCopy.c,v 1.3 2006/12/29 04:44:56 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -108,6 +153,7 @@ static MemHeap tStack;          /* trace list  stack */
 
 void ReportUsage(void)
 {
+   printf("\nModified for HTS\n");
    printf("\nUSAGE: HCopy [options] src [ + src ...] tgt ...\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -a i     Use level i labels                  1\n");
@@ -119,7 +165,7 @@ void ReportUsage(void)
    printf(" -s t     Start copy at time t                0\n");
    printf(" -t n     Set trace line width to n           70\n");
    printf(" -x s [n] Extract [n'th occ of] label  s      off\n");
-   PrintStdOpts("FGILPOX");
+   PrintStdOpts("FGILPOXS");
 }
 
 /* SetConfParms: set conf parms relevant to this tool */
@@ -317,6 +363,28 @@ int main(int argc, char *argv[])
    }
    if(useMLF) CloseMLFSaveFile();
    if (NumArgs() != 0) HError(-1019,"HCopy: Unused args ignored");
+   
+   
+   if(InitShell(argc,argv,hcopy_version,hcopy_vc_id)<SUCCESS)
+      HError(1000,"HCopy: InitShell failed");
+   InitMem();   InitLabel();
+   InitMath();  InitSigP();
+   InitWave();  InitAudio();
+   InitVQ();    InitModel();
+   if(InitParm()<SUCCESS)  
+      HError(1000,"HCopy: InitParm failed");
+   
+   ResetParm();
+   ResetModel();
+   ResetVQ();
+   ResetAudio();
+   ResetWave();
+   ResetSigP();
+   ResetMath();
+   ResetLabel();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
@@ -550,7 +618,7 @@ Boolean IsWave(char *srcFile)
    short sampS,kind;
    Boolean isPipe,bSwap,isWave;
    
-   isWave = tgtPK == WAVEFORM;
+   isWave = (tgtPK == WAVEFORM) ? TRUE:FALSE;
    if (tgtPK == ANON){
       if ((srcFF == HTK || srcFF == ESIG) && srcFile != NULL){
          if ((f=FOpen(srcFile,WaveFilter,&isPipe)) == NULL)
@@ -568,7 +636,7 @@ Boolean IsWave(char *srcFile)
                       srcFile);             
             break;
          }
-         isWave = kind == WAVEFORM;
+         isWave = (kind == WAVEFORM) ? TRUE:FALSE;
          FClose(f,isPipe);
       } else
          isWave = TRUE;

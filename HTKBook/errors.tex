@@ -115,7 +115,7 @@ HERest   & 2300-2399     & HGraf         & 6800-6899    \\
 HSmooth  & 2400-2499     &               &              \\
 HQuant   & 2500-2599     & HModel        & 7000-7099    \\
 HHEd     & 2600-2699     & HTrain        & 7100-7199    \\
-HEAdapt  & 2700-2799     & HUtil         & 7200-7299    \\
+         &               & HUtil         & 7200-7299    \\
          &               & HFB           & 7300-7399    \\
          &               & HAdapt        & 7400-7499    \\
 HBuild   & 3000-3099     &               &              \\
@@ -594,41 +594,6 @@ LPMerge  & 15600-15699   &               &              \\
 
 \end{itemize}
 
-\module{\htool{HEAdapt}}
-
-\begin{itemize}
-
-\erno{+2720} Invalid update flag\\      
-        Means (m) and variances (v) can be updated, check that the update 
-        flags are correct.\\
-
-\erno{-2721} No update requested\\
-        Mean transformation will be updated even though none specified.\\
-
-\erno{+2728}    Load/Make HMMSet failed\\
-        The model set could not be loaded due to either an error opening the
-        file or the data within being inconsistent.
-
-\erno{+2730} Invalid HMM kind\\
-        MLLR adaptation only available for PLAIN or SHARED systems.\\
-
-\erno{+2731} Invalid HMM kind\\
-        MLLR adaptation only currently available for single stream data.\\
-
-\erno{-2740} Invalid Adaptation Mode\\
-        Incremental MAP adaptation is not supported, use in static
-        mode.
-
-\erno{-2741} Invalid Adaptation Mode\\
-        MLLR and MAP adaptation does not support incremental
-        adaptation. If incremental MLLR and static MAP adaptation is 
-        required, perform the steps separately.
-
-\erno{-2789} Alien format set\\
-        Input format has been set to ALIEN, ensure that this was intended.\\
-
-\end{itemize}
-
 \module{\htool{HBuild}}
 
 \begin{itemize}
@@ -682,6 +647,10 @@ LPMerge  & 15600-15699   &               &              \\
 
 \erno{+3232} MMF Load Error\\
         The HMMSet does not contain a well-formed regression class tree.
+
+\erno{+3233} Transcription empty\\
+        In alignmnet mode a segment had an empty transcription and no
+        boundary word was specified.
 
 \erno{-3289}    ALIEN format set\\
         Input/output format has been set to \texttt{ALIEN}, ensure that 
@@ -1211,47 +1180,6 @@ LPMerge  & 15600-15699   &               &              \\
 
 \end{itemize}
 
-\module{\htool{HAdapt}}
-
-\begin{itemize}
-
-\erno{\pm 7410} TMF load error\\
-        Can't open the input TMF.
-
-\erno{-7420} Can't calculate the auxilliary function\\
-        Only possible with mean and variance transforms, check update flags.
-
-\erno{+7421} MMF load error\\
-        MMF does not contain a HMM identifier, use HHEd to generate
-        one.
-
-\erno{+7422} MMF load error\\
-        MMF does not contain a regression class, use HHEd to generate
-        one
-  
-\erno{+7425} Mismatch number of Gaussian components \\
-        The number of Gaussian components found for a regression class
-        does not much the number expected. Check the MMF is not corrupted.
-
-\erno{+7430} MMF load error\\
-        Can't find the regression class tree.
-
-\erno{+7431} Can't add regression class accumulate\\
-        Problem adding a frame of accumulation at the component level.
-
-\erno{\pm 7440} Symbol not found\\
-        Could not read in symbol.
-
-\erno{+7450} Invalid HMM kind\\
-        Can only adapt PLAIN and SHARED systems.
-
-\erno{+7460} Can't create block transformation matrix\\
-        Check number of blocks compatible with vector size.
-
-\erno{+7470} MAP weight hook is NULL\\
-
-\end{itemize}
-
 \module{\htool{HDict}}
 
 \begin{itemize}
@@ -1374,6 +1302,16 @@ LPMerge  & 15600-15699   &               &              \\
         The lattice end node must either be labelled with \verb|!NULL|
         or the specified end word (default: \verb|!SENT_END|)
 
+\erno{-8630}    LLF file not found\\
+        The specified LLF file could not be found or isn't in the
+        right format.
+
+\erno{8631}    Lattice not found in LLF file\\
+        A lattice couldn't be found in the LLF file. Note that the
+        order in the LLF file must correspond to the order of processing.
+
+\erno{8632}    Lattice not found\\
+        The specified lattice file could not be opened.
 
 \erno{8690}    Lattice operation not supported\\
         The requested operation is not supported, yet.
@@ -1429,6 +1367,12 @@ LPMerge  & 15600-15699   &               &              \\
 
 \erno{+15057} Bad type \texttt{XYZ} for class \texttt{XYZ} in \texttt{XYZ}\\
         Classes must be defined using either IN or NOTIN.
+
+\erno{+15058} A class is in its own exclusive list. This typically happens when a class map 
+              is specified as a plain list of words. Such list is by default assumed to be 
+              a list of words excluded from class !!UNK. The error is triggered when !!UNK
+              is in the word list. !!UNK must be removed from the list.
+
 \end{itemize}
 
 

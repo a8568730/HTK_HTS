@@ -21,7 +21,7 @@
 /*          1995-2000 Redmond, Washington USA                  */
 /*                    http://www.microsoft.com                 */
 /*                                                             */
-/*          2001-2002 Cambridge University                     */
+/*          2001-2004 Cambridge University                     */
 /*                    Engineering Department                   */
 /*                                                             */
 /*   Use of this software is governed by a License Agreement   */
@@ -32,10 +32,9 @@
 /*         File: HNet.c  Network and Lattice Functions         */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -43,7 +42,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -57,10 +57,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -74,13 +75,10 @@
 /*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
-/*  ---------------------------------------------------------------  */ 
-/*      HNet.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen        */
 /*  ---------------------------------------------------------------  */
 
-
-char *hnet_version = "!HVER!HNet:   3.2.1 [CUED 15/10/03]";
-char *hnet_vc_id = "$Id: HNet.c,v 1.15 2003/10/15 08:10:12 ge204 Exp $";
+char *hnet_version = "!HVER!HNet:   3.4 [CUED 25/04/06]";
+char *hnet_vc_id = "$Id: HNet.c,v 1.3 2006/12/29 04:44:54 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -184,6 +182,12 @@ void InitNet(void)
    }
 }
 
+/* EXPORT->ResetNet: reset module */
+void ResetNet(void)
+{
+   return;  /* do nothing */
+}
+
 /* ------------------------ Lattice Creation ------------------------- */
 
 #define SafeCopyString(heap,str) ((str)==NULL?NULL:CopyString((heap),(str)))
@@ -222,6 +226,7 @@ Lattice *NewLattice(MemHeap *heap,int nn,int na)
 
    for(i=0,ln=lat->lnodes;i<nn;i++,ln++) {
       ln->time=0.0;ln->word=NULL;ln->tag=NULL;
+      ln->score=0.0;
       ln->foll=ln->pred=NARC;
       ln->hook=NULL;
       ln->sublat=NULL;
@@ -310,6 +315,7 @@ Lattice *NewILattice(MemHeap *heap,int nn,int na,Lattice *info)
    else
       for(i=0,ln=lat->lnodes;i<lat->nn;i++,ln++) {
          ln->time=0.0;ln->word=NULL;ln->tag=NULL;
+         ln->score=0.0;
          ln->foll=ln->pred=NARC;
          ln->hook=NULL;
          ln->sublat=NULL;
@@ -575,7 +581,7 @@ static void OutputAlign(LArc *la,int format,FILE *file)
 ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
 {
    int i, *order, *rorder, st, en;
-   LNode *ln;
+   LNode *ln = NULL;
    LArc *la;
 
    /* Rather than return an error assume labels on nodes !! */
@@ -598,9 +604,9 @@ ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
          ln=lat->lnodes+order[i];
          rorder[order[i]]=i;
          ln->n = i;
-         OutputIntField('I',i,format&HLAT_LBIN,"%-4d",file);
+         OutputIntField('I',i,((format&HLAT_LBIN) ? TRUE:FALSE),"%-4d",file);
          if (format&HLAT_TIMES)
-            OutputFloatField('t',ln->time / lat->tscale,format&HLAT_LBIN,"%-5.2f",file);
+            OutputFloatField('t',ln->time / lat->tscale,((format&HLAT_LBIN) ? TRUE:FALSE),"%-5.2f",file);
          if (!(format&HLAT_ALABS)) {
             if (ln->word==lat->voc->subLatWord && ln->sublat!=NULL)
                fprintf(file,"L=%-19s ",
@@ -611,7 +617,7 @@ ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
                        ReWriteString(ln->word->wordName->name,
                                      NULL,ESCAPE_CHAR));
                if ((format&HLAT_PRON) && ln->v>=0)
-                  OutputIntField('v',ln->v,format&HLAT_LBIN,"%-2d",file);
+                  OutputIntField('v',ln->v,((format&HLAT_LBIN) ? TRUE:FALSE),"%-2d",file);
                if ((format&HLAT_TAGS) && ln->tag!=NULL)
                   fprintf(file,"s=%-19s ",
                           ReWriteString(ln->tag,NULL,ESCAPE_CHAR));
@@ -634,11 +640,11 @@ ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
    }
    for (i=0;i<lat->na;i++) {
       la=NumbLArc(lat,order[i]);
-      OutputIntField('J',i,format&HLAT_LBIN,"%-5d",file);
+      OutputIntField('J',i,((format&HLAT_LBIN) ? TRUE:FALSE),"%-5d",file);
       st=rorder[la->start-lat->lnodes];
       en=rorder[la->end-lat->lnodes];
-      OutputIntField('S',st,format&HLAT_LBIN,"%-4d",file);
-      OutputIntField('E',en,format&HLAT_LBIN,"%-4d",file);
+      OutputIntField('S',st,((format&HLAT_LBIN) ? TRUE:FALSE),"%-4d",file);
+      OutputIntField('E',en,((format&HLAT_LBIN) ? TRUE:FALSE),"%-4d",file);
       if (format&HLAT_ALABS) {
          if (la->end->word!=NULL) 
             fprintf(file,"W=%-19s ",
@@ -647,19 +653,19 @@ ReturnStatus WriteOneLattice(Lattice *lat,FILE *file,LatFormat format)
          else
             fprintf(file,"W=%-19s ","!NULL");
          if ((format&HLAT_PRON) && ln->v>=0)
-            OutputIntField('v',la->end->v,format&HLAT_LBIN,"%-2d",file);
+            OutputIntField('v',la->end->v,((format&HLAT_LBIN) ? TRUE:FALSE),"%-2d",file);
       }
       if (!(lat->format&HLAT_SHARC) && (format&HLAT_ACLIKE))
-         OutputFloatField ('a', ConvLogLikeToBase(lat->logbase, la->aclike), format&HLAT_LBIN, "%-9.2f", file);
+         OutputFloatField ('a', ConvLogLikeToBase(lat->logbase, la->aclike), ((format&HLAT_LBIN) ? TRUE:FALSE), "%-9.2f", file);
       if (format&HLAT_LMLIKE) {
          if (lat->net==NULL)
             OutputFloatField('l', ConvLogLikeToBase(lat->logbase, la->lmlike*lat->lmscale+lat->wdpenalty),
-                             format&HLAT_LBIN,"%-8.2f",file);
+                             ((format&HLAT_LBIN) ? TRUE:FALSE),"%-8.2f",file);
          else
-            OutputFloatField('l',ConvLogLikeToBase(lat->logbase, la->lmlike), format&HLAT_LBIN, "%-7.3f", file);
+            OutputFloatField('l',ConvLogLikeToBase(lat->logbase, la->lmlike), ((format&HLAT_LBIN) ? TRUE:FALSE), "%-7.3f", file);
       }
       if (!(lat->format&HLAT_SHARC) && (format&HLAT_PRLIKE))
-         OutputFloatField('r', ConvLogLikeToBase(lat->logbase, la->prlike), format&HLAT_LBIN, "%-6.2f", file);
+         OutputFloatField('r', ConvLogLikeToBase(lat->logbase, la->prlike), ((format&HLAT_LBIN) ? TRUE:FALSE), "%-6.2f", file);
       if (!(lat->format&HLAT_SHARC) && (format&HLAT_ALIGN) && la->nAlign>0)
          OutputAlign(la,format,file);
       fprintf(file,"\n");
@@ -819,9 +825,9 @@ static LatFieldType ParseNumber(double *rval,char *buf)
    LatFieldType type;
 
    type=STR_FIELD;
-   if (isdigit(buf[0]) || 
+   if (isdigit((int) buf[0]) || 
        ((buf[0]=='-' || buf[0]=='+') && 
-        isdigit(buf[1]))) {
+        isdigit((int) buf[1]))) {
       val=strtod(buf,&ptr);
       if (ptr != buf) {
          type=INT_FIELD;
@@ -920,7 +926,7 @@ static int ReadAlign(Lattice *lat,LArc *la,char *buf)
 }
 
 /* ReadOneLattice: Read (one level) of lattice from file */
-static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc, 
+Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc, 
                                Boolean shortArc, Boolean add2Dict)
 {
    int i,s,e,n,v=0,nn,na;
@@ -937,7 +943,7 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
    float logbase = 1.0, tscale = 1.0;
 
    char *uttstr,*lmnstr,*vocstr,*hmmstr,*sublatstr,*tag;
-   SubLatDef *subLatId;
+   SubLatDef *subLatId = NULL;
 
    lat = (Lattice *) New(heap,sizeof(Lattice));
    lat->heap=heap; lat->subLatId=NULL; lat->chain=NULL;
@@ -1032,6 +1038,7 @@ static Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc,
       ln->hook=NULL;
       ln->pred=NULL;
       ln->foll=NULL;
+      ln->score=0.0;
    }
    for(i=0, la=lat->larcs; i<na; i++, la=NextLArc(lat,la)) {
       la->lmlike=0.0;

@@ -1077,47 +1077,6 @@ its transition matrix is renormalised.
 \hmkw{EndHMM} 
 }
 
-\mysect{Regression Class Trees for Adaptation}{regtreemods}
-
-In order to perform adaptation \HTK\ generally \index{adaptation!regression tree}requires the use of a
-binary regression tree. Its use in the adaptation process is explained
-in further detail in chapter~\ref{c:Adapt}.
-After construction (see
-section~\ref{s:hhedregtree}) the terminal nodes of the binary
-regression tree contain mixture component groupings or
-clusters. These clusters are referred to as regression base
-classes. Each mixture component in an HMM set belongs to a unique
-regression base class. The binary regression tree is stored as part of
-the HMM set, since its structure is necessary for the dynamic
-adaptation procedure described in section~\ref{s:reg_classes}. 
-Also each mixture component has a regression base class identifier (the
-terminal node indices) stored with it. 
-
-An example is shown in
-figure~\ref{f:macregtreedef} and corresponds with the tree shown in
-figure~\ref{f:regtree1}. The example shows the use of the keyword {\sf
-$<$HMMSetId$>$} used to store an identifier for this HMM set. This is
-important because the regression tree is built based on this HMM set
-and is hence specific to it. Many sets of transforms may be built that
-can be applied to this HMM set, but only one HMM set can be
-transformed by a transform set that utilises the regression tree.
-The regression tree is described by non-terminal nodes {\sf $<$Nodes$>$} and
-terminal nodes {\sf $<$TNodes$>$}. Each node contains its index
-followed by either the indices of its children (if it is a
-non-terminal) or the number of mixture components clustered at a
-terminal. Each mixture component as defined by the keyword  {\sf
-$<$Mixture$>$} has an {\sf $<$RClass$>$} keyword followed by the
-regression base class index.
-When an HMM definition is loaded, a check is made to see that all the
-regression classes have been defined and that the total number of
-mixture components loaded for each regression class matches the number
-of mixture components defined in the regression tree.
-
-The regression tree together with the mixture regression base class
-numbers can be constructed automatically with the use of the tool
-\htool{HHEd} (see section~\ref{s:hhedregtree}).
-
-
 \mysect{Binary Storage Format}{binsave}
 
 Throughout this chapter, a text-based representation
@@ -1190,33 +1149,6 @@ force binary format output.
 \hmkw{EndHMM} 
 }
 
-\putprog{macregtreedef}{80}{MMF with a regression tree and classes}
-{
-\hmmt{o} \> \hmkw{HMMSetId} ecrl\_us\_mono \\
-\>    \hmkw{VecSize} 4 \hmkw{MFCC} \\
-\hmmc{r}{ecrl\_us\_mono\_tree\_4} \\
-\>    \hmkw{RegTree} 4 \\
-\>    \hmkw{Node} 1 2 3 \\
-\>    \hmkw{Node} 2 4 5 \\
-\>    \hmkw{Node} 3 6 7 \\
-\>    \hmkw{TNode} 4 30 \\
-\>    \hmkw{TNode} 5 25 \\
-\>    \hmkw{TNode} 6 40 \\
-\>    \hmkw{TNode} 7 39 \\
-\hmmc{s}{stateA} \hmkw{NumMixes} 3 \\
-\>    \hmkw{Mixture} 1 0.34 \\
-\>\>    \hmkw{RClass} 4 \\
-\>\>    \hmmc{u}{mean51} \\   
-\>\>    \hmmc{v}{var65} \\
-\>    \hmkw{Mixture} 2 0.52 \\
-\>\>    \hmkw{RClass} 7 \\
-\>\>    \hmmc{u}{mean32} \\   
-\>\>    \hmmc{v}{var65} \\
-\>    \hmkw{Mixture} 3 0.14 \\
-\>\>    \hmkw{RClass} 5 \\
-\>\>    \hmmc{u}{mean12} \\   
-\>\>    \hmmc{v}{var3}
-}
 
 \mysect{The HMM Definition Language}{hmmdef}
 
@@ -1246,7 +1178,6 @@ rule.
 \>\>\>          [ globalOpts ] \\
 \>\>\>          $<$NumStates$>$ short \\
 \>\>\>          state \{ state \} \\
-\>\>\>          [ regTree ] \\
 \>\>\>          transP \\
 \>\>\>          [ duration ] \\
 \>\>         $<$EndHMM$>$ 
@@ -1294,7 +1225,9 @@ width will be assumed.  All other options default to null.
 \>  option = \> $<$HmmSetId$>$ string $|$ \\ 
 \>\>  $<$StreamInfo$>$ short \{ short \} $|$  \\
 \>\>   $<$VecSize$>$    short $|$  \\
+\>\>   $<$ProjSize$>$    short $|$  \\
 \>\>   $<$InputXform$>$ inputXform $|$  \\
+\>\>   $<$ParentXform$>$ $\sim$a macro $|$  \\
 \>\>   covkind $|$ \\
 \>\>   durkind $|$ \\
 \>\>   parmkind 
@@ -1307,7 +1240,10 @@ be safely applied to this MMF.
 The arguments to the
 {\sf $<$StreamInfo$>$} option are the number of streams (default 1) and then
 for each stream, the width of that stream.  The {\sf $<$VecSize$>$} option 
-gives the total number of elements in each input vector.  
+gives the total number of elements in each input vector.  {\sf $<$ProjSize$>$}
+is the number of ``nuisance'' dimensions removed using, for example, 
+an HLDA transform. The {\sf $<$ParentXForm$>$} allows the semi-tied macro,
+if any, associated with the model-set to be specified.
 If both \hmkw{VecSize} and \hmkw{StreamInfo} are included then the
 sum of all the stream widths must equal the input vector size.
 
@@ -1321,7 +1257,7 @@ The {\sf covkind } defines the kind of the covariance matrix
 }
 \noindent
 where {\sf $<$InvDiagC$>$} is used internally.  {\sf $<$LLTC$>$}
-and {\sf $<$XformC$>$} are not used in \HTK\ Version 2.0.
+and {\sf $<$XformC$>$} are not used in \HTK\ Version 3.4.
 Setting the covariance kind as a global option forces all components to
 have this kind.  In particular, it prevents mixing full and diagonal covariances
 within a HMM set.
@@ -1377,7 +1313,7 @@ information can be defined in any order.  The syntax is as follows
 }
 \noindent
 A {\sf stateinfo} definition consists of an 
-optional specification of the number of mixtures, an optional set of stream weights,
+optional specification of the number of mixture components, an optional set of stream weights,
 followed by a block of information for each stream, optionally terminated with
 a duration vector.  Alternatively, {\sf $\sim$s macro} can be
 written where {\sf macro} is the name of a previously defined macro.
@@ -1478,8 +1414,7 @@ be given and one of the possible forms of covariance
 {\sf
 \begin{tabbing}
 ++++ \= ++++++++ \=  \kill
-\>   mixpdf = \> $\sim$m macro $|$ [ rclass ] mean cov [ $<$GConst$>$ float ] \\
-\>   rclass = \> $<$RClass$>$ short \\
+\>   mixpdf = \> $\sim$m macro $|$ mean cov [ $<$GConst$>$ float ] \\
 \>   mean = \> $\sim$u macro $|$ $<$Mean$>$ short vector \\
 \>   cov =  \> var $|$ inv $|$ xform \\
 \>   var = \> $\sim$v macro $|$ $<$Variance$>$ short vector \\
@@ -1504,12 +1439,6 @@ that part of the log
 probability of a Gaussian that can be precomputed.  If it is omitted, then
 it will be computed during load-in, including it simply saves some time.
 \HTK\ tools which output HMM definitions always include this field.
-The optional {\sf $<$RClass$>$} stores the regression base class index that
-this mixture component belongs to, as specified by the regression
-class tree (which is also stored in the model set). \HTK\ tools which
-output HMM definitions always include this field, and if there is no
-regression class tree then the regression identifier is set to zero.
-
 
 In addition to defining the output distributions, a state can have a
 duration probability distribution defined for it. However, no current HTK
@@ -1524,30 +1453,6 @@ tool can estimate or use these.
 Alternatively, as shown by the top level syntax for a {\sf hmmdef},
 duration parameters can be specified for a whole model.
 
-A binary regression class tree (for the purposes of HMM adaptation as in
-chapter~\ref{c:Adapt}) may also exist for an HMM set. This is defined
-by 
-{\sf
-\begin{tabbing}
-++++ \= ++++++++ \=  \kill
-\>   regTree = \> $\sim$r macro tree \\
-\>   tree    = \> $<$RegTree$>$ short nodes \\
-\>   nodes   = \> ($<$Node$>$ short short short $|$ $<$TNode$>$ short
-int) [ nodes ]
-\end{tabbing}
-}
-\noindent
-In {\sf tree} the {\sf short} preceding the {\sf nodes} refers to
-the number of terminal nodes or leaves that the regression tree
-contains. Each node in {\sf nodes} can either be a non-terminal {\sf
-$<$Node$>$} or a terminal (leaf) {\sf $<$TNode$>$}. For a {\sf
-$<$Node$>$} the three following {\sf short}s refer to the node's index
-number and the index numbers of its children. For a {\sf
-$<$TNode$>$}, the {\sf short} refers to the leaf's index (which
-correspond to a regression base class index as stored at the
-component level in {\sf RClass}, see above), while the {\sf int}
-refers to the number of mixture components in this leaf cluster.
-
 The transition matrix is defined by
 {\sf
 \begin{tabbing}
@@ -1559,15 +1464,69 @@ The transition matrix is defined by
 where the {\sf short} in this case should be equal to the number of
 states in the model. 
 
+To support HMM adaptation (as described in
+chapter~\ref{c:Adapt}) baseclasses and regression class trees are
+defined.  A baseclass is defined as {\sf
+\begin{tabbing}
+++++ \= ++++++++ \=  \kill
+\>   baseClass = \> $\sim$b macro  baseopts classes\\
+\>   baseopts  =  \> $<$MMFIdMask$>$ string $<$Parameters$>$ baseKind $<$NumClasses$>$ int\\
+\>   baseKind  = \>MIXBASE $|$ MEANBASE $|$ COVBASE \\
+\>   classes   = \> $<$Class$>$ int itemlist  \{ classes \} \\
+\end{tabbing}
+} 
+\noindent
+where itemlist is a list of mixture components specified using
+the same conventions as the \htool{HHEd} command
+described in section~\ref{s:parmtying}.  A regression class tree may
+also exist for an HMM set. This is defined by {\sf
+\begin{tabbing}
+++++ \= ++++++++ \=  \kill
+\>   regTree = \> $\sim$r macro $<$BaseClass$>$ baseclasses node \\
+\>   baseclasses = \> $\sim$b macro $|$ baseopts classes \\
+\>   node    = \> ($<$Node$>$ int int int \{ int \}  $|$ $<$TNode$>$ int int
+int \{ int \}) \{ node \}
+\end{tabbing}
+}
+\noindent
+For the definition of a node ($<$Node$>$) in {\sf node} the first integrer is the 
+node number, the second the number of children followed the of children
+node numbers\footnote{Though the notation support n-ary trees, the regression
+class tree code can only generate binary regression class trees.}. The 
+integers in the definition of a terminal node ($<$TNode$>$) define the node number, 
+number of base classes associated with the teminal and the base class-index numbers.
+
+Adaptation transforms are defined using
+{\sf
+\begin{tabbing}
+++++ \= ++++++++ \=  \kill
+\>  adaptXForm  = \> $\sim$a macro adaptOpts $<$XformSet$>$ xformset \\
+\>  adaptOpts   = \> $<$AdaptKind$>$ adaptkind $<$BaseClass$>$ baseclasses [$<$ParentXForm$>$ parentxform]  \\
+\>  parentxform = \> $\sim$a macro $|$ adaptOpts $<$XformSet$>$ xformset\\
+\>  adaptKind   = \> TREE $|$ BASE\\
+\>  xformset    = \> $<$XFormKind$>$ xformKind $<$NumXForms$>$ int \{ linxform \}\\
+\>  xformKind   = \> MLLRMEAN $|$ MLLRCOV $|$ MLLRVAR $|$ CMLLR $|$ SEMIT\\
+\>  linxform    = \> $<$LinXForm$>$ int $<$VecSize$>$ int [$<$OFFSET$>$ xformbias] \\
+\>                \> $<$BlockInfo$>$ 
+int int \{int\} block \{block\}\\
+\>  xformbias = \> $\sim$y macro $|$ $<$Bias$>$ short vector \\
+\>  block       = \> $<$Block$>$ int xform\\
+\end{tabbing}
+}
+\noindent
+In the definition of the $<$BlockInfo$>$ the first integer is the number of blocks,
+followed the size of each of the clocks. For examples of the adaptation transform
+format see section~\ref{s:tmfs}.
+
 Finally the input transform is defined by
 {\sf
 \begin{tabbing}
 ++++ \= ++++++++ \=  \kill
 \>  inputXform  = \> $\sim$j macro $|$ inhead inmatrix\\
 \>  inhead      = \> $<$MMFIdMask$>$ string parmkind [$<$PreQual$>$]\\
-\>  inmatrix    = \> $<$LinXform$>$ $<$VecSize$>$ short $<$BlockInfo$>$ 
-short short \{short\} block \{block\}\\
-\>  block       = \> $<$Block$>$ short xform
+\>  inmatrix    = \> $<$LinXform$>$ $<$VecSize$>$ int $<$BlockInfo$>$ 
+int int \{int\} block \{block\}\\
+\>  block       = \> $<$Block$>$ int xform
 \end{tabbing}
 }
 \noindent

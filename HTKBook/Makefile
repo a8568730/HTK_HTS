@@ -12,7 +12,7 @@ reftex =     HTKRef/Cluster.tex  HTKRef/HInit.tex    HTKRef/HResults.tex    \
 	     HTKRef/HLMCopy.tex  HTKRef/HSLab.tex    HTKRef/LGPrep.tex      \
 	     HTKRef/HCopy.tex    HTKRef/HLStats.tex  HTKRef/HSmooth.tex     \
 	     HTKRef/LMerge.tex   HTKRef/HDMan.tex    HTKRef/HList.tex       \
-             HTKRef/HVite.tex    HTKRef/LPlex.tex    HTKRef/HEAdapt.tex     \
+             HTKRef/HVite.tex    HTKRef/LPlex.tex    \
 	     HTKRef/HParse.tex   HTKRef/LAdapt.tex   HTKRef/LSubset.tex     \
 	     HTKRef/HERest.tex   HTKRef/HQuant.tex   HTKRef/LBuild.tex      \
 	     HTKRef/tools.tex    HTKRef/HHEd.tex     HTKRef/HRest.tex       \
@@ -73,7 +73,7 @@ htkbook.dvi: $(maintex) $(reftex) $(figures)
 
 html: htkbook.dvi
 	-mkdir -p htkbook
-	latex2html -t "HTKBook for HTK3" -address "<A HREF="http://htk.eng.cam.ac.uk/docs/docs.shtml" TARGET="_top">Back to HTK site</A><BR>See front page for HTK Authors" -white -transparent -html_version 4.0,frame -rootdir htkbook/ htkbook.tex
+	latex2html -init_file latex2html-init -t "HTKBook for HTK3" -address "<A HREF="http://htk.eng.cam.ac.uk/docs/docs.shtml" TARGET="_top">Back to HTK site</A><BR>See front page for HTK Authors" -white -transparent -html_version 4.0,frame  -dir htkbook htkbook.tex
 
 .PHONY: clean
 clean:

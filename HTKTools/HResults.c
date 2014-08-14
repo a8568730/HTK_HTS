@@ -19,8 +19,53 @@
 /*    File: HResults.c: gather statistics on results           */
 /* ----------------------------------------------------------- */
 
-char *hresults_version = "!HVER!HResults:   3.2.1 [CUED 15/10/03]";
-char *hresults_vc_id = "$Id: HResults.c,v 1.9 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and to  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hresults_version = "!HVER!HResults:   3.4 [CUED 25/04/06]";
+char *hresults_vc_id = "$Id: HResults.c,v 1.4 2006/12/29 04:44:56 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -130,6 +175,7 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HResults [options] labelList recFiles...\n\n");
+   printf("\nModified for HTS\n");
    printf(" Option                                       Default\n\n");
    printf(" -a s    Redefine string level label          SENT\n");
    printf(" -b s    Redefine unitlevel label             WORD\n");
@@ -148,7 +194,7 @@ void ReportUsage(void)
    printf(" -u f    False alarm time units (hours)       1.0\n");
    printf(" -w      Enable word spotting analysis        off\n");
    printf(" -z s    Redefine null class name to s        ???\n");
-   PrintStdOpts("GILX");
+   PrintStdOpts("GILXS");
    printf("\n\n");
 }
 
@@ -323,6 +369,12 @@ int main(int argc, char *argv[])
    else 
       printf("No transcriptions found\n");
 
+   ResetLabel();
+   ResetWave();
+   ResetMath();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
@@ -379,7 +431,7 @@ void NormaliseName(LabList *ll,int lev)
          strcpy(buf,id->name);
          len = strlen(buf);
          for (ptr=buf;*ptr!=0;ptr++)
-            if (islower(*ptr)) break;
+            if (islower((int) *ptr)) break;
          if (*ptr){
             for (;*ptr!=0;ptr++)
                *ptr = toupper(*ptr);
@@ -439,9 +491,9 @@ static Boolean SpRMatch(char *s,char *p,char *spkr,
    else if ((numstars==0 && minplen!=slen) || minplen>slen)
       match=FALSE;
    else if (*p == '*') {
-      match=(SpRMatch(s+1,p,spkr,slen-1,minplen,numstars) ||
+      match=((SpRMatch(s+1,p,spkr,slen-1,minplen,numstars) ||
              SpRMatch(s,p+1,spkr,slen,minplen,numstars-1) ||
-             SpRMatch(s+1,p+1,spkr,slen-1,minplen,numstars-1));
+              SpRMatch(s+1,p+1,spkr,slen-1,minplen,numstars-1)) ? TRUE:FALSE);
    }
    else if (*p == '%') {
       *spkr=*s,spkr[1]=0;
@@ -532,7 +584,7 @@ Boolean RecordFileStats(CellPtr p)
    del += p->del;    ins += p->ins; /* update global counters */
    sub += p->sub;    hits += p->hit;
    nsyms += p->hit+p->del+p->sub; ++nphr;
-   error = !(p->del==0 && p->ins==0 && p->sub==0);
+   error = (!(p->del==0 && p->ins==0 && p->sub==0)) ? TRUE:FALSE;
    if (!error) ++phrcor;
    if (spkrMask != NULL){       /* update speaker if reqd */
       s = GetSpeaker();
@@ -885,9 +937,9 @@ void DoCompare(void)
 
    for (i=1;i<=nTest;i++){
       gridi = grid[i]; gridi1 = grid[i-1];
-      testnull = (lTest[i] == nulClass);
+      testnull = (lTest[i] == nulClass) ? TRUE:FALSE;
       for (j=1;j<=nRef;j++) {
-         refnull = (lRef[j] == nulClass);
+         refnull = (lRef[j] == nulClass) ? TRUE:FALSE;
          if (refnull && testnull) { /* both ref and test are null */
             h = gridi1[j].score; 
             d = gridi1[j-1].score; 
@@ -955,9 +1007,9 @@ void DoCompareNIST(void)
 
    for (i=1;i<=nTest;i++){
       gridi = grid[i]; gridi1 = grid[i-1];
-      testnull = (lTest[i] == nulClass);
+      testnull = (lTest[i] == nulClass) ? TRUE:FALSE;
       for (j=1;j<=nRef;j++) {
-         refnull = (lRef[j] == nulClass);
+         refnull = (lRef[j] == nulClass) ? TRUE:FALSE;
          if (refnull && testnull) { /* both ref and test are null */
             h = gridi1[j].score; 
             d = gridi1[j-1].score; 
@@ -1047,7 +1099,7 @@ void AppendPair(char *linea, char *a, char *lineb, char *b)
 void AppendCell(int i, int j, char *tb, char *rb)
 {
    char *rlab,*tlab;
-   LabId rid,tid;
+   LabId rid=NULL,tid=NULL;
    char empty[1];
 
    if (i<0 || j<0) 
@@ -1296,7 +1348,7 @@ void MatchRecFiles(void)
 {
    Cell bp,*p;
    int i,n,err,berr,best;
-   char buf[255];
+   char buf[MAXSTRLEN];
    
    n=(ans->numLists>maxNDepth)?maxNDepth:ans->numLists;
    best=0;berr=INT_MAX;

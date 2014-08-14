@@ -19,10 +19,9 @@
 /*         File: HMem.h:   Memory Management Module            */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -30,7 +29,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -44,10 +44,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -62,11 +63,8 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HMem.h modified for HTS-1.1.1 2003/12/26 by Heiga Zen        */
-/*  ---------------------------------------------------------------  */
 
-
-/* !HVER!HMem:   3.2.1 [CUED 15/10/03] */
+/* !HVER!HMem:   3.3 [CUED 28/04/05] */
 
 /*
    This module provides a type MemHeap which once initialised
@@ -130,7 +128,7 @@ typedef struct {
    size_t totAlloc;     /*  total #elems alloc'ed    total #bytes alloc'd */
    BlockP heap;         /*               linked list of blocks            */
    Boolean protectStk;  /*  MSTAK only, prevents disposal below Stack Top */
-} MemHeap;
+}MemHeap;
 
 /* ---------------------- Alignment Issues -------------------------- */
 
@@ -148,6 +146,11 @@ void InitMem(void);
 /*
    Initialise the module.  This routine must be called before any other
    routine in this module
+*/
+
+void ResetMem(void);
+/* 
+   reset the module 
 */
 
 void CreateHeap(MemHeap *x, char *name, HeapType type, size_t elemSize, 
@@ -203,12 +206,13 @@ void PrintAllHeapStats(void);
 /* Basic Numeric Types */
 typedef short *ShortVec;   /* short vector[1..size] */
 typedef int   *IntVec;     /* int vector[1..size] */
-typedef int   **IMatrix; /* int matrix[1...nrows][1...ncols] */
+typedef int   **IMatrix;/* int matrix[1...nrows][1...ncols] */
 typedef float *Vector;     /* vector[1..size]   */
 typedef float **Matrix;    /* matrix[1..nrows][1..ncols] */
 typedef Matrix TriMat;     /* matrix[1..nrows][1..i] (lower triangular) */
 typedef double *DVector;   /* double vector[1..size]   */
 typedef double **DMatrix;  /* double matrix[1..nrows][1..ncols] */
+typedef DMatrix DTriMat;   /* double matrix [1..nrows][1..i] (lower triangular) */
 
 /* Shared versions */
 typedef Vector SVector;    /* shared vector[1..size]   */
@@ -258,6 +262,7 @@ size_t IMatrixElemSize(int nrows,int ncols);
 size_t DMatrixElemSize(int nrows,int ncols);
 size_t SMatrixElemSize(int nrows,int ncols);
 size_t TriMatElemSize(int size);
+size_t DTriMatElemSize(int size);
 size_t STriMatElemSize(int size);
 /* 
    Return elemSize of a Matrix with given number of rows
@@ -271,6 +276,7 @@ IMatrix CreateIMatrix(MemHeap *x,int nrows,int ncols);
 DMatrix CreateDMatrix(MemHeap *x,int nrows,int ncols);
 SMatrix CreateSMatrix(MemHeap *x,int nrows,int ncols);
 TriMat  CreateTriMat(MemHeap *x,int size);
+DTriMat CreateDTriMat(MemHeap *x,int size);
 STriMat CreateSTriMat(MemHeap *x,int size);
 /*
    Create and return a matrix with nrows rows and ncols columns.
@@ -280,6 +286,7 @@ STriMat CreateSTriMat(MemHeap *x,int size);
 */
 
 Boolean IsTriMat(Matrix m);
+Boolean IsDTriMat(DMatrix m);
 /*
    Return true if m is actually TriMat
 */
@@ -291,6 +298,7 @@ int NumCols(Matrix m);
 int NumICols(IMatrix m);
 int NumDCols(DMatrix m);
 int TriMatSize(TriMat m);
+int DTriMatSize(DTriMat m);
 /*
    Return the number of rows/cols in matrix m.  These can be
    applied to shared variants also.
@@ -301,6 +309,7 @@ void FreeIMatrix(MemHeap *x,IMatrix m);
 void FreeDMatrix(MemHeap *x,DMatrix m);
 void FreeSMatrix(MemHeap *x,SMatrix m);
 void FreeTriMat(MemHeap *x,TriMat m);
+void FreeDTriMat(MemHeap *x,DTriMat m);
 void FreeSTriMat(MemHeap *x,STriMat m);
 /*
    Free the space occupied by matrix m

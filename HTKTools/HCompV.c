@@ -32,10 +32,9 @@
 /*  File: HCompV.c: HMM global mean/variance initialisation    */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /*  ---------------------------------------------------------------  */
-/*     The HMM-Based Speech Synthesis System (HTS): version 1.1.1    */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
 /*                       HTS Working Group                           */
 /*                                                                   */
 /*                  Department of Computer Science                   */
@@ -43,7 +42,8 @@
 /*                               and                                 */
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
-/*                     Copyright (c) 2001-2003                       */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -57,10 +57,11 @@
 /*    1. Once you apply the HTS patch to HTK, you must obey the      */
 /*       license of HTK.                                             */
 /*                                                                   */
-/*    2. The code must retain the above copyright notice, this list  */
-/*       of conditions and the following disclaimer.                 */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
 /*                                                                   */
-/*    3. Any modifications must be clearly marked as such.           */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
 /*                                                                   */
 /*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
 /*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
@@ -75,11 +76,9 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*      HCompV.c modified for HTS-1.1.1 2003/12/26 by Heiga Zen      */
-/*  ---------------------------------------------------------------  */
 
-char *hcompv_version = "!HVER!HCompV:   3.2.1 [CUED 15/10/03]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.12 2003/10/15 08:10:13 ge204 Exp $";
+char *hcompv_version = "!HVER!HCompV:   3.4 [CUED 25/04/06]";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.3 2006/12/29 04:44:56 zen Exp $";
 
 /* 
    This program calculates a single overall variance vector from a
@@ -146,8 +145,9 @@ static MemHeap iStack;
 
 /* Storage for mean and covariance accumulators */
 typedef struct {
-   Vector       meanSum;            /* acc for mean vector value */
-   Covariance   squareSum;          /* acc for sum of squares */
+   DVector      meanSum;            /* acc for mean vector value */
+   DMatrix      inv;                /* acc for sum of squares (full) */
+   DVector      var;                /* acc for sum of squares (diag) */
    Covariance   fixed;              /* fixed (co)variance values */
 } CovAcc;
 static CovAcc accs[SMAX];           /* one CovAcc for each stream */
@@ -173,6 +173,7 @@ typedef struct SpkrAccListItem{
 static SpkrAccListItem *salist = NULL;   /* global speaker accumulate list */
 static int vSize = 0;                    /* target observation vector size */
 static char spPattern[MAXSTRLEN];        /* speaker mask */
+static char pathPattern[MAXSTRLEN];      /* path mask */
 static char oflags[MAXSTRLEN] = "m";     /* export flags for CMV */  
 static char cmDir[MAXSTRLEN];            /* directory to export CMV */
 static char TargetPKStr[MAXSTRLEN];      /* target parm kind string */
@@ -199,7 +200,7 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nModified for HTS ver.1.1.1\n");
+   printf("\nModified for HTS\n");
    printf("\nUSAGE: HCompV [options] [hmmFile] trainFiles...\n" );
    printf(" Option                                       Default\n\n");
    printf(" -c dir  Set output directiry for CMV         none\n");
@@ -208,11 +209,13 @@ void ReportUsage(void)
    printf(" -l s    Set segment label to s               none\n");
    printf(" -m      Update means                         off\n");
    printf(" -o fn   Store new hmm def in fn (name only)  outDir/srcfn\n");
+   printf(" -p s    path pattern for CMV                 none\n");
    printf(" -q nmv  output type flags for CMV            m\n");
    printf(" -v f    Set minimum variance to f            0.0\n");
    PrintStdOpts("BCFGHILMX");
    printf("\n\n");
 }
+
 
 /* ------------------------ Initialisation ----------------------- */
 
@@ -233,7 +236,7 @@ void CheckVarianceKind(void)
          for (m=1,me = sti->spdf.cpdf+1; m<=sti->nMix; m++, me++)
             if (me->mpdf->ckind == FULLC) 
                fullcNeeded[s] = TRUE;
-      }
+}
 }
 
 /* Initialise: load HMMs and create accumulators */
@@ -270,17 +273,17 @@ void Initialise(void)
    /* Create accumulators for the mean and variance */
    for (s=1;s<=hset.swidth[0]; s++){
       V = hset.swidth[s];
-      accs[s].meanSum=CreateVector(&gstack,V);
-      ZeroVector(accs[s].meanSum);
+      accs[s].meanSum=CreateDVector(&gstack,V);
+      ZeroDVector(accs[s].meanSum);
       if (fullcNeeded[s]) {
-         accs[s].squareSum.inv=CreateSTriMat(&gstack,V);
-         accs[s].fixed.inv=CreateSTriMat(&gstack,V);
-         ZeroTriMat(accs[s].squareSum.inv);
+         accs[s].inv=CreateDMatrix(&gstack,V,V);
+         accs[s].fixed.inv=CreateTriMat(&gstack,V);
+         ZeroDMatrix(accs[s].inv);
       }
       else {
-         accs[s].squareSum.var=CreateSVector(&gstack,V);
-         accs[s].fixed.var=CreateSVector(&gstack,V);
-         ZeroVector(accs[s].squareSum.var);
+         accs[s].var=CreateDVector(&gstack,V);
+         accs[s].fixed.var=CreateVector(&gstack,V);
+         ZeroDVector(accs[s].var);
       }
    }
 
@@ -306,15 +309,16 @@ void Initialise(void)
 /* CalcCovs: calculate covariance of speech data */
 void CalcCovs(void)
 {
-   int x,y,s,V;
-   float meanx,meany,varxy,n;
+   int i,j,x,y,s,V;
+   double meanx,meany,varxy,n;
    Matrix fullMat;
+   TriMat triMat;
    
    if (totalCount<2)
       HError(2021,"CalcCovs: Only %d speech frames accumulated",totalCount);
    if (trace&T_TOP)
       printf("%ld speech frames accumulated\n", totalCount);
-   n = (float)totalCount;     /* to prevent rounding to integer below */
+   n = (double)totalCount;     /* to prevent rounding to integer below */
    for (s=1; s<=hset.swidth[0]; s++){  /* For each stream   */
       V = hset.swidth[s];
       for (x=1; x<=V; x++)            /* For each coefficient ... */
@@ -324,29 +328,41 @@ void CalcCovs(void)
          if (fullcNeeded[s]) {
             for (y=1; y<=x; y++) {
                meany = accs[s].meanSum[y];
-               varxy = accs[s].squareSum.inv[x][y]/n - meanx*meany;
-               accs[s].squareSum.inv[x][y] =
-                  (x != y || varxy > minVar) ? varxy : minVar;    
+               varxy = accs[s].inv[x][y]/n - meanx*meany;
+               accs[s].inv[x][y] =
+                  (x != y || varxy > (double)minVar) ? varxy : (double)minVar;    
             }
          }
          else {
-            varxy = accs[s].squareSum.var[x]/n - meanx*meanx;
-            accs[s].fixed.var[x] = (varxy > minVar) ? varxy :minVar;
+            varxy = accs[s].var[x]/n - meanx*meanx;
+            accs[s].fixed.var[x] = (varxy > (double)minVar) ? (float)varxy : minVar;
          }
       }
       if (fullcNeeded[s]) { /* invert covariance matrix */
+         /* prepare temporaly full & triangle matrices */
+         triMat=CreateTriMat(&gstack,V);
          fullMat=CreateMatrix(&gstack,V,V);
          ZeroMatrix(fullMat); 
-         CovInvert(accs[s].squareSum.inv,fullMat);
+         
+         /* copy full double matrix to triangular float matrix */
+         for (i=1; i<=V; i++)
+            for (j=1; j<=i; j++) 
+               triMat[i][j] = (float)accs[s].inv[i][j];
+         
+         /* Covariance -> InvCov */
+         CovInvert(triMat,fullMat);
          Mat2Tri(fullMat,accs[s].fixed.inv);
+         
+         /* Free temporaly full & triangle matrices */
          FreeMatrix(&gstack,fullMat);
+         FreeTriMat(&gstack,triMat);
       }
       if (trace&T_COVS) {
          printf("Stream %d\n",s);
          if (meanUpdate)
-            ShowVector(" Mean Vector ", accs[s].meanSum,12);
+            ShowDVector(" Mean Vector ", accs[s].meanSum,12);
          if (fullcNeeded[s]) {
-            ShowTriMat(" Covariance Matrix ",accs[s].squareSum.inv,12,12);
+            ShowTriMat(" Inverse Covariance Matrix ",accs[s].fixed.inv,12,12);
          } else
             ShowVector(" Variance Vector ", accs[s].fixed.var,12);
       }
@@ -368,7 +384,7 @@ void TriDiag2Vector(TriMat m, Vector v)
 /* SetCovs: set covariance values in hmm */
 void SetCovs(void)
 {
-   int i,s,m;
+   int i,k,s,m;
    StateElem *se;
    StreamElem *ste;
    StreamInfo *sti;
@@ -387,8 +403,9 @@ void SetCovs(void)
          for (m=1,me = sti->spdf.cpdf+1; m<=sti->nMix; m++, me++) {
             mp = me->mpdf;
             if (meanUpdate && !IsSeenV(mp->mean)){      /* meanSum now holds mean */
-               if ( VectorSize(mp->mean)==VectorSize(accs[s].meanSum) )
-                  CopyVector(accs[s].meanSum,mp->mean); 
+               if ( VectorSize(mp->mean)==DVectorSize(accs[s].meanSum) )
+                  for (k=1;k<=VectorSize(mp->mean);k++)
+                     mp->mean[k] = (float)accs[s].meanSum[k]; 
                TouchV(mp->mean);
             }
             if (!IsSeenV(mp->cov.var)){
@@ -398,11 +415,11 @@ void SetCovs(void)
                   TriDiag2Vector(accs[s].fixed.inv,mp->cov.var);
                else {
                   if ( VectorSize(mp->cov.var)==VectorSize(accs[s].fixed.var) )
-                     CopyVector(accs[s].fixed.var,mp->cov.var);
+                  CopyVector(accs[s].fixed.var,mp->cov.var);
                }
                TouchV(mp->cov.var);
             }
-      }
+         }
    }
    ClearSeenFlags(&hset,CLR_ALL);
 }
@@ -424,7 +441,8 @@ void PutVFloor(void)
       strcpy(vName,"varFloor"); strcat(vName,num);
       fprintf(f,"~v %s\n",vName);
       if (fullcNeeded[s])              
-         TriDiag2Vector(accs[s].squareSum.inv,v);
+         for (i=1;i<=hset.swidth[s];i++)
+            v[i] = (float)accs[s].inv[i][i];
       else
          CopyVector(accs[s].fixed.var,v);
       for (i=1; i<=hset.swidth[s]; i++)
@@ -444,23 +462,23 @@ void PutVFloor(void)
 void AccVar(Observation obs)
 {
    int x,y,s,V;
-   float val;
+   double val;
    Vector v;
 
    totalCount++;
    for (s=1; s<=hset.swidth[0]; s++){
       v = obs.fv[s]; V = hset.swidth[s];
       if (SpaceOrder(v)==V) 
-         for (x=1;x<=V;x++) { 
-            val=v[x];            
-            accs[s].meanSum[x] += val;     /* accumulate mean */                             
-            if (fullcNeeded[s]) {          /* accumulate covar */ 
-               accs[s].squareSum.inv[x][x] += val*val;
-               for (y=1;y<x;y++) 
-                  accs[s].squareSum.inv[x][y] += val*v[y];
-            } else                         /* accumulate var */
-               accs[s].squareSum.var[x] += val*val;
-         }
+      for (x=1;x<=V;x++) { 
+            val=(double)v[x];            
+         accs[s].meanSum[x] += val;     /* accumulate mean */                             
+         if (fullcNeeded[s]) {          /* accumulate covar */ 
+               accs[s].inv[x][x] += val*val;
+            for (y=1;y<x;y++) 
+                  accs[s].inv[x][y] += val*(double)v[y];
+         } else                         /* accumulate var */
+               accs[s].var[x] += val*val;
+      }
    }
 }
 
@@ -542,7 +560,7 @@ void SaveModel(char *outfn)
 {
    if (outfn != NULL)
       macroLink->id = GetLabId(outfn,TRUE);
-   if(SaveHMMSet(&hset,outDir,NULL,saveBinary)<SUCCESS)
+   if(SaveHMMSet(&hset,outDir,NULL,NULL,saveBinary)<SUCCESS)
       HError(2011,"SaveModel: SaveHMMSet failed");
 }
 
@@ -741,13 +759,23 @@ void ExportNMV(SpkrAccListItem *sal, char *OutDirName, char *tgtPKStr)
    FILE *oFile;
    Boolean isPipe;
    char oFileName[MAXSTRLEN];
+   char pathBuffer1[MAXSTRLEN];
+   char pathBuffer2[MAXSTRLEN];
    SpkrAccListItem *p;
    int i;
 
    p = sal;
    while(p != NULL){
       /* create output file name for current spkr index */    
-      MakeFN(p->sa->SpkrName,OutDirName,NULL,oFileName);
+      if ( pathPattern[0] != '\0'){
+         if ( MaskMatch(pathPattern,pathBuffer1,p->sa->SpkrName) != TRUE ){
+            HError(2039,"HCompV: ExportNMV: path pattern matching failure on speaker: %s\n",p->sa->SpkrName);
+         }
+         MakeFN(pathBuffer1,OutDirName,NULL,pathBuffer2); 
+         MakeFN(p->sa->SpkrName,pathBuffer2,NULL,oFileName);
+      }
+      else
+         MakeFN(p->sa->SpkrName,OutDirName,NULL,oFileName);
 
       /* open and write */
       oFile = FOpen(oFileName,NoOFilter,&isPipe);
@@ -808,6 +836,7 @@ int main(int argc, char *argv[])
    SetConfParms();
 
    CreateHMMSet(&hset,&gstack,FALSE);
+   pathPattern[0]='\0';
    while (NextArg() == SWITCHARG) {
       s = GetSwtArg();
       if (strlen(s)!=1) 
@@ -846,6 +875,13 @@ int main(int argc, char *argv[])
             HError(2019,"HCompV: CMV output dir expected");
          strcpy(cmDir,GetStrArg());
          DoCMV = TRUE;
+         break;
+      case 'p':
+         if (NextArg() != STRINGARG)
+            HError(2019,"HCompV: path pattern expected");
+         strcpy(pathPattern,GetStrArg());
+         if (strchr(pathPattern,'%')==NULL)
+            HError(2019,"HCompV: Path mask invalid");
          break;
       case 'q':
          if (NextArg() != STRINGARG)
@@ -944,6 +980,17 @@ int main(int argc, char *argv[])
       ExportNMV(salist,cmDir,TargetPKStr);
    }
 
+   ResetParm();
+   ResetModel();
+   ResetVQ();
+   ResetAudio();
+   ResetWave();
+   ResetSigP();
+   ResetMath();
+   ResetLabel();
+   ResetMem();
+   ResetShell();   
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }

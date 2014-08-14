@@ -19,8 +19,53 @@
 /*    File: HSGen: Generate Sentences from a Lattice           */
 /* ----------------------------------------------------------- */
 
-char *hsgen_version = "!HVER!HSGen:   3.2.1 [CUED 15/10/03]";
-char *hsgen_vc_id = "$Id: HSGen.c,v 1.10 2003/10/15 08:10:13 ge204 Exp $";
+/*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*                       HTS Working Group                           */
+/*                                                                   */
+/*                  Department of Computer Science                   */
+/*                  Nagoya Institute of Technology                   */
+/*                               and                                 */
+/*   Interdisciplinary Graduate School of Science and Engineering    */
+/*                  Tokyo Institute of Technology                    */
+/*                                                                   */
+/*                     Copyright (c) 2001-2006                       */
+/*                       All Rights Reserved.                        */
+/*                                                                   */
+/*  Permission is hereby granted, free of charge, to use and         */
+/*  distribute this software in the form of patch code to HTK and    */
+/*  its documentation without restriction, including without         */
+/*  limitation the rights to use, copy, modify, merge, publish,      */
+/*  distribute, sublicense, and/or sell copies of this work, and Exitto  */
+/*  permit persons to whom this work is furnished to do so, subject  */
+/*  to the following conditions:                                     */
+/*                                                                   */
+/*    1. Once you apply the HTS patch to HTK, you must obey the      */
+/*       license of HTK.                                             */
+/*                                                                   */
+/*    2. The source code must retain the above copyright notice,     */
+/*       this list of conditions and the following disclaimer.       */
+/*                                                                   */
+/*    3. Any modifications to the source code must be clearly        */
+/*       marked as such.                                             */
+/*                                                                   */
+/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
+/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
+/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
+/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
+/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
+/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
+/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
+/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
+/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
+/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
+/*  PERFORMANCE OF THIS SOFTWARE.                                    */
+/*                                                                   */
+/*  ---------------------------------------------------------------  */
+
+char *hsgen_version = "!HVER!HSGen:   3.4 [CUED 25/04/06]";
+char *hsgen_vc_id = "$Id: HSGen.c,v 1.2 2006/12/29 04:44:56 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -72,6 +117,7 @@ void SetConfParms(void)
 void ReportUsage(void)
 {
    printf("\nUSAGE: HSGen [options] latticeFile dictFile\n\n");
+   printf("\nModified for HTS\n");
    printf(" Option                                       Default\n\n");
    printf(" -l      Include line numbers                 off\n");
    printf(" -n N    Number of sentences to generate      100\n");
@@ -129,6 +175,24 @@ int main(int argc, char *argv[])
       HError(3419, "dictionary file name expected");
    dfn = GetStrArg(); 
    GenSentences(lfn,dfn);
+   
+   
+   if(InitShell(argc,argv,hsgen_version,hsgen_vc_id)<SUCCESS)
+      HError(3400,"HSGen: InitShell failed");
+
+   ResetNet();
+   ResetDict();
+   ResetParm();
+   ResetModel();
+   ResetVQ();
+   ResetAudio();
+   ResetWave();
+   ResetSigP();
+   ResetMath();
+   ResetLabel();
+   ResetMem();
+   ResetShell();
+   
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }
