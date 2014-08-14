@@ -1,3 +1,107 @@
+2010-05-10 20:28  uratec
+
+	* HTKLib/HAdapt.c: Fix bugs suggested by Wenlin Zhang: in
+	  UpdateSemiTiedXForm and EstMLLRCovXForm, the matrix was updated.
+	  but the determinant of A was not updated.
+
+2010-05-10 20:10  uratec
+
+	* HTKLib/HAdapt.c, HTKTools/HHEd.c: Merge patch code by Heiga Zen
+	  of Toshiba Research Europe Ltd. Cambridge Research Laboratory:
+	  Fix small bugs and typos.
+
+2010-04-21 20:54  uratec
+
+	* HTKLib/HGen.c: Fix a bug suggested by Florian Krebs:
+	  Context-dependent and state alignment flag can not be used in
+	  parameter generation step.
+
+2010-04-08 13:50  uratec
+
+	* Makefile.in, configure, configure.ac, HTKLVRec/HDecode.c,
+	  HTKLVRec/HDecode.mod.c, HTKLVRec/HLVLM.c, HTKLVRec/HLVModel.c,
+	  HTKLVRec/HLVNet.c, HTKLVRec/HLVRec-LM.c, HTKLVRec/HLVRec-outP.c,
+	  HTKLVRec/HLVRec-propagate.c, HTKLVRec/HLVRec-traceback.c,
+	  HTKLVRec/HLVRec.c, HTKLib/HAdapt.c, HTKLib/HAdapt.h,
+	  HTKLib/HArc.c, HTKLib/HArc.h, HTKLib/HAudio.c, HTKLib/HAudio.h,
+	  HTKLib/HDict.c, HTKLib/HDict.h, HTKLib/HExactMPE.c,
+	  HTKLib/HExactMPE.h, HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HFBLat.c,
+	  HTKLib/HFBLat.h, HTKLib/HGen.c, HTKLib/HGen.h, HTKLib/HGraf.c,
+	  HTKLib/HGraf.h, HTKLib/HGraf.null.c, HTKLib/HGraf_WIN32.c,
+	  HTKLib/HLM.c, HTKLib/HLM.h, HTKLib/HLabel.c, HTKLib/HLabel.h,
+	  HTKLib/HLat.c, HTKLib/HLat.h, HTKLib/HMap.c, HTKLib/HMap.h,
+	  HTKLib/HMath.c, HTKLib/HMath.h, HTKLib/HMem.c, HTKLib/HMem.h,
+	  HTKLib/HModel.c, HTKLib/HModel.h, HTKLib/HNet.c, HTKLib/HNet.h,
+	  HTKLib/HParm.c, HTKLib/HParm.h, HTKLib/HRec.c, HTKLib/HRec.h,
+	  HTKLib/HShell.c, HTKLib/HShell.h, HTKLib/HSigP.c, HTKLib/HSigP.h,
+	  HTKLib/HTrain.c, HTKLib/HTrain.h, HTKLib/HUtil.c, HTKLib/HUtil.h,
+	  HTKLib/HVQ.c, HTKLib/HVQ.h, HTKLib/HWave.c, HTKLib/HWave.h,
+	  HTKLib/Makefile.in, HTKLib/lbfgs.h, HTKTools/HBuild.c,
+	  HTKTools/HCompV.c, HTKTools/HCopy.c, HTKTools/HDMan.c,
+	  HTKTools/HERest.c, HTKTools/HFst.c, HTKTools/HHEd.c,
+	  HTKTools/HInit.c, HTKTools/HLEd.c, HTKTools/HLRescore.c,
+	  HTKTools/HLStats.c, HTKTools/HList.c, HTKTools/HMGenS.c,
+	  HTKTools/HMMIRest.c, HTKTools/HParse.c, HTKTools/HQuant.c,
+	  HTKTools/HRest.c, HTKTools/HResults.c, HTKTools/HSGen.c,
+	  HTKTools/HSLab.c, HTKTools/HSmooth.c, HTKTools/HVite.c,
+	  HTKTools/Makefile.in: Update all description from beta to version
+	  2.1.1
+
+2010-04-08 12:50  uratec
+
+	* HTKLib/HUtil.c: Fix a serious bug in HTK and HTS: Mixture weight
+	  calculation for HERest and HMMIRest.
+
+2010-03-08 10:31  uratec
+
+	* HTKTools/HHEd.c: Marge patch code by Junichi Yamagishi: Fix
+	  vector size in SW command.
+
+2010-03-01 18:07  uratec
+
+	* HTKLib/HGen.c: Add GV flag for each PdfStream.
+
+2010-02-19 03:55  uratec
+
+	* HTKTools/HHEd.c: Add error flag for wrong mixture weight for MU
+	  command in HHEd.c.
+
+2010-02-07 22:08  uratec
+
+	* HTKTools/HFst.c: Bug fix suggested by Junichi Yamagishi: HFst for
+	  tied context list.
+
+2010-02-01 20:51  uratec
+
+	* HTKTools/HHEd.c: Test commit mail.
+
+2010-02-01 20:41  uratec
+
+	* HTKTools/HFst.c: Test commit mail.
+
+2010-01-26 10:29  uratec
+
+	* HTKTools/HHEd.c: Change *.pdf file format in CM command
+
+2010-01-22 01:29  uratec
+
+	* HTKLib/HAdapt.c, HTKTools/HFst.c, HTKTools/HMGenS.c: Add pruning
+	  using time information in label for HFst.c.  Fix bug that WFST of
+	  state duration don't allow 1 frame.  Fix version in HMGen.c and
+	  HAdapt.c.
+
+2010-01-20 19:35  uratec
+
+	* configure, configure.ac: Marge patch code by Junichi Yamagishi:
+	  Fix warning for compiling HMGenS with Mac OS (Leopard).
+
+2010-01-12 17:30  uratec
+
+	* HTKLib/HTrain.c: Merge patch code by Heiga Zen of Toshiba
+	  Research Europe Ltd. Cambridge Research Laboratory: A bug ignores
+	  state occupancy counts which are loaded by the previous
+	  LoadStateOcc() calls.
+
 2009-12-20 21:36  uratec
 
 	* HTKLib/HAdapt.c: Merge patch code by Heiga Zen of Toshiba

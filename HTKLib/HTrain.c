@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *htrain_version = "!HVER!HTrain:   3.4.1 [CUED 12/03/09]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.18 2009/12/11 10:00:48 uratec Exp $";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.20 2010/04/08 04:50:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1584,11 +1584,13 @@ FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, UPDSet uFlags, int ind
 /* LoadStateOcc: new state occ from file f */
 static void LoadStateOcc(Source *src, HMMSet *hset, StateInfo *si)
 {
-   float occ;
+   float tocc, socc;
 
    if (hset->numSharedStreams>0) {
-      ReadFloat(src,&occ,1,ldBinary);
-      memcpy(&(si->hook),&occ,sizeof(float));
+      memcpy(&tocc,&(si->hook),sizeof(float));
+      ReadFloat(src,&socc,1,ldBinary);
+      tocc += socc;
+      memcpy(&(si->hook),&tocc,sizeof(float));
    }
 }
 

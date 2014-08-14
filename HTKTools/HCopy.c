@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hcopy_version = "!HVER!HCopy:   3.4.1 [CUED 12/03/09]";
-char *hcopy_vc_id = "$Id: HCopy.c,v 1.7 2009/12/11 10:00:54 uratec Exp $";
+char *hcopy_vc_id = "$Id: HCopy.c,v 1.8 2010/04/08 04:50:30 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

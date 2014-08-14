@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hparm_version = "!HVER!HParm:   3.4.1 [CUED 12/03/09]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.11 2009/12/11 10:00:48 uratec Exp $";
+char *hparm_vc_id = "$Id: HParm.c,v 1.12 2010/04/08 04:50:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

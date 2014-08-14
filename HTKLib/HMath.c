@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmath_version = "!HVER!HMath:   3.4.1 [CUED 12/03/09]";
-char *hmath_vc_id = "$Id: HMath.c,v 1.12 2009/12/11 10:00:47 uratec Exp $";
+char *hmath_vc_id = "$Id: HMath.c,v 1.13 2010/04/08 04:50:29 uratec Exp $";
 
 /*
    This library provides math support in the following three areas

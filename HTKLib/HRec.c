@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hrec_version = "!HVER!HRec:   3.4.1 [CUED 12/03/09]";
-char *hrec_vc_id = "$Id: HRec.c,v 1.8 2009/12/14 08:12:55 uratec Exp $";
+char *hrec_vc_id = "$Id: HRec.c,v 1.9 2010/04/08 04:50:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

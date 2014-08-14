@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2008-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2008-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /* All rights reserved.                                              */
@@ -38,8 +38,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hfst_version = "!HVER!HFst:   3.4.1 [CUED 25/04/06]";
-char *hfst_vc_id = "$Id: HFst.c,v 1.1 2009/12/11 10:00:54 uratec Exp $";
+char *hfst_version = "!HVER!HFst:   2.1.1 beta  [CUED 25/12/09]";
+char *hfst_vc_id = "$Id: HFst.c,v 1.5 2010/04/08 04:50:30 uratec Exp $";
 
 /*
    This program is used to make WFST from HSMMs.
@@ -70,7 +70,7 @@ static char *durExt = NULL;     /* duration model def file extension */
 /* WFST */
 static char *hmmFstDir = NULL;  /* directory to save Fst for HMM */
 static char *durFstDir = NULL;  /* directory to save Fst for Duration */
-static double fstPrun = 0.0;    /* pruning WFST of HSMM */
+static int prunFrame = -1;      /* prun WFST by using time information of label */
 static int fstType = 0;         /* type of WFST (0: OpenFst 1: MIT FST) */
 static double fstDurWeight = 1.0;       /* duration weight for WFST of duration model */
 static double fstMaxWidth = 4.0;        /* max width for WFST of HSMM */
@@ -112,7 +112,7 @@ void ReportUsage(void)
    printf("\nUSAGE: HFst [options] hmmList durList dataFiles...\n\n");
    printf
        (" Option                                                    Default\n\n");
-   printf(" -c      pruning threshold                                 0.0\n");
+   printf(" -c      number of frame for pruning                       none\n");
    printf
        (" -d s    dir to find hmm definitions                       current\n");
    printf(" -e N    type of output WFST (0: OpenFst 1: MIT FST)       0\n");
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
          HError(2319, "HFst: bad switch %s; must be single letter", s);
       switch (s[0]) {
       case 'c':
-         fstPrun = GetChkedFlt(0.0, 1.0, s);
+         prunFrame = GetIntArg();
          break;
       case 'd':
          if (NextArg() != STRINGARG)
@@ -378,36 +378,6 @@ void Initialise(HMMSet * hset, HMMSet * dset, char *hmmListFn, char *durListFn,
 
 /* ------------------------- FST Generation ------------------------ */
 
-void sortProb(DVector pt, char **nt, int s, int e)
-{
-   int i = s;
-   int j = e;
-   double tmp_p;
-   char tmp_n[MAXSTRLEN];
-   double x = pt[(int) ((s + e) / 2)];
-
-   while (1) {
-      while (pt[i] < x)
-         i++;
-      while (pt[j] > x)
-         j--;
-      if (i >= j)
-         break;
-      tmp_p = pt[i];
-      pt[i] = pt[j];
-      pt[j] = tmp_p;
-      strcpy(tmp_n, nt[i]);
-      strcpy(nt[i], nt[j]);
-      strcpy(nt[j], tmp_n);
-      i++;
-      j--;
-   }
-   if (s + 1 < i)
-      sortProb(pt, nt, s, i - 1);
-   if (j + 1 < e)
-      sortProb(pt, nt, j + 1, e);
-}
-
 void makeFst(UttInfo * utt, char *datafn, char *outHMMDir, char *outDurDir,
              HMMSet * hset, HMMSet * dset, int *maxMixInS)
 {
@@ -428,8 +398,6 @@ void makeFst(UttInfo * utt, char *datafn, char *outHMMDir, char *outDurDir,
    int dmin;
    int dmax;
    Boolean isPipe;
-   DVector prob_table;
-   char **name_table;
    int numStates = dset->swidth[0];
 
    /* load utterance */
@@ -447,12 +415,6 @@ void makeFst(UttInfo * utt, char *datafn, char *outHMMDir, char *outDurDir,
       fflush(stdout);
    }
 
-   /* create memories */
-   prob_table = CreateDVector(&tmpStack, utt->Q * numStates);
-   name_table = (char **) New(&tmpStack, utt->Q * numStates * sizeof(char *));
-   for (i = 0; i < utt->Q * numStates; i++)
-      name_table[i] = NewString(&tmpStack, MAXSTRLEN);
-
    /* save WFST for parameter */
    sprintf(fstfn, "%s%c%s.fst", outHMMDir, PATHCHAR, basefn);
    if ((fp = FOpen(fstfn, NoOFilter, &isPipe)) == NULL)
@@ -468,40 +430,29 @@ void makeFst(UttInfo * utt, char *datafn, char *outHMMDir, char *outDurDir,
            llink = llink->succ) {
          if (llink->labid != NULL) {
             name = llink->labid->name;
-            mlink = FindMacroName(hset, 'h', llink->labid);
-            hlink = (HLink) mlink->structure;
-            for (i = 2; i < hlink->numStates; i++) {
-               p = (-1.0) * POutP(hset, &(utt->o[t]), hlink->svec[i].info);
-               prob_table[l * numStates + i - 2] = p;
-               if (fstType == 0)
-                  sprintf(name_table[l * numStates + i - 2],
-                          "%d %d %s_f%d %s_m%d_s%d %f\n", t - 1, t, name, t - 1,
-                          name, l, i, p);
-               else if (fstType == 1)
-                  sprintf(name_table[l * numStates + i - 2],
-                          "T %d %d %s_f%d %s_m%d_s%d %f\n", t - 1, t, name,
-                          t - 1, name, l, i, p);
+            i = (llink->start * (1.0 / utt->tgtSampRate) + 1);
+            j = (llink->end * (1.0 / utt->tgtSampRate) + 1);
+            if (llink->start < 0.0 || llink->end < 0.0 || prunFrame < 0 ||
+                (i - prunFrame <= t && t <= j + prunFrame)) {
+               mlink = FindMacroName(hset, 'l', llink->labid);
+               hlink = (HLink) mlink->structure;
+               for (i = 2; i < hlink->numStates; i++) {
+                  p = (-1.0) * POutP(hset, &(utt->o[t]), hlink->svec[i].info);
+                  if (fstType == 0)
+                     fprintf(fp, "%d %d %s_f%d %s_m%d_s%d %f\n", t - 1, t, name,
+                             t - 1, name, l, i, p);
+                  else if (fstType == 1)
+                     fprintf(fp, "T %d %d %s_f%d %s_m%d_s%d %f\n", t - 1, t,
+                             name, t - 1, name, l, i, p);
+               }
             }
             l++;
          }
-      }
-      /* sort */
-      sortProb(prob_table, name_table, 0, l * numStates - 1);
-      /* output */
-      j = (int) (l * numStates * (1.0 - fstPrun));
-      for (i = 0; i < j; i++) {
-         fprintf(fp, "%s", name_table[i]);
       }
    }
    if (fstType == 0)
       fprintf(fp, "%d 0.0\n", utt->T);
    FClose(fp, isPipe);
-
-   /* free memories */
-   for (i = utt->Q * numStates - 1; i >= 0; i--)
-      Dispose(&tmpStack, name_table[i]);
-   Dispose(&tmpStack, name_table);
-   FreeDVector(&tmpStack, prob_table);
 
    /* save WFST for duration */
    sprintf(fstfn, "%s%c%s.fst", outDurDir, PATHCHAR, basefn);
@@ -516,7 +467,7 @@ void makeFst(UttInfo * utt, char *datafn, char *outHMMDir, char *outDurDir,
    for (l = 0, llink = utt->tr->head->head; llink != NULL; llink = llink->succ) {
       if (llink->labid != NULL) {
          name = llink->labid->name;
-         mlink = FindMacroName(dset, 'h', llink->labid);
+         mlink = FindMacroName(dset, 'l', llink->labid);
          hlink = (HLink) mlink->structure;
          for (i = 1; i <= numStates; i++) {
             pdf = hlink->svec[2].info->pdf[i].info->spdf.cpdf[1].mpdf;
@@ -533,36 +484,54 @@ void makeFst(UttInfo * utt, char *datafn, char *outHMMDir, char *outDurDir,
                    (log(2 * PI * vari) +
                     (j - mean) * (j - mean) * (1.0 / vari));
                if (fstType == 0) {
-                  /* down */
-                  if (j == 2)
-                     fprintf(fp, "%d %d %s_m%d_s%d %s_m%d_s%d %f\n", idx,
-                             l * numStates + i, name, l, i + 1, name, l, i + 1,
-                             0.0);
-                  else if (j > 2)
-                     fprintf(fp, "%d %d %s_m%d_s%d %s_m%d_s%d %f\n", idx,
-                             idx - 1, name, l, i + 1, name, l, i + 1, 0.0);
-                  /* right */
-                  if (j >= dmin)
+                  if (j == 1) {
+                     if (j >= dmin)
+                        fprintf(fp, "%d %d %s_m%d_s%d %s_m%d_s%d %f\n",
+                                l * numStates + i - 1, l * numStates + i, name,
+                                l, i + 1, name, l, i + 1, p);
+                  } else if (j == 2) {
                      fprintf(fp, "%d %d %s_m%d_s%d %s_m%d_s%d %f\n",
                              l * numStates + i - 1, idx, name, l, i + 1, name,
-                             l, i + 1, p);
+                             l, i + 1, 0.0);
+                     if (j >= dmin)
+                        fprintf(fp, "%d %d %s_m%d_s%d %s_m%d_s%d %f\n", idx,
+                                l * numStates + i, name, l, i + 1, name, l,
+                                i + 1, p);
+                     idx++;
+                  } else {
+                     fprintf(fp, "%d %d %s_m%d_s%d %s_m%d_s%d %f\n", idx - 1,
+                             idx, name, l, i + 1, name, l, i + 1, 0.0);
+                     if (j >= dmin)
+                        fprintf(fp, "%d %d %s_m%d_s%d %s_m%d_s%d %f\n", idx,
+                                l * numStates + i, name, l, i + 1, name, l,
+                                i + 1, p);
+                     idx++;
+                  }
                } else if (fstType == 1) {
-                  /* down */
-                  if (j == 2)
-                     fprintf(fp, "T %d %d %s_m%d_s%d %s_m%d_s%d %f\n", idx,
-                             l * numStates + i, name, l, i + 1, name, l, i + 1,
-                             0.0);
-                  else if (j > 2)
-                     fprintf(fp, "T %d %d %s_m%d_s%d %s_m%d_s%d %f\n", idx,
-                             idx - 1, name, l, i + 1, name, l, i + 1, 0.0);
-                  /* right */
-                  if (j >= dmin)
+                  if (j == 1) {
+                     if (j >= dmin)
+                        fprintf(fp, "T %d %d %s_m%d_s%d %s_m%d_s%d %f\n",
+                                l * numStates + i - 1, l * numStates + i, name,
+                                l, i + 1, name, l, i + 1, p);
+                  } else if (j == 2) {
                      fprintf(fp, "T %d %d %s_m%d_s%d %s_m%d_s%d %f\n",
                              l * numStates + i - 1, idx, name, l, i + 1, name,
-                             l, i + 1, p);
+                             l, i + 1, 0.0);
+                     if (j >= dmin)
+                        fprintf(fp, "T %d %d %s_m%d_s%d %s_m%d_s%d %f\n", idx,
+                                l * numStates + i, name, l, i + 1, name, l,
+                                i + 1, p);
+                     idx++;
+                  } else {
+                     fprintf(fp, "T %d %d %s_m%d_s%d %s_m%d_s%d %f\n", idx - 1,
+                             idx, name, l, i + 1, name, l, i + 1, 0.0);
+                     if (j >= dmin)
+                        fprintf(fp, "T %d %d %s_m%d_s%d %s_m%d_s%d %f\n", idx,
+                                l * numStates + i, name, l, i + 1, name, l,
+                                i + 1, p);
+                     idx++;
+                  }
                }
-               if (j > 1)
-                  idx++;
             }
          }
          l++;

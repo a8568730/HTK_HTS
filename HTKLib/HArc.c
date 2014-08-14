@@ -33,7 +33,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -72,7 +72,7 @@
 /* ----------------------------------------------------------------- */
 
 char *arc_version = "!HVER!HArc:   3.4.1 [CUED 12/03/09]";
-char *arc_vc_id = "$Id: HArc.c,v 1.8 2009/12/11 10:00:47 uratec Exp $";
+char *arc_vc_id = "$Id: HArc.c,v 1.9 2010/04/08 04:50:29 uratec Exp $";
 
 
 /*

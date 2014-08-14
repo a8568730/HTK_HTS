@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -73,7 +73,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hdecode_version = "!HVER!HDecode:   3.4.1 [GE 12/03/09]";
-char *hdecode_sccs_id = "$Id: HDecode.mod.c,v 1.6 2009/12/11 10:00:43 uratec Exp $";
+char *hdecode_sccs_id = "$Id: HDecode.mod.c,v 1.7 2010/04/08 04:50:28 uratec Exp $";
 
 /* this is just the tool that handles command line arguments and
    stuff, all the real magic is in HLVNet and HLVRec */

@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *herest_version = "!HVER!HERest:   3.4.1 [CUED 12/03/09]";
-char *herest_vc_id = "$Id: HERest.c,v 1.41 2009/12/15 01:17:29 uratec Exp $";
+char *herest_vc_id = "$Id: HERest.c,v 1.42 2010/04/08 04:50:30 uratec Exp $";
 
 /*
    This program is used to perform a single reestimation of

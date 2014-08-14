@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hutil_version = "!HVER!HUtil:   3.4.1 [CUED 12/03/09]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.23 2009/12/14 03:51:59 uratec Exp $";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.25 2010/04/08 04:50:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -537,13 +537,16 @@ void ForceDiagC(HMMSet *hset)
 /* EXPORT->ConvLogWt Converts all mixture weights into log-weights. */
 void ConvLogWt(HMMSet *hset)
 {
+   int m;
    HMMScanState hss;
 
    if (hset->hsKind == DISCRETEHS || hset->hsKind == TIEDHS || hset->logWt == TRUE) 
       return;
    NewHMMScan(hset, &hss);
-   while (GoNextMix(&hss,FALSE))
-      hss.me->weight = MixLogWeight(hset,hss.me->weight);
+   while (GoNextStream(&hss,FALSE)) {
+      for (m=1;m<=hss.M;m++)
+         hss.sti->spdf.cpdf[m].weight = MixLogWeight(hset,hss.sti->spdf.cpdf[m].weight);
+   }
    EndHMMScan(&hss);
    hset->logWt = TRUE;
 }
@@ -551,13 +554,16 @@ void ConvLogWt(HMMSet *hset)
 /* EXPORT->ConvExpWt Converts all mixture log-weights into weights. */
 void ConvExpWt(HMMSet *hset)
 {
+   int m;
    HMMScanState hss;
 
    if (hset->hsKind == DISCRETEHS || hset->hsKind == TIEDHS  || hset->logWt == FALSE) 
       return;
    NewHMMScan(hset, &hss);
-   while (GoNextMix(&hss,FALSE))
-      hss.me->weight = exp(hss.me->weight);
+   while (GoNextStream(&hss,FALSE)) {
+      for (m=1;m<=hss.M;m++)
+         hss.sti->spdf.cpdf[m].weight = MixWeight(hset,hss.sti->spdf.cpdf[m].weight);
+   }
    EndHMMScan(&hss);
    hset->logWt = FALSE;
 }
@@ -695,7 +701,7 @@ void CopySet(IntSet oldSet, IntSet newSet)
 
    if (newSet.nMembers!=oldSet.nMembers)
       HError(9999,"CopySet: numbers of members in old and new sets are different");
-
+   
    for (i=1;i<=oldSet.nMembers;i++) 
       newSet.set[i] = oldSet.set[i];
 }
@@ -1001,14 +1007,14 @@ static void PStatecomp(ILink models, ILink *ilist, char *type,
          for (h=models; h!=NULL; h=h->next) {
             hmm = h->owner;
             for (j=2; j<hmm->numStates; j++)
-               if (IsMember(states,j))
-                  for (s=1; s<=hset->swidth[0];s++)
-                     if (IsMember(str,s)) { /* tie -> spdf */
-                        if (trace & T_ITM)
-                           printf(" %12s.state[%d].stream[%d]\n",
-                                  HMMPhysName(hset,hmm),j,s);
-                           AddItem(hmm,hmm->svec[j].info->pdf+s,ilist);
-                     }
+            if (IsMember(states,j))
+               for (s=1; s<=hset->swidth[0];s++)
+                  if (IsMember(str,s)) { /* tie -> spdf */
+                     if (trace & T_ITM)
+                        printf(" %12s.state[%d].stream[%d]\n",
+                               HMMPhysName(hset,hmm),j,s);
+                        AddItem(hmm,hmm->svec[j].info->pdf+s,ilist);
+                  }
          }
       }
       FreeSet(str);

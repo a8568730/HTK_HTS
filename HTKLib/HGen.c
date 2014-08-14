@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -45,7 +45,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hgen_version = "!HVER!HGen:   2.1 [NIT 30/05/08]";
-char *hgen_vc_id = "$Id: HGen.c,v 1.48 2009/12/15 01:17:26 uratec Exp $";
+char *hgen_vc_id = "$Id: HGen.c,v 1.51 2010/04/21 11:54:25 uratec Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -89,6 +89,7 @@ static double rndParVar  = 1.0;     /* variance of Gaussian noise for random gen
 
 /* GV related variables */
 static Boolean useGV = FALSE;
+static IntVec useGVPst = NULL;      /* GV flag for each Pst */
 static int maxGVIter = 50;          /* max iterations in the speech parameter generation considering GV */
 static double GVepsilon = 1.0E-4;   /* convergence factor per dimension for GV iteration */
 static double minEucNorm = 1.0E-2;  /* minimum Euclid norm per dimension of a gradient vector */ 
@@ -217,6 +218,8 @@ void InitGen(void)
       if (GetConfStr (cParm,nParm,"GVMODELEXT",buf)) strcpy(gvExt,buf);
       if (GetConfStr (cParm,nParm,"GVOFFMODEL",buf)) 
          gvOffmodel = ParseConfStrVec(&gstack,buf,TRUE);
+      if (GetConfStr (cParm,nParm,"USEGVPST",  buf))
+         useGVPst = ParseConfIntVec(&gstack,buf,TRUE);
    }
 
    if (useGV) {
@@ -435,7 +438,12 @@ static void SetupPdfStreams (GenInfo *genInfo)
       
       /* get gv mean and covariance */
       if (useGV) {
-         id = (cdGV) ? genInfo->label[1]->labid : GetLabId("gv",TRUE);
+         if(!cdGV)
+            id = GetLabId("gv",TRUE);
+         else if(genInfo->stateAlign)
+            id = genInfo->label[1]->auxLab[1];
+         else
+            id = genInfo->label[1]->labid;
          if ((macro=FindMacroName(&gvset,'h',id))!=NULL) {
             for (s=stream,v=1; s<stream+genInfo->nPdfStream[p]; v+=genInfo->hset->swidth[s++]) {
                mpdf = ((HLink)macro->structure)->svec[2].info->pdf[p].info->spdf.cpdf[1].mpdf;  /* currently only sigle-mixture GV pdf is supported */
@@ -1589,7 +1597,7 @@ static void Cholesky_ParmGen (GenInfo *genInfo, const Boolean GV)
          Cholesky_Factorization(pst);     /* Cholesky decomposition */
          Forward_Substitution(pst);       /* forward substitution   */
          Backward_Substitution(pst, m-1); /* backward substitution  */
-         if (GV)
+         if (GV && (useGVPst == NULL || useGVPst[p] == 1))
             GV_ParmGen(pst, m-1);    /* iterative optimization */
       }
    }
@@ -1893,7 +1901,7 @@ void ParamGen (GenInfo *genInfo, UttInfo *utt, FBInfo *fbInfo, const ParmGenType
          HError(9999,"ParamGen: not supported parameter generation type");
       } 
       if (!success)
-         HError(9999,"ParamGen: failed to compute output prob");
+         HError(-9999,"ParamGen: failed to compute output prob");
 
       /* output prob */
       curr = utt->pr;

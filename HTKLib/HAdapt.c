@@ -35,7 +35,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -76,8 +76,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hadapt_version = "!HVER!HAdapt:   3.4  [CUED 25/04/06]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.55 2009/12/20 12:36:33 uratec Exp $";
+char *hadapt_version = "!HVER!HAdapt:   3.4.1  [CUED 12/03/09]";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.59 2010/05/10 11:28:58 uratec Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>
@@ -857,7 +857,7 @@ static float GetSplitThresh(XFInfo *xfinfo, float *thresh)
    }
       if (thresh[s]<min)
          min = thresh[s];
-}
+   }
 
    return min;
 }
@@ -1441,11 +1441,12 @@ static void ResetComp(MixPDF *mp)
 static DTriMat *CreateBlockTriMat(MemHeap *x, IntVec blockSize)
 {
    DTriMat *tm;
-  int nblock, bsize, b, *i;
+   int nblock, bsize, b;
+   long *i;
   
   nblock = IntVecSize(blockSize);
    tm = (DTriMat *)New(x,sizeof(DTriMat)*(nblock+1));  
-  i = (int *)tm; *i = nblock;
+   i = (long *) tm; *i = (long) nblock;
   for (b=1;b<=nblock;b++) {
     bsize = blockSize[b];
       tm[b] = CreateDTriMat(x, bsize); 
@@ -1456,9 +1457,10 @@ static DTriMat *CreateBlockTriMat(MemHeap *x, IntVec blockSize)
 
 static void ZeroBlockTriMat(DTriMat *bTriMat)
 {
-  int *nblock,b;
+  int b;
+  long *nblock;
 
-  nblock = (int *)bTriMat;
+  nblock = (long *) bTriMat;
   for (b=1; b<=*nblock; b++)
      ZeroDTriMat(bTriMat[b]);
 }
@@ -1466,10 +1468,10 @@ static void ZeroBlockTriMat(DTriMat *bTriMat)
 static void ZeroBaseTriMat(DTriMat *bTriMat)
 {
   int i;
-  int *vsize;
+   long *vsize;
    DTriMat tm;
  
-  vsize = (int *)bTriMat;
+   vsize = (long *) bTriMat;
   for (i=1;i<=*vsize;i++) {
     tm = bTriMat[i];
       ZeroDTriMat(tm);
@@ -1485,7 +1487,8 @@ static void CreateBaseTriMat(XFInfo *xfinfo, MemHeap *x, MixPDF *mp, int class)
   MixPDF *me;
   BaseClass *bclass;
   ILink i;
-  int j, cntj, *vsp, b, bsize;
+   int j, cntj, b, bsize;
+   long *vsp;
    AdaptXForm *xform = xfinfo->outXForm;
 
   regAcc = GetRegAcc(mp);
@@ -1496,7 +1499,7 @@ static void CreateBaseTriMat(XFInfo *xfinfo, MemHeap *x, MixPDF *mp, int class)
     regAcc->bDiagMat = CreateBlockTriMat(x,blockSize); 
     ZeroBlockTriMat(regAcc->bDiagMat);
       tm = (DTriMat *)New(x,sizeof(DTriMat)*(vsize+1));
-    vsp = (int *)tm; *vsp = vsize;
+      vsp = (long *) tm; *vsp = (long) vsize;
     for (b=1,cntj=1;b<=IntVecSize(blockSize);b++) {
       bsize = blockSize[b];
       for (j=1;j<=bsize;j++,cntj++) {
@@ -2079,13 +2082,13 @@ static double SetNodeOcc (RegNode *node, BaseClass *bclass)
             if (node->vsize>-1) {
                if (vsize != node->vsize)
                   HError(999,"Inconsistent vector size in baseclasses (%d %d)", vsize, node->vsize);
-            }
+         }
             else
                 node->vsize = vsize;
 
             node->nodeOcc += (GetRegAcc(mp))->occ;
-         }
       }
+   }
    }
 
    return node->nodeOcc;
@@ -2553,10 +2556,10 @@ static void AddXFPrior(AccStruct *accs, AdaptXForm *xform, int xfindex)
             accs->K[cnti][bsize+1] += pxf->bias[cnti]*sigmascale;
             accs->G[cnti][bsize+1][bsize+1] += sigmascale;
          }
-      }
+    }
       cnt += bsize;
    }
-    }
+}
 
 /* Add Piror to the statistics Currently MLLRMEAN and CMLLR are supported */
 static void AddPrior(AccStruct *accs, AdaptXForm *xform, int xfindex)
@@ -2907,7 +2910,7 @@ static void ApplyXForm2Vector(LinXForm *linXForm, Vector mean)
 
 /* ApplyCMLLRXForm2Vector: apply CMLLR XForm to mean vector (mean' = A^{-1}*(mean-b)) */
 static void ApplyCMLLRXForm2Vector(LinXForm *linXForm, Vector mean)
-{
+{  
    Vector vec, bias;
    int b,bsize;
    Matrix A;
@@ -2991,8 +2994,8 @@ static void ApplyXForm2Cov(LinXForm *linXForm, Covariance *cov, CovKind ckind)
 }
 
 /* ApplyXForm2TriMat: Apply XForm to a given triangular matrix (m = A*t) */ 
-static void ApplyXForm2TriMat(LinXForm *linXForm, TriMat t, Matrix m)
-{  
+static void ApplyXForm2TriMat (LinXForm *linXForm, TriMat t, Matrix m)
+{
    int size,b,bsize;
    Matrix A,mat;
    float tmp;
@@ -3005,7 +3008,7 @@ static void ApplyXForm2TriMat(LinXForm *linXForm, TriMat t, Matrix m)
       HError(999,"Transform dimension (%d) does not match matrix dimension (%d)",
              size,TriMatSize(t));
    mat = CreateMatrix(&gstack,size,size);
-   Tri2Mat(t,mat); 
+   Tri2Mat(t,mat);
    /* Transform mean */
    for (b=1,cnti=1,cnt=1;b<=IntVecSize(linXForm->blockSize);b++) {
       bsize = linXForm->blockSize[b];
@@ -3049,7 +3052,7 @@ static void DiagApplyMat2TXForm(LinXForm *linXForm, Matrix m, Vector v)
       }
       cnt += bsize;
    }
-   if (linXForm->bias != NULL) HError(999,"Assumes there is no bias in transform");
+   if (linXForm->bias != NULL) HError(999,"Assumes there is no bias in transform");  
 }
 
 /* ConvFullCov: store diag covariance in full covariance form */
@@ -3086,15 +3089,15 @@ static void ConvFullCov (HMMSet *hset, MixPDF *mp)
          for (j=1; j<i; j++)
             inv[i][j] = 0.0;
          inv[i][i] = var[i];
-   }
+      }
       mp->cov.inv = inv;
       mp->ckind   = FULLC;
       break;
    case FULLC:
    default:
       break;
-}
-
+   }
+   
    return;
 }
       
@@ -4320,7 +4323,11 @@ static void UpdateSemiTiedXForm(AccStruct *accs, LinXForm *xf, LinXForm *ixf)
             if (trace&T_XFM)
                printf("Iteration %d (row %d): Old=%e, New=%e (diff=%e)\n",iter,cnti,likeOld,likeNew,likeNew-likeOld);
          if (likeNew>likeOld) {
-           for(j=1;j<=bsize;j++)  A[i][j] = W[j];
+               det = 0;
+               for(j=1;j<=bsize;j++){
+                  A[i][j] = W[j];
+                  det += W[j]*cofact[j];
+               }
             } 
             else {
                if (trace&T_XFM && (likeOld/likeNew>1.00001)) /* put a threshold on this! */
@@ -4554,7 +4561,11 @@ static void EstMLLRCovXForm(AccStruct *accs, LinXForm *xf)
             if (trace&T_XFM) 
                printf("Iteration %d (row %d): Old=%e, New=%e (diff=%e)\n",iter,cnti,likeOld,likeNew,likeNew-likeOld);
          if (likeNew>likeOld) {
-           for(j=1;j<=bsize;j++)  A[i][j] = W[j];
+               det = 0;
+               for(j=1;j<=bsize;j++){
+                  A[i][j] = W[j];
+                  det += W[j]*cofact[j];
+               }
             } 
             else {
                if (trace&T_XFM && (likeOld/likeNew>1.00001)) /* put a threshold on this! */
@@ -4689,30 +4700,30 @@ static Boolean GenClassXForm(XFInfo *xfinfo)
       in a non-zero-mean form. Fix statistics once to be of appropriate form.
       Prior to fixing stats sort out the covariance matrix for variance
       flooring.
-
+      
    */
-   if (xform->xformSet->xkind == SEMIT) {
-      SetSemiTiedAvCov(xform->hset);
-      FixSemiTiedStats(xform->hset);
-   }
-   classes = CreateIntVec(&gstack,bclass->numClasses);
-   for (b=1; b<=bclass->numClasses; b++) {
+  if (xform->xformSet->xkind == SEMIT) {
+     SetSemiTiedAvCov(xform->hset);
+     FixSemiTiedStats(xform->hset);
+  }
+  classes = CreateIntVec(&gstack,bclass->numClasses);
+  for (b=1;b<=bclass->numClasses;b++) {
       if (GetBaseClassVSize(bclass,b)>0) {
-         ZeroIntVec(classes); classes[b] = 1;
-         /* Accumulate structure regenerated each time as this will handle
-            streams of different sizes simply */
+     ZeroIntVec(classes); classes[b] = 1;
+    /* Accumulate structure regenerated each time as this will handle
+       streams of different sizes simply */
          blockSize = GetBlockSize(xfinfo,b);
          bandWidth = GetBandWidth(xfinfo,b,blockSize);
-         if (strmProj)
+     if (strmProj)
             accs = CreateAccStruct(&gstack,xfinfo,xform->hset->vecSize,blockSize,bandWidth);
-         else
+     else     
             accs = CreateAccStruct(&gstack,xfinfo,GetBaseClassVSize(bclass,b),blockSize,bandWidth);
-         for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
-            mp = ((MixtureElem *)i->item)->mpdf;
-            AccMixPDFStats(xform->hset,mp,accs);
-         }
-         /* Use last component of the baseclass to access baseclass stats */
-         if (AccAdaptBaseTriMat(xform))  AccBaseClassStats(mp,accs);
+    for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
+      mp = ((MixtureElem *)i->item)->mpdf;
+      AccMixPDFStats(xform->hset,mp,accs);
+    }
+    /* Use last component of the baseclass to access baseclass stats */
+    if (AccAdaptBaseTriMat(xform))  AccBaseClassStats(mp,accs);
    
          /* get threshold for this base class */
          s = bclass->stream[b];
@@ -4726,17 +4737,17 @@ static Boolean GenClassXForm(XFInfo *xfinfo)
    
          if ((accs->dim>0) && ((xform->xformSet->xkind==SEMIT) || (accs->occ > thresh[s]))) {
             EstXForm(accs,xfinfo,classes);
-            xform->xformWgts.assign[b] = xform->xformSet->numXForms;
-            if (mllrDiagCov) 
-               diagCovXForm->xformWgts.assign[b] = diagCovXForm->xformSet->numXForms;
+      xform->xformWgts.assign[b] = xform->xformSet->numXForms;
+      if (mllrDiagCov) 
+	diagCovXForm->xformWgts.assign[b] = diagCovXForm->xformSet->numXForms;
          } 
          else {
-            xform->xformWgts.assign[b] = 0;
-         }
-         Dispose(&gstack,accs);
-      }
+       xform->xformWgts.assign[b] = 0;
+    }
+    Dispose(&gstack,accs);
+  }
    }
-   return TRUE;
+  return TRUE;
 }
 
 InputXForm *AdaptXForm2InputXForm (HMMSet *hset, AdaptXForm *xform)
@@ -4782,8 +4793,8 @@ InputXForm *AdaptXForm2InputXForm (HMMSet *hset, AdaptXForm *xform)
          for (i=1; i<=hldasize; i++)
             v[i] = ixform->xform->vFloor[i];
          m->structure = v;
-  }
-    }
+      }
+   } 
    else {
       for (s=1,cnt=1; s<=hset->swidth[0]; s++) {
          strcpy(mac,"varFloor");
@@ -4794,8 +4805,8 @@ InputXForm *AdaptXForm2InputXForm (HMMSet *hset, AdaptXForm *xform)
             v = (SVector)m->structure;
             for (i=1; i<=hset->swidth[s]; i++,cnt++)
                v[i] = ixform->xform->vFloor[cnt];
-    }
-  }
+         }
+      }
    }
    ixform->xform->vFloor = NULL;
    ixform->nUse = 0;
@@ -5489,7 +5500,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                   xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
                      SetParentXForm(hset,xfinfo,xfinfo->paXForm);
                      SetAccCache(xfinfo);
-               }
+                  }
                   if (xfinfo->al_hset!=NULL && xfinfo->use_alPaXForm) {
                      MakeFN(xfinfo->cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
                      MakeFN(xfinfo->cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
@@ -5500,8 +5511,8 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                   else
                      xfinfo->al_paXForm = xfinfo->paXForm;
                }
+               }
             }
-         } 
          else if (xfinfo->usePaXForm || xfinfo->use_alPaXForm) { /* set-up the initial parent transform information */
             maskMatch = MaskMatch(xfinfo->paSpkrPat,paspkr,datafn);
             if (!maskMatch)
@@ -5538,7 +5549,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
             HError(999,"Changing parent transform out of sync with output transform (%s %s)",
                    paspkr,xfinfo->cpaspkr);
       }
-   } 
+      }
    else if ((xfinfo->usePaXForm || xfinfo->use_alPaXForm) && (datafn != NULL)) {
       /* Parent transform specified with no output transform */
       maskMatch = MaskMatch(xfinfo->paSpkrPat,paspkr,datafn);
@@ -5656,7 +5667,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
          xfinfo->coutspkr[s] = '\0';
          xfinfo->cpaspkr[s] = '\0';
          xfinfo->cinspkr[s] = '\0';
-      }
+   }
    }
 
    return spkrChange;

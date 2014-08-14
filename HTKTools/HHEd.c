@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hhed_version = "!HVER!HHEd:   3.4.1 [CUED 12/03/09]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.78 2009/12/15 01:42:39 uratec Exp $";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.84 2010/05/10 11:10:10 uratec Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -824,7 +824,7 @@ void ZapAliases(void)
          }
 }
 
-/* EquivMix: return TRUE if both states are identical */
+/* EquivMix: return TRUE if both mixtures are identical */
 Boolean EquivMix(MixPDF *a, MixPDF *b)
 {
    if (a->mean != b->mean ||
@@ -2550,6 +2550,7 @@ void FixDefunctMix(char *hname,StreamInfo *sti, int n)
          if (me[l].weight <= MINMIX)
             break;
       m = HeaviestMix(hname,me,M,mixOcc);
+      if(m < 1) HError(1,"FixDefunctMix: Wrong mixture weight.\n");
       vSize = VectorSize(me[m].mpdf->mean);
       SplitMix(me+m,&m1,&m2,vSize);
       me[m] = m1; me[l] = m2;
@@ -3943,7 +3944,7 @@ void BuildTree (ILink ilist, double threshold, char *macRoot, char *pattern)
       fflush(stdout);
    }
    TieLeafNodes(tree,macRoot);
-   Dispose(&tmpHeap,yes.sum);
+   FreeDVector(&tmpHeap,yes.sum);
    if (trace & T_BID) {
       printf("\n TB: Stats %d->%d [%.1f%%]  { %d->%d [%.1f%%] total }\n",
              numItems,numTreeClust,(float)numTreeClust*100.0/(float)numItems,
@@ -4526,8 +4527,8 @@ void LoadTreesCommand(void)
 void ConvertModelsCommand(void)
 {
    Boolean out[SMAX], first;
-   int i, j, k, s, v, vSize, idx, nMix;
-   float weight, var;
+   int i, j, k, s, v, vSize, sSize, idx, nMix;
+   float weight, mean, vari;
    Tree *tree;
    FILE *file = NULL;
    char dn[MAXSTRLEN], fn[MAXSTRLEN], head[MAXSTRLEN], ext[MAXSTRLEN];
@@ -4566,7 +4567,7 @@ void ConvertModelsCommand(void)
    for (s=1; s<=hset->swidth[0]; s++) {
       if (!out[s]) {
          /* output vector size and number of pdfs for each tree */
-         first=TRUE; vSize=0;
+         first=TRUE; vSize=0; sSize=0;
          for (i=2; i<=MaxStatesInSet(hset)+1; i++) {
             for (tree=treeList; tree!=NULL; tree=tree->next) {
                if (tree->state==i && tree->streams.set[s] ) {
@@ -4574,13 +4575,20 @@ void ConvertModelsCommand(void)
                      if (tree->streams.set[j]) {
                         out[j]=TRUE;
                         vSize += hset->swidth[j];
+                        sSize++;
                      }
                   if (first) {
+                     /* write header */
                      sprintf(ext,"%d",s);
                      MakeFN(head,dn,ext,fn);
                      if ((file=FOpen(fn,NoOFilter,&isPipe))==NULL)
                         HError(2611,"ConvertModels: Cannot create output file %s",fn);
-
+                     if(hset->msdflag[s])
+                        k=1;
+                     else
+                        k=0;
+                     WriteInt(file, &k, 1, TRUE);
+                     WriteInt(file, &sSize, 1, TRUE);
                      WriteInt(file, &vSize, 1, TRUE); 
                      first=FALSE;
                   }
@@ -4604,75 +4612,40 @@ void ConvertModelsCommand(void)
                   
                   /* output array */
                   for (j=1; j<=tree->nLeaves; j++) {
-                     /* very dirty implementation but we have to keep the compatibility... :-( */
                      for (k=0; k<tree->nActiveStr; k++) {
                         if (IsFullSet(tree->streams))
                            sti = ((StateInfo *)array[j]->macro[0]->structure)->pdf[k+1].info; /* state tying */
                         else
                            sti = (StreamInfo *)array[j]->macro[k]->structure;                 /* stream tying */
-                        
                         vSize = VectorSize(sti->spdf.cpdf[1].mpdf->mean);
-                        if (vSize!=hset->swidth[sti->stream])
-                           HError(9999,"ConvertModels: Vector size of the first mixture is not equal to stream width (%d, %d)", 
-                                  vSize, hset->swidth[sti->stream]);
-                        
-                        /* output mean */
-                        WriteVector(file, sti->spdf.cpdf[1].mpdf->mean, TRUE);
-                        
+                        for (v=1; v<=VectorSize(sti->spdf.cpdf[1].mpdf->mean); v++) {
+                           switch (sti->spdf.cpdf[1].mpdf->ckind) {
+                           case DIAGC:
+                              vari = sti->spdf.cpdf[1].mpdf->cov.var[v];
+                              break;
+                           case INVDIAGC:
+                              vari = 1.0/sti->spdf.cpdf[1].mpdf->cov.var[v];
+                              break;
+                           case FULLC:
+                              vari = 1.0/sti->spdf.cpdf[1].mpdf->cov.inv[v][v];  /* only diagonal elements are used */
+                              break;
+                           default:
+                              HError(999,"ConvertModels: not supported CovKind");
+                           }
+                           mean = sti->spdf.cpdf[1].mpdf->mean[v];
+                           /* output mean & variance value */
+                           WriteFloat(file, &mean, 1, TRUE);
+                           WriteFloat(file, &vari, 1, TRUE);
+                        }
                         /* for multi space probability distribution */
                         if (sti->nMix>1) {
-                           for (v=1; v<=VectorSize(sti->spdf.cpdf[1].mpdf->mean); v++) {
-                              switch (sti->spdf.cpdf[1].mpdf->ckind) {
-                              case DIAGC:
-                                 var = sti->spdf.cpdf[1].mpdf->cov.var[v];
-                                 break;
-                              case INVDIAGC:
-                                 var = 1.0/sti->spdf.cpdf[1].mpdf->cov.var[v];
-                                 break;
-                              case FULLC:
-                                 var = 1.0/sti->spdf.cpdf[1].mpdf->cov.inv[v][v];  /* only diagonal elements are used */
-                                 break;
-                              default:
-                                 HError(999,"ConvertModels: not supported CovKind");
-                              }
-                              
-                              /* output variance value */
-                              WriteFloat(file, &var, 1, TRUE);  /* this part is very dirty!! */
-                           }
-                           
+                           if (vSize!=hset->swidth[sti->stream])
+                              HError(9999,"ConvertModels: Vector size of the first mixture is not equal to stream width (%d, %d)", vSize, hset->swidth[sti->stream]);
                            /* output space weight */
                            weight = sti->spdf.cpdf[1].weight;
                            WriteFloat(file, &weight, 1, TRUE);
-                           
                            weight = 1-weight;
                            WriteFloat(file, &weight, 1, TRUE);
-                        }
-                     }
-                     for (k=0; k<tree->nActiveStr; k++) {
-                        if (IsFullSet(tree->streams))
-                           sti = ((StateInfo *)array[j]->macro[0]->structure)->pdf[k+1].info; /* state tying */
-                        else
-                           sti = (StreamInfo *)array[j]->macro[k]->structure;                 /* stream tying */
-                        
-                        /* output variance */
-                        if (sti->nMix==1) {
-                           for (v=1; v<=VectorSize(sti->spdf.cpdf[1].mpdf->mean); v++) {
-                              switch (sti->spdf.cpdf[1].mpdf->ckind) {
-                              case DIAGC:
-                                 var = sti->spdf.cpdf[1].mpdf->cov.var[v];
-                                 break;
-                              case INVDIAGC:
-                                 var = 1.0/sti->spdf.cpdf[1].mpdf->cov.var[v];
-                                 break;
-                              case FULLC:
-                                 var = 1.0/sti->spdf.cpdf[1].mpdf->cov.inv[v][v];  /* only diagonal elements are used */
-                                 break;
-                              default:
-                                 HError(999,"ConvertModels: not supported CovKind");
-                              }
-
-                              WriteFloat(file, &var, 1, TRUE);
-                           }
                         }
                      }
                   }
@@ -5927,7 +5900,7 @@ void SplitStreamCommand(Boolean userWidths)
 /* SetStreamWidthCommand: change width of stream s to n */
 void SetStreamWidthCommand(void)
 {
-   int s, n, nedit=0;
+   int s, n, orign, nedit=0;
    char c=' ';
    HMMScanState hss;
    HLink hmm=NULL;
@@ -5978,8 +5951,10 @@ void SetStreamWidthCommand(void)
       ResizeSVector(hset,vf[s],n,'v',0.0);
    }
    badGC = TRUE;
+   orign = hset->swidth[s];
    hset->swidth[s]=n;
-
+   hset->vecSize += n - orign;
+   
    if (trace & (T_BID | T_SIZ)) {
       printf(" SW: Stream width changed for %d mixes\n",nedit);
       fflush(stdout);
@@ -6512,7 +6487,7 @@ void ImposeTreeCommand (void)
 
    if (!occStatsLoaded)
       HError(2672, "ImposeTreeCommand: Use LoadStats (LS <whatever-dir/stats>) before doing this.");
-   
+
    if (treeList == NULL)
       HError(2662,"ImposeTreeCommand: there are no existing trees");
    
@@ -6709,10 +6684,10 @@ void FloorAverageCommand(void)
       HError(2640,"FloorAverageCommand: Only possible for continuous models");
    if (hset->ckind != DIAGC)
       HError(2640,"FloorAverageCommand: Only implemented for DIAGC models");
-   S= hset->swidth[0];
+   S = hset->swidth[0];
 
    /* allocate accumulators */
-   varAcc = (DVector*)New(&gstack,(S+1)*sizeof(DVector));
+   varAcc = (DVector*)New(&gstack, (S+1)*sizeof(DVector));
    for (s=1;s<=S;s++) {
       varAcc[s] = CreateDVector(&gstack,hset->swidth[s]);
       ZeroDVector(varAcc[s]);
@@ -6738,7 +6713,7 @@ void FloorAverageCommand(void)
             for (k=1;k<=l;k++) { /* loop over k-th dimension */
                double    rvar  = 0.0;
                double    rmean = 0.0;
-               for (i=1; i<= hss.M; i++) {
+               for (i=1; i<=hss.M; i++) {
                   if (VectorSize(sti->spdf.cpdf[i].mpdf->mean) == l) {  /* MSD check */
                   weight = sti->spdf.cpdf[i].weight;
                   var  = sti->spdf.cpdf[i].mpdf->cov.var;
@@ -7658,17 +7633,17 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
             c1 = c1->next;
          }
             numLeft++;
-         }
-         else {
-            if (c2==NULL)
-               c2 = ch2->list = c;
-            else {
-               c2->next = c;
-               c2 = c2->next;
-            }
-            numRight++;
-         }
       }
+      else {
+         if (c2 == NULL)
+            c2 = ch2->list = c;
+         else {
+            c2->next = c;
+            c2 = c2->next;
+         }
+            numRight++;
+      }
+   }
       else if (!parent->pureStream) {
          /* stream is not pure */
          if (c->stream == s) {
@@ -7677,7 +7652,7 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
             else {
                c1->next = c;
                c1 = c1->next;
-            }
+}
             numLeft++;
          }
          else {
@@ -7699,14 +7674,14 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
                c1 = c1->next;
             }
             numLeft++;
-      }
-      else {
-         if (c2 == NULL)
-            c2 = ch2->list = c;
-         else {
-            c2->next = c;
-            c2 = c2->next;
          }
+         else {
+            if (c2==NULL)
+               c2 = ch2->list = c;
+            else {
+               c2->next = c;
+               c2 = c2->next;
+            }
             numRight++;
          }
       }
@@ -7714,9 +7689,10 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
 
    ch1->nComponents = numLeft;
    ch2->nComponents = numRight;
-   if (c1 != NULL)
+
+   if (c1!=NULL)
       c1->next = NULL;
-   if (c2 != NULL)
+   if (c2!=NULL)
       c2->next = NULL;
 }
 
@@ -7727,22 +7703,22 @@ void ClusterChildren (RNode *parent, RNode *ch1, RNode *ch2)
    double oldDistance, newDistance=0.0 ;
 
    if (parent->pureStream && parent->pureVecSize) {
-   do {
-      iter+=1;
-      if (iter >= MAX_ITER)
-         break;
+      do {
+         iter+=1;
+         if (iter >= MAX_ITER)
+            break;
          CalcDistance(parent->list, ch1, ch2);
-      if (iter == 1)
-         oldDistance = ((ch1->clusterScore + ch2->clusterScore) / 
-            (ch1->clustAcc + ch2->clustAcc)) + thresh + 1;
-      else
-         oldDistance = newDistance ;
-      newDistance = (ch1->clusterScore + ch2->clusterScore) / 
-         (ch1->clustAcc + ch2->clustAcc) ;
-      if (trace & T_CLUSTERS) {
          if (iter == 1)
-            printf("Iteration %d: Distance = %e\n", iter, newDistance);
+            oldDistance = ((ch1->clusterScore + ch2->clusterScore) / 
+                           (ch1->clustAcc + ch2->clustAcc)) + thresh + 1;
          else
+            oldDistance = newDistance ;
+         newDistance = (ch1->clusterScore + ch2->clusterScore) / 
+                       (ch1->clustAcc + ch2->clustAcc) ;
+         if (trace & T_CLUSTERS) {
+            if (iter == 1)
+               printf("Iteration %d: Distance = %e\n", iter, newDistance);
+            else
                printf("Iteration %d: Distance = %e, Delta = %e\n", iter, newDistance, oldDistance - newDistance);
          fflush(stdout);
       }
