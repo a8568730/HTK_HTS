@@ -205,4 +205,4 @@ LogFloat LMTrans (LModel *lm, LMState src, LabId wdid, LMState *dest);
 
 #endif  /* _HLM_H_ */
 
-/* ---------------------- End of HLM.h ----------------------- */
+/* ------------------------ End of HLM.h --------------------------- */

@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmath_version = "!HVER!HMath:   3.4.1 [CUED 12/03/09]";
-char *hmath_vc_id = "$Id: HMath.c,v 1.14 2011/02/10 08:23:06 uratec Exp $";
+char *hmath_vc_id = "$Id: HMath.c,v 1.15 2011/06/16 04:18:29 uratec Exp $";
 
 /*
    This library provides math support in the following three areas
@@ -2082,4 +2082,4 @@ void ResetMath(void)
    return;  /* do nothing */
 }
 
-/* ------------------------- End of HMath.c ------------------------- */
+/* ------------------------ End of HMath.c ------------------------- */

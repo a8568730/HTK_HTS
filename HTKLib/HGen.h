@@ -51,33 +51,35 @@
 extern "C" {
 #endif
 
-#define MAXWINNUM 30   /* maximum number of static + deltas */
+#define MAXWINNUM 30            /* maximum number of static + deltas */
 
-typedef enum {WLEFT=0, WRIGHT=1} WINWIDTH;
-typedef enum {CHOLESKY=0, MIX=1, FB=2} ParmGenType;
+typedef enum { WLEFT = 0, WRIGHT = 1 } WINWIDTH;
+typedef enum { CHOLESKY = 0, MIX = 1, FB = 2 } ParmGenType;
 
 typedef struct {
-   char fn[MAXWINNUM][MAXFNAMELEN];  /* window coefficient file(s) */
-   int num;                          /* number of windows */
-   int maxw[2];                      /* max width [0(left) 1(right)] */
-   int  **width;                     /* width [0..num-1][0(left) 1(right)] */
-   float **coef;                     /* window coefficient [0..num][length[1]..length[2]] */
+   char fn[MAXWINNUM][MAXFNAMELEN];     /* window coefficient file(s) */
+   int num;                     /* number of windows */
+   int maxw[2];                 /* max width [0(left) 1(right)] */
+   int **width;                 /* width [0..num-1][0(left) 1(right)] */
+   float **coef;                /* window coefficient [0..num][length[1]..length[2]] */
+   int max_L;
 } Window;
 
 typedef struct {
-   char ext[MAXSTRLEN];  /* filename extension for this PdfStream */
-   Boolean *ContSpace;   /* space indexes */
-   Boolean fullCov;      /* full covariance flag */
-   int vSize;            /* vector size of observation vector */
-   int order;            /* vector size of static feature vector */
-   int t;                /* time counter */
-   int T;                /* number of frames */
-   int width;            /* band width */
-   Window win;           /* window coefficients */
-   Matrix mseq;          /* sequence of mean vector */
-   Covariance *vseq;     /* sequence of covariance matrices */
-   Matrix C;             /* generated parameter c */
-   DVector g;   
+   char ext[MAXSTRLEN];         /* filename extension for this PdfStream */
+   IntVec ContSpace;            /* space indexes */
+   Boolean fullCov;             /* full covariance flag */
+   int vSize;                   /* vector size of observation vector */
+   int order;                   /* vector size of static feature vector */
+   int t;                       /* time counter */
+   int origStart;               /* start pos of current segment in original utterance */
+   int T;                       /* number of frames */
+   int width;                   /* band width */
+   Window win;                  /* window coefficients */
+   Matrix mseq;                 /* sequence of mean vector */
+   Covariance *vseq;            /* sequence of covariance matrices */
+   Matrix C;                    /* generated parameter c */
+   DVector g;
    DVector c;
    DMatrix WUW;
    DVector WUM;
@@ -88,35 +90,35 @@ typedef struct {
 } PdfStream;
 
 typedef struct {
-   MemHeap *genMem;       /* generation memory heap */
-   
-   float speakRate;       /* speaking rate */
-   float MSDthresh;       /* MSD threshold */
-   Boolean modelAlign;    /* use model-level alignment from label */
-   Boolean stateAlign;    /* use state-level alignment from label */
-   HTime frameRate;       /* frame rate in 100ns */
-   
-   HMMSet *hset;          /* set of HMMs */
-   HMMSet *dset;          /* set of duration models */
-   int maxStates;         /* max # of states in hset */
-   int maxMixes;          /* max # of mixes in hset */
-   
-   PdfStream pst[SMAX];   /* PdfStream for generation */
-   int nPdfStream[SMAX];  /* # of PdfStreams and its size */ 
-   
-   Transcription *labseq; /* input label sequence */
-   int labseqlen;         /* # of labels */
-   Label **label;         /* labels sequence */
-   
-   HLink *hmm;            /* a sentence HMM for given label */
-   HLink *dm;             /* a sentence duration models for given label */
-   
-   IMatrix sindex;        /* state sequence indexes */
-   IMatrix durations;     /* state durations */
-   int tframe;            /* total # of frames */
+   MemHeap *genMem;             /* generation memory heap */
+
+   float speakRate;             /* speaking rate */
+   float MSDthresh;             /* MSD threshold */
+   Boolean modelAlign;          /* use model-level alignment from label */
+   Boolean stateAlign;          /* use state-level alignment from label */
+   HTime frameRate;             /* frame rate in 100ns */
+
+   HMMSet *hset;                /* set of HMMs */
+   HMMSet *dset;                /* set of duration models */
+   int maxStates;               /* max # of states in hset */
+   int maxMixes;                /* max # of mixes in hset */
+
+   PdfStream pst[SMAX];         /* PdfStream for generation */
+   int nPdfStream[SMAX];        /* # of PdfStreams and its size */
+
+   Transcription *labseq;       /* input label sequence */
+   int labseqlen;               /* # of labels */
+   Label **label;               /* labels sequence */
+
+   HLink *hmm;                  /* a sentence HMM for given label */
+   HLink *dm;                   /* a sentence duration models for given label */
+
+   IMatrix sindex;              /* state sequence indexes */
+   IMatrix durations;           /* state durations */
+   int tframe;                  /* total # of frames */
 } GenInfo;
 
-/* EXPORTED functions ------------------ */ 
+/* EXPORTED functions ------------------ */
 
 void SetrFlags(char *s);
 /* 
@@ -143,30 +145,55 @@ void SetTraceGen(void);
    Set trace level 
 */
 
-void InitialiseGenInfo (GenInfo *, Transcription *);
+void InitialiseGenInfo(GenInfo *, Transcription *, Boolean);
 /*
  * Initialise GenInfo 
  */
 
-void ResetGenInfo (GenInfo *);
+void ResetGenInfo(GenInfo *);
 /*
  * Reset GenInfo 
  */
 
-void JointProb (GenInfo *genInfo, UttInfo *utt);
+void JointProb(GenInfo * genInfo, UttInfo * utt);
 /* 
    joint probability of given observations and state sequence
 */
 
-void ParamGen (GenInfo *, UttInfo *, FBInfo *, ParmGenType);
+void ParamGen(GenInfo *, UttInfo *, FBInfo *, ParmGenType);
 /*
    Generate parameter sequence 
  */
+
+void SetupPdfStreams(GenInfo * genInfo, int start, int end);
+/*
+  Setup PdfStreams for parameter generation
+*/
+
+void Calc_WUM_and_WUW(PdfStream * pst, const int bias);
+/*
+  Calcurate W'*U^{-1}*M and W'*U^{-1}*W
+*/
+
+void Cholesky_Factorization(PdfStream * pst);
+/*
+  Compute Cholesky factor of matrix W'*U^{-1}*W
+*/
+
+void Forward_Substitution(PdfStream * pst);
+/*
+  Forward substitution to solve set of linear equations
+*/
+
+void Backward_Substitution(PdfStream * pst, const int bias);
+/*
+  Backward substitution to solve set of linear equations
+*/
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* _HGEN_H_ */
+#endif                          /* _HGEN_H_ */
 
-/* ------------------------- End of HGen.h --------------------------- */
+/* ------------------------ End of HGen.h -------------------------- */

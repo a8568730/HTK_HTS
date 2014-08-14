@@ -114,6 +114,7 @@ objects = @HGRAF@ esig_asc.o \
 	HMath.o \
 	HMem.o \
 	HModel.o \
+	HMTrain.o \
 	HNet.o \
 	HParm.o \
 	HRec.o \
@@ -144,6 +145,7 @@ lvobjects = $(basename @HGRAF@).lv.o esig_asc.lv.o \
 	HMath.lv.o \
 	HMem.lv.o \
 	HModel.lv.o \
+	HMTrain.lv.o \
 	HNet.lv.o \
 	HParm.lv.o \
 	HRec.lv.o \

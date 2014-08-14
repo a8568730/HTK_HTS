@@ -73,7 +73,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hexactmpe_version = "!HVER!HExactMPE:   3.4.1 [CUED 12/03/09]";
-char *hexactmpe_vc_id = "$Id: HExactMPE.c,v 1.12 2011/02/10 08:23:06 uratec Exp $";
+char *hexactmpe_vc_id = "$Id: HExactMPE.c,v 1.13 2011/06/16 04:18:28 uratec Exp $";
 
 /*
     Performs forward/backward alignment
@@ -901,3 +901,5 @@ void ResetExactMPE (void)
 {
    return;  /* do nothing */
 }
+
+/* ------------------------ End of HExactMPE.c --------------------- */

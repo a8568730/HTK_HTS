@@ -1,3 +1,63 @@
+2011-06-19 20:53  uratec
+
+	* HTKTools/HMgeTool.c: update
+
+2011-06-16 14:18  uratec
+
+	* HTKTools/HHEd.c: Modify a comment.
+
+2011-06-16 14:13  bonanza
+
+	* HTKLib/HModel.h, HTKTools/HHEd.c: bug fix
+
+2011-06-16 14:10  bonanza
+
+	* HTKLib/HModel.h: Modify for for CalKLDist
+
+2011-06-16 14:07  bonanza
+
+	* HTKLib/HModel.c, HTKTools/HHEd.c: Modify CalcKLDist
+
+2011-06-16 13:27  uratec
+
+	* HTKLib/HGen.c, HTKLib/HMTrain.c, HTKTools/HMGenS.c,
+	  HTKTools/HMgeTool.c, HTKTools/HSMMAlign.c: Update version number.
+
+2011-06-16 13:18  uratec
+
+	* HTKLib/HArc.c, HTKLib/HArc.h, HTKLib/HAudio.c, HTKLib/HAudio.h,
+	  HTKLib/HDict.c, HTKLib/HDict.h, HTKLib/HExactMPE.c,
+	  HTKLib/HExactMPE.h, HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HFBLat.c,
+	  HTKLib/HFBLat.h, HTKLib/HGraf.c, HTKLib/HGraf.h,
+	  HTKLib/HGraf.null.c, HTKLib/HGraf_WIN32.c, HTKLib/HLM.c,
+	  HTKLib/HLM.h, HTKLib/HLabel.c, HTKLib/HLabel.h, HTKLib/HLat.c,
+	  HTKLib/HLat.h, HTKLib/HMap.c, HTKLib/HMap.h, HTKLib/HMath.c,
+	  HTKLib/HMath.h, HTKLib/HMem.c, HTKLib/HMem.h, HTKLib/HModel.h,
+	  HTKLib/HNet.c, HTKLib/HNet.h, HTKLib/HParm.c, HTKLib/HParm.h,
+	  HTKLib/HRec.c, HTKLib/HRec.h, HTKLib/HShell.c, HTKLib/HShell.h,
+	  HTKLib/HSigP.c, HTKLib/HSigP.h, HTKLib/HTrain.c, HTKLib/HTrain.h,
+	  HTKLib/HUtil.c, HTKLib/HUtil.h, HTKLib/HVQ.c, HTKLib/HVQ.h,
+	  HTKLib/HWave.c, HTKLib/HWave.h, HTKLib/esignal.h, HTKLib/lbfgs.h,
+	  HTKTools/HBuild.c, HTKTools/HCompV.c, HTKTools/HCopy.c,
+	  HTKTools/HDMan.c, HTKTools/HERest.c, HTKTools/HHEd.c,
+	  HTKTools/HInit.c, HTKTools/HLEd.c, HTKTools/HLRescore.c,
+	  HTKTools/HLStats.c, HTKTools/HList.c, HTKTools/HMMIRest.c,
+	  HTKTools/HParse.c, HTKTools/HQuant.c, HTKTools/HRest.c,
+	  HTKTools/HResults.c, HTKTools/HSGen.c, HTKTools/HSLab.c,
+	  HTKTools/HSmooth.c, HTKTools/HVite.c: modify footer format.
+
+2011-06-16 13:15  uratec
+
+	* configure, configure.ac, HTKLib/HAdapt.c, HTKLib/HAdapt.h,
+	  HTKLib/HGen.c, HTKLib/HGen.h, HTKLib/HMTrain.c, HTKLib/HMTrain.h,
+	  HTKLib/HModel.c, HTKLib/Makefile.in, HTKTools/HMGenS.c,
+	  HTKTools/HMgeTool.c, HTKTools/Makefile.in: Add prototype of MGE
+	  training tool.
+
+2011-06-16 13:13  uratec
+
+	* HTKTools/HSMMAlign.c: Add function to output stats for HSMMAlign.
+
 2011-03-02 17:36  uratec
 
 	* .project, HTKLib/HFB.c, HTKLib/HFB.h, HTKTools/HSMMAlign.c:

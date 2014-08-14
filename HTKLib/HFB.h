@@ -227,3 +227,5 @@ void SetAlign (long *st, long *en, short *qDms, const int Q, const int T);
 #endif
 
 #endif  /* _HFB_H_ */
+
+/* ------------------------ End of HHB.h --------------------------- */

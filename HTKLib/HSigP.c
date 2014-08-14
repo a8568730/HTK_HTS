@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hsigp_version = "!HVER!HSigP:   3.4.1 [CUED 12/03/09]";
-char *hsigp_vc_id = "$Id: HSigP.c,v 1.7 2011/02/10 08:23:06 uratec Exp $";
+char *hsigp_vc_id = "$Id: HSigP.c,v 1.8 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"

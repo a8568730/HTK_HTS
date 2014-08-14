@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmem_version = "!HVER!HMem:   3.4.1 [CUED 12/03/09]";
-char *hmem_vc_id = "$Id: HMem.c,v 1.10 2011/02/10 08:23:06 uratec Exp $";
+char *hmem_vc_id = "$Id: HMem.c,v 1.11 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1140,4 +1140,4 @@ char *CopyString(MemHeap *x, char *s)
    return t;
 }
 
-/* -------------------------- End of HMem.c ---------------------------- */
+/* ------------------------ End of HMem.c -------------------------- */

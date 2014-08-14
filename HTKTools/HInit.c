@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hinit_version = "!HVER!HInit:   3.4.1 [CUED 12/03/09]";
-char *hinit_vc_id = "$Id: HInit.c,v 1.12 2011/02/10 08:23:06 uratec Exp $";
+char *hinit_vc_id = "$Id: HInit.c,v 1.13 2011/06/16 04:18:30 uratec Exp $";
 
 /*
    This program is used to initialise (or tune) a single hidden

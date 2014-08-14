@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hrest_version = "!HVER!HRest:   3.4.1 [CUED 12/03/09]";
-char *hrest_vc_id = "$Id: HRest.c,v 1.12 2011/02/10 08:23:06 uratec Exp $";
+char *hrest_vc_id = "$Id: HRest.c,v 1.13 2011/06/16 04:18:30 uratec Exp $";
 
 /*
    This program is used to estimate the transition parameters,

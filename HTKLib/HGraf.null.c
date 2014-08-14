@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hgraf_version = "!HVER!HGraf(null):   3.4.1 [CUED 12/03/09]";
-char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.9 2011/02/10 08:23:06 uratec Exp $";
+char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.10 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -304,4 +304,4 @@ int HTextHeight(char *str)
    return 0;
 }
 
-/* ------------------------ End of HGraf.null.c ------------------------- */
+/* ------------------------ End of HGraf.null.c -------------------- */

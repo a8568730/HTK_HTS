@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *htrain_version = "!HVER!HTrain:   3.4.1 [CUED 12/03/09]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.21 2011/02/10 08:23:06 uratec Exp $";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.22 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1929,5 +1929,4 @@ double ScaleAccsParallel(HMMSet *hset, float wt, int index)
    return ans;
 }
 
-
-/* ------------------------ End of HTrain.c ----------------------- */
+/* ------------------------ End of HTrain.c ------------------------ */

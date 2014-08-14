@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hfb_version = "!HVER!HFB:   3.4.1 [CUED 12/03/09]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.50 2011/03/02 08:36:30 uratec Exp $";
+char *hfb_vc_id = "$Id: HFB.c,v 1.51 2011/06/16 04:18:28 uratec Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -700,7 +700,7 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
       if (al_dset!=NULL) {
          al_dList=(HLink *)New(&ab->abMem, Q*sizeof(HLink));
          --al_dList;
-   }
+      }
    }
    else {
       /* use same list for update and align */
@@ -978,7 +978,7 @@ static void StepAlpha(AlphaBeta *ab, int t, int *start, int *end,
                   y = laq[i][d];
                   if (y>LSMALL)
                      x = LAdd(x,y+durprob[i][d]+a);
-         }
+               }
          }
          aq[j][1] = x + outprob[j][0][0];
 
@@ -993,7 +993,7 @@ static void StepAlpha(AlphaBeta *ab, int t, int *start, int *end,
                y = aq[i][d];
                if (y>LSMALL)
                   x = LAdd(x,y+durprob[i][d]+a);
-            }
+      }
       }
       aq[Nq][1] = x; a1N = ApplyDAEM(hmm->transP[1][Nq]);
    }
@@ -1712,7 +1712,7 @@ static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
                      x = LAdd(x,outprob[i][0][0]+bqt1[i][d+1]);
                }
                bqt[i][d] = x;
-            }
+               }
             /* compute lMax and gMax only if pruning is on */
             if (p->pruneThresh < NOPRUNE) { 
                x = LZERO;
@@ -2069,7 +2069,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                   }
                   else {
                      otvs = ApplyCompFXForm(mp,o2[t].fv[s],inxform,&det,t);
-               }
+                  }
                } else if (fbInfo->twoModels) {
                   otvs = ApplyCompFXForm(mp,o[t].fv[s],inxform,&det,t);
                } else
@@ -2708,7 +2708,7 @@ void InitUttObservations(UttInfo *utt, HMMSet *al_hset,
    }
 }
 
-   
+
 /* EXPORT -> ResetUttObservations: reset the observation structures within UttInfo */
 void ResetUttObservations (UttInfo *utt, HMMSet *al_hset)
 {
@@ -2751,7 +2751,4 @@ Boolean FBUtt (FBInfo *fbInfo, UttInfo *utt)
    return success;
 }
 
-
-/* ----------------------------------------------------------- */
-/*                      END:  HFB.c                         */
-/* ----------------------------------------------------------- */
+/* ------------------------ End of HFB.c --------------------------- */

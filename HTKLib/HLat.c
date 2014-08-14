@@ -1878,3 +1878,5 @@ void ApplyNGram2LabLat(Lattice *lat, LModel *lm)
    Dispose(lat->heap, revlab);
 }
 #endif
+
+/* ------------------------ End of HLat.c -------------------------- */

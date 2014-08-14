@@ -16,7 +16,7 @@
 /*    **     This banner notice must not be removed      **    */
 /*                                                             */
 /* ----------------------------------------------------------- */
-/*         File: HGraf.X.c:  HGraf for X-Windows               */
+/*         File: HGraf.c:  HGraf for X-Windows                 */
 /* ----------------------------------------------------------- */
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hgraf_version = "!HVER!HGraf(X):   3.4.1 [CUED 12/03/09]";
-char *hgraf_vc_id = "$Id: HGraf.c,v 1.9 2011/02/10 08:23:06 uratec Exp $";
+char *hgraf_vc_id = "$Id: HGraf.c,v 1.10 2011/06/16 04:18:29 uratec Exp $";
 
 /*
    This is the X Windows implementation of HGraf.  It is server
@@ -917,6 +917,4 @@ void TermHGraf()
    DeleteHeap(&btnHeap);
 }
 
-
-/* ------------------------ End of HGraf.X.c ------------------------- */
-
+/* ------------------------ End of HGraf.c ------------------------- */

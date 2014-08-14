@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hquant_version = "!HVER!HQuant:   3.4.1 [CUED 12/03/09]";
-char *hquant_vc_id = "$Id: HQuant.c,v 1.7 2011/02/10 08:23:06 uratec Exp $";
+char *hquant_vc_id = "$Id: HQuant.c,v 1.8 2011/06/16 04:18:30 uratec Exp $";
 
 /* 
    This program calculates a vector quantisation table from a

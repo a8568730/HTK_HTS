@@ -377,4 +377,4 @@ extern Boolean strmProj;
 
 #endif  /* _HTRAIN_H_ */
 
-/* ---------------------- End of HTrain.h ---------------------- */
+/* ------------------------ End of HTrain.h ------------------------ */

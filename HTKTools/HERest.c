@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *herest_version = "!HVER!HERest:   3.4.1 [CUED 12/03/09]";
-char *herest_vc_id = "$Id: HERest.c,v 1.48 2011/02/10 08:23:06 uratec Exp $";
+char *herest_vc_id = "$Id: HERest.c,v 1.49 2011/06/16 04:18:29 uratec Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -815,9 +815,9 @@ int main(int argc, char *argv[])
                else
                   printf("Saving hmm's to MMF %s\n",mmfFn);
                fflush(stdout);
-      }
+            }
             SaveHMMSet(&hset,newhmmDir,newhmmExt,NULL,saveBinary);
-   }
+         }
          /* update duration models */
          if (up_durLoaded && (updateMode&UPMODE_UPDATE) && uFlags_dur) {
             /* first estimate variance floor */
@@ -837,9 +837,9 @@ int main(int argc, char *argv[])
                else
                   printf("Saving duration models to MMF %s\n",up_durMMF);
                fflush(stdout);
-            }
+      }
             SaveHMMSet(&dset,newdurDir,newhmmExt,NULL,saveBinary);
-         }
+   }
          
          if (trace&T_TOP) {
             printf("Reestimation complete - average log prob per frame = %e\n", totalPr/totalT);
@@ -1004,14 +1004,14 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, HMMSet *dset, char *hm
          if ((hsKind != PLAINHS) && (hsKind != SHAREDHS))
             HError(999,"Can only estimated transforms with PLAINHS and SHAREDHS!");
          xfInfo_dur.useOutXForm = TRUE;
-         /* This initialises things - temporary hack - THINK!! */
+      /* This initialises things - temporary hack - THINK!! */
          CreateAdaptXForm(dset, &xfInfo_dur, "tmp");
       }
       if ((uFlags_dur&UPXFORM) || (uFlags_dur&UPSEMIT))
          CheckAdaptSetUp(dset,&xfInfo_dur);
       
-   }
-   
+   } 
+
    if (trace&T_TOP) {
       printf("\n");
       fflush(stdout);

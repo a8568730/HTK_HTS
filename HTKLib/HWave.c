@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hwave_version = "!HVER!HWave:   3.4.1 [CUED 12/03/09]";
-char *hwave_vc_id = "$Id: HWave.c,v 1.10 2011/02/10 08:23:06 uratec Exp $";
+char *hwave_vc_id = "$Id: HWave.c,v 1.11 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1851,4 +1851,4 @@ ReturnStatus CloseWaveOutput(Wave w, FileFormat fmt, char *fname)
    return(SUCCESS);
 }
 
-/* --------------------------------  HWave.c ------------------------------- */
+/* ------------------------ End of HWave.c ------------------------- */

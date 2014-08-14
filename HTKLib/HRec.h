@@ -271,3 +271,5 @@ void TracePath(FILE *file,Path *path);
 #endif
 
 #endif  /* _HREC_H_ */
+
+/* ------------------------ End of HRec.h -------------------------- */

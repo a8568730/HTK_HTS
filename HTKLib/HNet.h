@@ -581,3 +581,5 @@ int AddHCIContext(HMMSetCxtInfo *hci,LabId labid);
 #endif
 
 #endif  /* _HNET_H_ */
+
+/* ------------------------ End of HNet.h -------------------------- */

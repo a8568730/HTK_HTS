@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hparse_version = "!HVER!HParse:   3.4.1 [CUED 12/03/09]";
-char *hparse_vc_id = "$Id: HParse.c,v 1.9 2011/02/10 08:23:06 uratec Exp $";
+char *hparse_vc_id = "$Id: HParse.c,v 1.10 2011/06/16 04:18:30 uratec Exp $";
 
 /* The HParse program reads in a set of HTK  HParse rewrite rules
    (as used in HTK V1.x) and writes out an HTK V2 lattice and
@@ -2380,4 +2380,6 @@ static void ConvertHParseNetwork(HPNetwork *theNet, char *latFn, char *dictFn)
    SaveLattice(lat,latFn,format);
 }
 
-/* ------------------- End of HParse.c --------------------------------- */
+/* ----------------------------------------------------------- */
+/*                      END:  HParse.c                         */
+/* ----------------------------------------------------------- */

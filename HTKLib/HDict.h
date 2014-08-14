@@ -208,5 +208,4 @@ void DelPron(Vocab *voc, Word word, Pron pron);
 
 #endif  /* _HDICT_H_ */
 
-/* ------------------------ End of HDict.h ----------------------- */
-
+/* ------------------------ End of HDict.h ------------------------- */

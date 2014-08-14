@@ -332,4 +332,4 @@ int MultiNomial(Vector prob, const int N);
 
 #endif  /* _HMATH_H_ */
 
-/* ------------------------- End of HMath.h -------------------------- */
+/* ------------------------ End of HMath.h ------------------------- */

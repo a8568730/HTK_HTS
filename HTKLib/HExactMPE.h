@@ -91,3 +91,4 @@ void ResetExactMPE(void);
 void DoExactCorrectness(FBLatInfo *fbInfo, Lattice *lat);   
 #endif
 
+/* ------------------------ End of HExtractMPE.h ------------------- */

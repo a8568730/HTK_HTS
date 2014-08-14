@@ -16,7 +16,7 @@
 /*    **     This banner notice must not be removed      **    */
 /*                                                             */
 /* ----------------------------------------------------------- */
-/*         File: HGraf.win32.c:  HGraf for Windows NT          */
+/*         File: HGraf_WIN32.c:  HGraf for Windows NT          */
 /* ----------------------------------------------------------- */
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
@@ -1247,5 +1247,4 @@ KeyType HGetKeyType(char c)
    }
 }
 
-
-/* ------------------------ End of HGraf.win32.c ------------------------- */
+/* ------------------------ End of HGraf_WIN32.c ------------------- */

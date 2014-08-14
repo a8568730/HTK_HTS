@@ -621,4 +621,4 @@ char *RetrieveCommandLine(void);
 
 #endif  /* _HSHELL_H_ */
 
-/* ----------------------- End of HShell.h --------------------------- */
+/* ------------------------ End of HShell.h ------------------------ */

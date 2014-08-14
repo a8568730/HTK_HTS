@@ -73,7 +73,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hfblat_version = "!HVER!HFBLat:   3.4.1 [CUED 12/03/09]";
-char *hfblat_vc_id = "$Id: HFBLat.c,v 1.17 2011/02/10 08:23:06 uratec Exp $";
+char *hfblat_vc_id = "$Id: HFBLat.c,v 1.18 2011/06/16 04:18:29 uratec Exp $";
 
 /*
   Performs forward/backward alignment
@@ -1957,7 +1957,4 @@ void SetDoingFourthAcc(Boolean DO, int indx){
    add_index = indx;
 }
 
-
-/* --------------------------------- End HFBLat.c -------------------------------------- */
-
-
+/* ------------------------ End of HFBLat.c ------------------------ */

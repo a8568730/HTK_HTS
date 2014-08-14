@@ -188,4 +188,4 @@ void GetVQ(VQTable vqTab, int numS, Vector *fv, short *vq);
 
 #endif  /* _HVQ_H_ */
 
-/* ------------------------ End of HVQ.h ----------------------- */
+/* ------------------------ End of HVQ.h --------------------------- */

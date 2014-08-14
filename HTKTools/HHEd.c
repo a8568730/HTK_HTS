@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hhed_version = "!HVER!HHEd:   3.4.1 [CUED 12/03/09]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.101 2011/02/10 08:23:06 uratec Exp $";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.105 2011/06/16 05:18:47 uratec Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -4904,69 +4904,12 @@ void DumpAllStreams(HMMSet * hset_L1)
    EndHMMScan(&hss_L1);
 }
 
-/* CalKLDist: Calculate symmetric KL divergence, only support diagonal covariance matrix */
-float CalKLDist(MixPDF * mp1, MixPDF * mp2)
-{
-   int i, vsize;
-   float kld1, kld2, diff;
-
-   assert(VectorSize(mp1->mean) == VectorSize(mp2->mean));
-   if (mp1->ckind != DIAGC || mp2->ckind != DIAGC)
-      HError(6611, "CalKLDist: Only support diagonal covariance matrix");
-
-   vsize = VectorSize(mp1->mean);
-
-   kld1 = kld2 = 0.0;
-   kld1 -= vsize;
-   kld2 -= vsize;
-   for (i = 1; i <= vsize; i++) {
-      diff = (mp2->mean[i] - mp1->mean[i]);
-      diff *= diff;
-      kld1 += mp1->cov.var[i] / mp2->cov.var[i];
-      kld1 += diff / mp2->cov.var[i];
-      kld2 += mp2->cov.var[i] / mp1->cov.var[i];
-      kld2 += diff / mp1->cov.var[i];
-   }
-
-   return (kld1 + kld2) * 0.5f;
-}
-
-/* KLDMap: KLD mapping */
-StreamInfo *KLDMap(StreamInfo * Sti, StreamInfo ** DumpSti, const int numStream)
-{
-   int i, m;
-   float min, tmp;
-   MixPDF *pdf_L2, *pdf_L1;
-   StreamInfo *min_stream;
-
-   min_stream = NULL;
-   min = MAX_KLD_SCORE;
-
-   for (m = 1; m <= Sti->nMix; m++) {
-      pdf_L2 = Sti->spdf.cpdf[m].mpdf;
-      for (i = 1; i <= numStream; i++) {
-         if (Sti->nMix == DumpSti[i]->nMix) {
-            pdf_L1 = DumpSti[i]->spdf.cpdf[m].mpdf;
-            if (VectorSize(pdf_L2->mean) != VectorSize(pdf_L1->mean))
-               HError(6611, "KLDMap: Only support same vector size");
-            if (VectorSize(pdf_L2->mean) <= 0)
-               continue;
-            tmp = CalKLDist(pdf_L2, pdf_L1);
-            if (tmp < min) {
-               min = tmp;
-               min_stream = DumpSti[i];
-            }
-         }
-      }
-   }
-   return min_stream;
-}
-
 /* PerformStateMapping: output state mapping table */
 void PerformStateMapping(HMMSet * hset_L1, HMMSet * hset_L2, char *out_table)
 {
    FILE *fp;
-   int i = 0, s = 1;
+   int i = 0, s = 1, j;
+   float min, tmp;
    Boolean isPipe;
 
    HMMScanState hss_L2;
@@ -4985,7 +4928,18 @@ void PerformStateMapping(HMMSet * hset_L1, HMMSet * hset_L2, char *out_table)
       while (GoNextState(&hss_L2, TRUE)) {
          while (GoNextStream(&hss_L2, TRUE)) {
             /* KLD mapping */
-            sti = KLDMap(hss_L2.sti, DumpStream[hss_L2.s], DStreamNum[hss_L2.s]);
+            sti = NULL;
+            min = MAX_KLD_SCORE;
+            for (j = 1; j <= DStreamNum[hss_L2.s]; j++) {
+               if (hss_L2.sti->nMix == DumpStream[hss_L2.s][j]->nMix) {
+                  tmp = CalStrKLDist(hss_L2.sti, DumpStream[hss_L2.s][j]);
+                  if (tmp < min) {
+                     min = tmp;
+                     sti = DumpStream[hss_L2.s][j];
+                  }
+               }
+            }
+
             /* output */
             ml_L2 = FindMacroStruct(hset_L2, 'p', hss_L2.sti);
             ml_L1 = FindMacroStruct(hset_L1, 'p', sti);
@@ -5045,6 +4999,8 @@ void StateMappingCommand()
 
    /* state mapping */
    PerformStateMapping(hset, &hset_L2, out_table);
+
+   saveHMMSet = FALSE;
 }
 
 /* ----------------- TR - Set Trace Level Command --------------- */
@@ -6807,7 +6763,7 @@ void ImposeTreeCommand (void)
       printf("\nIT\n Clustering while imposing previously constructed tree-based tying structure\n");
       fflush(stdout);
    }
-   
+
    if (hset->hsKind!=PLAINHS)
       HError(9999,"ImposeTreeCommand: only PLAINHS is supported");
    

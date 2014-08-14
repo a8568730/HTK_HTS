@@ -77,7 +77,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hadapt_version = "!HVER!HAdapt:   3.4.1  [CUED 12/03/09]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.63 2011/02/10 08:23:06 uratec Exp $";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.64 2011/06/16 04:15:50 uratec Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>
@@ -5501,7 +5501,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                   xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
                      SetParentXForm(hset,xfinfo,xfinfo->paXForm);
                      SetAccCache(xfinfo);
-               }
+                  }
                   if (xfinfo->al_hset!=NULL && xfinfo->use_alPaXForm) {
                      MakeFN(xfinfo->cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
                      MakeFN(xfinfo->cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
@@ -5512,8 +5512,8 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                   else
                      xfinfo->al_paXForm = xfinfo->paXForm;
                }
+               }
             }
-         } 
          else if (xfinfo->usePaXForm || xfinfo->use_alPaXForm) { /* set-up the initial parent transform information */
             maskMatch = MaskMatch(xfinfo->paSpkrPat,paspkr,datafn);
             if (!maskMatch)
@@ -5532,7 +5532,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                xfinfo->al_paXForm = LoadOneXForm(xfinfo->al_hset,newMn,newFn);
                SetParentXForm(xfinfo->al_hset,xfinfo,xfinfo->al_paXForm);
                SetAccCache(xfinfo);
-            }
+         }
             else
                xfinfo->al_paXForm = xfinfo->paXForm;
          }
@@ -5668,7 +5668,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
          xfinfo->coutspkr[s] = '\0';
          xfinfo->cpaspkr[s] = '\0';
          xfinfo->cinspkr[s] = '\0';
-   }
+      }
    }
 
    return spkrChange;
@@ -5749,3 +5749,26 @@ void ApplyMapXForm(MixPDF * mp, MixPDF * mp_map, AdaptXForm * xform, Boolean ful
       CompXForm(mp, xform, ai, full);
    }
 }
+
+LinXForm* GetRelateXForm(HMMSet *hset, MixPDF *mp, XFormKind xkind)
+{
+   AInfo *ai = NULL;
+   AdaptXForm *xform;
+   int numXf;
+
+   xform = hset->curXForm;
+   ai = GetAInfo(mp);
+
+   while(ai) {
+      if(xform->xformSet->xkind == xkind) {
+         numXf = xform->xformWgts.assign[ai->baseClass];
+         return xform->xformSet->xforms[numXf];
+      }
+      ai = ai->next;
+      xform = xform->parentXForm;
+   }
+
+  return NULL;
+}
+
+/* ------------------------ End of HAdapt.c ------------------------ */

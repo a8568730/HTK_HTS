@@ -175,9 +175,4 @@ void GetTimes(LArc *larc, int i, int *start, int *end);   /*gets times as ints. 
 /* EXPORT-> SetDoingFourthAcc: Indicate whether it is currently storing MMI statistics */
 void SetDoingFourthAcc(Boolean DO, int indx);
 
-/* ------------------------- End of HFBLat.h --------------------------- */
-
-
-
-
-
+/* ------------------------ End of HFBLat.h ------------------------ */

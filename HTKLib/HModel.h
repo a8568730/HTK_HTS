@@ -798,10 +798,19 @@ float ReturnIgnoreValue(void);
    ReturnIgnoreValue: Return ignoreValue for MSD
 */
 
+/* -------------- Calculate symmetric KL divergence ------------------- */
+
+/* EXPORT -> CalKLDist: Calculate symmetric KL divergence of single pdf, only support diagonal covariance matrix */
+float CalKLDist(MixPDF * mp1, MixPDF * mp2);
+
+/* EXPORT -> CalStrKLDist: Calculate symmetric KL divergence of stream,
+                           only support single mixture distribution and MSD distribution */
+float CalStrKLDist(StreamInfo *sti1, StreamInfo *sti2);
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif  /* _HMODEL_H_ */
 
-/* ------------------------- End of HModel.h --------------------------- */
+/* ------------------------ End of HModel.h ------------------------ */

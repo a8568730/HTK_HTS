@@ -336,10 +336,12 @@ void UpdateProjectModels(HMMSet *hset, char *dir);
 void AttachXFormInfo(HMMSet *hset);
 void ApplyMapXForm(MixPDF *mp, MixPDF *mp_map, AdaptXForm *xform, Boolean full);
 
+LinXForm* GetRelateXForm(HMMSet *hset, MixPDF *mp, XFormKind xkind);
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif  /* _HADAPT_H_ */
 
-/* ---------------------------- END HAdapt.h ------------------------------ */
+/* ------------------------ End of HAdapt.h ------------------------ */

@@ -1,6 +1,6 @@
 ===============================================================================
-         The HMM-based Speech Synthesis System (HTS) version 2.2 beta
-                             release March 3, 2011
+            The HMM-based Speech Synthesis System (HTS) version 2.2
+                             release July 7, 2011
 
 
 The HMM-Based Speech Synthesis System (HTS) (http://hts.sp.nitech.ac.jp/) has
@@ -13,8 +13,8 @@ implemented as a modified version of the Hidden Markov Model Toolkit (HTK)
                                     Copying
 *******************************************************************************
 
-The basic core system of HTS version 2.2 beta is released as a patch code to
-HTK version 3.4.1. The patch code is released under the New and Simplified BSD
+The basic core system of HTS version 2.2 is released as a patch code to HTK
+version 3.4.1. The patch code is released under the New and Simplified BSD
 license (see http://www.opensource.org/). However, it should be noted that once
 you apply the patch to the HTK source code, you must obey the license of HTK.
 Using and distributing this software in the form of patch code to HTK and its

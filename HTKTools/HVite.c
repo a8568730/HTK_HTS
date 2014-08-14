@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hvite_version = "!HVER!HVite:   3.4.1 [CUED 12/03/09]";
-char *hvite_vc_id = "$Id: HVite.c,v 1.19 2011/02/10 08:23:07 uratec Exp $";
+char *hvite_vc_id = "$Id: HVite.c,v 1.20 2011/06/16 04:18:30 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *haudio_version = "!HVER!HAudio:   3.4.1 [CUED 12/03/09]";
-char *haudio_vc_id = "$Id: HAudio.c,v 1.8 2011/02/10 08:23:06 uratec Exp $";
+char *haudio_vc_id = "$Id: HAudio.c,v 1.9 2011/06/16 04:18:28 uratec Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"
@@ -2417,4 +2417,4 @@ int SamplesToPlay(AudioOut a)
    return OutSamples(a);
 }
 
-/* ------------------------ End of HAudio.c ------------------------- */
+/* ------------------------ End of HAudio.c ------------------------ */

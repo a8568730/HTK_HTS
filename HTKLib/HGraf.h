@@ -428,4 +428,4 @@ ButtonId TrackButtons(HButton *btnlist, HEventRec hev);
 
 #endif  /* _HGRAF_H_ */
 
-/* --------------------------- End of HGraf.h ---------------------------- */
+/* ------------------------ End of HGraf.h ------------------------- */

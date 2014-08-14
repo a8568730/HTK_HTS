@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hlabel_version = "!HVER!HLabel:   3.4.1 [CUED 12/03/09]";
-char *hlabel_vc_id = "$Id: HLabel.c,v 1.11 2011/02/10 08:23:06 uratec Exp $";
+char *hlabel_vc_id = "$Id: HLabel.c,v 1.12 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1622,4 +1622,4 @@ ReturnStatus LSave(char *fname, Transcription *t, FileFormat fmt)
    return(SUCCESS);
 }
 
-/* ------------------------ End of HLabel.c ------------------------- */
+/* ------------------------ End of HLabel.c ------------------------ */

@@ -72,7 +72,7 @@
 /* ----------------------------------------------------------------- */
 
 char *arc_version = "!HVER!HArc:   3.4.1 [CUED 12/03/09]";
-char *arc_vc_id = "$Id: HArc.c,v 1.10 2011/02/10 08:23:06 uratec Exp $";
+char *arc_vc_id = "$Id: HArc.c,v 1.11 2011/06/16 04:18:28 uratec Exp $";
 
 
 /*
@@ -635,3 +635,5 @@ void ResetArc (void)
 {
    return;
 }
+
+/* ------------------------ End of HArc.c -------------------------- */

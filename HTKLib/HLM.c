@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hlm_version = "!HVER!HLM:   3.4.1 [CUED 12/03/09]";
-char *hlm_vc_id = "$Id: HLM.c,v 1.10 2011/02/10 08:23:06 uratec Exp $";
+char *hlm_vc_id = "$Id: HLM.c,v 1.11 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1061,5 +1061,4 @@ LogFloat LMTrans (LModel *lm, LMState src, LabId wdid, LMState *dest)
 }
 #endif
 
-
-/* ------------------------- End of HLM.c ------------------------- */
+/* ------------------------ End of HLM.c --------------------------- */

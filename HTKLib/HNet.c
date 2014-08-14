@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hnet_version = "!HVER!HNet:   3.4.1 [CUED 12/03/09]";
-char *hnet_vc_id = "$Id: HNet.c,v 1.10 2011/02/10 08:23:06 uratec Exp $";
+char *hnet_vc_id = "$Id: HNet.c,v 1.11 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -3709,4 +3709,4 @@ Network *ExpandWordNet(MemHeap *heap,Lattice *lat,Vocab *voc,HMMSet *hset)
    return(net);
 }   
 
-/* ------------------------ End of HNet.c ------------------------- */
+/* ------------------------ End of HNet.c -------------------------- */

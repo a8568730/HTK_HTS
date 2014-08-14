@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hutil_version = "!HVER!HUtil:   3.4.1 [CUED 12/03/09]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.30 2011/02/10 08:23:06 uratec Exp $";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.31 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1646,4 +1646,4 @@ Boolean *ParseConfBoolVec (MemHeap *x, char *inbuf, Boolean residual)
    return vec;
 }
 
-/* ---------------------------- End of HUtil.c --------------------------- */
+/* ------------------------ End of HUtil.c ------------------------- */

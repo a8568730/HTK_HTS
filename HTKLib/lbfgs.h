@@ -41,7 +41,7 @@
 /* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE           */
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
-/*                 File: lbfgs.h: L-BFGS routine                     */
+/*         File: lbfgs.h: L-BFGS routine                             */
 /* ----------------------------------------------------------------- */
 
 /* 
@@ -93,5 +93,4 @@ void lbfgs_(int* n, int* m, double* x, double* f, double* g,
 
 #endif  /* _LBFGS_H_ */
 
-/* ------------------------- End of lbfgs.h -------------------------- */
-
+/* ------------------------ End of lbfgs.h ------------------------- */

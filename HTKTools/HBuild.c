@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hbuild_version = "!HVER!HBuild:   3.4.1 [CUED 12/03/09]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 1.11 2011/02/10 08:23:06 uratec Exp $";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.12 2011/06/16 04:18:29 uratec Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.
@@ -802,8 +802,6 @@ Lattice *ProcessWordPair(MemHeap *latHeap, Vocab *voc, char *gramFn)
    return lat;
 }
 
-
-/* ------------------- End of HBuild.c --------------------------------- */
-
-
-
+/* ----------------------------------------------------------- */
+/*                      END:  HBuild.c                         */
+/* ----------------------------------------------------------- */

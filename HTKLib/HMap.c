@@ -536,3 +536,5 @@ void MAPUpdateModels(HMMSet *hset, UPDSet uFlags)
   /* Reset vfloor */
   ResetVFloor(hset,vFloor);
 }
+
+/* ------------------------ End of HMap.c -------------------------- */

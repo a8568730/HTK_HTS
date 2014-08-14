@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hshell_version = "!HVER!HShell:   3.4.1 [CUED 12/03/09]";
-char *hshell_vc_id = "$Id: HShell.c,v 1.14 2011/02/10 08:23:06 uratec Exp $";
+char *hshell_vc_id = "$Id: HShell.c,v 1.15 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"
 
@@ -2184,4 +2184,4 @@ void PrintStdOpts(char *opt)
    }
 }
 
-/* -------------------------- End of HShell.c ----------------------------- */
+/* ------------------------ End of HShell.c ------------------------ */

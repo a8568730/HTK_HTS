@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hparm_version = "!HVER!HParm:   3.4.1 [CUED 12/03/09]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.14 2011/02/10 08:23:06 uratec Exp $";
+char *hparm_vc_id = "$Id: HParm.c,v 1.15 2011/06/16 04:18:29 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -5212,4 +5212,4 @@ void AddToBuffer(ParmBuf pbuf, Observation o)
    pbuf->qst++; pbuf->qen++; 
 }
 
-/* --------------------------  HParm.c ------------------------- */
+/* ------------------------ End of HParm.c ------------------------- */

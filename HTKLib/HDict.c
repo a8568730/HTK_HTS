@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hdict_version = "!HVER!HDict:   3.4.1 [CUED 12/03/09]";
-char *hdict_vc_id = "$Id: HDict.c,v 1.8 2011/02/10 08:23:06 uratec Exp $";
+char *hdict_vc_id = "$Id: HDict.c,v 1.9 2011/06/16 04:18:28 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -477,4 +477,4 @@ ReturnStatus WriteDict(char *dictFn, Vocab *voc)
    return(SUCCESS);
 }
 
-/* ------------------------ End of HDict.c ----------------------- */
+/* ------------------------ End of HDict.c ------------------------- */

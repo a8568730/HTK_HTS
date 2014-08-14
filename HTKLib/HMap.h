@@ -29,7 +29,7 @@
 /*    **     This banner notice must not be removed      **    */
 /*                                                             */
 /* ----------------------------------------------------------- */
-/*            File: HMap.c  - MAP Model Updates                */
+/*         File: HMap.h  - MAP Model Updates                   */
 /* ----------------------------------------------------------- */
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
@@ -106,5 +106,4 @@ void MAPUpdateModels(HMMSet *hset, UPDSet uflags);
   2) TIEDHS model kind MAP updates not supported
 */
 
-
-
+/* ------------------------ End of HMap.h -------------------------- */

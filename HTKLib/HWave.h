@@ -235,5 +235,4 @@ Boolean ReadEsignalHeader(FILE *f, long *nSamp, long *sampP, short *sampS,
 
 #endif  /* _HWAVE_H_ */
 
-/* ------------------------ End of HWave.h ----------------------- */
-
+/* ------------------------ End of HWave.h ------------------------- */

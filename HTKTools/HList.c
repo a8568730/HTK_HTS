@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hlist_version = "!HVER!HList:   3.4.1 [CUED 12/03/09]";
-char *hlist_vc_id = "$Id: HList.c,v 1.8 2011/02/10 08:23:06 uratec Exp $";
+char *hlist_vc_id = "$Id: HList.c,v 1.9 2011/06/16 04:18:30 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

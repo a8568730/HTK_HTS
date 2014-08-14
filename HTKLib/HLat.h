@@ -160,3 +160,5 @@ void ApplyWPNet2LabLat(Lattice *lat, Lattice *wdNet);
 #endif
 
 #endif  /* _HLAT_H_ */
+
+/* ------------------------ End of HLat.h -------------------------- */

@@ -247,4 +247,4 @@ int SamplesToPlay(AudioOut a);
 
 #endif  /* _HAUDIO_H_ */
 
-/* ------------------------ End of HAudio.h ----------------------- */
+/* ------------------------ End of HAudio.h ------------------------ */

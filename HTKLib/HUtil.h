@@ -348,4 +348,4 @@ Boolean *ParseConfBoolVec(MemHeap *x, char *inbuf, Boolean residual);
 
 #endif  /* _HUTIL_H_ */
 
-/* ------------------------- End of HUtil.h --------------------------- */
+/* ------------------------ End of HUtil.h ------------------------- */

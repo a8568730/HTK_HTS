@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmodel_version = "!HVER!HModel:   3.4.1 [CUED 12/03/09]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.40 2011/02/10 08:23:06 uratec Exp $";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.42 2011/06/16 05:07:56 bonanza Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -2027,8 +2027,8 @@ static StreamInfo *GetStreamInfo(HMMSet *hset, Source *src, Token *tok, int s)
       if(GetToken(src,tok)<SUCCESS){
          HMError(src,"GetToken failed");
             return(NULL);
-         }
       }
+   }
       else 
          sti->stream = s;
       
@@ -2041,7 +2041,7 @@ static StreamInfo *GetStreamInfo(HMMSet *hset, Source *src, Token *tok, int s)
          if (GetToken(src,tok)<SUCCESS) {
             HMError(src,"GetToken failed");
             return(NULL);
-   }
+         }
       } else 
          sti->nMix=1;
 
@@ -2394,6 +2394,7 @@ static LinXForm* GetLinXForm(HMMSet *hset, Source *src, Token *tok)
     if (hset==NULL) hmem = &xformStack;
     else hmem = hset->hmem;
     xf = (LinXForm *)New(hmem,sizeof(LinXForm));
+    memset(xf, 0, sizeof(LinXForm));
     if (!ReadInt(src,&(xf->vecSize),1,tok->binForm)){
       HRError(7013,"GetLinXForm: cannot read vector size");
       return(NULL);
@@ -2648,6 +2649,7 @@ static AdaptXForm* GetAdaptXForm(HMMSet *hset, Source *src, Token *tok)
     xform->rtree = NULL;
     xform->nUse = 0;
     xform->xformName = NULL;
+    xform->swapXForm = xform->parentXForm = NULL;
     if (!ReadString(src,buf)){
       HRError(7013,"GetAdaptXForm: cannot read Transform Kind");
       return(NULL);
@@ -6256,4 +6258,62 @@ float ReturnIgnoreValue (void)
    return ignoreValue;
 }
 
-/* ------------------------- End of HModel.c --------------------------- */
+/* -------------- Calculate symmetric KL divergence ------------------- */
+
+/* EXPORT -> CalKLDist: Calculate symmetric KL divergence of single pdf, only support diagonal covariance matrix */
+float CalKLDist(MixPDF * mp1, MixPDF * mp2)
+{
+   int i, vsize;
+   float kld1, kld2, diff;
+
+   if (VectorSize(mp1->mean) != VectorSize(mp2->mean))
+      HError(6611, "CalKLDist: Only support same vector size");
+   if (mp1->ckind != DIAGC || mp2->ckind != DIAGC)
+      HError(6611, "CalKLDist: Only support diagonal covariance matrix");
+
+   vsize = VectorSize(mp1->mean);
+
+   kld1 = kld2 = 0.0;
+   kld1 -= vsize;
+   kld2 -= vsize;
+   for (i = 1; i <= vsize; i++) {
+      diff = (mp2->mean[i] - mp1->mean[i]);
+      diff *= diff;
+      kld1 += mp1->cov.var[i] / mp2->cov.var[i];
+      kld1 += diff / mp2->cov.var[i];
+      kld2 += mp2->cov.var[i] / mp1->cov.var[i];
+      kld2 += diff / mp1->cov.var[i];
+   }
+
+   return (kld1 + kld2) * 0.5f;
+}
+
+/* EXPORT -> CalStrKLDist: Calculate symmetric KL divergence of stream,
+                           only support single mixture distribution and MSD distribution */
+float CalStrKLDist(StreamInfo *sti1, StreamInfo *sti2)
+{
+   MixtureElem *me1, *me2;
+   MixPDF *mp1, *mp2;
+   float kld, wt1, wt2;
+   int m;
+
+   kld = 0.0;
+   me1 = sti1->spdf.cpdf+1;
+   me2 = sti2->spdf.cpdf+1;
+   for (m = 1; m <= sti1->nMix; m++, me1++, me2++) {
+     if (sti1->nMix > 1) {
+         wt1 = me1->weight;
+         wt2 = me2->weight;
+         kld += wt1 * log(wt1) - wt1 * log(wt2);
+         kld += wt2 * log(wt2) - wt2 * log(wt1);
+      }
+
+      mp1 = me1->mpdf;
+      mp2 = me2->mpdf;
+      kld += CalKLDist(mp1, mp2);
+   }
+
+   return kld;
+}
+
+/* ------------------------ End of HModel.c ------------------------ */

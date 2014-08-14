@@ -251,8 +251,6 @@ int TimeToNFrames(float time, ArcInfo *aInfo);
    as the first and last frames of the phone).
  */
 
-/* ------------------------- End of Arc.h --------------------------- */
-
 void AttachMPEInfo(ArcInfo *aInfo); /* attaches the "mpe" fields  */
 
 Boolean LatInLat(Lattice *numLat, Lattice *denLat);
@@ -262,3 +260,5 @@ Boolean LatInLat(Lattice *numLat, Lattice *denLat);
 
 void InitArc(void);
 void ResetArc(void);
+
+/* ------------------------ End of Arc.h --------------------------- */
