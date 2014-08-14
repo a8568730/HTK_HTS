@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,8 +64,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hquant_version = "!HVER!HQuant:   3.4 [CUED 25/04/06]";
-char *hquant_vc_id = "$Id: HQuant.c,v 1.4 2008/05/30 07:19:08 zen Exp $";
+char *hquant_version = "!HVER!HQuant:   3.4.1 [CUED 12/03/09]";
+char *hquant_vc_id = "$Id: HQuant.c,v 1.5 2009/12/11 10:00:55 uratec Exp $";
 
 /* 
    This program calculates a vector quantisation table from a
@@ -155,8 +155,8 @@ void InitStreamVars(void)
 
 void ReportUsage(void)
 {
-   printf("\nUSAGE: HQuant [options] vqFile trainFiles...\n\n" );
    printf("\nModified for HTS\n");
+   printf("\nUSAGE: HQuant [options] vqFile trainFiles...\n\n" );
    printf(" Option                                       Default\n\n");
    printf(" -d      Use diagonal cov Mahalanobis         Euclidean\n");
    printf(" -f      Use full covariance Mahalanobis      Euclidean\n");
@@ -304,7 +304,7 @@ int main(int argc, char *argv[])
       ClusterVecs(dSeq,stream);
    }
    WriteVQTable(cs,vqfn);
-   
+
    ResetTrain();
    ResetParm();
    ResetModel();

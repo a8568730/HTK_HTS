@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,7 +77,7 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-/* !HVER!HNET:   3.3 [CUED 28/04/05] */
+/* !HVER!HNET:   3.4.1 [CUED 12/03/09] */
 
 /*
    Nets come in two forms.
@@ -341,7 +341,6 @@ Lattice *ReadLattice(FILE *file, MemHeap *heap, Vocab *voc,
 
 Lattice *ReadOneLattice(Source *src, MemHeap *heap, Vocab *voc, 
                         Boolean shortArc, Boolean add2Dict);
-                        
 /*
    Read lattice from file and creates a lattice in memory using heap.
    Word names in the lattice are mapped to the internal Word type

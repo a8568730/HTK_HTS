@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hutil_version = "!HVER!HUtil:   3.4 [CUED 25/04/06]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.20 2008/06/23 09:15:55 zen Exp $";
+char *hutil_version = "!HVER!HUtil:   3.4.1 [CUED 12/03/09]";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.23 2009/12/14 03:51:59 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -133,7 +133,7 @@ void ResetUtil(void)
    return;
 }
 
-/* EXPORT->ResetUtilItemList: frees all the memory from the ItemlList heap */
+/* EXPORT->ResetUtilItemList: frees all the memory from the ItemList heap */
 void ResetUtilItemList(void)
 {
    DeleteHeap(&itemHeap);
@@ -205,6 +205,7 @@ MixPDF *CloneMixPDF(HMMSet *hset, MixPDF *s, Boolean sharing)
    }
    t = (MixPDF*)New(hset->hmem,sizeof(MixPDF));
    t->nUse = 0; t->hook = NULL; t->gConst = s->gConst;
+   t->info = s->info; /* handles semi-tied case */
    t->mean = CloneSVector(hset->hmem,s->mean,sharing);
    t->ckind = s->ckind;
    switch(s->ckind) {
@@ -269,10 +270,9 @@ StateInfo *CloneState(HMMSet *hset, StateInfo *ssi, Boolean sharing)
    tsi->nUse = 0; tsi->hook = NULL;
    tste = (StreamElem *)New(hset->hmem,S*sizeof(StreamElem));
    tsi->pdf = tste-1; sste = ssi->pdf + 1;
-
-   for (s=1; s<=S; s++,tste++,sste++)
+   for (s=1; s<=S; s++,tste++,sste++){
       tste->info = ClonePDF(hset,s,sste->info,sharing);
-
+   }
    tsi->dur     = CloneSVector(hset->hmem,ssi->dur,sharing);
    tsi->weights = CloneSVector(hset->hmem,ssi->weights,sharing);
    return tsi;
@@ -314,13 +314,8 @@ void NewHMMScan(HMMSet *hset, HMMScanState *hss)
 void EndHMMScan(HMMScanState *hss)
 {
    ClearSeenFlags(hss->hset,CLR_ALL);
-   hss->hmm = NULL;
-   hss->se  = NULL;
-   hss->si  = NULL;
-   hss->ste = NULL;
-   hss->sti = NULL;
-   hss->me  = NULL;
-   hss->mp  = NULL;
+   hss->hmm = NULL; hss->se = NULL; hss->ste = NULL; hss->me = NULL;
+   hss->si = NULL; hss->sti = NULL; hss->mp = NULL;
 }
 
 /* EXPORT->GoNextHMM: Move to next unseen HMM in HMM set */
@@ -333,7 +328,7 @@ Boolean GoNextHMM(HMMScanState *hss)
       mac = hss->mac->next;
    else
       mac = NULL;
-      
+
    if (mac==NULL) hss->h++;
    for (;hss->h<MACHASHSIZE;hss->h++)
       for (mac=((mac==NULL)?hss->hset->mtab[hss->h]:mac);
@@ -351,8 +346,7 @@ Boolean GoNextHMM(HMMScanState *hss)
             if (hss->isCont){
                hss->me = hss->sti->spdf.cpdf+1;
                hss->mp = hss->me->mpdf;
-            } 
-            else if  (hss->hset->hsKind == TIEDHS) {
+            } else if  (hss->hset->hsKind == TIEDHS) {
                hss->mp = hss->hset->tmRecs[hss->s].mixes[hss->m];
                hss->me = NULL;
             }
@@ -383,15 +377,14 @@ Boolean GoNextState(HMMScanState *hss, Boolean noSkip)
    if (ok) {
       Touch(&hss->si->nUse);
       if (stepping){
-         hss->ste = hss->si->pdf+1; hss->sti=hss->ste->info;
-         hss->s=1;
+         hss->ste = hss->si->pdf+1; hss->s=1;
+         hss->sti=hss->ste->info;
          M = hss->sti->nMix;
          hss->M = (M<0)?-M:M; hss->m=1;
          if (hss->isCont){
             hss->me = hss->sti->spdf.cpdf+1;
             hss->mp = hss->me->mpdf;
-         } 
-         else if  (hss->hset->hsKind == TIEDHS) {
+         } else if  (hss->hset->hsKind == TIEDHS) {
             hss->mp = hss->hset->tmRecs[hss->s].mixes[1];
             hss->me = NULL;
          }
@@ -427,8 +420,7 @@ Boolean GoNextStream(HMMScanState *hss, Boolean noSkip)
          if (hss->isCont){
             hss->me = hss->sti->spdf.cpdf+1;
             hss->mp = hss->me->mpdf;
-         }
-         else if  (hss->hset->hsKind == TIEDHS) {
+         } else if  (hss->hset->hsKind == TIEDHS) {
             hss->mp = hss->hset->tmRecs[hss->s].mixes[1];
             hss->me = NULL;
          }
@@ -451,13 +443,11 @@ Boolean GoNextMix(HMMScanState *hss, Boolean noSkip)
             if (hss->isCont) {
                ++hss->me; 
                hss->mp = hss->me->mpdf;
-            } 
-            else {
+            } else {
                hss->mp = hss->hset->tmRecs[hss->s].mixes[hss->m];
                hss->me = NULL;
             }
-         } 
-         else if (noSkip)
+         } else if (noSkip)
             return FALSE;
          else
             ok = GoNextStream(hss,FALSE);
@@ -466,9 +456,8 @@ Boolean GoNextMix(HMMScanState *hss, Boolean noSkip)
          Touch(&hss->mp->nUse);
          return TRUE;
       }
-   } 
-   else { /* There are no components in a DISCRETEHS system - use GoNextSt     394 ream instead */
-      HError(7231,"GoNextMix: Cannot specify mixture components unless conti     395 nuous");
+   } else { /* There are no components in a DISCRETEHS system - use GoNextStream instead */
+      HError(7231,"GoNextMix: Cannot specify mixture components unless continuous");
    }
    hss->me = NULL;
    return FALSE;
@@ -690,13 +679,13 @@ void SetSet(IntSet s)
 }
 
 /* DupSet: duplicate given set to newset*/
-void DupSet(IntSet oldSet, IntSet newSet)
+void DupSet(IntSet oldSet, IntSet *newSet)
 {
    int i;
 
-   newSet = CreateSet(oldSet.nMembers);   
+   *newSet = CreateSet(oldSet.nMembers);   
    for (i=1;i<=oldSet.nMembers;i++) 
-      newSet.set[i] = oldSet.set[i];
+      newSet->set[i] = oldSet.set[i];
 }
 
 /* CopySet: copy given set to newset*/
@@ -1003,33 +992,48 @@ static void PStatecomp(ILink models, ILink *ilist, char *type,
       if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
          HError(7231,"PStatecomp: Cannot specify streams or mixes unless continuous");
       str = CreateSet(SMAX);
-      AddMember(str,1);
+      SetSet(str);
       SkipSpaces();
       if (ch == '[')
          PMix(models,ilist,type,states,str,hset);
-      FreeSet(str);
-      break;
-   case STREAM_KEY:
-      if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
-         HError(7231,"PStatecomp: Cannot specify streams or mixes unless continuous");
-      str = CreateSet(SMAX);
-      PIndex(str);
-         SkipSpaces();
-      if (ch == '.') {
-         ReadCh();
-         if (GetKey() != MIX_KEY)
-            EdError("Mix expected");
-      SkipSpaces();
-      if (ch=='[')
-            PMix(models,ilist,type,states,str,hset);
       else {
          ChkType('p',type);
          for (h=models; h!=NULL; h=h->next) {
             hmm = h->owner;
             for (j=2; j<hmm->numStates; j++)
-                  if (IsMember(states,j)) {
+               if (IsMember(states,j))
+                  for (s=1; s<=hset->swidth[0];s++)
+                     if (IsMember(str,s)) { /* tie -> spdf */
+                        if (trace & T_ITM)
+                           printf(" %12s.state[%d].stream[%d]\n",
+                                  HMMPhysName(hset,hmm),j,s);
+                           AddItem(hmm,hmm->svec[j].info->pdf+s,ilist);
+                     }
+         }
+      }
+      FreeSet(str);
+      break;
+   case STREAM_KEY:
+      if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
+         HError(7231,"PStatecomp: Cannot specify streams or mixes unless continuous");
+         str = CreateSet(SMAX);
+         PIndex(str);
+         SkipSpaces();
+         if (ch == '.') {
+         ReadCh();
+         if (GetKey() != MIX_KEY)
+            EdError("Mix expected");
+      SkipSpaces();
+      if (ch=='[')
+         PMix(models,ilist,type,states,str,hset);
+      else {
+         ChkType('p',type);
+         for (h=models; h!=NULL; h=h->next) {
+            hmm = h->owner;
+            for (j=2; j<hmm->numStates; j++)
+               if (IsMember(states,j))    
                   for (s=1; s<=hset->swidth[0];s++)   
-                        if (IsMember(str,s)) { /* tie -> spdf */
+                     if (IsMember(str,s)) { /* tie -> spdf */
                         if (trace & T_ITM)
                            printf(" %12s.state[%d].stream[%d]\n",
                                   HMMPhysName(hset,hmm),j,s);
@@ -1037,9 +1041,8 @@ static void PStatecomp(ILink models, ILink *ilist, char *type,
                      }
          }
       }
-         }
-      }
-      else {
+	 }
+	 else {
          ChkType('p',type);
          for (h=models; h!=NULL; h=h->next) {
             hmm = h->owner;
@@ -1058,7 +1061,7 @@ static void PStatecomp(ILink models, ILink *ilist, char *type,
                         }
                }
          }
-      }
+	 }
       if (streams != NULL)
          for (s=1;s<=SMAX;s++)
             streams->set[s] = str.set[s];
@@ -1139,7 +1142,7 @@ static void PHIdent(ILink *models, HMMSet *hset)
    GetAlpha(pattern);
    p = pattern; h=0;
    while ((*p != '\0') && (h<MAXSTRLEN) && (fullName)) {
-      if ((*p=='*')||(*p=='?')) fullName=FALSE;
+     if ((*p=='*')||(*p=='?')) fullName=FALSE;
      h++; 
      p = pattern+h;
    }
@@ -1151,8 +1154,7 @@ static void PHIdent(ILink *models, HMMSet *hset)
             printf("%s ",hmmId->name);
          AddItem((HLink) q->structure, q->structure, models);
       }
-   } 
-   else { /* need to search for all models that match */
+   } else { /* need to search for all models that match */
      for (h=0; h<MACHASHSIZE; h++)
        for (q=hset->mtab[h]; q!=NULL; q=q->next)
          if (((q->type=='h') && (parsePhysicalHMM)) || ((q->type=='l') && (!parsePhysicalHMM))) {

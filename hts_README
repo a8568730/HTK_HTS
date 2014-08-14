@@ -1,108 +1,35 @@
-================================================================================
-             The HMM-based Speech Synthesis System (HTS) version 2.1           
-                             release June 27, 2008
+===============================================================================
+        The HMM-based Speech Synthesis System (HTS) version 2.1.1 beta
+                           release December 25, 2009
 
 
 The HMM-Based Speech Synthesis System (HTS) (http://hts.sp.nitech.ac.jp/) has
 been being developed by the HTS working group (see "Who we are" below) and 
-others (see "Acknowledgments" in the separate file).  The training part of HTS
-has been implemented as a modified version of the Hidden Markov Model Toolkit
-(HTK) (http://htk.eng.cam.ac.uk/).  Major modifications which we have made to
-HTK are listed below:
-                                
- * Context clustering based on the MDL criterion (instead of ML)
- * Stream-dependent context clustering
- * Multi-space probability distribution (MSD) as state output
-   PDFs (for F0 pattern modeling)
- * State duration modeling and clustering
+others (see "Acknowledgments" below). The training part of HTS has been
+implemented as a modified version of the Hidden Markov Model Toolkit (HTK)
+(http://htk.eng.cam.ac.uk/).
 
-Related publications about the techniques and algorithms used in HTS can be
-found at http://hts.sp.nitech.ac.jp/?Publications
-
-The current version does not include any text analyzer but the Festival Speech
-Synthesis System (http://www.festvox.org/festival/), DFKI MARY Text-to-Speech
-System (http://mary.dfki.de/), or other text analyzers can be used with HTS.
-Since version 1.1, HTS has included a small run-time synthesis engine called
-hts_engine.  Its footprint is usually less than 5 Mbytes including HMMs.
-Because the synthesis engine can run without the HTK library, users can develop
-their own open or proprietary softwares using hts_engine.
-
-This distribution comes with demo scripts for training speaker-dependent and 
-speaker-adaptation systems using "CMU ARCTIC databases"
-(http://www.festvox.org/cmu_arctic/).  These demo scripts generate "voices" 
-which can be used with Festival.  By applying the patch codes provided by DFKI
-(http://mary.opendfki.de/wiki/HMMVoiceCreation), they can generate "voices"
-which can be used with DFKI MARY.
-
-Six HTS voices for Festival 1.96 trained by CMU ARCTIC databases are also
-released with HTS version 2.1.  Each of HTS voices consists of HMMs trained by
-the demo script, and can be used as a "voice" of Festival without any other HTS
-tools.
-
-***** Notes for Japanese speech synthesis *****
-
-A demo script using the Nitech database for speech synthesis "Nitech Jp ATR503
-m001" is also prepared for training Japanese voices.  Voices trained by the
-demo script can be used on GalateaTalk, which is a speech synthesis module of an
-open-source toolkit for anthropomorphic spoken dialogue agents developed in
-Galatea project (http://hil.t.u-tokyo.ac.jp/~galatea/), without any other HTS 
-tools.
-
-An HTS voice for GalateaTalk trained by the demo script is also released with
-HTS version 2.1.
-
-********************************************************************************
-                           What's new in version 2.1
-********************************************************************************
-
- * Many bug fixes
- * Released under the New and Simplified BSD license
- * Simple documentation
- * 64-bit compile support
- * MAXSTRLEN (max length of strings), SMAX (max # of streams), and PAT_LEN (max
-   length of patterns)  can be set through configure script like
-
-   ./configure MAXSTRLEN=1024 SMAX=20
-
- * HFB:
-  - HSMM training and adaptation
- * HAdapt:
-  - SMAPLR/CSMAPLR adaptation
- * HGen:
-  - Speech parameter generation algorithm considering GV
-  - Random generation of state transitions, state durations, 
-    and mixture components (by configuration variable RNDFLAGS)
- * HMGenS:
-  - Speech parameter generation from HSMMs
- * HHEd:
-  - Add DM command to delete existing macros
-  - Add IT command to impose pre-built trees in clustering
-  - Add JM command to merge difference models on state or stream levels
-  - MU command supports '*2' style mixing up
-  - MU command supports mixture-level occupancy threshold in mixing up (by
-    configuration variable MINMIXOCC)
-
-********************************************************************************
+*******************************************************************************
                                     Copying
-********************************************************************************
+*******************************************************************************
 
-The basic core system of HTS version 2.1 is released as a patch code to HTK
-version 3.4.  The patch code is released under the New and Simplified BSD
-license (see http://www.opensource.org/).  However, it should be noted that
-once you apply the patch to the HTK source code, you must obey the license of
-HTK.  Using and distributing this software in the form of patch code to HTK and
-its documentation is free (without restriction including without limitation the
-rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of this work, and to permit persons to whom this work is furnished to do
-so) subject to the conditions in the following license:
+The basic core system of HTS version 2.1.1 beta is released as a patch code to
+HTK version 3.4.1. The patch code is released under the New and Simplified BSD
+license (see http://www.opensource.org/). However, it should be noted that once
+you apply the patch to the HTK source code, you must obey the license of HTK.
+Using and distributing this software in the form of patch code to HTK and its
+documentation is free (without restriction including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of this work, and to permit persons to whom this work is furnished
+to do so) subject to the conditions in the following license:
 
-/*  ---------------------------------------------------------------  */
+/* ----------------------------------------------------------------- */
 /*           The HMM-Based Speech Synthesis System (HTS)             */
-/*           developed by HTS Working Group                          */
-/*           http://hts.sp.nitech.ac.jp/                             */
-/*  ---------------------------------------------------------------  */
+/*           hts_engine API developed by HTS Working Group           */
+/*           http://hts-engine.sourceforge.net/                      */
+/* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -138,47 +65,78 @@ so) subject to the conditions in the following license:
 /* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY    */
 /* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE           */
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
-/*  ---------------------------------------------------------------  */
+/* ----------------------------------------------------------------- */
 
 Although the patch code is free, we still offer no warranties and no
-maintenance.  We will continue to endeavor to fix bugs and answer queries when 
-can, but are not in a position to guarantee it.  We will consider consultancy if
+maintenance. We will continue to endeavor to fix bugs and answer queries when
+can, but are not in a position to guarantee it. We will consider consultancy if
 desired, please contacts us for details.
 
-If you are using HTS in commercial environment, even though no license is
-required, we would be grateful if you let us know as it helps justify ourselves
-to our various sponsors.  We also strongly encourage you to
+If you are using HTS in commercial environment, even though no license
+is required, we would be grateful if you let us know as it helps justify
+ourselves to our various sponsors. We also strongly encourage you to
 
  * refer to the use of HTS in any publications that use HTS
  * report bugs, where possible with bug fixes, that are found
 
-********************************************************************************
+See "COPYING" in the same directory for details.
+
+*******************************************************************************
                                  Installation
-********************************************************************************
+*******************************************************************************
 
-Please expand HTS-2.1_for_HTK-3.4.tar.bz2 and see the extracted file "INSTALL."
-Note that HTS requires HTK.
+See "INSTALL" in the same directory for details.
 
-********************************************************************************
+*******************************************************************************
+                                 Documentation
+*******************************************************************************
+
+Reference manual of HTS is available at
+
+http://hts.sp.nitech.ac.jp/
+
+*******************************************************************************
+                                  Acknowledgements
+*******************************************************************************
+
+Keiichi Tokuda
+Keiichiro Oura
+Heiga Zen
+Junichi Yamagishi
+Takayoshi Yoshimura
+Masatsune Tamura
+Shinji Sako
+Noboru Miyazaki
+Tetsuya Yamada
+Takashi Masuko
+Takao Kobayashi
+Tadashi Kitamura
+Satoshi Imai
+Alan Black
+Takashi Nose
+Tomoki Toda
+Kei Hashimoto
+
+*******************************************************************************
                                   Who we are
-********************************************************************************
+*******************************************************************************
 
-The HTS working group is a voluntary group for developing the HMM-Based Speech 
-Synthesis System.  Current members are
+The HTS working group is a voluntary group for developing the HMM-Based Speech
+Synthesis System. Current members are
 
  Keiichi Tokuda      http://www.sp.nitech.ac.jp/~tokuda/
- (Principle Designer)
- Heiga Zen           http://www.sp.nitech.ac.jp/~zen/
- (Main Maintainer)
- Junichi Yamagishi   http://homepages.inf.ed.ac.uk/jyamagis/
- Alan W. Black       http://www.cs.cmu.edu/~awb/
- Takashi Masuko
- Shinji Sako         http://www.mmsp.nitech.ac.jp/~sako/
- Tomoki Toda         http://spalab.naist.jp/~tomoki/index_e.html
- Takashi Nose        
+ (Produce and Design)
  Keiichiro Oura      http://www.sp.nitech.ac.jp/~uratec/
+ (Design and Development, Main Maintainer)
+ Kei Hashimoto       http://www.sp.nitech.ac.jp/~bonanza/
+ Heiga Zen
+ Junichi Yamagishi   http://homepages.inf.ed.ac.uk/jyamagis/
+ Tomoki Toda         http://spalab.naist.jp/~tomoki/index_e.html
+ Takashi Nose
+ Shinji Sako         http://www.mmsp.nitech.ac.jp/~sako/
+ Alan W. Black       http://www.cs.cmu.edu/~awb/
 
-and the members are dynamically changing.  The current formal contact address of
-HTS working group and a mailing list for HTS users can be found at 
+and the members are dynamically changing. The current formal contact address of
+HTS working group and a mailing list for HTS users can be found at
 http://hts.sp.nitech.ac.jp/
-================================================================================
+===============================================================================

@@ -35,7 +35,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -73,8 +73,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hlvrec_version = "!HVER!HLVRec:   3.4 [GE 25/04/06]";
-char *hlvrec_vc_id = "$Id: HLVRec.c,v 1.5 2008/05/30 07:19:22 zen Exp $";
+char *hlvrec_version = "!HVER!HLVRec:   3.4.1 [GE 12/03/09]";
+char *hlvrec_vc_id = "$Id: HLVRec.c,v 1.6 2009/12/11 10:00:44 uratec Exp $";
 
 
 #include "HShell.h"
@@ -128,6 +128,12 @@ static int gcFreq = 100;          /* run Garbage Collection every gcFreq frames 
 
 static Boolean pde = FALSE;      /* partial distance elimination */
 
+static Boolean useOldPrune = FALSE;     /* backward compatibility for max model and reltok pruning etc. */
+static Boolean mergeTokOnly = TRUE;     /* if merge token set with pruning */
+static float maxLNBeamFlr = 0.8;        /* maximum percentile of glogal beam for max model pruning */
+static float dynBeamInc = 1.3;          /* dynamic beam increment for max model pruning */
+#define LAYER_SIL_NTOK_SCALE 6          /* SIL layer re-adjust token set size e.g. 6 */
+
 /* -------------------------- Global Variables --------------------- */
 
 RelToken startTok = {NULL, NULL, 0.0, 0.0, NULL};
@@ -156,6 +162,7 @@ void InitDecoderInst (DecoderInst *dec, LexNet *net, HTime sampRate, LogFloat be
                       LogFloat fastlmlaBeam);
 void CleanDecoderInst (DecoderInst *dec);
 static TokenSet *NewTokSetArray(DecoderInst *dec, int N);
+static TokenSet *NewTokSetArrayVar(DecoderInst *dec, int N, Boolean isSil);
 static LexNodeInst *ActivateNode (DecoderInst *dec, LexNode *ln);
 static void DeactivateNode (DecoderInst *dec, LexNode *ln);
 static void PruneTokSet (DecoderInst *dec, TokenSet *ts);
@@ -283,6 +290,14 @@ void InitLVRec(void)
       if (GetConfBool (cParm, nParm, "FORCELATOUT",&b)) forceLatOut = b;
       if (GetConfInt (cParm, nParm,"GCFREQ", &i)) gcFreq = i;
       if (GetConfBool (cParm, nParm, "PDE",&b)) pde = b;
+      if (GetConfBool (cParm, nParm, "USEOLDPRUNE",&b)) useOldPrune = b;
+      if (GetConfBool (cParm, nParm, "MERGETOKONLY",&b)) mergeTokOnly = b;
+      if (GetConfFlt (cParm, nParm, "MAXLNBEAMFLR", &f)) maxLNBeamFlr = f;
+      if (GetConfFlt (cParm, nParm, "DYNBEAMINC", &f)) dynBeamInc = f;
+
+      if (useOldPrune) {
+         mergeTokOnly = FALSE; maxLNBeamFlr = 0.0; dynBeamInc = 1.1;
+      }
    }
 
 #if 0
@@ -357,7 +372,9 @@ DecoderInst *CreateDecoderInst(HMMSet *hset, FSLM *lm, int nTok, Boolean latgen,
    /* alloc Heap for RelToken arrays */
    CreateHeap (&dec->relTokHeap, "Decoder RelToken array heap",
                MHEAP, dec->nTok * sizeof (RelToken), 1, 1000, 5000);
-   
+
+   CreateHeap (&dec->lrelTokHeap, "Decoder RelToken array heap",
+               MHEAP, LAYER_SIL_NTOK_SCALE * dec->nTok * sizeof (RelToken), 1, 1000, 5000);   
    
    /* alloc heap for word end hyps */
    CreateHeap (&dec->weHypHeap, "WordendHyp heap", MHEAP, sizeof (WordendHyp), 
@@ -487,6 +504,7 @@ void InitDecoderInst (DecoderInst *dec, LexNet *net, HTime sampRate, LogFloat be
    for (i = 0; i < dec->maxNStates; ++i) 
       ResetHeap (&dec->tokSetHeap[i]);
    ResetHeap (&dec->relTokHeap);
+   ResetHeap (&dec->lrelTokHeap);
 
    if (trace & T_MEM) {
       printf ("memory stats at start of recognition\n");
@@ -528,10 +546,10 @@ void InitDecoderInst (DecoderInst *dec, LexNet *net, HTime sampRate, LogFloat be
 
    /* alloc temp tokenset arrays for use in PropagateInternal */
    for (i=1; i <= dec->maxNStates; ++i) 
-      dec->tempTS[i] = NewTokSetArray (dec, i);
+      dec->tempTS[i] = NewTokSetArrayVar (dec, i, TRUE);
 
    /* alloc winTok array for MergeTokSet */
-   dec->winTok = (RelToken *) New (&dec->heap, 2 * dec->nTok * sizeof (RelToken));
+   dec->winTok = (RelToken *) New (&dec->heap, LAYER_SIL_NTOK_SCALE * dec->nTok * sizeof (RelToken));
 
 
    /* init lists of active LexNode Instances  */
@@ -605,6 +623,27 @@ static TokenSet *NewTokSetArray(DecoderInst *dec, int N)
    return ts;
 }
 
+/* NewTokSetArrayVar:
+
+   allocating rel token array for lex node, larger array size
+   for silence layer nodes
+*/
+static TokenSet *NewTokSetArrayVar(DecoderInst *dec, int N, Boolean isSil)
+{
+   TokenSet *ts;
+   int i;
+
+   ts= (TokenSet *) New (&dec->tokSetHeap[N-1], N * sizeof (TokenSet));
+
+   /* clear token set */
+   for (i = 0; i < N; ++i) {
+      ts[i].score = 0.0;
+      ts[i].n = 0;
+      ts[i].id = 0;             /* id=0 means empty TokSet */
+      ts[i].relTok = (isSil) ? (RelToken *) New (&dec->lrelTokHeap, LAYER_SIL_NTOK_SCALE * dec->nTok * sizeof (RelToken)) : (RelToken *) New (&dec->relTokHeap, dec->nTok * sizeof (RelToken));
+   }
+   return ts;
+}
 
 
 /* ActivateNode
@@ -653,7 +692,7 @@ static LexNodeInst *ActivateNode (DecoderInst *dec, LexNode *ln)
    }
 
    /* alloc N tokensets */
-   inst->ts = NewTokSetArray (dec, N);          /*  size is  N * sizeof (TokenSet) */
+/*    inst->ts = NewTokSetArray (dec, N);          /\*  size is  N * sizeof (TokenSet) *\/ */
 
    inst->best = LZERO;
 
@@ -664,6 +703,11 @@ static LexNodeInst *ActivateNode (DecoderInst *dec, LexNode *ln)
       --l;
       assert (l >= 0);
    }
+   inst->ts = NewTokSetArrayVar (dec, N, (l == LAYER_SIL));          /*  size is  N * sizeof (TokenSet) */
+#ifdef DEBUG_TRACE
+   if (trace & T_ACTIV)
+      printf ("allocating %d tokens in array for node in layer %d\n", ((l == LAYER_SIL) ? LAYER_SIL_NTOK_SCALE : 1) * dec->nTok, l);
+#endif
 
    /* add to linked list */
    inst->next = dec->instsLayer[l];
@@ -679,7 +723,7 @@ static LexNodeInst *ActivateNode (DecoderInst *dec, LexNode *ln)
 
 static void DeactivateNode (DecoderInst *dec, LexNode *ln)
 {
-   int N, i;
+   int N, i, l;
 
 #ifdef COLLECT_STATS
    ++dec->stats.nDeActivate;
@@ -711,8 +755,16 @@ static void DeactivateNode (DecoderInst *dec, LexNode *ln)
    }
    
 #if 1
-   for (i = 0; i < N; ++i)
-      Dispose (&dec->relTokHeap, ln->inst->ts[i].relTok);
+   /* find right layer */
+   l = dec->nLayers-1;
+   while (dec->net->layerStart[l] > ln) {
+      --l;
+      assert (l >= 0);
+   }
+   for (i = 0; i < N; ++i) {
+      if (l == LAYER_SIL) Dispose (&dec->lrelTokHeap, ln->inst->ts[i].relTok);
+      else Dispose (&dec->relTokHeap, ln->inst->ts[i].relTok);
+   }
 
    Dispose (&dec->tokSetHeap[N-1], ln->inst->ts);
    Dispose (&dec->nodeInstanceHeap, ln->inst);

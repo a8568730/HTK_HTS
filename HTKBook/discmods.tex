@@ -23,7 +23,7 @@
 \mychap{Discrete and Tied-Mixture Models}{discmods}
 
 \sidepic{Tool.disc}{80}{ 
-Most of the discussion so far has focussed on using \HTK\
+Most of the discussion so far has focused on using \HTK\
 to model sequences of continuous-valued vectors.  In contrast, this chapter
 is mainly concerned with using \HTK\ to model sequences of discrete
 symbols.  
@@ -121,7 +121,7 @@ and normalising.  The final model is renamed \texttt{dhmm} and stored in
 the directory \texttt{hmm0}.
 
 When building discrete HMMs, it is important to floor the discrete
-probabilites so that no symbol has a zero probability.  This is 
+probabilities so that no symbol has a zero probability.  This is 
 achieved using the \texttt{-w} option which specifies a floor value
 as a multiple of a global constant called \texttt{MINMIX} whose
 value is $10^{-5}$. 
@@ -147,7 +147,7 @@ is represented by the mean value of the speech vectors belonging
 to that partition and optionally  a variance representing the spread.
 Each incoming speech vector is then
 matched with each partition and assigned the index corresponding
-to the partition which is closest using a Mahanalobis distance metric.
+to the partition which is closest using a Mahalanobis distance metric.
 
 In \HTK\ such a codebook can be built using the tool \htool{HQuant}.  This tool
 takes as input a set of continuous speech vectors, clusters them and uses

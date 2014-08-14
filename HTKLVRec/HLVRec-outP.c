@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -127,8 +127,7 @@ LogFloat SOutP_ID_mix_Block(HMMSet *hset, int s, Observation *x, StreamInfo *sti
    v = x->fv[s];
    if (hset->msdflag[s]) {
       vSize = SpaceOrder(v);
-   }
-   else {
+   } else {
    vSize = VectorSize(v);
    assert (vSize == hset->swidth[s]);
    }
@@ -332,8 +331,7 @@ static LogFloat SOutP_HMod (HMMSet *hset, int s, Observation *x, StreamInfo *sti
    if (sti->nMix==1){     /* Single Mixture Case */
       bx= MOutP(ApplyCompFXForm(me->mpdf,v,inXForm,&det,id),me->mpdf);
       bx += det;
-   } 
-   else if (!pde) {
+   } else if (!pde) {
       bx=LZERO;                   /* Multi Mixture Case */
       for (m=1; m<=sti->nMix; m++,me++) {
          wt = MixLogWeight(hset,me->weight);
@@ -343,15 +341,13 @@ static LogFloat SOutP_HMod (HMMSet *hset, int s, Observation *x, StreamInfo *sti
             bx=LAdd(bx,wt+px);
          }
       }
-   } 
-   else {   /* Partial distance elimination */
+   } else {   /* Partial distance elimination */
       wt = MixLogWeight(hset,me->weight);
       mp = me->mpdf;
       if (!hset->msdflag[s] || SpaceOrder(v)==VectorSize(mp->mean)) {
       otvs = ApplyCompFXForm(mp,v,inXForm,&det,id);
       px = IDOutP(otvs,VectorSize(otvs),mp);
-      }
-      else {
+      } else {
          px = LZERO;
          det = 0.0;
       }

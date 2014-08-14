@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,7 +64,7 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-/* !HVER!HFB:   3.3 [CUED 28/04/05] */
+/* !HVER!HFB:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HFB_H_
 #define _HFB_H_
@@ -86,17 +86,16 @@ typedef struct {
   Transcription *tr;  /* current transcription */
 
   Boolean twoDataFiles; /* Using two data files */
-   
   int S;              /* number of data streams */
   int T;              /* number of frames in utterance */
   ParmBuf pbuf;       /* parameter buffer */
   ParmBuf pbuf2;      /* a second parameter buffer (if required) */
 
-   HTime tgtSampRate;  /* frame rate */
-   HTime tgtSampRate2; /* second frame rate */
+  HTime tgtSampRate;  /* frame rate */
+  HTime tgtSampRate2; /* second frame rate */
     
-   Observation *o;     /* Observations */
-   Observation *o2;    /* Cepstral Mean Normalised obervation, used in
+  Observation *o;      /* Observations */
+  Observation *o2;     /* Cepstral Mean Normalised obervation, used in
                                single pass re-training */
 
   LogDouble pr;        /* log prob of current utterance */
@@ -123,52 +122,53 @@ typedef struct {
   PruneInfo *pInfo;   /* pruning information */
   HLink *up_qList;    /* array[1..Q] of active HMM defs */
   HLink *al_qList;    /* array[1..Q] of active align HMM defs */
-   HLink *up_dList;    /* array[1..Q] of active dur model defs */
-   HLink *al_dList;    /* array[1..Q] of active align dur model defs */
-   MLink *qLink;       /* array[1..Q] of link to active HMM defs */
+  HLink *up_dList;    /* array[1..Q] of active dur model defs */
+  HLink *al_dList;    /* array[1..Q] of active align dur model defs */
+  MLink *qLink;       /* array[1..Q] of link to active HMM defs */
   LabId  *qIds;       /* array[1..Q] of logical HMM names (in qList) */
   short *qDms;        /* array[1..Q] of minimum model duration */
-   DVector **alphat;   /* array[1..Q][1..Nq][1..D] of prob */
-   DVector **alphat1;  /* alpha[t-1] */
-   DVector ***beta;    /* array[1..T][1..Q][1..Nq][1..D] of prob */
-   float *****otprob;  /* array[1..T][1..Q][2..Nq-1][0..S] of state output prob */
-   SVector **durprob;  /* array[1..Q][2..Nq-1][1..maxDur] of state dur prob */
-   int **maxDur;       /* array[1..Q][1..Nq] of max state duration */
+  DVector **alphat;   /* array[1..Q][1..Nq] of prob */
+  DVector **alphat1;  /* alpha[t-1] */
+  DVector ***beta;    /* array[1..T][1..Q][1..Nq] of prob */
+  float *****otprob;  /* array[1..T][1..Q][2..Nq-1][0..S][0..M] of prob */
+  SVector **durprob;  /* array[1..Q][2..Nq-1][1..maxDur] of state dur prob */
+  int **maxDur;       /* array[1..Q][1..Nq] of max state duration */
   LogDouble pr;       /* log prob of current utterance */
   Vector occt;        /* occ probs for current time t */
   Vector *occa;       /* array[1..Q][1..Nq] of occ probs (trace only) */
-   Vector ****occm;    /* array[1..T][1..Q][1..Nq][1..S][1..M] of occ probs (param gen only) */
+  Vector ****occm;    /* array[1..T][1..Q][1..Nq][1..S][1..M] of occ probs (param gen only) */
 
 } AlphaBeta;
 
 /* structure storing the model set and a pointer to it's alpha-beta pass structure */
 typedef struct {
   Boolean twoModels;  /* Enable two model reestimation */
-   Boolean useAlign;   /* Using model alignment */
+  Boolean useAlign;   /* Using model alignment */
   HMMSet *up_hset;    /* set of HMMs to be re-estimated */
   HMMSet *al_hset;    /* HMMs to use for alignment */
                       /* these are equal unless 2 model reest */
-   HMMSet *up_dset;    /* set of duration models to be estimated */
-   HMMSet *al_dset;    /* duration models to use for alignment */
-                       /* these are equal unless 2 model reest */
+  HMMSet *up_dset;    /* set of duration models to be estimated */
+  HMMSet *al_dset;    /* duration models to use for alignment */
+                      /* these are equal unless 2 model reest */
   HSetKind hsKind;    /* kind of the alignment HMM system */
-   UPDSet uFlags_hmm;  /* parameter update flags for HMMs */
-   UPDSet uFlags_dur;  /* parameter update flags for duration models */
+  UPDSet uFlags_hmm;  /* parameter update flags for HMMs */
+  UPDSet uFlags_dur;  /* parameter update flags for duration models */
   int skipstart;      /* Skipover region - debugging only */
   int skipend;
   int maxM;           /* maximum number of mixtures in hmmset */
   int maxMixInS[SMAX];/* array[1..swidth[0]] of max mixes */
   AlphaBeta *ab;      /* Alpha-beta structure for this model */
 
-   XFInfo *xfinfo_hmm;         /* xform info for hmmset */
-   XFInfo *xfinfo_dur;         /* xform info for dmset */
-   AdaptXForm *inXForm_hmm;    /* current input transform for HMMs (if any) */
-   AdaptXForm *inXForm_dur;    /* current input transform for duration models (if any) */
-   AdaptXForm *al_inXForm_hmm; /* current input transform for al_hset (if any) */
-   AdaptXForm *al_inXForm_dur; /* current input transform for al_dset (if any) */
-   AdaptXForm *paXForm_hmm;    /* current parent transform for HMMs (if any) */
-   AdaptXForm *paXForm_dur;    /* current parent transform for duration models (if any) */
+  XFInfo *xfinfo_hmm;         /* xform info for hmmset */
+  XFInfo *xfinfo_dur;         /* xform info for dmset */
+  AdaptXForm *inXForm_hmm;    /* current input transform for HMMs (if any) */
+  AdaptXForm *inXForm_dur;    /* current input transform for duration models (if any) */
+  AdaptXForm *al_inXForm_hmm; /* current input transform for al_hset (if any) */
+  AdaptXForm *al_inXForm_dur; /* current input transform for al_dset (if any) */
+  AdaptXForm *paXForm_hmm;    /* current parent transform for HMMs (if any) */
+  AdaptXForm *paXForm_dur;    /* current parent transform for duration models (if any) */
 } FBInfo;
+
 
 /* EXPORTED FUNCTIONS-------------------------------------------------*/
 

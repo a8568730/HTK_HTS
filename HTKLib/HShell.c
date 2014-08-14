@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hshell_version = "!HVER!HShell:   3.4 [CUED 25/04/06]";
-char *hshell_vc_id = "$Id: HShell.c,v 1.11 2008/06/24 03:19:08 zen Exp $";
+char *hshell_version = "!HVER!HShell:   3.4.1 [CUED 12/03/09]";
+char *hshell_vc_id = "$Id: HShell.c,v 1.12 2009/12/11 10:00:48 uratec Exp $";
 
 #include "HShell.h"
 
@@ -1400,7 +1400,6 @@ static Boolean IsVAXOrder(void)
    px = &x;
    pc = (unsigned char *) px;
    *pc = 1; *(pc+1) = 0;         /* store bytes 1 0 */
-   
    return ((x==1) ? TRUE:FALSE);          /* does it read back as 1? */
 }
 
@@ -1671,8 +1670,7 @@ void HRError(int errcode, char *message, ...)
       vfprintf(f, message, ap);
       va_end(ap);
       fprintf(f," in %s\n", arglist[0]);
-   } 
-   else{
+   }else{
       fprintf(stderr,"  ERROR [%+d]  ",errcode);
       f = stderr;
       vfprintf(f, message, ap);
@@ -1915,7 +1913,6 @@ Boolean RMatch(const char *s, const char *p, const int slen, const int minplen, 
       return FALSE;
    if (minplen>slen)
       return FALSE;
-   
    if (*p == '*')
       return ((RMatch(s+1,p+1,slen-1,minplen,numstars-1) ||
          RMatch(s,p+1,slen,minplen,numstars-1) ||
@@ -1936,7 +1933,6 @@ Boolean DoMatch(char *s, char *p)
    minplen = 0; numstars = 0; q = p;
    while ((c=*q++))
       if (c == '*') ++numstars; else ++minplen;
-      
    if (numstars==2 && *p=='*' && *(q-2)=='*' && strchr(p,'?')==NULL) {
       char str[PAT_LEN];
       strncpy(str, p+1, minplen);  str[minplen] = '\0';
@@ -1954,7 +1950,8 @@ Boolean DoMatch(char *s, char *p)
    is the min length string that can match p and
    numstars is the number of *'s in p 
 	   spkr is next character of the spkr name */
-static Boolean SpRMatch(char *s,char *p,char *spkr, int slen,int minplen,int numstars)
+static Boolean SpRMatch(char *s,char *p,char *spkr,
+			int slen,int minplen,int numstars)
 {
    Boolean match;
    

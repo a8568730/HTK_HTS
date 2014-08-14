@@ -29,7 +29,7 @@
 /*         File: LGBase: Gram File Database Routines           */
 /* ----------------------------------------------------------- */
 
-/* !HVER!lgbase:   3.3 [CUED 28/04/05] */
+/* !HVER!lgbase:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _LGBASE_H_
 #define _LGBASE_H_

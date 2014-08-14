@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,7 +77,7 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-/* !HVER!HShell:   3.3 [CUED 28/04/05] */
+/* !HVER!HShell:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HSHELL_H_
 #define _HSHELL_H_
@@ -118,7 +118,7 @@ extern "C" {
 
 
 #ifndef MAXSTRLEN
-#define MAXSTRLEN 256    /* max length of a string */
+#define MAXSTRLEN 1024   /* max length of a string (added for long context) */
 #endif  /* MAXSTRLEN */
 
 #ifndef MAXFNAMELEN
@@ -130,7 +130,7 @@ extern "C" {
 #endif  /* PAT_LEN */
 
 #ifndef SMAX
-#define SMAX      9      /* max num data streams + 1 */
+#define SMAX 30          /* max num data streams + 1 */
 #endif  /* SMAX */
 
 #define MAXGLOBS  256    /* max num global config parms */

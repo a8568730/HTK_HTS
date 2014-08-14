@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -72,8 +72,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hlvlm_version = "!HVER!HLVLM:   3.4 [GE 25/04/06]";
-char *hlvlm_vc_id = "$Id: HLVLM.c,v 1.6 2008/05/30 07:19:22 zen Exp $";
+char *hlvlm_version = "!HVER!HLVLM:   3.4.1 [GE 12/03/09]";
+char *hlvlm_vc_id = "$Id: HLVLM.c,v 1.7 2009/12/11 10:00:43 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -251,7 +251,10 @@ static LMId LMIdMapper(FSLM_ngram *nglm, char *w)
 
    wdId = GetLabId (w, FALSE);
    if (!wdId) {
+      /* warning only for non OOV symbols */
+      if (strcmp(w, "!!UNK")!=0 && strcmp(w,"<unk>")!=0) {
       HError (-8100, "ReadARPAngram: unseen word '%s' in ngram", w);
+      }
       return 0;
    }
    
@@ -878,15 +881,24 @@ LogFloat LMTransProb_ngram (FSLM *lm, LMState src, PronId pronid, LMState *dest)
             se = FindSEntry (ne->se, pronid, 0, ne->nse - 1);
             assert (!se || (se->word == pronid));
             if (se) { /* found it */
+#ifdef LM_NGRAM_INT
+	       lmprob = NGLM_PROB_ADD(lmprob,se->prob);
+#else
                lmprob += se->prob;
+#endif
                l = -1;
                break;
             }
          }
          if (l == 0) {          /* backed-off all the way to unigram */
             assert (!se);
+#ifdef LM_NGRAM_INT
+	    lmprob = NGLM_PROB_ADD(lmprob, ne->bowt);
+	    lmprob = NGLM_PROB_ADD(lmprob, nglm->unigrams[pronid]);
+#else
             lmprob += ne->bowt;
             lmprob += nglm->unigrams[pronid];
+#endif
          }
       }
    }
@@ -1055,7 +1067,11 @@ LogFloat LMLookAhead_2gram (FSLM *lm, LMState src, PronId minPron, PronId maxPro
 
    /* add the back-off weight to ug_maxscore and combine with maxscore */
    if (NGLM_PROB_GREATER(ug_maxScore,NGLM_PROB_LZERO)) {
+#ifdef LM_NGRAM_INT
+      ug_maxScore = NGLM_PROB_ADD(ug_maxScore, bowt);
+#else
       ug_maxScore += bowt;
+#endif
       if (NGLM_PROB_GREATER(ug_maxScore, maxScore))
          maxScore = ug_maxScore;
    }
@@ -1101,7 +1117,11 @@ LogFloat LMLookAhead_3gram (FSLM *lm, LMState src, PronId minPron, PronId maxPro
          se_tg = NULL;          /* force back-off to bigram */
 
       ne_bg = ne_tg->nebo;
+#ifdef LM_NGRAM_INT
+      bowt_ug = NGLM_PROB_ADD(bowt_bg, ne_bg->bowt);
+#else
       bowt_ug = bowt_bg + ne_bg->bowt;
+#endif
       if (ne_bg->nse > 0) {
          se_bg = ne_bg->se;
          seLast_bg = &se_bg[ne_bg->nse - 1];
@@ -1183,13 +1203,21 @@ LogFloat LMLookAhead_3gram (FSLM *lm, LMState src, PronId minPron, PronId maxPro
 
    /* add the back-off weight to bg_maxscore and combine with maxscore */
    if (NGLM_PROB_GREATER(bg_maxScore,NGLM_PROB_LZERO)) {
+#ifdef LM_NGRAM_INT
+      bg_maxScore = NGLM_PROB_ADD(bg_maxScore, bowt_bg);
+#else
       bg_maxScore += bowt_bg;
+#endif
       if (NGLM_PROB_GREATER(bg_maxScore, maxScore))
          maxScore = bg_maxScore;
    }
    /* add the back-off weight to ug_maxscore and combine with maxscore */
    if (NGLM_PROB_GREATER(ug_maxScore,NGLM_PROB_LZERO)) {
+#ifdef LM_NGRAM_INT
+      ug_maxScore = NGLM_PROB_ADD(ug_maxScore, bowt_ug);
+#else
       ug_maxScore += bowt_ug;
+#endif
       if (NGLM_PROB_GREATER(ug_maxScore, maxScore))
          maxScore = ug_maxScore;
    }
@@ -1255,7 +1283,11 @@ LogFloat LMLookAhead_ngram (FSLM *lm, LMState src, PronId minPron, PronId maxPro
          ne[l] = GetNEntry (nglm, hist, FALSE);
          assert (ne[l]);
          /* set bowt[l] to sum of all required bowts if we use se[l] */
+#ifdef LM_NGRAM_INT
+	 bowt[l] = NGLM_PROB_ADD(bowt[l+1], ne[l+1]->bowt);
+#else
          bowt[l] = bowt[l+1] + ne[l+1]->bowt;
+#endif
       }
       
       for (l = hiIdx; l >= 0; --l) {
@@ -1279,7 +1311,11 @@ LogFloat LMLookAhead_ngram (FSLM *lm, LMState src, PronId minPron, PronId maxPro
          for (l = hiIdx; l >= 0; --l) {
             if (se[l]) {     /* any entries left at this level? */
                if (se[l]->word == p) {
+#ifdef LM_NGRAM_INT
+		  prob = NGLM_PROB_ADD(se[l]->prob, bowt[l]);
+#else
                   prob = se[l]->prob + bowt[l];
+#endif
                   if (NGLM_PROB_GREATER(prob,maxScore))
                      maxScore = prob;
                   se[l]++;
@@ -1301,7 +1337,12 @@ LogFloat LMLookAhead_ngram (FSLM *lm, LMState src, PronId minPron, PronId maxPro
             }
          }
          if (l < 0) {       /* not found => back-off to unigram */
+#ifdef LM_NGRAM_INT
+	    prob = NGLM_PROB_ADD(nglm->unigrams[p], bowt[0]);
+	    prob = NGLM_PROB_ADD(prob, ne[0]->bowt);
+#else
             prob = nglm->unigrams[p] + bowt[0] + ne[0]->bowt;
+#endif
             if (NGLM_PROB_GREATER(prob,maxScore))
                maxScore = prob;
          }
@@ -1492,6 +1533,9 @@ FSLM_ngram *CreateBoNGram (MemHeap *heap, int vocSize, int counts[NSIZE])
 
    nglm->vocSize = vocSize;
    nglm->unigrams = (NGLM_Prob *) New (nglm->heap, (nglm->vocSize + 1) * sizeof (NGLM_Prob));
+   for (i = 0; i < (nglm->vocSize + 1); i++){
+     nglm->unigrams[i] = NGLM_PROB_LZERO;
+   }
    nglm->pronId2LMId = (LMId *) New (nglm->heap, (nglm->vocSize + 1) * sizeof (LMId));
 
    nglm->lablist = (LabId *) New (nglm->heap, nglm->counts[1] * sizeof(LabId)); nglm->lablist--;

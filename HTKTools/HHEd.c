@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hhed_version = "!HVER!HHEd:   3.4 [CUED 25/04/06]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.67 2008/06/23 09:21:09 zen Exp $";
+char *hhed_version = "!HVER!HHEd:   3.4.1 [CUED 12/03/09]";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.78 2009/12/15 01:42:39 uratec Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -176,6 +176,10 @@ static Boolean equivState = TRUE;      /* TRUE if states can be equivalent */
                                        /*  but not identical */
 static Boolean useModelName = TRUE;    /* Use base-phone name as tree name */
 static Boolean usePattern   = FALSE;   /* Use pattern as tree name */
+static Boolean saveHMMSet   = TRUE;    /* Save the HMMSet */
+
+/* information about transforms */
+static XFInfo xfInfo;                  /* for AX command */
 
 /* ---------------- Configuration Parameters --------------------- */
 
@@ -191,7 +195,7 @@ static Boolean applyMDL = FALSE;              /* apply MDL principle for cluster
 static float MDLfactor = 1.0;                 /* MDL control factor */
 static Boolean ignoreStrW = FALSE;            /* ignore stream weight */
 static float minVar = 1.0E-6;                 /* minimum variance for clusterd item */
-static Boolean reduceMem = FALSE;             /* reduce memory requirement for decision-tree clustering */
+static int reduceMem = 0;                     /* reduce memory requirement for decision-tree clustering (0: no reduction, 1: mid reduction but fast, 2: large reduction but slow */
 static float minLeafOcc = 0.0;                /* minimum occ for each leaf node */
 static float minMixOcc = 0.0;                 /* minimum occ for each mix */
 static Vector shrinkOccThresh=NULL;           /* occupancy threshold for shrinking decision trees */
@@ -210,13 +214,13 @@ void SetConfParms(void)
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
       if (GetConfBool(cParm,nParm,"TREEMERGE",&b)) treeMerge = b;
       if (GetConfBool(cParm,nParm,"USELEAFSTATS",&b)) useLeafStats = b;
+      if (GetConfBool(cParm,nParm,"APPLYVFLOOR",&b)) applyVFloor = b;
       if (GetConfBool(cParm,nParm,"USEMODELNAME",&b)) useModelName = b;
       if (GetConfBool(cParm,nParm,"USEPATTERN",&b)) usePattern = b;
-      if (GetConfBool(cParm,nParm,"APPLYVFLOOR",&b)) applyVFloor = b;
       if (GetConfBool(cParm,nParm,"SINGLETREE",&b)) singleTree = b;
       if (GetConfBool(cParm,nParm,"APPLYMDL",&b)) applyMDL = b;
       if (GetConfBool(cParm,nParm,"IGNORESTRW",&b)) ignoreStrW = b;
-      if (GetConfBool(cParm,nParm,"REDUCEMEM",&b)) reduceMem = b;
+      if (GetConfInt(cParm,nParm,"REDUCEMEM",&i)) reduceMem = i;
       if (GetConfFlt(cParm,nParm,"MINVAR",&f)) minVar = f;
       if (GetConfFlt(cParm,nParm,"MDLFACTOR",&f)) MDLfactor = f;
       if (GetConfFlt(cParm,nParm,"MINLEAFOCC",&f)) minLeafOcc = f;
@@ -265,11 +269,11 @@ void Summary(void)
    printf("MU n itemlist        - MixUp command, change mixtures in itemlist to n\n");
    printf("NC n macro itemlist  - N-Cluster specified components and tie\n");
    printf("PR                   - Convert model-set with PROJSIZE to compact form\n");
-   printf("PX filename          - Set the Parent Xform to filename\n");
-   printf("QS name itemlist     - Define a question as a list of model names\n");
-   printf("RC n id [itemList]   - Build n regression classes (for adaptation purposes)\n");
    printf("                       also supplying a regression tree identifier/label name\n");
    printf("                       Optional itemList to specify non-speech sounds\n");
+   printf("QS name itemlist     - Define a question as a list of model names\n");
+   printf("RC n id [itemList]   - Build n regression classes (for adaptation purposes)\n");
+   printf("                       this disables the storing of the models\n");  
    printf("RM hmmfile           - Rem mean in state 2, mix 1 of hmmfile from all \n");
    printf("                       loaded models nb. whole mean is removed incl. dels\n");
    printf("RN hmmSetIdentifier  - Rename the hmm mmf with a new identifier name\n");
@@ -306,7 +310,10 @@ void ReportUsage(void)
    printf(" -m      apply MDL principle for clustering                off\n");
    printf(" -o s    extension for new hmm files          as source\n");
    printf(" -p      use pattern instead of base phone                 off\n");
-   printf(" -r      reduce memory usage on clustering                 off\n");
+   printf(" -r n    reduce memory usage on clustering                 0\n");
+   printf("          0: no memory reduction                           \n");
+   printf("          1: mid reduction but fast                        \n");
+   printf("          2: large reduction but slow                      \n");
    printf(" -s      construct single tree                             off\n");
    printf(" -v f    Set minimum variance to f                         1.0E-6\n");
    printf(" -w mmf  Save all HMMs to macro file mmf s    as source\n");
@@ -331,7 +338,7 @@ int main(int argc, char *argv[])
    if(InitParm()<SUCCESS)  
       HError(2600,"HHEd: InitParm failed");
    InitUtil();
-   InitAdapt(NULL,NULL);
+   InitAdapt(&xfInfo,NULL);
 
    if (!InfoPrinted() && NumArgs() == 0)
       ReportUsage();
@@ -347,7 +354,7 @@ int main(int argc, char *argv[])
          HError(2619,"HHEd: Bad switch %s; must be single letter",s);
       switch(s[0]) {
       case 'a':
-         MDLfactor = GetChkedFlt(0.0,10000.0,s); break;
+         MDLfactor = GetChkedFlt(0.0,100000000.0,s); break;
       case 'd':
          if (NextArg()!=STRINGARG)
             HError(2619,"HHEd: Input HMM definition directory expected");
@@ -363,7 +370,7 @@ int main(int argc, char *argv[])
       case 'p':
          usePattern = TRUE; break;
       case 'r':
-         reduceMem = TRUE; break;
+         reduceMem = GetChkedInt(0,2,s); break;
       case 's':
          singleTree = TRUE; break;
       case 'v':
@@ -424,7 +431,7 @@ int main(int argc, char *argv[])
    ResetHeap(&questHeap);
    
    /* reset modules */
-   ResetAdapt();
+   ResetAdapt(&xfInfo,NULL);
    ResetUtil();   
    ResetParm();
    ResetModel();
@@ -439,7 +446,6 @@ int main(int argc, char *argv[])
    
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
-      
 }
 
 /* ----------------------- Lexical Routines --------------------- */
@@ -475,30 +481,37 @@ char *ChkedAlpha(char *what,char *buf)
 
 /* ------------- Question Handling for Tree Building ----------- */
 
-typedef struct _IPat{
+static int nQuestions=0;
+static int nPatterns=0;
+static char **QMTable=NULL;
+static Boolean setQMTable=FALSE;
+
+typedef struct {
    char *pat;
-   struct _IPat *next;
+   int index;
 }IPat;
 
 typedef struct _Question{      /* each question stored as both pattern and  */
    LabId qName;                 /* an expanded list of model names */
-   IPat *patList;               
+   ILink patList;               
    ILink ilist;
    char pattern[PAT_LEN];
+   int index;
    Boolean used;
 } Question;
 
+static ILink pList = NULL;      /* pattern list */
 static ILink qList = NULL;      /* question list */
 
 /* TraceQuestion: output given questions */
 void TraceQuestion(char *cmd, Question *q)
 {
-   IPat *ip;
+   ILink ip;
    
    printf("   %s %s: defines %d % d models\n       ",
           cmd,q->qName->name,NumItems(q->ilist),hset->numLogHMM);
    for (ip=q->patList; ip!=NULL; ip=ip->next)
-      printf("%s ",ip->pat); 
+      printf("%s ",((IPat *)ip->item)->pat);
    printf("\n");
    fflush(stdout);
 }
@@ -541,10 +554,11 @@ char *ParseAlpha(char *src, char *s)
 }
 
 /* ParsePattern: parse given string and return pattern list */
-IPat *ParsePattern (char *pattern)
+void ParsePattern (ILink *patList, char *pattern)
 {
    char *p,*r,buf[PAT_LEN];
-   IPat *ip=NULL, *ipat=NULL;
+   IPat *ip=NULL;
+   ILink i;
    
    for (p=pattern;*p && isspace((int) *p);p++);
    
@@ -553,7 +567,7 @@ IPat *ParsePattern (char *pattern)
       if (p==NULL) HError(2660,"ParsePattern: no { in itemlist");
    ++p;
    if (*p=='(')
-   ++p;
+      ++p;
    
    /* parse tail '}' and ')' */
    for (r=pattern+strlen(pattern)-1;r>=pattern && isspace((int) *r);r--);
@@ -569,13 +583,23 @@ IPat *ParsePattern (char *pattern)
       if (*p!=',')
          HError(2660,"ParsePattern: missing , in itemlist"); 
       p++;
+      for (i=pList; i!=NULL; i=i->next)
+	if (strcmp(((IPat *)i->item)->pat,buf)==0)
+           break;
+      if (i==NULL) {
       ip=(IPat*) New(&questHeap,sizeof(IPat));
       ip->pat = NewString(&questHeap,strlen(buf));
+      ip->index = nPatterns++;
       strcpy(ip->pat,buf);
-      ip->next = ipat; ipat = ip;
+      AddItem(NULL,ip,&pList);
+      }
+      else {
+         ip=(IPat *)i->item;
+      }
+      AddItem(NULL,ip,patList);
    } while (p<r);
    
-   return ipat;
+   return;
 }
 
 /* LoadQuestion: store given question in question list */
@@ -599,22 +623,22 @@ void LoadQuestion(char *qName, ILink ilist, char *pattern)
    }
    
    q=(Question *) New(&questHeap,sizeof(Question));
-   q->used=FALSE; q->qName=labid; q->patList = NULL;
+   q->used=FALSE; q->qName=labid; q->patList=NULL; q->index=nQuestions++;
    q->ilist = ilist;
    labid->aux=q; 
    strcpy(q->pattern, pattern);
    AddItem(NULL,q,&qList);
 
-   q->patList = ParsePattern(pattern);   
+   ParsePattern(&q->patList,pattern);
 }
 
 /* IPatMatch: return true if given name matches pattern list */
-Boolean IPatMatch (char *name, IPat *patList)
+Boolean IPatMatch (char *name, ILink patList)
 {
-   IPat *ip;
+   ILink ip;
    
    for (ip=patList; ip!=NULL; ip=ip->next)
-      if (DoMatch(name,ip->pat)) return TRUE;
+      if (DoMatch(name, ((IPat *)(ip->item))->pat)) return TRUE;
    return FALSE;
 }
 
@@ -809,7 +833,7 @@ Boolean EquivMix(MixPDF *a, MixPDF *b)
 }
 
 /* EquivStream: return TRUE if both streams are identical */
-Boolean EquivStream (StreamInfo *a, StreamInfo *b)
+Boolean EquivStream(StreamInfo *a, StreamInfo *b)
 {
    int m,M;
    MixtureElem *mea,*meb;
@@ -2768,7 +2792,7 @@ typedef struct _Node {          /* Tree Node */
 
 typedef struct _Tree{           /* A tree */
    LabId baseId;                /* base phone name */
-   IPat *patList;               /* pattern list */
+   ILink patList;               /* pattern list */
    int state;                   /* state (or 0 if hmm tree) */
    int size;                    /* number of non terminal nodes */
    int nLeaves;                 /* number of terminal(leaf) nodes */
@@ -2824,7 +2848,7 @@ Tree *CreateTree(ILink ilist,LabId baseId,int state)
    /* pattern or baseId */ 
    if (usePattern) {
       strcpy(buf,baseId->name);
-      tree->patList = ParsePattern(buf);
+      ParsePattern(&tree->patList,buf);
    }
    tree->baseId = baseId;
    tree->state = state;
@@ -3198,28 +3222,121 @@ double ClusterLogL(CLink clist, AccSum *no, AccSum *yes, double *occs)
    return(prob);
 }
 
+/* SetQMTable: Set Question x Model bit table */
+void SetQMTable (void)
+{
+   char *name,**PMTable;
+   int i,j,h;
+   MLink m;
+   ILink p,q;
+   Boolean answer;
+   IPat *ip;
+   Question *question;
+  
+   const int size=(hset->numPhyHMM>>3)+1;
+
+   if (trace&T_BAS) {
+      printf("   setting question*model table...");
+      fflush(stdout);
+}
+
+   /* set pattern * model table */
+   PMTable = (char **) New(&tmpHeap, nPatterns*sizeof(char *));
+   
+   for (i=0; i<nPatterns; i++) {
+      PMTable[i] = (char *) New(&tmpHeap, size*sizeof(char));
+      memset(PMTable[i], 0, size);
+   }
+      
+#pragma omp parallel for private(m,h,i,j,name,p,ip,answer)
+   for (h=0; h<MACHASHSIZE; h++) {
+      for (m=hset->mtab[h]; m!=NULL; m=m->next) {
+         if (m->type == 'h') {
+            /* index and name of current hmm */
+            i = ((HLink)(m->structure))->hIdx >> 3;  /* division by 8 */
+            j = ((HLink)(m->structure))->hIdx &  7;  /* residue by 8 */
+            name = m->id->name;
+
+            /* check answers */
+            for (p=pList; p!=NULL; p=p->next) {
+               ip = (IPat *)p->item;
+               answer = DoMatch(name, ip->pat);
+               if (answer)
+                  PMTable[ip->index][i] |= (1<<j);  /* set j-th bit */
+            }
+         }
+      }
+   }
+
+   /* set question * model table */
+   QMTable = (char **) New(&questHeap, nQuestions*sizeof(char *));
+
+   for (i=0; i<nQuestions; i++) {
+      QMTable[i] = (char *) New(&questHeap, size*sizeof(char));
+      memset(QMTable[i], 0, size);
+   }
+
+#pragma omp parallel for private(h,i,j,q,question,p,ip)
+   for (h=0; h<hset->numPhyHMM; h++) {
+      i = h>>3;  j = h&7;
+      for (q=qList; q!=NULL; q=q->next) {
+         question = (Question *)q->item;
+         for (p=question->patList; p!=NULL; p=p->next) {
+	    ip = (IPat *)p->item;
+	    if (PMTable[ip->index][i] & (1<<j)) {
+	       QMTable[question->index][i] |= (1<<j);  /* set j-th bit */
+	       break;
+	    }
+         }
+      }
+   }
+
+   /* free PMTable */
+   Dispose(&tmpHeap, PMTable);
+
+   if (trace&T_BAS) {
+      printf("done\n");
+      fflush(stdout);
+   }
+
+   setQMTable = TRUE;
+
+   return;
+}
+
 /* AnswerQuestion: set ans field in each cluster item in preparation for
    a possible split */
 Boolean AnswerQuestion(Node *node, Question *q)
 {
    CLink p;
    ILink i;
-   int yes=0, no=0;
-  
-   if (reduceMem) {
-      MLink m;
-      
+   int yes=0, no=0, index, j;
+   MLink m;
+        
+   switch(reduceMem) {
+   case 2:
       for (p=node->clist;p!=NULL;p=p->next) {
          m = (MLink)p->item->owner->hook;
          p->ans = QMatch(m->id->name, q);
          if (p->ans) yes++;
          else        no++;
       }
-   }
-   else {
+      break;
+   case 1:
+      index = q->index;
+      if (!setQMTable) SetQMTable();
+      for (p=node->clist; p!=NULL; p=p->next) {
+         j = p->item->owner->hIdx & 7;  /* residue by 8 */
+         p->ans = (QMTable[index][p->item->owner->hIdx>>3] & (1<<j)) ? TRUE : FALSE;
+         if (p->ans) yes++;
+         else        no++;
+      }
+      break;
+   case 0:
+   default: 
       /* set ans=FALSE for items in this cluster */
       for (p=node->clist;p!=NULL;p=p->next) {
-      p->ans = FALSE;
+         p->ans = FALSE;
          p->owner = node;
          no++;
       }
@@ -3341,26 +3458,22 @@ void AddLeafList(Node *node, Tree *tree, double threshold)
    /* delete node->parent from leaves */
    p = node->parent;
    if (p!=NULL) {
-      if (p==tree->leaf) {
+      if (p==tree->leaf)
          tree->leaf = p->next;
-      }
-      if (p->prev!=NULL) {
+      if (p->prev!=NULL)
          p->prev->next = p->next;
-         p->prev = NULL;
-      }
-      if (p->next!=NULL) {
+      if (p->next!=NULL)
          p->next->prev = p->prev;
-         p->next = NULL;
+      p->prev = p->next = NULL;
    }
-}
-
+   
    /* search insert location of given node */
    p=NULL; n=tree->leaf;
    while (n != NULL && imp < n->sProb-n->tProb) {
       if (n->sProb-n->tProb < threshold) break;
       p=n; n=n->next;
-}
-
+   }
+   
    if (p==NULL) tree->leaf = node;
    if (p!=NULL) p->next = node;
    if (n!=NULL) n->prev = node;
@@ -3371,7 +3484,7 @@ void AddLeafList(Node *node, Tree *tree, double threshold)
    /* Free question list of given node if imp. is less than thresh. */
    if (imp<threshold)
       FreeItems(&node->qlist);
-   
+
    return;
 }
 
@@ -3781,16 +3894,18 @@ void BuildTree (ILink ilist, double threshold, char *macRoot, char *pattern)
       SplitTreeNode(tree,node);
       ValidProbNode(node->yes,threshold);
       ValidProbNode(node->no,threshold);
+
       FreeItems(&node->qlist);
       
       AddLeafList(node->yes,tree,threshold);
       AddLeafList(node->no, tree,threshold);
       
-      if (trace & T_TREE_BESTQ)
+      if (trace & T_TREE_BESTQ) {
          printf("   Node %-3d  [Y] LogL %.3f (%.1f)    [N] LogL %.3f (%.1f)\n",
                 node->snum,node->yes->tProb/node->yes->occ,node->yes->occ,
                 node->no->tProb/node->no->occ,node->no->occ);
-      fflush(stdout);
+         fflush(stdout);
+      }
       node=FindBestSplit(tree->leaf,threshold);
    }
    tree->size=snum;
@@ -3875,7 +3990,7 @@ Ptr AssignStructure(LabId id, const int state)
              id->name,state);
    if (stream!=hset->swidth[0]) 
       HError(9999,"AssignStructure: incompatible tree");
-
+      
    nTree = NumItems(tlist);
    if (nTree>1) {
       si  = (StateInfo  *) New(&hmmHeap,sizeof(StateInfo));
@@ -3884,7 +3999,7 @@ Ptr AssignStructure(LabId id, const int state)
       si->nUse=0; si->hook=NULL; si->stateCounter=0; si->dur=NULL; si->weights=NULL; 
       si->pdf = ste;
    }
-      
+
    for (i=tlist;i!=NULL;i=i->next) {
       tree = (Tree *)i->item;
    /* Then move down tree until state is found */
@@ -3936,7 +4051,7 @@ HLink FindProtoModel(LabId model)
             if (strcmp(phone,buf)==0)
                return (hmm);
          }
-   
+
    /* if no model matches to given model and usePatten or singleTree is set, 
     * return the last model in hlist */
    if (usePattern || singleTree)
@@ -3952,8 +4067,8 @@ HMMDef *SynthModel(LabId id)
 {
    HMMDef *hmm,*proto;
    StateElem *se;
-   Boolean strShare;
    int i,s,N;
+   Boolean strShare;
    
    if (trace & T_DET) {
       printf("   Synth %-11s",id->name);
@@ -4051,16 +4166,15 @@ void DownTree(Node *node,Node **array)
 void PrintQuestions(FILE *file)
 {
    Question *q;
-   ILink i;
-   IPat *p;
+   ILink i,p;
   
    for (i=qList;i!=NULL;i=i->next) {
       q = (Question *)i->item;
       if (q->used) {
          fprintf(file,"QS %s ",q->qName->name);
-      fprintf(file,"{ %s",ReWriteString(q->patList->pat,NULL,DBL_QUOTE));
+         fprintf(file,"{ %s",ReWriteString(((IPat *)q->patList->item)->pat,NULL,DBL_QUOTE));
          for (p=q->patList->next;p!=NULL;p=p->next)
-         fprintf(file,",%s",ReWriteString(p->pat,NULL,DBL_QUOTE));
+            fprintf(file,",%s",ReWriteString(((IPat *)p->item)->pat,NULL,DBL_QUOTE));
       fprintf(file," }\n");
    }
    }
@@ -4221,7 +4335,7 @@ Tree *LoadTree(char *name,Source *src)
      if (s<=0 || s>hset->swidth[0])
        HError(9999,"LoadTree: stream index out of range");
      tree->streams.set[s] = TRUE;
-     p++;
+     while (*p!=',' && *p!=']') p++;
      while (*p==' ') p++;
 
      while (*p==',') {
@@ -4231,7 +4345,7 @@ Tree *LoadTree(char *name,Source *src)
            HError(9999,"LoadTree: stream index out of range");
         tree->streams.set[s] = TRUE;
         nStream++;
-        p++;
+        while (*p!=',' && *p!=']') p++;
         while (*p==' ') p++;
      }
      
@@ -4272,8 +4386,9 @@ Tree *LoadTree(char *name,Source *src)
             HError(-2661,"LoadTree: Macro %s not recognised",buf);
       }
       tree->nLeaves=1;
-      tree->root->id = GetLabId(buf, FALSE);
+      tree->root->id = GetLabId(buf, TRUE);
       tree->root->occ = GetNodeOcc(tree->root->macro[0],type);
+      tree->leaf = tree->root;
    }
    else {
       while (ReadString(src,buf),strcmp("}",buf)!=0) {
@@ -4395,8 +4510,10 @@ void LoadTreesCommand(void)
     
       LoadQuestion(qname,NULL,buf);
    }
+   /* comment out for no-question tree
    if (qList==NULL)
       HError(2660,"LoadTreesCommand: Questions Expected");
+   */
 
    do {
       LoadTree(info,&src);
@@ -4417,19 +4534,19 @@ void ConvertModelsCommand(void)
    Node *leaf, **array;
    StreamInfo *sti;
    Boolean isPipe;
-
+   
    ChkedAlpha("CM output directory name", dn);
    if (trace & T_BID) {
       printf("\nCM %s\n Convert current HMMSet into the hts_engine format\n",dn);
       fflush(stdout);
    }
-
+   
    /* check hset is valid for converting */
    if (hset->hsKind==DISCRETEHS)
       HError(9999,"ConvertModels: Only continuous HMMSet is supported");
    if (treeList==NULL)
       HError(2655,"ConvertModels: No trees loaded - use LT command");
-
+   
    /* if parent/adapt transforms have been set, apply them */
    if (hset->curXForm==NULL && hset->parentXForm!=NULL)
       ApplyHMMSetXForm(hset, hset->parentXForm, TRUE);
@@ -4568,6 +4685,8 @@ void ConvertModelsCommand(void)
             FClose(file,isPipe);
       }
    }
+
+   saveHMMSet = FALSE;
 }
 
 /* ----------------- CT - Convert Trees for synthesizer module --------------- */
@@ -4624,6 +4743,8 @@ void ConvertTreesCommand(void)
             FClose(file,isPipe);
       }
    }
+
+   saveHMMSet = FALSE;
 }
 
 /* ----------------- TR - Set Trace Level Command --------------- */
@@ -4695,7 +4816,6 @@ void CloneCommand(void)
    CreateHMMSet(tmpSet,&hmmHeap,TRUE);
    if(MakeHMMSet(tmpSet,buf)<SUCCESS)
       HError(2628,"CloneCommand: MakeHMMSet failed");
-   
    
    for (h=0; h<MACHASHSIZE; h++)
       for (q=tmpSet->mtab[h]; q!=NULL; q=q->next) 
@@ -5239,6 +5359,7 @@ void MixUpCommand(void)
          printf("\nMU %d {}\n Mixup to %d components per stream\n",trg,trg);
       fflush(stdout);
    }
+
    if (hset->hsKind==TIEDHS || hset->hsKind==DISCRETEHS)
       HError(2640,"MixUpCommand: MixUp only possible for continuous models");
    PItemList(&ilist,&type,hset,&source,NULL,0,0,(trace&T_ITM)?TRUE:FALSE);
@@ -6244,7 +6365,7 @@ void QuestionCommand(void)
    ChkedAlpha("QS question name",qName);
    
    /* get copy of original item list whilst parsing it */
-   if (reduceMem) {
+   if (reduceMem!=0) {
       char pattern[PAT_LEN]; 
       ReadLine(&source, pattern);
       if (trace & T_QST) {
@@ -6252,6 +6373,7 @@ void QuestionCommand(void)
          fflush(stdout);
       }
       LoadQuestion(qName,NULL,pattern);
+      setQMTable=FALSE;
    }
    else {
       ILink ilist=NULL;
@@ -6390,10 +6512,10 @@ void ImposeTreeCommand (void)
 
    if (!occStatsLoaded)
       HError(2672, "ImposeTreeCommand: Use LoadStats (LS <whatever-dir/stats>) before doing this.");
-
+   
    if (treeList == NULL)
       HError(2662,"ImposeTreeCommand: there are no existing trees");
-                  
+   
    for (tree=treeList; tree!=NULL; tree=tree->next) {
       /* set active stream flag */
       ClearSet(streams);
@@ -6572,11 +6694,12 @@ void FloorAverageCommand(void)
    StreamInfo *sti;
    SVector var , mean;
    DVector *varAcc;
-   double occAcc;
+   double occAcc[SMAX];
    float weight;
-   float occ; 
+   float occ,occs;
    int l=0,k,i,s,S;
    float varScale;
+   Boolean singleMix;
 
    /*  need stats for operation */
    if (!occStatsLoaded)
@@ -6586,45 +6709,61 @@ void FloorAverageCommand(void)
       HError(2640,"FloorAverageCommand: Only possible for continuous models");
    if (hset->ckind != DIAGC)
       HError(2640,"FloorAverageCommand: Only implemented for DIAGC models");
-   S = hset->swidth[0];
+   S= hset->swidth[0];
 
    /* allocate accumulators */
-   varAcc = (DVector*)New(&gstack, (S+1)*sizeof(DVector));
+   varAcc = (DVector*)New(&gstack,(S+1)*sizeof(DVector));
    for (s=1;s<=S;s++) {
       varAcc[s] = CreateDVector(&gstack,hset->swidth[s]);
       ZeroDVector(varAcc[s]);
    }
    NewHMMScan(hset,&hss);
-   occAcc = 0.0;
+   for (s=1;s<=S;s++) occAcc[s] = 0.0;
    while(GoNextState(&hss,FALSE)) {
       si = hss.si;
-      memcpy(&occ,&(si->hook),sizeof(float));
-      occAcc += occ;
-      s=0;
       while (GoNextStream(&hss,TRUE)) {
-         l=hset->swidth[hss.s];
+         s=hss.s;
+         l=hset->swidth[s];
          sti = hss.sti;
-         s++;
-         if ( hss.M > 1 ) { 
+         memcpy(&occ,&(sti->hook),sizeof(float));
+         /* single/multiple mix check */
+         for (i=1,k=0; i<=hss.M; i++) {
+            if (hset->swidth[s] == VectorSize(sti->spdf.cpdf[i].mpdf->mean))  /* MSD check */
+               k++;
+         }
+         singleMix = (k==1) ? TRUE : FALSE;
+         /* accumulate statistics */
+         if ( !singleMix ) { 
+            occs = 0.0;
             for (k=1;k<=l;k++) { /* loop over k-th dimension */
                double    rvar  = 0.0;
                double    rmean = 0.0;
-               for (i=1; i<=hss.M; i++) {
+               for (i=1; i<= hss.M; i++) {
+                  if (VectorSize(sti->spdf.cpdf[i].mpdf->mean) == l) {  /* MSD check */
                   weight = sti->spdf.cpdf[i].weight;
                   var  = sti->spdf.cpdf[i].mpdf->cov.var;
                   mean = sti->spdf.cpdf[i].mpdf->mean;
                   
                   rvar  += weight * ( var[k] + mean[k] * mean[k] );
                   rmean += weight * mean[k];
+                  if (k==1) occs += weight * occ;
+                  }
                }
                rvar -= rmean * rmean;
-               varAcc[s][k] += rvar * occ ;
+               varAcc[s][k] += rvar * occs ;
             }
+            occAcc[s] += occs;
          }
-         else { /* single mix */
-            var  = sti->spdf.cpdf[1].mpdf->cov.var;
+         else { /* single mix (single space matches the stream weight) */
+            for (i=1; i<=hss.M; i++) {
+               if (VectorSize(sti->spdf.cpdf[i].mpdf->mean) == l) {
+                  weight = sti->spdf.cpdf[i].weight;
+                  var    = sti->spdf.cpdf[i].mpdf->cov.var;
             for (k=1;k<=l;k++) 
-               varAcc[s][k] += var[k]*occ;
+                     varAcc[s][k] += occ * weight * var[k];
+                  occAcc[s] += occ * weight;
+               }
+            }
          }
       }
    }
@@ -6632,7 +6771,7 @@ void FloorAverageCommand(void)
    /* normalisation */
    for (s=1;s<=S;s++)
       for (k=1;k<=hset->swidth[s];k++)
-         varAcc[s][k] /= occAcc;
+         varAcc[s][k] /= occAcc[s];
    /* set the varFloorN macros */
    for (s=1; s<=S; s++){
       int size;
@@ -6657,7 +6796,7 @@ void FloorAverageCommand(void)
          NewMacro(hset,hset->numFiles,'v',id,v);
       }
       /* scale and store */
-      for (k=1;k<=l;k++)
+      for (k=1;k<=hset->swidth[s];k++)
          v[k] = varAcc[s][k]*varScale;
    }
    /* and apply floors */
@@ -7110,6 +7249,7 @@ CoList *CreateClusterLink(char *s, int state, int stream, int mix,
    c->mp = mp;
 
    return c;
+
 }
 
 /* PureVecSize: check dimensionality in list */
@@ -7156,7 +7296,7 @@ int MaxVecSize (CoList *list)
    
    if (list==NULL)
       return 0;
-
+      
    vSize = VectorSize(list->mp->mean);
 
    for (c=list->next; c!=NULL; c=c->next)
@@ -7212,6 +7352,7 @@ void PrintNodeInfo(RNode *n)
    fflush(stdout);
 }
 
+
 double Distance (Vector v1, Vector v2) 
 {  
    int k, vSize;
@@ -7220,7 +7361,7 @@ double Distance (Vector v1, Vector v2)
    vSize = VectorSize(v1);
    if (vSize==0)
       return LZERO;
-           
+
    for (k = 1; k <= vSize; k++) {
       x = (double)(v1[k] - v2[k]);
       x *= x;
@@ -7306,25 +7447,25 @@ RegTree *InitRegTree (HMMSet *hset, ILink ilist)
   RNode *r1=NULL, *r2=NULL, *rNode=NULL;
   RegNode *root;
   RegTree *rTree;
-   int vSize, nComponentsSp = 0, nComponentsNonSp = 0;
+  int vSize, nComponentsSp = 0, nComponentsNonSp = 0;
   StreamElem *ste;
   ILink p=NULL;
 
   if (!occStatsLoaded)
     HError(2672, "InitRegTree: Building regression classes must load the stats file!\n");
   
-   SetSet(streams);
+  SetSet(streams);
 
   NewHMMScan(hset,&hss);
 
   if (!(hss.isCont || (hss.hset->hsKind == TIEDHS))) {
-      HError(2673,"InitRegTree: Can only resize continuous featured system");
+     HError(2673,"InitRegTree: Can only resize continuous featured system");
   }
 
-   cs = cn = NULL;
+  cs = cn = NULL;
   do {
     while (GoNextState(&hss,TRUE)) {
-         InitTreeAccs(hss.se);
+      InitTreeAccs(hss.se);
       while (GoNextStream(&hss,TRUE)) {
 	/* go through item list to see if non-speech sound */
 	if (ilist != NULL)
@@ -7366,18 +7507,18 @@ RegTree *InitRegTree (HMMSet *hset, ILink ilist)
   } while (GoNextHMM(&hss));
   EndHMMScan(&hss);
 
-   /* create an instance of the node */
+  /* create an instance of the node */
   cs = NULL; cn = NULL;
-   vSize = MaxVecSize(listSp);
-   if (vSize <= 0)
-      HError(2673, "InitRegTree: Problem with vector Size = %d", vSize);
-   r1 = CreateRegTreeNode(listSp, vSize);  
+  vSize = MaxVecSize(listSp);
+  if (vSize <= 0)
+    HError(2673, "InitRegTree: Problem with vector Size = %d", vSize);
+  r1 = CreateRegTreeNode(listSp, vSize);  
   r1->nodeIndex = 1;
   r1->nComponents = nComponentsSp;
-   r1->pureVecSize = PureVecSize(r1->list);
-   r1->pureStream  = PureStream (r1->list);
-   CalcClusterDistribution(r1);
-   r1->clusterScore = CalcNodeScore(r1);
+  r1->pureVecSize = PureVecSize(r1->list);
+  r1->pureStream  = PureStream (r1->list);
+  CalcClusterDistribution(r1);
+  r1->clusterScore = CalcNodeScore(r1);
    
   /* create an instance of the tree */
   rTree = (RegTree *) New(&tmpHeap, sizeof(RegTree));
@@ -7385,30 +7526,29 @@ RegTree *InitRegTree (HMMSet *hset, ILink ilist)
   rTree->numNodes = 0;
   rTree->numTNodes = 0;
   root = rTree->root = (RegNode *) New(&tmpHeap, sizeof(RegNode));
-   
   /* is there a speech/sil split at the root */
   if (nComponentsNonSp > 0) {
     /* reset the root node */
     root->nodeIndex = 1;
-      rNode = CreateRegTreeNode(listSp, vSize);  /* use listSp for dummy */
+    rNode = CreateRegTreeNode(listSp, vSize);  /* use listSp for dummy */
     rNode->nodeIndex = 1;
-      rNode->nComponents = nComponentsNonSp + nComponentsSp;
-      rNode->pureVecSize = r1->pureVecSize;
-      rNode->pureStream  = r1->pureStream;
+    rNode->nComponents = nComponentsNonSp + nComponentsSp;
+    rNode->pureVecSize = r1->pureVecSize;
+    rNode->pureStream  = r1->pureStream;
     root->info = rNode;
     root->numChild = 2;
     root->child = (RegNode **)New(&tmpHeap,3*sizeof(RegNode *));
     root->child[1] = (RegNode *) New(&tmpHeap, sizeof(RegNode));
     root->child[2] = (RegNode *) New(&tmpHeap, sizeof(RegNode));
     /* set-up information for first child */
-      vSize = MaxVecSize(listNonSp);
-      r2 = CreateRegTreeNode(listNonSp, vSize);
+    vSize = MaxVecSize(listNonSp);
+    r2 = CreateRegTreeNode(listNonSp, vSize);
     r2->nodeIndex = 2;
     r2->nComponents = nComponentsNonSp;
-      r2->pureVecSize = PureVecSize(r2->list);
-      r2->pureStream  = PureStream (r2->list);
-      CalcClusterDistribution(r2);
-      r2->clusterScore = CalcNodeScore(r2);
+    r2->pureVecSize = PureVecSize(r2->list);
+    r2->pureStream  = PureStream (r2->list);
+    CalcClusterDistribution(r2);
+    r2->clusterScore = CalcNodeScore(r2);
     root->child[1]->info = r2;
     root->child[1]->numChild = 0;
     root->child[1]->child = NULL;
@@ -7437,6 +7577,7 @@ void PerturbMean(Vector mean, Vector covar, float pertDepth)
       x = pertDepth * covar[k];
       mean[k] += x;
    }
+
 }
 
 void CalcDistance (CoList *list, RNode *ch1, RNode *ch2)
@@ -7449,9 +7590,7 @@ void CalcDistance (CoList *list, RNode *ch1, RNode *ch2)
    DVector sum1, sum2;
 
    vSize = MaxVecSize(list);
-   /*if (ch1->vSize != ch2->vSize)
-      HError(9999,"CalcDistance: two nodes have the different dimensionalities (%d vs %d)", ch1->vSize, ch2->vSize);*/
-   
+
    sum1 = CreateDVector(&gstack, vSize);
    ZeroDVector(sum1);
    sum2 = CreateDVector(&gstack, vSize);
@@ -7476,6 +7615,7 @@ void CalcDistance (CoList *list, RNode *ch1, RNode *ch2)
       else {
          if (acc != NULL) {
             ch2->clustAcc += acc->occ;
+            ch2->clusterScore += (acc->occ * score2);
             for (k = 1; k <= vSize; k++)
                sum2[k] += acc->sum[k];
          }
@@ -7518,17 +7658,17 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
             c1 = c1->next;
          }
             numLeft++;
-      }
-      else {
-         if (c2 == NULL)
-            c2 = ch2->list = c;
-         else {
-            c2->next = c;
-            c2 = c2->next;
          }
+         else {
+            if (c2==NULL)
+               c2 = ch2->list = c;
+            else {
+               c2->next = c;
+               c2 = c2->next;
+            }
             numRight++;
+         }
       }
-   }
       else if (!parent->pureStream) {
          /* stream is not pure */
          if (c->stream == s) {
@@ -7537,7 +7677,7 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
             else {
                c1->next = c;
                c1 = c1->next;
-}
+            }
             numLeft++;
          }
          else {
@@ -7559,14 +7699,14 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
                c1 = c1->next;
             }
             numLeft++;
-         }
+      }
+      else {
+         if (c2 == NULL)
+            c2 = ch2->list = c;
          else {
-            if (c2==NULL)
-               c2 = ch2->list = c;
-            else {
-               c2->next = c;
-               c2 = c2->next;
-            }
+            c2->next = c;
+            c2 = c2->next;
+         }
             numRight++;
          }
       }
@@ -7574,10 +7714,9 @@ void CreateChildNodes (RNode *parent, RNode *ch1, RNode *ch2)
 
    ch1->nComponents = numLeft;
    ch2->nComponents = numRight;
-
-   if (c1!=NULL)
+   if (c1 != NULL)
       c1->next = NULL;
-   if (c2!=NULL)
+   if (c2 != NULL)
       c2->next = NULL;
 }
 
@@ -7588,22 +7727,22 @@ void ClusterChildren (RNode *parent, RNode *ch1, RNode *ch2)
    double oldDistance, newDistance=0.0 ;
 
    if (parent->pureStream && parent->pureVecSize) {
-      do {
-         iter+=1;
-         if (iter >= MAX_ITER)
-            break;
+   do {
+      iter+=1;
+      if (iter >= MAX_ITER)
+         break;
          CalcDistance(parent->list, ch1, ch2);
+      if (iter == 1)
+         oldDistance = ((ch1->clusterScore + ch2->clusterScore) / 
+            (ch1->clustAcc + ch2->clustAcc)) + thresh + 1;
+      else
+         oldDistance = newDistance ;
+      newDistance = (ch1->clusterScore + ch2->clusterScore) / 
+         (ch1->clustAcc + ch2->clustAcc) ;
+      if (trace & T_CLUSTERS) {
          if (iter == 1)
-            oldDistance = ((ch1->clusterScore + ch2->clusterScore) / 
-                           (ch1->clustAcc + ch2->clustAcc)) + thresh + 1;
+            printf("Iteration %d: Distance = %e\n", iter, newDistance);
          else
-            oldDistance = newDistance ;
-         newDistance = (ch1->clusterScore + ch2->clusterScore) / 
-                       (ch1->clustAcc + ch2->clustAcc) ;
-         if (trace & T_CLUSTERS) {
-            if (iter == 1)
-               printf("Iteration %d: Distance = %e\n", iter, newDistance);
-            else
                printf("Iteration %d: Distance = %e, Delta = %e\n", iter, newDistance, oldDistance - newDistance);
          fflush(stdout);
       }
@@ -7654,8 +7793,7 @@ void PrintRegTree(FILE *f, RegTree *t, int nNodes, char* rname, char* bname)
 	 t->numNodes++;
        }
        fprintf(f,"\n");
-      } 
-      else {
+     } else {
        t->numTNodes++;
        /* always one base class */
        fprintf(f, "<TNODE> %d 1 %d\n",n->nodeIndex,t->numTNodes);
@@ -7688,7 +7826,7 @@ void PrintBaseClass(FILE *f, RegTree *t, int nNodes, char *bname)
       fprintf(f,"\n");
    }
   fprintf(f,"<NUMCLASSES> %d\n",t->numTNodes);
-   
+
   for (i=1;i<=nNodes;i++) {
     /* print out the information from the baseclasses */
     if (tVec[i]->numChild == 0) {
@@ -7706,28 +7844,25 @@ void PrintBaseClass(FILE *f, RegTree *t, int nNodes, char *bname)
       fprintf(f,"}\n");
     }
   }
-   
-   tVec++;
-   Dispose(&gstack, tVec);
+  
+  tVec++;
+  Dispose(&gstack, tVec);
 }
-
 
 RegNode *FindBestTerminal (RegNode *t, double *score, RegNode *best) 
 {
   RNode *n;
-   double nodeScore;
+  double nodeScore;
   int i;
 
   if (t != NULL) {
     if (t->numChild>0) {
       for (i=1;i<=t->numChild;i++)
-            best = FindBestTerminal(t->child[i], score, best);
-      } 
-      else {
+        best = FindBestTerminal(t->child[i], score, best);
+    } else {
       n = GetRNode(t);
       nodeScore = n->clusterScore;
-         
-         if (!n->pureVecSize || !n->pureStream || ((*score < nodeScore) && (n->nComponents > n->vSize*3))) {
+      if (!n->pureVecSize || !n->pureStream || ((*score < nodeScore) && (n->nComponents > n->vSize*3))) {
 	*score = nodeScore;
 	best = t;
       }
@@ -7741,21 +7876,21 @@ int BuildRegClusters (RegNode *rtree, const int nTerminals, Boolean nonSpeechNod
 {
   RegNode *t;
   RNode *ch1, *ch2, *n, *r;   /* temporary children */  
-   double score;
-   int s, k, index, nStrTerminals[SMAX];
-   IntSet strTerminals;
-      
-   /* prepare children nodes for clustering */
-   r = GetRNode(rtree);
-   ch1 = CreateRegTreeNode(NULL, r->vSize);
-   ch2 = CreateRegTreeNode(NULL, r->vSize);
+  double score;
+  int s, k, index, nStrTerminals[SMAX];
+  IntSet strTerminals;
 
-   /* initialise # of terminals in each stream */
-   strTerminals = CreateSet(hset->swidth[0]);
-   for (s=1; s<=hset->swidth[0]; s++)
-      nStrTerminals[s] = 0;
-   if (r->pureStream && r->pureVecSize && r->vSize>0)
-      nStrTerminals[r->list->stream] = (nonSpeechNode) ? 2 : 1; 
+  /* prepare children nodes for clustering */
+  r = GetRNode(rtree);
+  ch1 = CreateRegTreeNode(NULL, r->vSize);
+  ch2 = CreateRegTreeNode(NULL, r->vSize);
+
+  /* initialise # of terminals in each stream */
+  strTerminals = CreateSet(hset->swidth[0]);
+  for (s=1; s<=hset->swidth[0]; s++)
+    nStrTerminals[s] = 0;
+  if (r->pureStream && r->pureVecSize && r->vSize>0)
+    nStrTerminals[r->list->stream] = (nonSpeechNode) ? 2 : 1; 
 
   /* the artificial first split of speech/non-speech has been made */
   if (nonSpeechNode)
@@ -7764,12 +7899,12 @@ int BuildRegClusters (RegNode *rtree, const int nTerminals, Boolean nonSpeechNod
     index = 2;
 
   k = index/2;
-   while (!IsFullSet(strTerminals)) { 
+  while (!IsFullSet(strTerminals)) { 
     score = 0.0;
     /* find the best (worst scoring) terminal to split 
        based on score and number of examples */
-      t = FindBestTerminal(rtree, &score, rtree);
-      
+    t = FindBestTerminal(rtree, &score, rtree);
+
     /* check to see if there are no more nodes to split */
     if ((k > 1 || score == 0.0) && t == rtree) {
       printf("No more nodes to split..\n");
@@ -7778,20 +7913,20 @@ int BuildRegClusters (RegNode *rtree, const int nTerminals, Boolean nonSpeechNod
     }
     r = GetRNode(t);
       
-      /* check to see whether this node should be split or not */
-      if (r->pureStream && r->pureVecSize && r->vSize>0) {
-         if (nStrTerminals[r->list->stream]>=nTerminals) {  /* no more splitting */
-            r->clusterScore = 0.0;
-            AddMember(strTerminals, r->list->stream);
-            continue;
-         }
-         
-         /* decrement nStrTerminals[s] */
-         nStrTerminals[r->list->stream]--;
+    /* check to see whether this node should be split or not */
+    if (r->pureStream && r->pureVecSize && r->vSize>0) {
+      if (nStrTerminals[r->list->stream]>=nTerminals) {  /* no more splitting */
+        r->clusterScore = 0.0;
+        AddMember(strTerminals, r->list->stream);
+        continue;
       }
-      
+         
+      /* decrement nStrTerminals[s] */
+      nStrTerminals[r->list->stream]--;
+    }
+
     if (trace & T_BID) {
-         printf("Splitting Node %d, score %e ", r->nodeIndex, score);
+      printf("Splitting Node %d, score %e\n", r->nodeIndex, score);
          if (!r->pureStream) 
             printf("(Stream splitting)\n");
          else if (!r->pureVecSize)
@@ -7802,69 +7937,68 @@ int BuildRegClusters (RegNode *rtree, const int nTerminals, Boolean nonSpeechNod
     }
 
     /* copy parent node distribution to children */
-      ZeroVector(ch1->aveMean);  ZeroVector(ch2->aveMean);
-      ZeroVector(ch1->aveCovar); ZeroVector(ch2->aveCovar);
-      
-      CopyRVector(r->aveMean,  ch1->aveMean,  r->vSize);
-      CopyRVector(r->aveMean,  ch2->aveMean,  r->vSize);
-      CopyRVector(r->aveCovar, ch1->aveCovar, r->vSize);
-      CopyRVector(r->aveCovar, ch2->aveCovar, r->vSize);
+    ZeroVector(ch1->aveMean);  ZeroVector(ch2->aveMean);
+    ZeroVector(ch1->aveCovar); ZeroVector(ch2->aveCovar);
+
+    CopyRVector(r->aveMean,  ch1->aveMean,  r->vSize);
+    CopyRVector(r->aveMean,  ch2->aveMean,  r->vSize);
+    CopyRVector(r->aveCovar, ch1->aveCovar, r->vSize);
+    CopyRVector(r->aveCovar, ch2->aveCovar, r->vSize);
     
     PerturbMean(ch1->aveMean, ch1->aveCovar, 0.2);
     PerturbMean(ch2->aveMean, ch2->aveCovar, -0.2);
     
-      /* cluster children of r into ch1 and ch2 */
-      ClusterChildren(r, ch1, ch2);
+    /* cluster children of r into ch1 and ch2 */
+    ClusterChildren(r, ch1, ch2);
   
-      /* now create new left and right children nodes */ 
     /* Currently always build a binary regression tree */
     t->numChild = 2;
     t->child = (RegNode **)New(&tmpHeap,3*sizeof(RegNode *));
-      
+    /* now create new left child node and store the clusters */
     t->child[1] = (RegNode *) New(&tmpHeap, sizeof(RegNode));
-      t->child[1]->info = (Ptr) CreateRegTreeNode(NULL, MaxVecSize(ch1->list));
+    t->child[1]->info = (Ptr) CreateRegTreeNode(NULL, MaxVecSize(ch1->list));
     t->child[1]->numChild = 0;
     t->child[1]->child = NULL;
 
     t->child[2] = (RegNode *) New(&tmpHeap, sizeof(RegNode));
-      t->child[2]->info = (Ptr) CreateRegTreeNode(NULL, MaxVecSize(ch2->list));
+    t->child[2]->info = (Ptr) CreateRegTreeNode(NULL, MaxVecSize(ch2->list));
     t->child[2]->numChild = 0;
     t->child[2]->child = NULL;
 
-      /* store the clusters */
-      n = GetRNode(t->child[1]);
-      n->list = ch1->list;
-      n->pureVecSize = PureVecSize(n->list);
-      n->pureStream  = PureStream (n->list);
-      CalcClusterDistribution(n);
-      n->clusterScore = CalcNodeScore(n);
-      n->nComponents  = ch1->nComponents;
-      n->nodeIndex    = index++;
-      if (n->pureStream && n->pureVecSize && n->vSize>0)
-         nStrTerminals[n->list->stream]++;
+    /* store the clusters */
+    n = GetRNode(t->child[1]);
+    n->list = ch1->list;
+    n->pureVecSize = PureVecSize(n->list);
+    n->pureStream  = PureStream (n->list);
+    CalcClusterDistribution(n);
+    n->clusterScore = CalcNodeScore(n);
+    n->nComponents  = ch1->nComponents;
+    n->nodeIndex    = index++;
+    if (n->pureStream && n->pureVecSize && n->vSize>0)
+      nStrTerminals[n->list->stream]++;
 
-      n = GetRNode(t->child[2]);
-      n->list = ch2->list;
-      n->pureVecSize = PureVecSize(n->list);
-      n->pureStream  = PureStream (n->list);
-      CalcClusterDistribution(n);
-      n->clusterScore = CalcNodeScore(n);
+    n = GetRNode(t->child[2]);
+    n->list = ch2->list;
+    n->pureVecSize = PureVecSize(n->list);
+    n->pureStream  = PureStream (n->list);
+    CalcClusterDistribution(n);
+    n->clusterScore = CalcNodeScore(n);
     n->nComponents  = ch2->nComponents;
     n->nodeIndex    = index++;
-      if (n->pureStream && n->pureVecSize && n->vSize>0)
-         nStrTerminals[n->list->stream]++;
+    if (n->pureStream && n->pureVecSize && n->vSize>0)
+      nStrTerminals[n->list->stream]++;
       
-      k++;
-   }
-   
-   if (trace&T_BID) {
-      for (s=1; s<=hset->swidth[0]; s++)
-         printf("stream %d: #terminals=%d\n", s, nStrTerminals[s]);
-      fflush(stdout);
+    k++;
   }
    
-   /* free strTerminals */
-   FreeSet(strTerminals);
+  if (trace&T_BID) {
+    for (s=1; s<=hset->swidth[0]; s++)
+      printf("stream %d: #terminals=%d\n", s, nStrTerminals[s]);
+    fflush(stdout);
+  }
+   
+  /* free strTerminals */
+  FreeSet(strTerminals);
       
   return(index-1);   
 } 
@@ -7872,20 +8006,20 @@ int BuildRegClusters (RegNode *rtree, const int nTerminals, Boolean nonSpeechNod
 void RegClassesCommand(void) 
 {
   char ch;
-   char buf[MAXSTRLEN], fname[MAXFNAMELEN], bname[MAXSTRLEN], tname[MAXSTRLEN];
-   char macroname[MAXSTRLEN], fname2[MAXFNAMELEN];
+  char buf[MAXSTRLEN], fname[MAXFNAMELEN], bname[MAXSTRLEN], tname[MAXSTRLEN];
+  char macroname[MAXSTRLEN], fname2[MAXFNAMELEN];
   RegTree *regTree;
   char type = 'p';             /* type of items must be p (pdfs) */
   ILink ilist=NULL;            /* list of items that are non-speech sounds */
-   int nTerminals, nNodes;   
+  int nTerminals, nNodes;   
   FILE *f;
   Boolean isPipe;
 
   nTerminals = ChkedInt("Maximum number of terminal nodes is 256",0,256);
   ChkedAlpha("RC regression trees identifier",buf);         
   if (trace & T_BID) {
-      printf("\nRC %d %s\n Building regression tree with %d terminals (%d streams)\n",
-             nTerminals, buf, nTerminals, hset->swidth[0]);
+    printf("\nRC %d %s\n Building regression tree with %d terminals (%d streams)\n",
+           nTerminals, buf, nTerminals, hset->swidth[0]);
     printf("Creating regression class tree with ident %s.tree and baseclass %s.base\n",
 	   buf, buf);
     fflush(stdout);
@@ -7897,17 +8031,21 @@ void RegClassesCommand(void)
   while(ch!=EOF && isspace((int) ch));
   UnGetCh(ch,&source);
   if (ch != '\n')
-      PItemList(&ilist,&type,hset,&source,NULL,0,0,(trace&T_ITM)?TRUE:FALSE);
+    PItemList(&ilist,&type,hset,&source,NULL,0,0,(trace&T_ITM)?TRUE:FALSE);
 
-   regTree = InitRegTree(hset, ilist);
+  regTree = InitRegTree(hset, ilist);
   if (ilist != NULL) 
-      nNodes = BuildRegClusters(regTree->root, nTerminals, TRUE);
+    nNodes = BuildRegClusters(regTree->root, nTerminals, TRUE);
   else
-      nNodes = BuildRegClusters(regTree->root, nTerminals, FALSE);
+    nNodes = BuildRegClusters(regTree->root, nTerminals, FALSE);
 
   /* now store the baseclasses and regression classes */
   MakeFN(buf,newDir,"tree",fname);
+  /* ar527: sometimes an output filter does exist
   if ((f=FOpen(fname,NoOFilter,&isPipe)) == NULL){
+    HError(999,"RC: Cannot create output file %s",fname);
+  }*/
+  if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
     HError(999,"RC: Cannot create output file %s",fname);
   }
   MakeFN(buf,NULL,"tree",tname);
@@ -7915,7 +8053,11 @@ void RegClassesCommand(void)
   PrintRegTree(f,regTree,nNodes,tname,bname);
   FClose(f,isPipe);  
   MakeFN(buf,newDir,"base",fname2);
+  /* ar527: sometimes an output filter does exist
   if ((f=FOpen(fname2,NoOFilter,&isPipe)) == NULL){
+    HError(999,"RC: Cannot create output file %s",bname);
+  }*/
+  if ((f=FOpen(fname2,HMMDefOFilter,&isPipe)) == NULL){
     HError(999,"RC: Cannot create output file %s",bname);
   }
   PrintBaseClass(f,regTree,nNodes,bname); 
@@ -7924,6 +8066,12 @@ void RegClassesCommand(void)
   /* Create the macros so they can be stored with the models */
   LoadBaseClass(hset,NameOf(bname,macroname),fname2);  
   LoadRegTree(hset,NameOf(fname,macroname),fname);  
+
+  /* 
+     In practice the above commands are wasteful, but useful to check
+     macronames. Turn off model storage instead.
+  */
+  saveHMMSet = FALSE;
 }
 
 
@@ -7943,6 +8091,7 @@ void InputXFormCommand()
    xf->nUse++;
    hset->xf = xf;
 }
+
 
 /* ----------------- ParentXForm Command -------------------- */
 
@@ -7973,7 +8122,7 @@ void AdaptXFormCommand()
       fflush(stdout);
    }
    xf = LoadOneXForm(hset,NameOf(fn,macroname),fn);
-   SetXForm(hset, NULL, xf);
+   SetXForm(hset, &xfInfo, xf);
 }
 
 /* ----------------- ReOrderFeatures Command -------------------- */
@@ -8018,8 +8167,7 @@ void ReOrderFeaturesCommand()
       for (i=1; i<=vSize; i++)
 	 tmpv[i] = var[frv[i]];
       CopyVector(tmpv,var);
-   } 
-   else
+   } else
       HError(2623,"ReOrderFeaturesCommand: variance floor macro %s not found",mac);
    if (hset->xf != NULL) {
       xform = hset->xf->xform->xform[1];
@@ -8200,7 +8348,7 @@ void JoinModelCommand (void)
    char *pattern,*p;  /* pattern of items to use */
    int s;
 
-   ChkedAlpha("MMF file name", buf);
+   ChkedAlpha("JM MMF file name", buf);
 
    CreateHMMSet(&tmpSet,&hmmHeap,TRUE);
    tmpset = &tmpSet;
@@ -8221,7 +8369,10 @@ void JoinModelCommand (void)
    ClearSet(streams);
    pattern = PItemList(&ilist,&type,tmpset,&source,&streams,0,0,(trace&T_ITM)?TRUE:FALSE);
 
-   printf("JM %s %s\n", buf, pattern);
+   if (trace&T_BID) {
+      printf("JM %s %s\n", buf, pattern);
+      fflush(stdout);
+   }
 
    /* extract specified model pattern */
    if (type!='h') {
@@ -8587,8 +8738,13 @@ void DecTrees2RegTreeCommand(void)
 
          /* update occ counts of all nodes */
          for (leaf=tree->leaf,zeroOcc=TRUE; leaf!=NULL; leaf=leaf->next) {
+            if (tree->nLeaves > 1) {
             for (node=leaf; node->parent!=NULL; node=node->parent) {
                node->parent->occ += leaf->occ;
+               if (leaf->occ>0.0)
+                  zeroOcc = FALSE;
+            }
+            } else {
                if (leaf->occ>0.0)
                   zeroOcc = FALSE;
             }
@@ -8815,7 +8971,6 @@ void Initialise(char *hmmListFn)
    }
 
    SetVFloor(hset, vf, minVar);
-
 }
 
 /* -------------------- Top Level of Editing ---------------- */
@@ -8929,23 +9084,24 @@ void DoEdit(char * editFn)
    }
    CloseSource(&source);
    
-   if (mmfFn!=NULL || newDir!=NULL) {
-   /* Save the Edited HMM Files */
-   if (trace & T_BID) {
-      printf("\nSaving new HMM files ...\n");
-      fflush(stdout);
-   }
-      if (badGC) {
-   FixAllGConsts(hset);         /* in case any bad gConsts around */
-   badGC=FALSE;
+   if (saveHMMSet) {
+      /* Save the Edited HMM Files */
+      if (trace & T_BID) {
+         printf("\nSaving new HMM files ...\n");
+         fflush(stdout);
       }
-   PurgeMacros(hset);
+      if (badGC) {
+      FixAllGConsts(hset);         /* in case any bad gConsts around */
+      badGC=FALSE;
+      }
+      PurgeMacros(hset);
 
-   if (mmfFn!=NULL)
-      SaveInOneFile(hset,mmfFn);
-   if(SaveHMMSet(&hSet,newDir,newExt,NULL,inBinary)<SUCCESS)
-      HError(2611,"DoEdit: SaveHMMSet failed");
+      if (mmfFn!=NULL)
+         SaveInOneFile(hset,mmfFn);
+      if(SaveHMMSet(&hSet,newDir,newExt,NULL,inBinary)<SUCCESS)
+         HError(2611,"DoEdit: SaveHMMSet failed");
    }
+
    if (trace & T_BID) {
       printf("Edit Complete\n");
       fflush(stdout);

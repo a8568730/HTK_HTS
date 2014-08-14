@@ -31,8 +31,8 @@ the parameters of the HMMs from examples of the data sequences that
 they are intended to model.  This process of parameter estimation
 \index{parameter estimation} is
 usually called \textit{training}. 
-\HTK\ supplies four basic tools for parameter estimation: \htool{HCompV},
-\htool{HInit}, \htool{HRest} and \htool{HERest}.
+\HTK\ supplies five basic tools for parameter estimation: \htool{HCompV},
+\htool{HInit}, \htool{HRest},  \htool{HERest} and \htool{HMMIRest}.
 \htool{HCompV} and \htool{HInit} are used for initialisation.
 \htool{HCompV} will set the mean and variance of every Gaussian component
 in a HMM definition to be equal to the global mean and variance of the
@@ -53,15 +53,21 @@ and \htool{HRest}, and continuous speech sub-word based systems
 are built using \htool{HERest} initialised by either \htool{HCompV} or
 \htool{HInit} and \htool{HRest}.
 
+\htool{HMMIRest} is used to discriminatively train the parameters of a trained
+HMM. This uses modified versions of the Extended Baum-Welch re-estimation
+formulae. Normally \htool{HMMIRest} will use models previously trained using
+\htool{HERest}.
+
 This chapter describes these training tools and their use for 
 estimating the parameters of plain (i.e. untied)
 continuous density HMMs. The use of tying and special cases such as
-tied-mixture HMM sets and discrete probality HMMs are dealt 
+tied-mixture HMM sets and discrete probability HMMs are dealt 
 with in later chapters.  The first section of this chapter gives an overview of the
 various training strategies possible with \HTK.  This is then followed
 by sections covering initialisation, isolated-unit training, and
-embedded training.  The chapter concludes with a section detailing
-the various formulae used by the training tools.
+embedded training.  The chapter continues with a section detailing
+the various formulae used by the training tools. The final section describes
+discriminative training.
 
 \mysect{Training Strategies}{tstrats}
 
@@ -82,7 +88,7 @@ conversion \textit{on-the-fly}.  Which approach is preferred depends on the
 available computing resources.  The advantages of storing the data already
 encoded are that the data is more compact in parameterised form  and pre-encoding
 avoids wasting compute time converting the data each time that it is read
-in.  However, if the training data is derived from CD-ROMS and they can be
+in.  However, if the training data is derived from CD-ROMs and they can be
 accessed automatically on-line, then the extra compute may be worth the
 saving in magnetic disk storage.\index{isolated word training}
 
@@ -125,7 +131,7 @@ compute this global variance.
 \centrefig{subword}{90}{Training Subword HMMs}
 
 Although \HTK\ gives full support for building whole-word
-HMM systems, the bulk of its facilities are focussed on 
+HMM systems, the bulk of its facilities are focused on 
 building sub-word systems in which the basic units are the
 individual sounds of the language called \textit{phones}.
 One HMM is constructed for each such phone\index{phones} and 
@@ -321,7 +327,7 @@ illustrates this process.
 
 All \HTK\ tools support the \texttt{-T}
 \index{standard options!aaat@\texttt{-T}} trace option and although the details of 
-tracing varies from tool to tool, setting the least signicant bit (e.g.\ by \texttt{-T 1}), 
+tracing varies from tool to tool, setting the least significant bit (e.g.\ by \texttt{-T 1}), 
 causes all tools to output top level progress information.  In the case
 of \htool{HInit}, this information includes the log likelihood at each iteration and hence
 it is very useful for monitoring convergence\index{monitoring convergence}.  For example, enabling top level tracing
@@ -539,7 +545,7 @@ Once all MMFs and MLFs have been loaded, \htool{HERest} processes each file in t
 \texttt{trainlist}, and accumulates the required statistics as described
 above.  On completion, an updated  MMF is output to the directory
 \texttt{dir2}.  If a second iteration is required, then \htool{HERest} is reinvoked
-reading in the MMF from \texttt{dir2} and outputing 
+reading in the MMF from \texttt{dir2} and outputting 
 a new one to \texttt{dir3}, and so on.
 This process is illustrated by Fig~\href{f:herestdp}.
 
@@ -617,7 +623,7 @@ machine such that each invocation of \htool{HERest}
 uses the same initial set of models but has its own private set of data.
 By setting the option {\tt -p N} where {\tt N} is an integer, \htool{HERest} will
 dump the contents of all its accumulators\index{accumulators}  into a file called {\tt HERN.acc}
-rather than updating and outputing a new set of models.  These dumped
+rather than updating and outputting a new set of models.  These dumped
 files are collected together and input to a new invocation of \htool{HERest} with
 the option {\tt -p 0} set.  \htool{HERest} then reloads the accumulators from
 all of the dump files and updates the models in the normal way.
@@ -861,7 +867,7 @@ The means and variances are then estimated via simple averages
 \[
    \hat{\bm{\Sigma}}_{jsm} = \frac{
         \vitsum{}{m}(\bm{o}^r_{st} - \hat{\bm{\mu}}_{jsm})
-                                        (\bm{o}^r_{st} - \hat{\bm{\mu}}_{jsm})'
+                                        (\bm{o}^r_{st} - \hat{\bm{\mu}}_{jsm})^\transpose
                 }{\vitsum{}{m}}
 \]
 
@@ -1099,7 +1105,7 @@ follows.
 \hequation{
    \hat{\bm{\Sigma}}_{jsm} = \frac{
         \liksum{jsm}(\bm{o}^r_{st} - \hat{\bm{\mu}}_{jsm})
-                                        (\bm{o}^r_{st} - \hat{\bm{\mu}}_{jsm})'
+                                        (\bm{o}^r_{st} - \hat{\bm{\mu}}_{jsm})^\transpose
                 }{\liksum{jsm}}
 }{sigjsm}
 
@@ -1107,7 +1113,7 @@ follows.
    \bm{c}_{jsm} = \frac{\liksum{jsm}}{\liksum{j}}
 \]
 
-\subsection{Embedded Model Reestimation(\htool{HERest})}
+\subsection{Embedded Model Reestimation (\htool{HERest})}
 
 \index{model training!embedded subword formulae}
 The re-estimation formulae for the embedded model case have
@@ -1175,7 +1181,7 @@ entry states by changing $U^r_j(t)$ in equation~\ref{e:urjt} to
         \right.
 \]
 
-\subsection{Semi-Tied Transform Estimation(\htool{HERest})}
+\subsection{Semi-Tied Transform Estimation (\htool{HERest})}
 In addition to estimating the standard parameters above \htool{HERest}
 can be used to estimated semi-tied transforms and HLDA projections.
 This section describes semi-tied transforms,  the updates for HLDA
@@ -1184,15 +1190,15 @@ are very similar.
 Semi-tied covariance matrices have the form
 \begin{eqnarray}
 {\bm{\mu}}_{m_r} = \bm{\mu}_{m_r}, \:\:\:\: 
-{\bm{\Sigma}}_{m_r} = {\bm H}_r{\bm{\Sigma}}^{\tt diag}_{m_r}{\bm H}_r^T
+{\bm{\Sigma}}_{m_r} = {\bm H}_r{\bm{\Sigma}}^{\tt diag}_{m_r}{\bm H}_r^\transpose
 \end{eqnarray}
 For efficiency reasons the transforms are stored and likelihoods
 calculated using
 \hequation{ 
-       {\cal N}(\bm{o};\bm{\mu}_{m_r},\bm{H}_r\bm{\Sigma}_{m_r}^{\tt diag}\bm{H}_r^T) = 
+       {\cal N}(\bm{o};\bm{\mu}_{m_r},\bm{H}_r\bm{\Sigma}_{m_r}^{\tt diag}\bm{H}_r^\transpose) = 
        \frac{1}{|\bm{H}_r|}{\cal N}(\bm{H}_r^{-1}\bm{o};\bm{H}_r^{-1}\bm{\mu}_{m_r},\bm{\Sigma}^{\tt diag}_{m_r}) = 
        {|\bm{A}_r|}{\cal N}(\bm{A}_r\bm{o};\bm{A}_r\bm{\mu}_{m_r},\bm{\Sigma}^{\tt diag}_{m_r})
-} {covlike}
+} {covlike2}
 where $\bm{A}_r=\bm{H}_r^{-1}$. The transformed mean, $\bm{A}_{r}\bm{\mu}_{m_r}$, is stored
 in the model files rather than the original mean for efficiency.
 
@@ -1203,7 +1209,7 @@ transforms are estimated in a similar fashion to the full variance
 \begin{eqnarray}
 {\bf a}_{ri} ={\bf c}_{ri}{\bf G}^{(i)-1}_r
 \sqrt{\left(\frac{\beta_r}{{\bf
-c}_{ri}{\bf G}_r^{(i)-1}{\bf c}^T_{ri}}\right)}
+c}_{ri}{\bf G}_r^{(i)-1}{\bf c}^\transpose_{ri}}\right)}
 \end{eqnarray}
 where ${\bf a}_{ri}$ is $i^{th}$ row of ${\bm
 A}_r$, the $1\times n$ row vector ${\bf c}_{ri}$ is the vector of
@@ -1213,8 +1219,7 @@ and  ${\bf G}^{(i)}_r$ is defined as
 {\bf G}^{(i)}_r=\sum_{m_r=1}^{M_r}
 \frac{1}{\sigma_{m_ri}^{{\tt diag}2}}
 \sum_{t=1}^TL_{m_r}(t)(\bm{o}(t)-{\bm{\mu}}_{m_r})
-(\bm{o}(t)-{\bm{\mu}}_{m_r})^T
-{\bm\Sigma}_{m_r}
+(\bm{o}(t)-{\bm{\mu}}_{m_r})^\transpose
 \label{eq:gi_st}
 \end{eqnarray}
 This iteratively estimates one row of the transform at a time.  The number of 
@@ -1226,17 +1231,398 @@ as
 \begin{eqnarray}
 \bm{\Sigma}^{\tt diag}_{m_r} = {\mbox{diag}}\left(\frac{
 {\bm A}_r\sum_{t=1}^TL_{m_r}(t)(\bm{o}(t)-{\bm{\mu}}_{m_r})
-(\bm{o}(t)-{\bm{\mu}}_{m_r})^T{\bm A}_r^T}
+(\bm{o}(t)-{\bm{\mu}}_{m_r})^\transpose{\bm A}_r^\transpose}
 {\sum_{t=1}^TL_{m_r}(t)}
 \right)
 \end{eqnarray}
 This is the second look as given a new estimate of the diagonal
 variance a new transform can be estimated. The number of iterations
-of transform and covarinace matrix update is controlled by the 
+of transform and covariance matrix update is controlled by the 
 \htool{HAdapt} configuration variable {\tt MAXSEMITIEDITER}
 
+\mysect{Discriminative Training}{discriminative}
 
+The previous sections have described how maximum likelihood (ML)-based
+estimates of the HMM model parameters can be initialised and estimated. This
+section briefly describes how discriminative training is implemented in
+HTK. It is not meant as a definitive guide to discriminative training, it 
+aims to give sufficient information so that the configuration and
+command-line options associated with the discriminative training tool
+\htool{HMMIRest} can be understood.
 
+HTK supports discriminative training using the \htool{HMMIRest} tool.  The use
+of both the \textit{Maximum Mutual Information} (MMI) and \textit{Minimum
+Phone Error} (MPE) training criteria are supported. In both cases the aim is
+to estimate the HMM parameters in such a way as to (approximately) reduce the
+error rate on the training data. Hence the criteria take into account not
+only the actual word-level transcription of the training data but also
+``confusable'' hypotheses which give rise to similar language model / acoustic
+model log likelihoods. The form of MMI criterion to be maximised may be
+expressed as \footnote{This form of criterion assumes that the language model
+parameters are fixed. As such it should really be called maximum conditional likelihood estimation.}
+\begin{eqnarray}
+{\cal F}_{\tt mmi}(\lambda) &=& \frac{1}{R}\sum_{r=1}^R\log\left(
+P({\cal H}^r_{\tt ref}|\bm{O}^r,\lambda)
+\right) \nonumber \\
+&=& \frac{1}{R}\sum_{r=1}^R\log\left(
+\frac{P(\bm{O}^r|{\cal H}^r_{\tt ref},\lambda)P({\cal H}^r_{\tt ref})}
+{\sum_{\cal H}P(\bm{O}^r|{\cal H},\lambda)P({\cal H})}
+\right)
+\end{eqnarray}
+Thus the average log-posterior of the reference, ${\cal H}^r_{\tt ref}$, is
+maximised. Here the summation for ${\cal H}$ is over all possible word
+sequences. In practice this is restricted to the set of confusable hypotheses,
+which will be defined by a lattice.
+
+The MPE training criterion is an example of minimum Bayes' risk
+training\footnote{The minimum word error rate (MWE) criterion is also
+implemented. However MPE has been found to perform slightly better on
+current large vocabulary speech recognition systems.}. The general 
+expression to be minimised can be expressed as
+\begin{eqnarray}
+{\cal F}_{\tt mpe}(\lambda) = \sum_{r=1}^R\sum_{\cal H}P({\cal H}|\bm{O}^r,\lambda)
+{\cal L}({\cal H},{\cal H}^r_{\tt ref})
+\end{eqnarray}
+where ${\cal L}({\cal H},{\cal H}^r_{\tt ref})$ is the ``loss'' between the 
+hypothesis ${\cal H}$ and the reference, ${\cal H}^r_{\tt ref}$. In general, there are
+various forms of loss function that may be used. However, in MPE training, the loss
+function is measured in terms of the the  Levenshtein edit distance between
+the phone sequences of the reference and the hypothesis. In HTK,
+rather than minimising this expression, the normalised average phone accuracy 
+is maximised. This may be expressed as
+\begin{eqnarray}
+{\hat{\lambda}} = \arg\max_{\lambda}\left\{
+1 - \frac{1}{\sum_{r=1}^RQ^r}{\cal F}_{\tt mpe}(\lambda)
+\right\}
+\end{eqnarray}
+where $Q^r$ is the number of phones in the transcription for training sequence $r$.
+
+In the \htool{HMMIRest} implementation the language model scores, including
+the grammar scale factor are combined into the acoustic models to yield a
+numerator acoustic model, ${\cal M}^{\tt num}_r$, and a denominator acoustic
+model, ${\cal M}^{\tt den}_r$ for utterance $r$. In this case the MMI criterion can be expressed as 
+\begin{eqnarray}
+{\cal F}_{\tt mmi}(\lambda) = \sum_{r=1}^R\log\left(
+\frac{P(\bm{O}^r|{\cal M}^{\tt num}_r)}
+{P(\bm{O}^r|{\cal M}^{\tt den}_r)}
+\right)
+\end{eqnarray}
+and the MPE criterion is expressed as
+\begin{eqnarray}
+{\cal F}_{\tt mpe}(\lambda) = \sum_{r=1}^R\sum_{\cal H}
+\left(\frac{P(\bm{O}^r|{\cal M}_{\cal H})}
+{P(\bm{O}^r|{\cal M}^{\tt den}_r)}\right)
+{\cal L}({\cal H},{\cal H}^r_{\tt ref})
+\end{eqnarray}
+where ${\cal M}_{\cal H}$ is the acoustic model for hypothesis
+${\cal H}$. 
+
+In practice approximate forms of the MMI and normalised average phone accuracy
+criteria are optimised. 
+
+\newcommand{\liksumdisc}[1]{
+                  \sum_{r=1}^R  \sum_{t=1}^{T_r} (L^{{\tt num}r}_{#1}(t) - L^{{\tt den}r}_{#1}(t))
+}
+\subsection{Discriminative Parameter Re-Estimation Formulae}
+For both MMI and MPE training the estimation of the model parameters are based
+on variants of the Extended Baum-Welch (EBW) algorithm. In HTK the following
+form is used to estimate the means and covariance matrices\footnote{Discriminative training with multiple streams can also be
+run. However to simplify the notation it is assumed that only a single stream
+is being used.}
+\begin{eqnarray}
+\hat{\bm{\mu}}_{jm} = \frac{\liksumdisc{jm}\bm{o}^r_t + D_{jm}{\bm{\mu}}_{jm}
++ \tau^{\tt I}{\bm\mu}^{\tt p}_{jm}}
+{\liksumdisc{jm} + D_{jm} + \tau^{\tt I}}
+\end{eqnarray}
+and
+\begin{eqnarray}
+\hat{\bm{\Sigma}}_{jm} = \frac{\liksumdisc{jm}\bm{o}^r_t\bm{o}^{r\transpose}_t
++ D_{jm}{\bf G}_{jm}^{\tt s}
++ \tau^{\tt I}{\bf G}_{jm}^{\tt p}}
+{\liksumdisc{jm} + D_{jm} + \tau^{\tt I}}
+- \hat{\bm{\mu}}_{jm}\hat{\bm{\mu}}^\transpose_{jm}
+\end{eqnarray}
+where
+\begin{eqnarray}
+{\bf G}_{jm}^{\tt s} = {\bm\Sigma}_{jm} + {\bm\mu}_{jm}{\bm\mu}_{jm}^\transpose\\
+{\bf G}_{jm}^{\tt p} = {\bm\Sigma}^{\tt p}_{jm} + {\bm\mu}^{\tt
+p}_{jm}{\bm\mu}^{{\tt p}\transpose}_{jm}
+\end{eqnarray}
+The difference between the MMI and MPE criteria lie in how the numerator,
+$L^{{\tt num}r}_{jm}(t)$, and denominator, $L^{{\tt den}r}_{jm}(t)$,
+``occupancy probabilities'' are computed. For MMI, these are the posterior 
+probabilities of Gaussian component occupation for either the numerator or denominator lattice. However for MPE, in order to keep the same form of re-estimation
+formulae as MMI, an MPE-based analogue of the ``occupation
+probability'' is computed which is related to an approximate error
+measure for each phone marked for the denominator: the
+positive values are treated as numerator statistics and negative
+values as denominator statistics.
+
+In these update formulae there are a
+number of parameters to be set.
+\begin{itemize}
+\item Smoothing constant, $D_{jm}$: this is a state-component specific
+parameter that determines the contribution of the counts from the current
+model parameter estimates. In \htool{HMMIRest} this is set at
+\begin{eqnarray}
+D_{jm} = \max\left\{
+E\sum_{r=1}^R\sum_{t=1}^{T_r}
+L^{{\tt den}r}_{jm}(t),2D_{jm}^{\tt min}
+\right\}
+\end{eqnarray}
+where $D_{jm}^{\tt min}$ is the minimum value of $D_{jm}$ to ensure that 
+${\hat{\bm\Sigma}}_{jm}$ is positive semi-definite. $E$ is specified using the
+configuration variable \texttt{E}. 
+
+\item I-smoothing constant, $\tau^{\tt I}$: global smoothing term to improve
+generalisation by using the state-component priors, ${\bm\mu}^{\tt p}_{jm}$
+and ${\bm\Sigma}^{\tt p}_{jm}$. This is set using the configuration option
+\texttt{ISMOOTHTAU}. 
+
+\item Prior parameters, ${\bm\mu}^{\tt p}_{jm}$ and ${\bm\Sigma}^{\tt
+p}_{jm}$: the prior parameters that the counts from the training data  are smoothed with. These may be
+obtained from a number of sources. Supported options are;
+\begin{enumerate}
+\item dynamic ML-estimates (default): the  ML estimates of the mean and
+covariance matrices, given the current model parameters, are used.
+
+\item dynamic MMI-estimates: for MPE training the MMI estimates of the mean and
+covariance matrices, given the current model parameters, can be used. To set this
+option the following configuration entries must be added:
+\begin{verbatim}
+   MMIPRIOR = TRUE
+   MMITAUI  = 50
+\end{verbatim}
+The MMI estimates for the prior can themselves make use of I-smoothing onto a
+dynamic ML prior. The smoothing constant for this is specified using
+\texttt{MMITAUI}.
+
+\item static estimates: fixed prior parameters can be specified and used for
+all iterations. A single MMF file can be specified on the command line using
+the \texttt{-Hprior} option and the following configuration file entries added
+\begin{verbatim}
+   PRIORTAU = 25
+   STATICPRIOR = TRUE
+\end{verbatim}
+where \texttt{PRIORTAU} specifies the prior constant, $\tau^{\tt I}$,  to be
+used, rather than  the standard I-smoothing value.
+
+\end{enumerate}
+\end{itemize}
+The best configuration option and parameter settings will be task and
+criterion specific and so will need to be determined empirically. The values
+shown in the tutorial section of this book can be treated as a reasonable
+starting point. Note the grammar scale factors used in the tutorial are low
+compared to those often used in a typical large vocabulary speech recognition
+systems where values in the range 12-15 are used.
+
+The estimation of the weights and the transition matrices have a similar
+form. Only the component prior updates will be described here. $c^{(0)}_{jm}$ is
+initialised to the current model parameter $c_{jm}$. The values are then
+updated 100 times using the following iterative update rule:
+\begin{eqnarray}
+{c}^{(i+1)}_{jm} = \frac{\sum_{r=1}^R
+\sum_{t=1}^{T_r}L_{jm}^{{\tt num}r}(t) + k_{jm}c^{(i)}_{jm} + \tau^{\tt W}c^{\tt
+p}_{jm}}
+{\sum_{n}\left(\sum_{r=1}^R
+\sum_{t=1}^{T_r}L_{jn}^{{\tt num}r}(t) + k_{jn}c^{(i)}_{jn} + \tau^{\tt W}c^{\tt
+p}_{jn}\right)}
+\end{eqnarray}
+where 
+\begin{eqnarray}
+k_{jm} = \max_n\left\{\frac{\sum_{r=1}^R\sum_{t=1}^{T_r}L_{jn}^{{\tt den}r}(t)}
+{c_{jn}}
+\right\}
+- \frac{\sum_{r=1}^R\sum_{t=1}^{T_r}L_{jm}^{{\tt den}r}(t)}
+{c_{jm}}
+\end{eqnarray}
+In a similar fashion to the estimation of the means and covariance matrices
+there are a range of forms that can be used to specify the prior for the
+component or the transition matrix entry. The same configuration options used
+for the mean and covariance matrix will determine the exact form of the prior.
+
+For the component prior the I-smoothing weight, $\tau^{\tt W}$, is specified
+using the configuration variable \texttt{ISMOOTHTAUW}. This is normally set to
+1. The equivalent smoothing term for the transition matrices is set using
+\texttt{ISMOOTHTAUT} and again a value of 1 is often used.
+
+\subsection{Lattice-Based Discriminative Training}
+
+For both the MMI and MPE training criteria a set of possible hypotheses for
+each utterance must be considered.  To get these confusable hypotheses the
+training data must first be recognised. Rather than perform an explicit
+recognition on each iteration of \htool{HMMIRest}, HTK uses \textit{Lattice
+Based Discriminative Training}, in which word lattices are first created with
+e.g. \htool{HDecode}, and then these lattices are used for all iterations of
+discriminative training.
+
+To make the operation of \htool{HMMIRest} more efficient, the times of 
+the HMM/phone boundaries are also marked in the lattices. This creates
+so-called phone-marked lattices and it is this form of lattice that is used by
+\htool{HMMIRest}. For each utterance used for discriminative training, two
+lattices need to be created. The first is a phone-marked lattice that
+represents the correct word sequence (also known as a ``numerator'' lattice).
+The second is a phone-marked lattice for competing hypotheses: the
+``denominator'' lattice. These names derive from the MMI objective function,
+but the same phone-marked lattices are also required for MPE.  The numerator
+lattice is found by generating phone-level alignments in lattice form from the
+correct word level transcription, while the denominator lattice uses a
+phone-marked form of the lattice representing confusable hypotheses. In both
+cases, these are created using \htool{HDecode.mod} which is a version
+\htool{HDecode} that can output lattices with model-level alignments (model
+names and segmentations) included in the lattice structure, or \htool{HVite}.
+
+For examples of lattice generation and phone-marking see the tutorial section.
+
+\subsection{Improved Generalisation}
+In order to improve the generalisation capability of discriminative training,
+several techniques can be used: lattice generation using \textit{weak language
+models}; and \textit{acoustic log likelihood scaling}. These are performed in
+addition to the \textit{smoothing} described in a previous section.
+
+\begin{itemize}
+\item {\bf weak language models}: in order to increase the number of reasonable
+errors made during the denominator lattice generation stage a simpler language
+mode, for example a unigram or heavily pruned bigram, is often used. When the
+training data lattices are generated with these weak language models, the
+lattices tend to be larger, and there is an increased focus on
+improved acoustic discrimination. It has been found that this aids
+generalisation.
+
+\item {\bf acoustic de-weighting}: when the language model probabilities and HMM
+log-likelihoods are normally combined in recognition a \textit{grammar scale
+factor} is used that multiplies the language model log probability. The
+EBW algorithm needs to find the posterior probability of competing states in a
+word-lattice. This involves adding contributions from different paths through
+the lattice. Thus rather than multiplying the language model log probabilities, the
+acoustic model log likelihoods are reduced in dynamic range, by means of
+scaling (down) the acoustic log likelihoods generated by the HMMs. Thus the
+following form of posterior is used
+\begin{eqnarray}
+P({\cal H}^r_{\tt ref}|\bm{O}^r,\lambda) \approx
+\frac{P(\bm{O}^r|{\cal H}^r_{\tt ref},\lambda)^\kappa P({\cal H}^r_{\tt ref})}
+{\sum_{\cal H}P(\bm{O}^r|{\cal H},\lambda)^\kappa P({\cal H})}
+\end{eqnarray}
+The acoustic scale factor, $\kappa$, used is normally the reciprocal of the standard grammar
+scale factor used in recognition. It is set using the configuration option
+\texttt{LATPROBSCALE}. 
+\end{itemize}
+
+In the implementation of \htool{HMMIRest} the language model scores, including
+the grammar scale factor are combined into the acoustic models to form a
+numerator acoustic model, ${\cal M}^{\tt num}_r$, and a denominator acoustic
+model, ${\cal M}^{\tt den}_r$. Thus from the implementation perspective, and the
+form given in the reference section, the MMI criterion is expressed as (which
+are equivalent to the expressions given above when $\kappa$ is the reciprocal
+of the grammar scale factor)
+\begin{eqnarray}
+{\cal F}_{\tt mmi}(\lambda) = \sum_{r=1}^R\log\left(
+\frac{P^\kappa(\bm{O}^r|{\cal M}^{\tt num}_r)}
+{P^\kappa(\bm{O}^r|{\cal M}^{\tt den}_r)}
+\right)
+\end{eqnarray}
+and the MPE criterion is expressed as
+\begin{eqnarray}
+{\cal F}_{\tt mpe}(\lambda) = \sum_{r=1}^R\sum_{\cal H}
+\left(\frac{P^\kappa(\bm{O}^r|{\cal M}_{\cal H})}
+{P^\kappa(\bm{O}^r|{\cal M}^{\tt den}_r)}\right)
+{\cal L}({\cal H},{\cal H}^r_{\tt ref})
+\end{eqnarray}
+where ${\cal M}_{\cal H}$ is the acoustic model for hypothesis
+${\cal H}$. 
+
+\mysect{Discriminative Training using \htool{HMMIRest}}{hmmiresttrain}
+
+\centrefig{hmmirest_par}{100}{\htool{HMMIRest} Parallel Operation}
+
+In the same fashion as \htool{HERest}, \htool{HMMIRest} can be run in a
+parallel mode. Again, the training data is divided amongst the available
+machines and then \htool{HMMIREst} is run on each machine such that each
+invocation of \htool{HMMIRest} uses the same initial set of models but has its
+own private set of data.  By setting the option {\tt -p N} where {\tt N} is an
+integer, \htool{HMMIRest} will dump the contents of all its
+accumulators\index{accumulators} into a set of files labelled {\tt HDRN.acc.1}
+to {\tt HDRN.acc.n}.  The number of files $n$ depends on the discriminative
+training criterion and I-smoothing prior being used. For all set-ups the
+denominator and numerator accumulates are kept separate. The standard
+training options will have the following number of accumulates:
+\begin{itemize}
+\item {\bf 4}: MPE/MWE training with a dynamic MMI prior; \item {\bf 3}:
+MPE/MWE training with a dynamic ML prior, MPE/MWE with static
+priors\footnote{The third accumulate is not now used, but is stored for
+backward compatibility.}; \item {\bf 2}: MMI training.
+\end{itemize}
+As each of the accumulators will be approximately the size of the model-set,
+and in this parallel model a large number of accumulators can be generated, it
+is useful to ensure that there is sufficient disk-space for all the
+accumulators generated.  These dumped files are then collected
+together and input to a new invocation of \htool{HMMIRest} with the option {\tt
+-p 0} set.  \htool{HMMIRest} then reloads the accumulators from all of the dump
+files and updates the models in the normal way.  This process is illustrated
+in Figure~\href{f:hmmirest_par}.
+
+To give a concrete example in the same fashion as described for
+\htool{HERest}, suppose that four networked workstations were available to
+execute the \htool{HMMIRest} command performing MMI training. Again the
+training files listed previously in \texttt{trainlist} would be split into
+four equal sets and a list of the files in each set stored in {\tt trlist1},
+{\tt trlist2}, {\tt trlist3}, and {\tt trlist4}. Phone-marked numerator and
+denominator lattices are assumed to be available in \texttt{plat.num} and
+\texttt{plat.den} respectively.  On the first workstation,
+the command
+\begin{verbatim}
+    HMMIRest -S trlist1 -C mmi.cfg -q plat.num -r plat.den\
+             -H dir1/hmacs -M dir2 -p 1 hmmlist
+\end{verbatim}
+would be executed.  This will load in the HMM definitions in 
+{\tt dir1/hmacs}, process the files listed in {\tt trlist1} and finally
+dump its accumulators into  files called {\tt HDR1.acc.1} and {\tt HDR1.acc.2} in the output
+directory {\tt dir2}.  At the same time, the command
+\begin{verbatim}
+    HMMIRest -S trlist2  -C mmi.cfg -q plat.num -r plat.den\
+             -H dir1/hmacs -M dir2 -p 2 hmmlist
+\end{verbatim}
+would be executed on the second workstation, and so on.  When 
+\htool{HMMIRest} has finished on all four
+workstations,  the following command will be executed on just one of them
+\begin{verbatim}
+    HMMIRest -C mmi.cfg -H dir1/hmacs -M dir2 -p 0 hmmlist \
+        dir2/HDR1.acc.1 dir2/HDR1.acc.2 dir2/HDR2.acc.1 dir2/HDR2.acc.2 \
+        dir2/HDR3.acc.1 dir2/HDR3.acc.2 dir2/HDR4.acc.1 dir2/HDR4.acc.2 
+\end{verbatim}
+where the list of training files has been replaced by the dumped accumulator
+files.  This will cause the accumulated
+statistics to be reloaded and merged so that the model parameters can
+be reestimated and the new model set output to \texttt{dir2}
+
+When discriminatively training large systems on large amounts of training
+data, and to a lesser extent for maximum likelihood training, the merging of
+possibly hundreds of accumulators associated with large model sets can be slow
+and significantly load the network. To avoid this problem, it
+is possible to merge  subsets of the accumlators using the
+\texttt{UPDATEMODE = DUMP} configuration option. As an example using the above
+configuration, assume that the file \texttt{dump.cfg} contains
+\begin{verbatim}
+UPDATEMODE = DUMP
+\end{verbatim}
+The following two commands would be used to merge the statistics into two sets
+of accumulators in directories \texttt{acc1} and \texttt{acc2}.
+\begin{verbatim}
+    HMMIRest -C mmi.cfg -C dump.cfg -H dir1/hmacs -M acc1 -p 0 hmmlist \
+        dir2/HDR1.acc.1 dir2/HDR1.acc.2 dir2/HDR2.acc.1 dir2/HDR2.acc.2
+
+    HMMIRest -C mmi.cfg -C dump.cfg -H dir1/hmacs -M acc2 -p 0 hmmlist \
+        dir2/HDR3.acc.1 dir2/HDR3.acc.2 dir2/HDR4.acc.1 dir2/HDR4.acc.2 
+\end{verbatim}
+These two sets of merged statistics  can then be used to update the acoustic
+model using
+\begin{verbatim}
+    HMMIRest -C mmi.cfg -H dir1/hmacs -M dir2 -p 0 hmmlist \
+        acc1/HDR0.acc.1 acc1/HDR0.acc.2 acc2/HDR0.acc.1 acc2/HDR0.acc.2
+\end{verbatim}
+For very large systems this hierarchical merging of stats can be done
+repeatedly. Note this form of accumulate merger is also supported for
+\htool{HERest}.
 
 
 %%% Local Variables: 

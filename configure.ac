@@ -8,7 +8,7 @@
 #                                                             
 # ----------------------------------------------------------- 
 #         Copyright: Cambridge University
-#          1995-2005 Engineering Department
+#          1995-2009 Engineering Department
 #                    http://htk.eng.cam.ac.uk
 #                    http://mi.eng.cam.ac.uk
 #                 
@@ -27,7 +27,7 @@
 #           http://hts.sp.nitech.ac.jp/                             #
 # ----------------------------------------------------------------- #
 #                                                                   #
-#  Copyright (c) 2001-2008  Nagoya Institute of Technology          #
+#  Copyright (c) 2001-2009  Nagoya Institute of Technology          #
 #                           Department of Computer Science          #
 #                                                                   #
 #                2001-2008  Tokyo Institute of Technology           #
@@ -66,14 +66,15 @@
 # ----------------------------------------------------------------- #
 
 # After editing this file, run "autoconf" to regenerate "configure".
-AC_INIT(HTS,2.1, hts-users@sp.nitech.ac.jp)
-AC_COPYRIGHT(Copyright 2003-2005 University of Cambridge)
-AC_COPYRIGHT(Copyright 2001-2008 Nagoya Institute of Technology)
+
+AC_INIT(HTS,2.1.1beta, hts-users@sp.nitech.ac.jp)
+AC_COPYRIGHT(Copyright 2003-2009 University of Cambridge)
+AC_COPYRIGHT(Copyright 2001-2009 Nagoya Institute of Technology)
 AC_COPYRIGHT(Copyright 2001-2008 Tokyo Institute of Technology)
 
-AC_PREFIX_DEFAULT(/usr/local/HTS-2.1)
+AC_PREFIX_DEFAULT(/usr/local/HTS-2.1.1beta)
 
-# Checks for programs.
+dnl Checks for programs.
 AC_PROG_MAKE_SET
 AC_PROG_AWK
 AC_PROG_CC
@@ -81,17 +82,17 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_RANLIB
 
-# Check for ar
+dnl Check for ar
 AN_MAKEVAR([AR], [AC_PROG_AR])
 AN_PROGRAM([ar], [AC_PROG_AR])
 AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL(AR, ar, :)])
 AC_PROG_AR
 
-# Checks for libraries.
+dnl Checks for libraries.
 AC_CHECK_LIB([X11], [main])
-AC_CHECK_LIB([m],  [main],,AC_MSG_ERROR(Cannot find libm))
+AC_CHECK_LIB([m], [main],,AC_MSG_ERROR(Cannot find libm))
 
-# Checks for FORTRAN
+dnl Checks for FORTRAN
 AC_PROG_F77
 if test -z "$F77"; then
 	LBFGS=''
@@ -104,20 +105,20 @@ fi
 AC_SUBST(FLIBS, $FLIBS)
 AC_SUBST(LBFGS, $LBFGS)
 
-# Checks for header files.
+dnl Checks for header files.
 AC_CONFIG_HEADERS
 AC_PATH_X
 AC_HEADER_STDC
 AC_CHECK_HEADERS(errno.h fcntl.h float.h limits.h malloc.h memory.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h)
 
-# Checks for typedefs, structures, and compiler characteristics.
+dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_C_VOLATILE
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
 AC_STRUCT_TM
 
-# Checks for library functions.
+dnl Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MEMCMP
 AC_FUNC_MALLOC
@@ -126,55 +127,57 @@ AC_FUNC_STRTOD
 AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
 AC_HEADER_STDBOOL
-AC_CHECK_FUNCS(floor gettimeofday memmove memset modf pow socket sqrt strchr strcspn strrchr strspn strstr strtol strdup)
+AC_CHECK_FUNCS(floor gettimeofday memmove memset modf pow socket sqrt strchr strcspn strrchr strspn strstr strtol)
+AC_CHECK_FUNCS(strdup)
 
 
 AC_CANONICAL_HOST
 AC_C_BIGENDIAN
 AC_CHECK_SIZEOF(int *)
 
-
-# Traditional HTK build?
-# if enabled this will install in $bindir.$host_cpu
+dnl Traditional HTK build?
+dnl if enabled this will install in $bindir.$host_cpu
 AC_ARG_ENABLE(trad-htk,
 		AS_HELP_STRING([--enable-trad-htk],
 		[HTK installed into $prefix/bin.$cpu and installed when compiled]))
 
-# Build HDecode
+dnl Build HDecode
 AC_ARG_ENABLE(hdecode,
 		AS_HELP_STRING([--enable-hdecode],
 		[build large vocabulary recognition system (HDecode)]))
 
-# Build LM Tools
+dnl Build LM Tools
 AC_ARG_ENABLE(hlmtools,
-	AS_HELP_STRING([--enable-hlmtools],
-	[build Language Modelling tools]))
+		AS_HELP_STRING([--enable-hlmtools],
+		[build Language Modelling tools]))
 
-# Disable building for X
-# i.e. use HGraf.null, and don't build HSLab
+dnl Disable building for X
+dnl i.e. use HGraf.null, and don't build HSLab
 AC_ARG_ENABLE(hslab,
 		AS_HELP_STRING([--disable-hslab],
 		[don't build HSLab]))
 
-# Build LV Recognition
+dnl Build LV Recognition
 AC_ARG_ENABLE(htkbook,
 		AS_HELP_STRING([--enable-htkbook],
 		[build HTK book]))
 
 
-# Use -Wall if using gcc/g77
+dnl Use -Wall if using gcc
 case "$CC" in
 	 gcc*)
 		CFLAGS="-Wall -Wno-switch $CFLAGS"
 		;;		
 esac
+dnl Use -Wall if using g77
 case "$F77" in
 	g77*)
 		FFLAGS="-Wall $FFLAGS"
 	;;
 esac
 
-# customise for htk comilpation
+
+dnl customise for htk comilpation
 trad_bin_dir=$host
 case "$host_cpu" in
 	 powerpc)
@@ -185,57 +188,67 @@ esac
 
 case "$host" in
 		*x86_64*linux*)
-		CFLAGS="-ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
-		FFLAGS="$FFLAGS"
-		AC_MSG_CHECKING(whether to compile in 32-bit or 64-bit mode)
-		if test x$ac_cv_sizeof_int_p = x"4"; then
-			AC_MSG_RESULT(32-bit)
+				CFLAGS="-ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
+				FFLAGS="$FFLAGS"
+				AC_MSG_CHECKING(whether to compile in 32-bit or 64-bit mode)
+				if test x$ac_cv_sizeof_int_p = x"4"; then
+					AC_MSG_RESULT(32-bit)
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
-		elif test x$ac_cv_sizeof_int_p = x"8"; then
-			AC_MSG_RESULT(64-bit)
-			LDFLAGS="-L/usr/X11R6/lib64 $LDFLAGS"
-		fi
+				elif test x$ac_cv_sizeof_int_p = x"8"; then
+					AC_MSG_RESULT(64-bit)
+					LDFLAGS="-L/usr/X11R6/lib64 $LDFLAGS"
+				fi
 				ARCH=linux
 				trad_bin_dir=linux
 		;;
 		*linux*)
 				CFLAGS="-ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
-		FFLAGS="$FFLAGS"
+				FFLAGS="$FFLAGS"
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
 				ARCH=linux
 				trad_bin_dir=linux
 		;;
 		*pc-solaris*)
 				CFLAGS="-ansi -I/usr/openwin/include -O2 -DSOLARIS16_AUDIO -DBSD_COMP -D'ARCH=\"$host_cpu\"' $CFLAGS"
-		FFLAGS="-O2 $FFLAGS"
+				FFLAGS="-O2 $FFLAGS"
 				LDFLAGS="-L/usr/openwin/lib -ldl -lsocket -lnsl -lintl $LDFLAGS"
 		;;
 		*sun*)
 				CFLAGS="-ansi -I/usr/openwin/include -O2 -DSOLARIS16_AUDIO -DBSD_COMP -D'ARCH=\"$host_cpu\"' $CFLAGS"
-		FFLAGS="-O2 $FFLAGS"
+				FFLAGS="-O2 $FFLAGS"
 				LDFLAGS="-L/usr/openwin/lib -ldl -lsocket -lnsl -lintl $LDFLAGS"
 		;;
 		*sgi*)
 				CFLAGS="-O -DSGI_AUDIO  -D'ARCH=\"$host_cpu\"' $CFLAGS"
-		FFLAGS="$FFLAGS"
+				FFLAGS="$FFLAGS"
 				LDFLAGS="-laudio -lmalloc $LDFLAGS"
 		;;
 		*hp*)
 				CFLAGS="+e -O -I/usr/include/X11R5 -I/usr/include/audio -I/opt/audio/include -D_HPUX_SOURCE -Aa -DHPUX_AUDIO -DUSE_TIMER  -D'ARCH=\"$host_cpu\"' $CFLAGS"
-		FFLAGS="$FFLAGS"
+				FFLAGS="$FFLAGS"
 				LDFLAGS="-L/opt/audio/lib -lAlib $LDFLAGS"
 		;;
 		*cygwin)
 				CFLAGS="-ansi -DCYGWIN -D'ARCH=\"ASCII\"' $CFLAGS"
-		FFLAGS="$FFLAGS"
+				FFLAGS="$FFLAGS"
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
 				ARCH=ASCII
-		CPU=cygwin
+				CPU=cygwin
 				BINARY_EXTENSION=.exe
 		;;				
-	*darwin*)
-		CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' -I/usr/include/malloc $CFLAGS"
-		FFLAGS="-g -O2 $FFLAGS"
+		i386*darwin*)
+				CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' -I/usr/include/malloc $CFLAGS"
+				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
+				ARCH=darwin
+				Objcopy=echo
+				PRILF="-x"
+				CPU=darwin
+				SHRLF="-shared"
+				LIBEXT=dylib
+		;;				
+		*darwin*)
+				CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' -I/usr/include/malloc $CFLAGS"
+				FFLAGS="-g -O2 $FFLAGS"
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
 				ARCH=darwin
 				Objcopy=echo
@@ -246,7 +259,7 @@ case "$host" in
 		;;				
 esac
 
-# define MAXSTRLEN if users want to change it to other value
+dnl define MAXSTRLEN if users want to change it to other value
 AC_ARG_VAR([MAXSTRLEN],[max length of strings (default=256)])
 if test -n "$MAXSTRLEN" -a $MAXSTRLEN!=256; then
 	AC_MSG_CHECKING(user-defined maximum length of strings)
@@ -254,7 +267,7 @@ if test -n "$MAXSTRLEN" -a $MAXSTRLEN!=256; then
 	AC_MSG_RESULT($MAXSTRLEN)
 fi
 
-# define MAXFNAMELEN if users want to change it to other value
+dnl define MAXFNAMELEN if users want to change it to other value
 AC_ARG_VAR([MAXFNAMELEN],[max length of file names (default=1024)])
 if test -n "$MAXFNAMELEN" -a $MAXFNAMELEN!=1024; then
 	AC_MSG_CHECKING(user-defined maximum length of file names)
@@ -262,7 +275,7 @@ if test -n "$MAXFNAMELEN" -a $MAXFNAMELEN!=1024; then
 	AC_MSG_RESULT($MAXFNAMELEN)
 fi
 
-# define PAT_LEN if users want to change it to other value
+dnl define PAT_LEN if users want to change it to other value
 AC_ARG_VAR([PAT_LEN],[max length of patterns (default=2048)])
 if test -n "$PAT_LEN" -a $PAT_LEN!=2048; then
 	AC_MSG_CHECKING(user-defined maximum length of file names)
@@ -270,7 +283,7 @@ if test -n "$PAT_LEN" -a $PAT_LEN!=2048; then
 	AC_MSG_RESULT($PAT_LEN)
 fi
 
-# define SMAX if users want to change it to other value
+dnl define SMAX if users want to change it to other value
 AC_ARG_VAR([SMAX],[max number of streams (default=9)])
 if test -n "$SMAX" -a $SMAX!=9; then
 	AC_MSG_CHECKING(user-defined maximum number of streams)
@@ -279,12 +292,12 @@ if test -n "$SMAX" -a $SMAX!=9; then
 fi
 
 
-# Process customised options
+dnl Process customised options
 make_all=htktools
 make_install=install-htktools
 build_notes="Build notes: "
-# Tweak bindir and libdir for backwards compatibility 
-# with previous versions of HTK
+dnl Tweak bindir and libdir for backwards compatibility 
+dnl with previous versions of HTK
 case "$enable_trad_htk" in
      yes)
 	bindir=${bindir}.${trad_bin_dir}
@@ -292,13 +305,13 @@ case "$enable_trad_htk" in
 	;;
 esac
 case "$enable_hlmtools" in
-	yes)
+     yes)
 	make_all="$make_all hlmtools"
 	make_install="$make_install install-hlmtools"
 	build_notes="$build_notes Language Modelling tools will be built."
 	;;
-	*)
-		build_notes="$build_notes The Language Modelling tools will not be built. You can build them manually later by running 'make hlmtools install-hlmtools'."
+     *)
+	build_notes="$build_notes The Language Modelling tools will not be built. You can build them manually later by running 'make hlmtools install-hlmtools'"
 	;;
 esac
 case "$enable_hdecode" in
@@ -306,11 +319,11 @@ case "$enable_hdecode" in
 	make_all="$make_all hdecode"
 	make_install="$make_install install-hdecode"
 	build_notes="$build_notes Large Vocabulary recogniser HDecode will be built."
-		LIBLV="HTKLiblv.a"
+	LIBLV="HTKLiblv.a"
 	;;
      *)
-		build_notes="$build_notes HDecode will not be built. You can build it manually later by running 'make hdecode install-hdecode'."
-		LIBLV=""
+	build_notes="$build_notes HDecode will not be built. You can build it manually later by running 'make hdecode install-hdecode'"
+	LIBLV=""
 	;;
 esac
 case "$enable_htkbook" in

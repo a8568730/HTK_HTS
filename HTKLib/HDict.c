@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,8 +64,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hdict_version = "!HVER!HDict:   3.4 [CUED 25/04/06]";
-char *hdict_vc_id = "$Id: HDict.c,v 1.5 2008/05/30 07:19:14 zen Exp $";
+char *hdict_version = "!HVER!HDict:   3.4.1 [CUED 12/03/09]";
+char *hdict_vc_id = "$Id: HDict.c,v 1.6 2009/12/11 10:00:47 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -359,6 +359,8 @@ ReturnStatus ReadDict(char *dictFn, Vocab *voc)
       word = GetWord(voc,labels[0],TRUE);
       if (labels[1]==NULL) labels[1]=labels[0];
       if (labels[1]->name[0]==0) labels[1]=NULL;
+      if (voc->nullWord->wordName == word->wordName)
+         HRError(-8013,"ReadDict: !NULL entry contains pronunciation");
       NewPron(voc,word,nphones,labels+2,labels[1],prob);
       if((ret=ReadDictWord(&src,labels,&prob, &nphones))<SUCCESS){
          HRError(8013,"ReadDict: Dict format error");

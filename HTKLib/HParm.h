@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,7 +77,7 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-/* !HVER!HParm:   3.3 [CUED 28/04/05] */
+/* !HVER!HParm:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HPARM_H_
 #define _HPARM_H_
@@ -196,6 +196,7 @@ typedef struct {
    int spDetSt;               /* Frame number of first frame of buffer */
    int spDetEn;               /* Frame number of last frame of buffer */
    char *matTranFN;           /* Matrix transformation name */
+   Ptr xform;                 /* Used for input xform associated with this buffer */
 }BufferInfo;
 
 /*
@@ -214,7 +215,7 @@ ReturnStatus InitParm(void);
 void ResetParm(void);
 /*
    Reset the module
- */
+*/
 
 /* -------------------- Channel functions ------------------ */
 

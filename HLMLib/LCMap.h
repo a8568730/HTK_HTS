@@ -29,7 +29,7 @@
 /*       File: LCMap:  Class Map and Associated Routines       */
 /* ----------------------------------------------------------- */
 
-/* !HVER!lcmap:   3.3 [CUED 28/04/05] */
+/* !HVER!lcmap:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _LCMAP_H
 #define _LCMAP_H

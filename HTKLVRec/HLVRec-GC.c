@@ -234,13 +234,14 @@ static void SweepModPaths (MemHeap *heap)
    int iMapPos, iMapMask;
    int total, freed;
 
+   if(heap != NULL){
    assert (heap->type == MHEAP);
 
    total = freed = 0;
    elemSize = heap->elemSize;
 
-   for (b = heap->heap; b; b = b->next) {
-      for (i = 0, path = b->data; i < b->numElem; 
+   for (b = heap->heap; b != NULL; b = b->next) {
+      for (i = 0, path = b->data; path != NULL && i < b->numElem; 
            ++i, path = (ModendHyp *) (((char *) path) + elemSize)) {
          iMapPos = i/8;
          iMapMask = 1 << (i&7);
@@ -276,6 +277,7 @@ static void SweepModPaths (MemHeap *heap)
    if (trace&T_GC)
       printf ("freed %d of %d ModPaths\n", freed, total);
 }
+}
 #endif
 
 /* GarbageCollectPaths
@@ -295,7 +297,8 @@ static void GarbageCollectPaths (DecoderInst *dec)
       PrintHeapStats (&dec->weHypHeap);
       PrintHeapStats (&dec->altweHypHeap);
 #ifdef MODALIGN
-      PrintHeapStats (&dec->modendHypHeap);
+      if (dec->modAlign)
+        PrintHeapStats (&dec->modendHypHeap);
 #endif
    }
    /*# mark phase */
@@ -325,7 +328,8 @@ static void GarbageCollectPaths (DecoderInst *dec)
    SweepPaths (&dec->weHypHeap);
    SweepAltPaths (&dec->altweHypHeap);
 #ifdef MODALIGN
-   SweepModPaths (&dec->modendHypHeap);
+   if (dec->modAlign)
+      SweepModPaths (&dec->modendHypHeap);
 #endif
 
    if (trace&T_GC) {
@@ -333,6 +337,7 @@ static void GarbageCollectPaths (DecoderInst *dec)
       PrintHeapStats (&dec->weHypHeap);
       PrintHeapStats (&dec->altweHypHeap);
 #ifdef MODALIGN
+   if (dec->modAlign)
       PrintHeapStats (&dec->modendHypHeap);
 #endif
    }

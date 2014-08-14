@@ -27,7 +27,7 @@
 #           http://hts.sp.nitech.ac.jp/                             #
 # ----------------------------------------------------------------- #
 #                                                                   #
-#  Copyright (c) 2001-2008  Nagoya Institute of Technology          #
+#  Copyright (c) 2001-2009  Nagoya Institute of Technology          #
 #                           Department of Computer Science          #
 #                                                                   #
 #                2001-2008  Tokyo Institute of Technology           #
@@ -87,14 +87,14 @@ includedir = @includedir@
 oldincludedir = /usr/include
 
 CC      = 	@CC@
-CFLAGS  = 	-I$(inc) @CFLAGS@ 
+CFLAGS  = 	@CFLAGS@ -I$(inc) -DPHNALG
 LDFLAGS = 	@LDFLAGS@ -lm
 INSTALL = 	@INSTALL@
 PROGS   = 	@HSLAB@ HBuild HCompV HCopy HDMan \
 		HERest HHEd HInit HLEd 	HList \
 		HLRescore HLStats HMMIRest HParse \
 		HQuant HRest HResults HSGen HSmooth \
-		HVite HMGenS
+		HVite HMGenS HFst
 all: $(PROGS)
 
 %: %.c $(HTKLIB) 

@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hlist_version = "!HVER!HList:   3.4 [CUED 25/04/06]";
-char *hlist_vc_id = "$Id: HList.c,v 1.5 2008/05/30 07:19:10 zen Exp $";
+char *hlist_version = "!HVER!HList:   3.4.1 [CUED 12/03/09]";
+char *hlist_vc_id = "$Id: HList.c,v 1.6 2009/12/11 10:00:55 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
             HError(1119,"HList: List file name expected");
          ListSpeech(GetStrArg());
       }
-   
+
    ResetParm();
    ResetModel();
    ResetLabel();
@@ -384,8 +384,7 @@ Boolean IsWave(char *srcFile)
          }
          isWave = (kind == WAVEFORM) ? TRUE:FALSE;
          FClose(f,isPipe);
-      } 
-      else
+      } else
          isWave = TRUE;
    }
    return isWave;

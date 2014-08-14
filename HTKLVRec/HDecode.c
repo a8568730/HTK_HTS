@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -72,8 +72,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hdecode_version = "!HVER!HDecode:   3.4 [GE 25/04/06]";
-char *hdecode_sccs_id = "$Id: HDecode.c,v 1.10 2008/05/30 07:19:22 zen Exp $";
+char *hdecode_version = "!HVER!HDecode:   3.4.1 [GE 12/03/09]";
+char *hdecode_sccs_id = "$Id: HDecode.c,v 1.11 2009/12/11 10:00:43 uratec Exp $";
 
 /* this is just the tool that handles command line arguments and
    stuff, all the real magic is in HLVNet and HLVRec */
@@ -82,6 +82,7 @@ char *hdecode_sccs_id = "$Id: HDecode.c,v 1.10 2008/05/30 07:19:22 zen Exp $";
 #include "HShell.h"
 #include "HMem.h"
 #include "HMath.h"
+#include "HSigP.h"
 #include "HWave.h"
 #include "HLabel.h"
 #include "HAudio.h"
@@ -128,6 +129,7 @@ static char *labForm = NULL;	/* output label format */
 static Boolean latRescore = FALSE; /* read lattice for each utterance and rescore? */
 static char *latInDir = NULL;   /* lattice input directory */
 static char *latInExt = "lat";  /* latttice input extension */
+static char *latFileMask = NULL; /* mask for reading lattice */
 
 static Boolean latGen = FALSE;  /* output lattice? */
 static char *latOutDir = NULL;  /* lattice output directory */
@@ -239,6 +241,9 @@ SetConfParms (void)
       if (GetConfStr (cParm, nParm, "BESTALIGNMLF", buf))
          bestAlignMLF = CopyString (&gstack, buf);
       if (GetConfBool (cParm, nParm, "USEHMODEL",&b)) useHModel = b;
+      if (GetConfStr(cParm,nParm,"LATFILEMASK",buf)) {
+         latFileMask = CopyString(&gstack, buf);
+      }
    }
 }
 
@@ -294,6 +299,7 @@ main (int argc, char *argv[])
 
    InitMem ();
    InitMath ();
+   InitSigP ();
    InitWave ();
    InitLabel ();
    InitAudio ();
@@ -305,7 +311,7 @@ main (int argc, char *argv[])
    InitLVNet ();
    InitLVLM ();
    InitLVRec ();
-   InitAdapt (&xfInfo,NULL);
+   InitAdapt (&xfInfo, NULL);
    InitLat ();
 
    if (!InfoPrinted () && NumArgs () == 0)
@@ -718,7 +724,7 @@ DecoderInst *Initialise (void)
    obs = (Observation *) New (&gcheap, outpBlocksize * sizeof (Observation));
    for (i = 0; i < outpBlocksize; ++i)
       obs[i] = MakeObservation (&gcheap, hset.swidth, hset.pkind, 
-                                ((hset.hsKind==DISCRETEHS) ? TRUE:FALSE), eSep);
+                                ((hset.hsKind == DISCRETEHS) ? TRUE:FALSE), eSep);
 
    CreateHeap (&inputBufHeap, "Input Buffer Heap", MSTAK, 1, 1.0, 80000, 800000);
 
@@ -731,7 +737,7 @@ DecoderInst *Initialise (void)
    if (xfInfo.useOutXForm) {
       CreateHeap(&regHeap,   "regClassStore",  MSTAK, 1, 0.5, 1000, 8000 );
       /* This initialises things - temporary hack - THINK!! */
-      CreateAdaptXForm(&hset,&xfInfo,"tmp");
+      CreateAdaptXForm(&hset, &xfInfo, "tmp");
 
       /* online adaptation not supported yet! */
    }
@@ -777,7 +783,7 @@ struct _BestInfo {
    step over LN_CON and LN_WORDEND nodes.
    return NULL if not found
 */
-BestInfo *FindLexNetLab (MemHeap *heap, LexNode *ln, LLink ll)
+BestInfo *FindLexNetLab (MemHeap *heap, LexNode *ln, LLink ll, HTime frameDur)
 {
    int i;
    LexNode *follLN;
@@ -799,12 +805,12 @@ BestInfo *FindLexNetLab (MemHeap *heap, LexNode *ln, LLink ll)
          m = FindMacroStruct (&hset, 'h', follLN->data.hmm);
          if (m->id == ll->labid) {
             /*            printf ("found  %8.0f %8.0f %8s  %p\n", ll->start, ll->end, ll->labid->name, follLN); */
-            next = FindLexNetLab (heap, follLN, ll->succ);
+            next = FindLexNetLab (heap, follLN, ll->succ, frameDur);
             if (next) {
                info = New (heap, sizeof (BestInfo));
                info->next = next;
-               info->start = ll->start / 1.0e5;
-               info->end = ll->end / 1.0e5;
+               info->start = ll->start / (frameDur*1.0e7);
+               info->end = ll->end / (frameDur*1.0e7);
                info->ll = ll;
                info->ln = follLN;
                return info;
@@ -814,11 +820,11 @@ BestInfo *FindLexNetLab (MemHeap *heap, LexNode *ln, LLink ll)
       }
       else {
          /*         printf ("searching for %8s recursing\n", ll->labid->name); */
-         next = FindLexNetLab (heap, follLN, ll);
+         next = FindLexNetLab (heap, follLN, ll, frameDur);
          if (next) {
             info = New (heap, sizeof (BestInfo));
             info->next = next;
-            info->start = info->end = ll->start / 1.0e5;
+            info->start = info->end = ll->start / (frameDur*1.0e7);
             info->ll = ll;
             info->ln = follLN;
             return info;
@@ -830,7 +836,7 @@ BestInfo *FindLexNetLab (MemHeap *heap, LexNode *ln, LLink ll)
    return NULL;
 }
 
-BestInfo *CreateBestInfo (MemHeap *heap, char *fn)
+BestInfo *CreateBestInfo (MemHeap *heap, char *fn, HTime frameDur)
 {
    char alignFN[MAXFNAMELEN];
    Transcription *bestTrans;
@@ -870,14 +876,14 @@ BestInfo *CreateBestInfo (MemHeap *heap, char *fn)
 #endif
    assert (ll->labid == lnLabId);
    bestAlignInfo = New (&transHeap, sizeof (BestInfo));
-   bestAlignInfo->start = ll->start / 1.0e5;
-   bestAlignInfo->end = ll->end / 1.0e5;
+   bestAlignInfo->start = ll->start / (frameDur*1.0e7);
+   bestAlignInfo->end = ll->end / (frameDur*1.0e7);
    bestAlignInfo->ll = ll;
    bestAlignInfo->ln = ln;
    
    
    /* info for all the following nodes */
-   bestAlignInfo->next = FindLexNetLab (&transHeap, ln, ll->succ);
+   bestAlignInfo->next = FindLexNetLab (&transHeap, ln, ll->succ, frameDur);
    
    {
       BestInfo *b;
@@ -972,7 +978,7 @@ void DoRecognition (DecoderInst *dec, char *fn)
 
    /* get transcrition of 1-best alignment */
    if (bestAlignMLF)
-      bestAlignInfo = CreateBestInfo (&transHeap, fn);
+      bestAlignInfo = CreateBestInfo (&transHeap, fn, pbInfo.tgtSampRate/1.0e7);
    
    parmBuf = OpenBuffer (&inputBufHeap, fn, 50, dataForm, TRI_UNDEF, TRI_UNDEF);
    if (!parmBuf)
@@ -986,7 +992,7 @@ void DoRecognition (DecoderInst *dec, char *fn)
               
    if (latRescore) {
       /* read lattice and create LM */
-      char latfn[MAXSTRLEN];
+      char latfn[MAXSTRLEN],buf3[MAXSTRLEN];
       FILE *latF;
       Boolean isPipe;
       Lattice *lat;
@@ -994,8 +1000,15 @@ void DoRecognition (DecoderInst *dec, char *fn)
       /* clear out previous LexNet, Lattice and LM structures */
       ResetHeap (&lmHeap);
       ResetHeap (&netHeap);
-
-      MakeFN (fn, latInDir, latInExt, latfn);
+      
+      if (latFileMask != NULL ) { /* support for rescoring lattoce masks */
+         if (!MaskMatch(latFileMask, buf3 , fn))
+            HError(2319,"HDecode: mask %s has no match with segemnt %s",latFileMask,fn);
+         MakeFN (buf3, latInDir, latInExt, latfn);
+      } else {
+         MakeFN (fn, latInDir, latInExt, latfn);
+      }
+      
       if (trace & T_TOP)
          printf ("Loading Lattice from %s\n", latfn);
       {
@@ -1057,6 +1070,11 @@ void DoRecognition (DecoderInst *dec, char *fn)
             PrintObservation (frameProc+1, &obs[frameProc % outpBlocksize], 13);
          for (i = 0; i < outpBlocksize; ++i)
             obsBlock[i] = &obs[(frameProc + i) % outpBlocksize];
+
+#ifdef DEBUG_TRACE
+         fprintf(stdout, "\nProcessing frame %d :\n", frameProc);
+         fflush(stdout);
+#endif
          
          ProcessFrame (dec, obsBlock, outpBlocksize, xfInfo.inXForm);
          if (bestAlignInfo)
@@ -1085,7 +1103,7 @@ void DoRecognition (DecoderInst *dec, char *fn)
    endClock = clock();
    cpuSec = (endClock - startClock) / (double) CLOCKS_PER_SEC;
    printf ("CPU time %f  utterance length %f  RT factor %f\n",
-           cpuSec, frameN/100.0, cpuSec / (frameN/100.0));
+           cpuSec, frameN*dec->frameDur, cpuSec / (frameN*dec->frameDur));
 
    trans = TraceBack (&transHeap, dec);
 
@@ -1096,13 +1114,13 @@ void DoRecognition (DecoderInst *dec, char *fn)
 
       if (labForm != NULL)
          ReFormatTranscription (trans, pbInfo.tgtSampRate, FALSE, FALSE,
-                               ((strchr(labForm,'X')!=NULL) ? TRUE:FALSE),
-                               ((strchr(labForm,'N')!=NULL) ? TRUE:FALSE),
-                               ((strchr(labForm,'S')!=NULL) ? TRUE:FALSE),
-                               ((strchr(labForm,'C')!=NULL) ? TRUE:FALSE),
-                               ((strchr(labForm,'T')!=NULL) ? TRUE:FALSE),
-                               ((strchr(labForm,'W')!=NULL) ? TRUE:FALSE),
-                               ((strchr(labForm,'M')!=NULL) ? TRUE:FALSE));
+                                (strchr(labForm,'X')!=NULL) ? TRUE:FALSE,
+                                (strchr(labForm,'N')!=NULL) ? TRUE:FALSE,
+                                (strchr(labForm,'S')!=NULL) ? TRUE:FALSE,
+                                (strchr(labForm,'C')!=NULL) ? TRUE:FALSE,
+                                (strchr(labForm,'T')!=NULL) ? TRUE:FALSE,
+                                (strchr(labForm,'W')!=NULL) ? TRUE:FALSE,
+                                (strchr(labForm,'M')!=NULL) ? TRUE:FALSE);
       
       MakeFN (fn, labDir, labExt, labfn);
 

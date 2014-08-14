@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -72,8 +72,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hdecode_version = "!HVER!HDecode:   3.4 [GE 25/04/06]";
-char *hdecode_sccs_id = "$Id: HDecode.mod.c,v 1.5 2008/05/30 07:19:22 zen Exp $";
+char *hdecode_version = "!HVER!HDecode:   3.4.1 [GE 12/03/09]";
+char *hdecode_sccs_id = "$Id: HDecode.mod.c,v 1.6 2009/12/11 10:00:43 uratec Exp $";
 
 /* this is just the tool that handles command line arguments and
    stuff, all the real magic is in HLVNet and HLVRec */
@@ -305,7 +305,7 @@ main (int argc, char *argv[])
    InitLVNet ();
    InitLVLM ();
    InitLVRec ();
-   InitAdapt (&xfInfo,NULL);
+   InitAdapt (&xfInfo, NULL);
    InitLat ();
 
    if (!InfoPrinted () && NumArgs () == 0)
@@ -777,7 +777,7 @@ struct _BestInfo {
    step over LN_CON and LN_WORDEND nodes.
    return NULL if not found
 */
-BestInfo *FindLexNetLab (MemHeap *heap, LexNode *ln, LLink ll)
+BestInfo *FindLexNetLab (MemHeap *heap, LexNode *ln, LLink ll, HTime frameDur)
 {
    int i;
    LexNode *follLN;
@@ -799,12 +799,12 @@ BestInfo *FindLexNetLab (MemHeap *heap, LexNode *ln, LLink ll)
          m = FindMacroStruct (&hset, 'h', follLN->data.hmm);
          if (m->id == ll->labid) {
             /*            printf ("found  %8.0f %8.0f %8s  %p\n", ll->start, ll->end, ll->labid->name, follLN); */
-            next = FindLexNetLab (heap, follLN, ll->succ);
+            next = FindLexNetLab (heap, follLN, ll->succ, frameDur);
             if (next) {
                info = New (heap, sizeof (BestInfo));
                info->next = next;
-               info->start = ll->start / 1.0e5;
-               info->end = ll->end / 1.0e5;
+               info->start = ll->start / (frameDur*1.0e7);
+               info->end = ll->end / (frameDur*1.0e7);
                info->ll = ll;
                info->ln = follLN;
                return info;
@@ -814,11 +814,11 @@ BestInfo *FindLexNetLab (MemHeap *heap, LexNode *ln, LLink ll)
       }
       else {
          /*         printf ("searching for %8s recursing\n", ll->labid->name); */
-         next = FindLexNetLab (heap, follLN, ll);
+         next = FindLexNetLab (heap, follLN, ll, frameDur);
          if (next) {
             info = New (heap, sizeof (BestInfo));
             info->next = next;
-            info->start = info->end = ll->start / 1.0e5;
+            info->start = info->end = ll->start / (frameDur*1.0e7);
             info->ll = ll;
             info->ln = follLN;
             return info;
@@ -830,7 +830,7 @@ BestInfo *FindLexNetLab (MemHeap *heap, LexNode *ln, LLink ll)
    return NULL;
 }
 
-BestInfo *CreateBestInfo (MemHeap *heap, char *fn)
+BestInfo *CreateBestInfo (MemHeap *heap, char *fn, HTime frameDur)
 {
    char alignFN[MAXFNAMELEN];
    Transcription *bestTrans;
@@ -870,14 +870,14 @@ BestInfo *CreateBestInfo (MemHeap *heap, char *fn)
 #endif
    assert (ll->labid == lnLabId);
    bestAlignInfo = New (&transHeap, sizeof (BestInfo));
-   bestAlignInfo->start = ll->start / 1.0e5;
-   bestAlignInfo->end = ll->end / 1.0e5;
+   bestAlignInfo->start = ll->start / (frameDur*1.0e7);
+   bestAlignInfo->end = ll->end / (frameDur*1.0e7);
    bestAlignInfo->ll = ll;
    bestAlignInfo->ln = ln;
    
    
    /* info for all the following nodes */
-   bestAlignInfo->next = FindLexNetLab (&transHeap, ln, ll->succ);
+   bestAlignInfo->next = FindLexNetLab (&transHeap, ln, ll->succ, frameDur);
    
    {
       BestInfo *b;
@@ -972,7 +972,7 @@ void DoRecognition (DecoderInst *dec, char *fn)
 
    /* get transcrition of 1-best alignment */
    if (bestAlignMLF)
-      bestAlignInfo = CreateBestInfo (&transHeap, fn);
+     bestAlignInfo = CreateBestInfo (&transHeap, fn, pbInfo.tgtSampRate/1.0e7);
    
    parmBuf = OpenBuffer (&inputBufHeap, fn, 50, dataForm, TRI_UNDEF, TRI_UNDEF);
    if (!parmBuf)
@@ -1085,7 +1085,7 @@ void DoRecognition (DecoderInst *dec, char *fn)
    endClock = clock();
    cpuSec = (endClock - startClock) / (double) CLOCKS_PER_SEC;
    printf ("CPU time %f  utterance length %f  RT factor %f\n",
-           cpuSec, frameN/100.0, cpuSec / (frameN/100.0));
+           cpuSec, frameN*dec->frameDur, cpuSec / (frameN*dec->frameDur));
 
    trans = TraceBack (&transHeap, dec);
 

@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,10 +64,16 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-/* !HVER!HMath:   3.3 [CUED 28/04/05] */
+/* !HVER!HMath:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HMATH_H_
 #define _HMATH_H_
+
+
+#ifdef WIN32
+#include <float.h>
+#define isnan _isnan
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -141,7 +147,7 @@ void CopyDVector(DVector v1, DVector v2);
 Boolean ReadShortVec(Source *src, ShortVec v, Boolean binary);
 Boolean ReadIntVec(Source *src, IntVec v, Boolean binary);
 Boolean ReadVector(Source *src, Vector v, Boolean binary);
-Boolean ReadDVector (Source *src, DVector v,  Boolean binary);
+Boolean ReadDVector(Source *src, DVector v,  Boolean binary);
 /*
    Read vector v from source in ascii or binary
 */
@@ -149,7 +155,7 @@ Boolean ReadDVector (Source *src, DVector v,  Boolean binary);
 void WriteShortVec(FILE *f, ShortVec v, Boolean binary);
 void WriteIntVec(FILE *f, IntVec v, Boolean binary);
 void WriteVector(FILE *f, Vector v, Boolean binary);
-void WriteDVector (FILE *f, DVector v,  Boolean binary);
+void WriteDVector(FILE *f, DVector v,  Boolean binary);
 /*
    Write vector v to stream f in ascii or binary
 */

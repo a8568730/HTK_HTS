@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,7 +77,7 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-/* !HVER!HModel:   3.3 [CUED 28/04/05] */
+/* !HVER!HModel:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HMODEL_H_
 #define _HMODEL_H_
@@ -119,8 +119,8 @@ typedef struct _MMFInfo{
    MILink next;            /* next external file name in list */
 } MMFInfo;
 
-/* -------------------- HMM Definition ----------------------- */
 
+/* -------------------- HMM Definition ----------------------- */
 
 enum _DurKind {NULLD, POISSOND, GAMMAD, RELD, GEND, GAUSSD};
 typedef enum _DurKind DurKind;
@@ -170,7 +170,7 @@ typedef struct {        /* 1 of these per stream */
    int nMix;            /* num mixtures in this stream */
    short stream;        /* position of stream of this stream info */
    MixtureVector spdf;  /* Mixture Vector */
-   int pIdx;            /* Strean index */
+   int pIdx;            /* Stream index */
    int nUse;            /* usage counter */
    Ptr hook;            /* general hook */
 } StreamInfo;
@@ -200,6 +200,7 @@ typedef struct {
    SVector dur;            /* vector of model duration params, if any */   
    SMatrix transP;         /* transition matrix (logs) */
    int tIdx;               /* Transition matrix index */
+   int hIdx;               /* hmm index */
    int nUse;               /* num logical hmm's sharing this def */
    Ptr hook;               /* general hook */
 } HMMDef;
@@ -233,21 +234,21 @@ typedef struct {
   IntVec swidth;       /* stream width size */
   int numClasses;      /* number of baseclasses */
   ILink *ilist;        /* 1..numClasses of ilists */
-   IntVec stream;       /* 1..numClasses of stream indexes */
+  IntVec stream;       /* 1..numClasses of stream indexes */
   int nUse;            /* usage counter */
   char *fname;         /* filename of where the baseclass was loaded */
 } BaseClass;
 
 typedef struct _RegNode {
-   double nodeOcc;            /* occupancy for this node */
+  double nodeOcc;           /* occupancy for this node */
   int vsize;                /* vector size associated with the baseclasses of this node */
-   int stream;               /* stream index associated with the baseclasses of this node */
+  int stream;               /* stream index associated with the baseclasses of this node */
   int nodeIndex;            /* index number of node */
   int numChild;             /* number of children - 0 if terminal */
-   Boolean valid;            /* whether transform can be generated in this node */
+  Boolean valid;            /* whether transform can be generated in this node */
+  struct _RegNode **child;  /* children of this node NULL if terminal */
   IntVec baseClasses;       /* if a terminal node the set of baseclasses else NULL */
   Ptr info;                 /* hook to hang information from */
-   struct _RegNode **child;  /* children of this node NULL if terminal */
 } RegNode ;
 
 typedef struct RegTree {
@@ -255,10 +256,10 @@ typedef struct RegTree {
   int numTNodes;       /* number of terminal nodes in tree */
   BaseClass *bclass;   /* baseclass associated with this regression tree */
   RegNode *root;       /* pointer to the root node of the tree */
-   ILink nodes;         /* list of nodes */
+  ILink nodes;         /* list of nodes */
   Boolean valid;       /* is it valid to generate a transform at the root node */
                        /* handles multiple stream adaptation issues */
-   float thresh[SMAX];  /* split threshold to determine stopping in tree */
+  float thresh[SMAX];  /* split threshold to determine stopping in tree */
   char *fname;         /* filename of where the regTree was loaded */
 } RegTree;             
 
@@ -367,7 +368,7 @@ typedef struct _HMMSet{
    PtrMap ** pmap;         /* Array[0..PTRHASHSIZE-1]OF PtrMap* */
    Boolean allowTMods;     /* true if HMMs can have Tee Models */
    Boolean optSet;         /* true if global options have been set */
-   Boolean indexSet;       /* have the indexes been set for the model set */
+   Boolean indexSet;       /* have the indexes been set for the model set*/
    short vecSize;          /* dimension of observation vectors */
    short swidth[SMAX];     /* [0]=num streams,[i]=width of stream i */
    short msdflag[SMAX];    /* flag for multi-space probability density */
@@ -401,16 +402,17 @@ typedef struct _HMMSet{
 
    /* Added to support delayed loading of the semi-tied transform */
    char *semiTiedMacro;  /* macroname of semi-tied transform */
+
 } HMMSet;
 
-/* ---------------------- MSD Infomation ----------------------- */
+/* ---------------------- MSD Information ----------------------- */
 
 /* Multi-Space probability Density information */
 typedef struct _SpaceInfo {
    int order;                  /* order of space */
    int count;                  /* number of spaces with same order*/
    IntVec sindex;              /* space index */
-   struct _SpaceInfo *next;            /* link to next SpaceInfo */
+   struct _SpaceInfo *next;    /* link to next SpaceInfo */
 } SpaceInfo;
 
 typedef struct _MSDInfo {
@@ -490,9 +492,9 @@ void SetVFloor(HMMSet *hset, Vector *vFloor, float minVar);
 
 void ResetVFloor(HMMSet *hset, Vector *vFloor);
 /*
-   Reset the variance floors 
- */
- 
+   Reset the variance floors
+*/
+
 void ApplyVFloor(HMMSet *hset);
 /* 
    Apply the variance floors in hset to all covariances in the model set 
@@ -712,7 +714,6 @@ void FixAllGConsts(HMMSet *hset);
    Sets all gConst values in all HMMs in set
 */
 
-
 void SetAnnealTemp(const float temp);
 /*
   Sets temperature for deterministic annealing
@@ -773,7 +774,7 @@ AdaptKind Str2AdaptKind(char *str);
 
 MSDInfo ***CreateMSDInfo(MemHeap *mem, HLink hmm);
 /*
-   Create MSD infomation of each stream
+   Create MSD information of each stream
 */
 
 int SpaceOrder(Vector vec);
@@ -788,14 +789,14 @@ int IncludeSpace(MSDInfo *msdInfo, int order);
 
 int NumNonZeroSpace(StreamInfo *sti);
 /*
-   NumNonZeroSpace: Return the number of space which order is not zero 
+   NumNonZeroSpace: Return the number of space which order is not zero
 */
 
 float ReturnIgnoreValue(void);
 /*
    ReturnIgnoreValue: Return ignoreValue for MSD
- */
- 
+*/
+
 #ifdef __cplusplus
 }
 #endif

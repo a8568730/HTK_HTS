@@ -1,28 +1,35 @@
+Installation Instructions
+*************************
 
-   HMM-based Speech Synthesis System (HTS) version 2.1
+1. This version is released as a patch code for HTK-3.4.1 and HDecode-3.4.1.
+   You can download them from
 
-Install
-=========
+   HTK-3.4.1:  http://htk.eng.cam.ac.uk/download.shtml
+   HDecode-3.4.1:  http://htk.eng.cam.ac.uk/extensions/index.shtml
 
-This version is released as a patch code for HTK-3.4 and HDecode.
-You can download them from 
+2. After downloading HTK-3.4.1.tar.gz and HDecode-3.4.1.tar.gz, expand them as
+   follows:
 
-HTK 3.4 source code:  http://htk.eng.cam.ac.uk/download.shtml
-HDecode source code:  http://htk.eng.cam.ac.uk/extensions/index.shtml
+   % tar -zxvf HTK-3.4.1.tar.gz
+   % tar -zxvf HDecode-3.4.1.tar.gz
 
-After downloading HTK-3.4.tar.gz and HDecode-3.4.tar.gz, expand them as follows:
+3. And then apply HTS-2.1.1beta_for_HTK-3.4.patch for HTK-3.4 as
 
- % tar -zxvf HTK-3.4.tar.gz
- % tar -zxvf HDecode-3.4.tar.gz
+   % cd htk
+   % patch -p1 -d . < HTS-2.1.1beta_for_HTK-3.4.patch
 
-And then apply HTS-2.1_for_HTK-3.4.patch for HTK-3.4 as
+4. Run configure script with appropriate options.
 
- % cd htk
- % patch -p1 -d . < HTS-2.1_for_HTK-3.4.patch
+   % ./configure
 
-Finally configure and compile it.
+   For detail, please see.
 
-Please refer to "Compiling & Installing HTK under UNIX/Linux, OS X or Cygwin"
-and "Compiling & Installing HTK under Windows" sections in htk/README for
-details.
+   % ./configure --help
 
+5. Run make.
+
+   % make
+
+6. Install library and binary.
+
+   % make install

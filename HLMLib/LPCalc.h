@@ -29,7 +29,7 @@
 /*      File: LPCalc: probability calculation                  */
 /* ----------------------------------------------------------- */
 
-/* !HVER!LPCalc:   3.3 [CUED 28/04/05] */
+/* !HVER!LPCalc:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _LPCALC_H
 #define _LPCALC_H

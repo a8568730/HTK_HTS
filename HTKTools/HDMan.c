@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hdman_version = "!HVER!HDMan:   3.4 [CUED 25/04/06]";
-char *hdman_vc_id = "$Id: HDMan.c,v 1.8 2008/06/24 03:19:04 zen Exp $";
+char *hdman_version = "!HVER!HDMan:   3.4.1 [CUED 12/03/09]";
+char *hdman_vc_id = "$Id: HDMan.c,v 1.9 2009/12/11 10:00:54 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -105,7 +105,7 @@ static int nParm = 0;               /* total num params */
 
 #define MAXARGS  100    /* max args in any command */
 /* MAXPHONES (max phones in any pronunciation) is defined in HDict.h */
-#define MAXPRONS 200     /* max number of pronunciations per word */
+#define MAXPRONS 400     /* max number of pronunciations per word */
 #define MAXDICTS 100     /* max number of source dictionaries */
 #define MAXCONS  20     /* max number of contexts per script */
 #define MAXPVOC  500    /* max num distinct phones */

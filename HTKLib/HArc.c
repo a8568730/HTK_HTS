@@ -33,7 +33,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -71,8 +71,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *arc_version = "!HVER!HArc:   3.4 [CUED 25/04/06]";
-char *arc_vc_id = "$Id: HArc.c,v 1.7 2008/05/30 07:19:16 zen Exp $";
+char *arc_version = "!HVER!HArc:   3.4.1 [CUED 12/03/09]";
+char *arc_vc_id = "$Id: HArc.c,v 1.8 2009/12/11 10:00:47 uratec Exp $";
 
 
 /*
@@ -516,12 +516,11 @@ void ArcFromLat(ArcInfo *aInfo, HMMSet *hset){
                      sti = ac->hmm->svec[j].info->pdf[1].info;
 		     if (S==1) {
 		        ac->otprob[t][j][0] = NULL;
-                     } 
-                     else {
+		     } else {
 		        ac->otprob[t][j][0] = (float*)New(aInfo->mem,sizeof(float));
 			ac->otprob[t][j][0][0] = LZERO;
-                        for (s=1; s<=S; s++) {
-                           sti = ac->hmm->svec[j].info->pdf[s].info;
+			for (s=1;s<=S;s++) {
+                          sti = ac->hmm->svec[j].info->pdf[s].info;
 			  ac->otprob[t][j][s] = NULL;
 		     }
                   }
@@ -636,5 +635,3 @@ void ResetArc (void)
 {
    return;
 }
-
-

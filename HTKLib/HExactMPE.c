@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -72,8 +72,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hexactmpe_version = "!HVER!HExactMPE:   3.4 [CUED 25/04/06]";
-char *hexactmpe_vc_id = "$Id: HExactMPE.c,v 1.9 2008/05/30 07:19:15 zen Exp $";
+char *hexactmpe_version = "!HVER!HExactMPE:   3.4.1 [CUED 12/03/09]";
+char *hexactmpe_vc_id = "$Id: HExactMPE.c,v 1.10 2009/12/11 10:00:47 uratec Exp $";
 
 /*
     Performs forward/backward alignment
@@ -157,9 +157,8 @@ Boolean IsNonSilArc(LArc *larc) /*returns TRUE if this word is non SENT_START et
    if (larc->nAlign>1 || (larc->nAlign==1 && !IsSilence(larc->lAlign[0].label->name))) 
       return TRUE;
    else
-      return FALSE;     
+      return FALSE;
 }
-
 int GetNumPhones(LArc *larc){ /*returns num phones in a word...*/
   if(!Quinphone){
     int nAlign = larc->nAlign;
@@ -172,7 +171,6 @@ int GetNumPhones(LArc *larc){ /*returns num phones in a word...*/
     return i;
   }
 }
-
 Boolean NonSil_and_Quinphone_IsStartPhone(LArc *larc, int i)
 {
   if(!Quinphone){ 
@@ -343,11 +341,11 @@ float DoCorrectness(FBLatInfo *fbInfo, MemHeap *mem, ArcInfo *ai, float prune,
 	lastArc=a;
 	if(a->follTrans)
 	  for(b=a->follTrans->end;b->parentLarc==la;b->follTrans&&(b=b->follTrans->end)){
-	    HArc *cb =  (b->calcArc) ? b->calcArc : b;
+	    HArc *cb =  (b->calcArc ? b->calcArc : b);
 	    x++;
 	    b->mpe->cn = (CorrN*)(void*)-1;
 	    cn->scaled_aclike += cb->ac->aclike * latProbScale 
-	      + translm(b->precTrans->lmlike); /*should be zero unless inspen used in a funny way.*/
+	      + translm(b->precTrans->lmlike)/*should be zero unless inspen used in a funny way.*/;
 	    lastArc=b;
 	  }
 	if(x!=cn->nArcs) HError(1, "Problem with nArcs [wordMee]...");
@@ -901,7 +899,5 @@ void InitExactMPE(void)
 /* EXPORT->ResetExactMPE: reset module */
 void ResetExactMPE (void)
 {
-   return;
+   return;  /* do nothing */
 }
-
-

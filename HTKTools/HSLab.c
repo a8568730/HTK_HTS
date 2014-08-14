@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hslab_version = "!HVER!HSLab:   3.4 [CUED 25/04/06]";
-char *hslab_vc_id = "$Id: HSLab.c,v 1.6 2008/06/24 03:19:04 zen Exp $";
+char *hslab_version = "!HVER!HSLab:   3.4.1 [CUED 12/03/09]";
+char *hslab_vc_id = "$Id: HSLab.c,v 1.7 2009/12/11 10:00:55 uratec Exp $";
 
 /* 
    --------------------------------------------------------------
@@ -274,8 +274,8 @@ static char spcl_str[SLEN] = "Command";   /* special button string */
 
 void ReportUsage(void)
 {
-   printf("\nUSAGE: HSLab [options] waveformFile\n\n");
    printf("\nModified for HTS\n");
+   printf("\nUSAGE: HSLab [options] waveformFile\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -a      auto-increment global label          off\n");
    printf(" -i s    Output transcriptions to MLF s       off\n");  

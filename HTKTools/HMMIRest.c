@@ -35,7 +35,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -75,7 +75,7 @@
 
 #define EXITSTATUS 0 /*2 for gprof.*/
 
-char *hmmirest_version = "!HVER!HMMIRest:   3.4 [CUED 25/04/06]";
+char *hmmirest_version = "!HVER!HMMIRest:   3.4.1 [CUED 12/03/09]";
 char *hmmirest_vc_id = "$Id: HMMIRest.c,v 1.1.1.1 2006/10/11 09:55:01 jal58 Exp $";
 
 
@@ -253,7 +253,6 @@ static LogDouble totalPr1=0,totalPr2=0,totalPr3=0;              /* total log pro
 
 
 static Vector vFloor[SMAX];          /* variance floor - default is all zero */
-/* static float minVar; */                /* variance floor if vFloor not specified in hmm set. */
 
 static MemHeap accStack;           /* accumulated statistics */
 static MemHeap hmmStack;           /* HMM defs and related structures */
@@ -270,6 +269,9 @@ static double TotalCorr=0;
 
 /* information about transforms */
 static XFInfo xfInfo;
+
+/* static prior */
+static Boolean STATICPRIOR = FALSE;
 
 /* ------------------ Process Command Line -------------------------- */
    
@@ -315,8 +317,11 @@ void SetConfParms(void)
       if (GetConfFlt(cParm,nParm,"PRIORTAU",&f)){ PriorTau = f; } 
       if (GetConfFlt(cParm,nParm,"PRIORTAUW",&f)){ PriorTauWeights = f; } 
       if (GetConfFlt(cParm,nParm,"PRIORTAUT",&f)){ PriorTauTrans = f; } 
-      if (GetConfFlt(cParm,nParm,"PRIORK",&f)){ PriorK = f; } 
-
+      if (GetConfFlt(cParm,nParm,"PRIORK",&f)){ PriorK = f; }
+      if (GetConfBool(cParm,nParm,"STATICPRIOR",&b)) {
+         STATICPRIOR=b;
+         if (STATICPRIOR) PriorK = 1.0; else PriorK = 0.0;
+      }
 
       if (GetConfFlt(cParm,nParm,"MIXWEIGHTFLOOR",&f)){ mixWeightFloor = MINMIX * f; }
 
@@ -354,8 +359,9 @@ void SetConfParms(void)
 
    }
 
-   if(MPE && uFlagsMLE) HError(1, "Can't combine MPE with ML update of some parameters (code could be simply added).");
-   if(MMIPrior && !THREEACCS) HError(999, "MMI Prior must be used in MPE update (THREEACCS).");
+   if (MPE && uFlagsMLE) HError(1, "Can't combine MPE with ML update of some parameters (code could be simply added).");
+   if (MMIPrior && !THREEACCS) HError(999, "MMI Prior must be used in MPE update (THREEACCS).");
+   if ((STATICPRIOR && PriorK==0.0) || (!STATICPRIOR && PriorK==1.0)) HError(999, "Specify either PRIORK or STATICPRIOR (PRIORK overwrites value given by STATICPRIOR).");
    /*   if(ISmoothTau && !ISmoothTauTransSet){ ISmoothTauTrans = 10; printf("Smoothing transitions with tau=%f since ISMOOTHTAUT not set\n",ISmoothTauTrans); }
         if(ISmoothTau && !ISmoothTauWeightsSet){ ISmoothTauTrans = 10; printf("Smoothing weights with tau=%f since ISMOOTHTAUW not set\n",ISmoothTauWeights); } */
 }
@@ -365,9 +371,12 @@ void ReportUsage(void)
    printf("\nModified for HTS\n");
    printf("\nUSAGE: HMMIRest [options] hmmList dataFiles...\n\n");
    printf(" Option                                   Default\n\n");
+   printf(" -a      Use an input linear transform        off\n");
    printf(" -d s    dir to find hmm definitions       current\n");
    printf(" -D f    dictionary file.                  none   \n");
    printf(" -g      MLE updates only.                   \n");
+   printf(" -h s    set output speaker name pattern   *.%%%%%%\n");
+   printf("         to s, optionally set input and parent patterns\n");
    printf(" -l N    set max sentences (useful for debug) all\n"); 
    printf(" -m N    set min examples needed per model   3\n");
    printf(" -o s    extension for new hmm files        as src\n");
@@ -385,9 +394,9 @@ void ReportUsage(void)
    printf(" -w f    set mix weight floor to f*MINMIX   0.0\n");
    printf(" -x s    extension for hmm files            none\n");
    /* printf(" -y f    dictionary file.                   none\n");  not needed now. */
-   printf(" -z   combine all accs into one acc, HDR0.acc.{1,2,3}  off \n"); /*TODO*/
+   /* printf(" -z   combine all accs into one acc, HDR0.acc.{1,2,3}  off \n"); */
    printf(" -Q      Lattice file extension              lat \n");
-   PrintStdOpts("BFHIMSTX"); /*E,J,K,G,L removed*/
+   PrintStdOpts("BEFHIMSTJX"); /*K,G,L removed*/
    printf(" Note: doesn't work if means and variances are shared independently.\n");
    printf("\n\n");
 }
@@ -412,12 +421,8 @@ void SetuFlags(UPDSet *uFlags)
 void PrintCriteria (void)
 {
    printf("\nMMI criterion per frame is: %f (%f - %f)\n", (totalPr1-totalPr2)/totalT,totalPr1/totalT,totalPr2/totalT);
-   
-   if(MPE) 
-      printf("\nMPE/MWE criterion is: %f ( %f / %d )\n", TotalCorr/TotalNWords, TotalCorr, TotalNWords);
-   
-   if(!MPE || MPEStoreML) 
-      printf("\nML criterion per frame is: %f (%f/%d)\n", totalPr1/totalT,totalPr1, totalT);
+   if(MPE) printf("\nMPE/MWE criterion is: %f ( %f / %d )\n", TotalCorr/TotalNWords, TotalCorr, TotalNWords);
+   if(!MPE || MPEStoreML) printf("\nML criterion per frame is: %f (%f/%d)\n", totalPr1/totalT,totalPr1, totalT);
 }
 
 int main(int argc, char *argv[]) 
@@ -755,12 +760,12 @@ int main(int argc, char *argv[])
 
             if(nDenLats > 0){ /* Load denominator (recognition) lattices. */
                char buf1[MAXFNAMELEN],buf2[MAXFNAMELEN],buf3[MAXFNAMELEN];
-               if ( denLatSubDirPat[0] )
-                  if ( !MaskMatch( denLatSubDirPat , buf1 , datafn_lat ) )
-                     HError(2319,"HERest: mask %s has no match with segemnt %s" , denLatSubDirPat , datafn_lat );
                for(latn = 0; latn<nDenLats;latn++){
-                  if ( denLatSubDirPat[0] )
+                  if ( denLatSubDirPat[0] ){
+                     if ( !MaskMatch( denLatSubDirPat , buf1 , datafn_lat ) )
+                        HError(2319,"HERest: mask %s has no match with segemnt %s" , denLatSubDirPat , datafn_lat );
                      MakeFN(buf1,denLatDir[latn],NULL,buf2);
+                  }
                   else
                      strcpy(buf2,denLatDir[latn]);
                   if ( LatMask_Denominator != NULL ){
@@ -778,6 +783,7 @@ int main(int argc, char *argv[])
                      MakeFN(datafn_lat,buf2,latExt,latfn);
                      f = FOpen(latfn, NetFilter, &isPipe);
                      if(!f) HError(1, "Couldn't open file %s\n", latfn);
+                     printf("Reading lattice from file: %s\n", latfn); fflush(stdout);
                      denLats[latn] = ReadLattice(f, &latStack, &vocab, FALSE/*shortArc*/, TRUE/*add2Dict*/);
                      FClose(f, isPipe);
                   }
@@ -786,13 +792,12 @@ int main(int argc, char *argv[])
 
             if(nNumLats > 0){  /* Load numerator (correct transcription) lattices. */
                char buf1[MAXFNAMELEN],buf2[MAXFNAMELEN],buf3[MAXFNAMELEN];
-               if ( numLatSubDirPat[0] )
-                  if ( !MaskMatch( numLatSubDirPat , buf1 , datafn_lat ) )
-                     HError(2319,"HERest: mask %s has no match with segemnt %s" , numLatSubDirPat , datafn_lat );
-
                for(latn=0;latn<nNumLats;latn++){
-                  if ( numLatSubDirPat[0] )
+                  if ( numLatSubDirPat[0] ){
+                     if ( !MaskMatch( numLatSubDirPat , buf1 , datafn_lat ) )
+                        HError(2319,"HERest: mask %s has no match with segemnt %s" , numLatSubDirPat , datafn_lat );
                      MakeFN(buf1,numLatDir[latn],NULL,buf2);
+                  }
                   else
                      strcpy(buf2,numLatDir[latn]);
                   if ( LatMask_Numerator != NULL ){
@@ -929,9 +934,9 @@ int main(int argc, char *argv[])
       if (updateMode&UPMODE_UPDATE)
         UpdateModels(); 
    }
-   
+
    /* Reset modules */
-   ResetAdapt();
+   ResetAdapt(&xfInfo,NULL);
    ResetNet();
    ResetLat();
    ResetDict();
@@ -1412,6 +1417,9 @@ Boolean UpdateGauss(int stream, MixPDF *mp){
    return TRUE;
 }
 
+
+
+
 void UpdateWeightsAndTrans (void)
 {
    HMMScanState hss;
@@ -1421,6 +1429,8 @@ void UpdateWeightsAndTrans (void)
    void UpdateWeight(const int s, StreamInfo *sti);
 
    NewHMMScan(&hset,&hss);
+
+
    while(GoNextStream(&hss,FALSE)){
       if(uFlags&UPMIXES)
          UpdateWeight(hss.s, hss.sti);
@@ -1449,7 +1459,7 @@ void UpdateWeightsAndTrans (void)
 static void FixHMMForICrit();
 
 
-static void FixWeightsForICrit (float Tau, Boolean THREEACCS)
+static void FixWeightsForICrit(float Tau, Boolean THREEACCS)
 {
    HMMScanState hss;
    NewHMMScan(&hset,&hss); 
@@ -1464,29 +1474,25 @@ static void FixWeightsForICrit (float Tau, Boolean THREEACCS)
    EndHMMScan(&hss); 
 }
 
-static void FixTransForICrit (float Tau, Boolean THREEACCS)
+static void FixTransForICrit(float Tau, Boolean THREEACCS)
 {
    HMMScanState hss;
-   
+
    NewHMMScan(&hset,&hss); 
-   
    do{
       TrAcc *ta_src, *ta_dst; int m,M;
-      ta_dst = (TrAcc*) GetHook(hss.hmm->transP); 
-      ta_src = (THREEACCS ? ta_dst+2 : ta_dst); /* THREEACCS should be true for the forseeable use of this. */
-      
+      ta_dst = (TrAcc*) GetHook(hss.hmm->transP); ta_src = (THREEACCS ? ta_dst+2 : ta_dst); /* THREEACCS should be true for the forseeable use of this. */
       M=hss.hmm->numStates;
       for(m=1;m<M;m++){
          int n;
          if(ta_src->occ[m] != 0){
-            for (n=1; n<=M; n++) 
+            for(n=1;n<=M;n++){
                ta_dst->tran[m][n] += Tau * ta_src->tran[m][n]/ta_src->occ[m]; /* Tau! not * M!*/ 
-            
+            }
             ta_dst->occ[m] += Tau;
          }
       }
    } while(GoNextHMM(&hss));
-   
    EndHMMScan(&hss); 
 }
 
@@ -1638,35 +1644,24 @@ void AddPriorsFromPriorHMM(int dst_index, float Tau, float K, Boolean IsMMI, flo
 static void SmoothWeightsFromPriorHMM (const int index, const float Tau)
 {
    HMMScanState hss,hss_prior;
-   
-   NewHMMScan(&hset,&hss);  
-   NewHMMScan(&hset_prior,&hss_prior);
-   
+
+   NewHMMScan(&hset,&hss);  NewHMMScan(&hset_prior,&hss_prior);
    while(GoNextStream(&hss,FALSE) && GoNextStream(&hss_prior,FALSE)){
       WtAcc *wa_dst; int m,M; 
-       
       M = hss.M; 
       wa_dst = ((WtAcc*)hss.sti->hook) + index;
-      
-      for (m=1; m<=M; m++) 
-         wa_dst->c[m] += Tau * hss_prior.sti->spdf.cpdf[m].weight;
-      
+      for(m=1;m<=M;m++) wa_dst->c[m] += Tau * hss_prior.sti->spdf.cpdf[m].weight;
       wa_dst->occ += Tau;
    }
-   
-   EndHMMScan(&hss); 
-   EndHMMScan(&hss_prior); 
-   
-   return;
+   EndHMMScan(&hss); EndHMMScan(&hss_prior); 
 }
 
 
 static void SmoothTransFromPriorHMM(int index, float Tau)
 {
    HMMScanState hss,hss_prior;
-   NewHMMScan(&hset,&hss);    
-   NewHMMScan(&hset_prior,&hss_prior); 
 
+   NewHMMScan(&hset,&hss);    NewHMMScan(&hset_prior,&hss_prior); 
    do{
       TrAcc *ta_dst; int m,M;
       ta_dst = ((TrAcc*)GetHook(hss.hmm->transP)) + index; 
@@ -1681,54 +1676,49 @@ static void SmoothTransFromPriorHMM(int index, float Tau)
    EndHMMScan(&hss); EndHMMScan(&hss_prior);
 }
 
+
+
+
 static void FixHMMForICrit (void)
 {
    Boolean ISmoothingDone=FALSE;
 
    if(PriorTau>0||PriorK>0||PriorK>0||PriorTauTrans>0) {
-      if(!hset_prior_initialised)  
-         HError(-1, "Config indicates that you intend to use a prior model (-Hprior), but none supplied.");
-   } 
-   else {
-      if(hset_prior_initialised)  
-         HError(1, "Config indicates that you are not making use of the prior model (-Hprior), which has been supplied.");
+     if(!hset_prior_initialised)  HError(-1, "Config indicates that you intend to use a prior model (-Hprior), but none supplied.");
+   } else {
+     if(hset_prior_initialised)  HError(1, "Config indicates that you are not making use of the prior model (-Hprior), which has been supplied.");
    }
 
    if(hset_prior_initialised){  /* Using a prior HMM set */
-      if(hset.ckind == FULLC) 
-         HError(1, "Prior HMM set not supported with FULLC.");
-    
-      if(PriorTauWeights) 
-         SmoothWeightsFromPriorHMM(THREEACCS ? 2 : 0, PriorTauWeights); 
-      
-      if(PriorTauTrans) 
-         SmoothTransFromPriorHMM(THREEACCS ? 2 : 0, PriorTauTrans); 
-   
+     if(hset.ckind == FULLC) HError(1, "Prior HMM set not supported with FULLC.");
+     if(PriorTauWeights) SmoothWeightsFromPriorHMM(THREEACCS ? 2 : 0, PriorTauWeights); 
+     if(PriorTauTrans) SmoothTransFromPriorHMM(THREEACCS ? 2 : 0, PriorTauTrans); 
      if (THREEACCS){ /* if MPE... */
        AddPriorsFromPriorHMM(2 /* to index-pos 2 */, PriorTau, PriorK, FALSE,0);          /* The ML accs are in position 2 for MPE. */
-      } 
-      else if (ML_MODE){ /* MLE */
+     } else if (ML_MODE){ /* MLE */
        AddPriorsFromPriorHMM(0 /* to index-pos 0 */, PriorTau, PriorK, FALSE,0);          /* The ML accs are in position 0 for MMI. */
-      } 
-      else { /* MMI --> do I-smoothing and MAP in one go. */ /* to index-pos 0 */
-         AddPriorsFromPriorHMM(0, PriorTau, PriorK, TRUE, ISmoothTau); /* Combines I-smoothing with estimating the "center of the prior" in a MAP fashion. */
+     } else { /* MMI --> do I-smoothing and MAP in one go. */
+       AddPriorsFromPriorHMM(0 /* to index-pos 0 */, PriorTau, PriorK, TRUE, ISmoothTau); /* Combines I-smoothing with estimating the "center of the prior" in a MAP fashion. */
        ISmoothingDone=TRUE;
      }
+
    }
 
-   if (ISmoothTau>0 && !ISmoothingDone && hset.ckind != FULLC) 
-      _FixHMMForICrit(ISmoothTau, THREEACCS);
+   if(ISmoothTau>0 && !ISmoothingDone && hset.ckind != FULLC) _FixHMMForICrit(ISmoothTau, THREEACCS);
   
    if(ISmoothTauWeights>0)
       FixWeightsForICrit(ISmoothTauWeights, THREEACCS);
 
    if(ISmoothTauTrans>0)
       FixTransForICrit(ISmoothTauTrans, THREEACCS);
-
+      
    return;
 }
 
-void UpdateWeightsOrTrans (int M, float *acc1, float *acc2, float *mixes, float *oldMixes, float C)
+
+
+
+void UpdateWeightsOrTrans(int M, float *acc1, float *acc2, float *mixes, float *oldMixes, float C)
 { 
    int iter=0;
    int m;

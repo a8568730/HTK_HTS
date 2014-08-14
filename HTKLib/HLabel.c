@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,8 +64,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hlabel_version = "!HVER!HLabel:   3.4 [CUED 25/04/06]";
-char *hlabel_vc_id = "$Id: HLabel.c,v 1.7 2008/06/24 03:19:09 zen Exp $";
+char *hlabel_version = "!HVER!HLabel:   3.4.1 [CUED 12/03/09]";
+char *hlabel_vc_id = "$Id: HLabel.c,v 1.9 2009/12/15 01:17:26 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -157,7 +157,7 @@ static double htkLabelTimeScale = 1; /* multiply all times in HTK format labels 
 /* --------------- Global MLF Data Structures  --------- */
 
 #define MLFCHUNKSIZE 500
-#define MAXMLFS 200
+#define MAXMLFS 1000
 
 static int      numMLFs = 0;     /* number of MLF files opened */
 static FILE   * mlfile[MAXMLFS]; /* array [0..numMLFs-1] of MLF file */

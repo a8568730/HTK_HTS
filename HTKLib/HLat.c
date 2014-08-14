@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -79,7 +79,7 @@
 */
 
 
-char *hlat_version = "!HVER!HLat:   3.4 [CUED 25/04/06]";
+char *hlat_version = "!HVER!HLat:   3.4.1 [CUED 12/03/09]";
 char *hlat_vc_id = "$Id: HLat.c,v 1.2 2006/12/07 11:09:08 mjfg Exp $";
 
 
@@ -121,6 +121,7 @@ static LabId endLMWord;         /* word at end in LM (</s>) */
 static LabId nullWord;          /* null word in Lattices (!NULL) */
 static Boolean beamPruneArcs = TRUE; /* apply beam pruning to arcs (rather than just nodes) */
 static Boolean compressMerge = TRUE; /* compressing lattice scores when merging duplicates */
+
 static char *llfExt = "LLF";    /* extension for LLF lattice files */
 
 #ifndef NO_LAT_LM
@@ -334,6 +335,7 @@ void InitLat(void)
    CreateHeap (&slnHeap, "LatExpand node heap", MHEAP,sizeof (SubLNode), 1.0, 1000, 32000);
 #endif
 }
+
 
 /* EXPORT->ResetLat: reset the module */
 void ResetLat (void)
@@ -894,6 +896,7 @@ Lattice *LatPrune (MemHeap *heap, Lattice *lat, LogDouble thresh, float arcsPerS
          *newla = *la;
          newla->start = newlat->lnodes + ((int) la->start->n);
          newla->end = newlat->lnodes + ((int) la->end->n);
+         
          /* insert newla into foll list */
          newla->farc = newla->start->foll;
          newla->start->foll = newla;

@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,8 +64,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hled_version = "!HVER!HLEd:   3.4 [CUED 25/04/06]";
-char *hled_vc_id = "$Id: HLEd.c,v 1.9 2008/06/24 03:19:04 zen Exp $";
+char *hled_version = "!HVER!HLEd:   3.4.1 [CUED 12/03/09]";
+char *hled_vc_id = "$Id: HLEd.c,v 1.10 2009/12/11 10:00:54 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

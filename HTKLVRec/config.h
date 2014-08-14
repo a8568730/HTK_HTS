@@ -35,9 +35,11 @@
 typedef unsigned short PronId;             /* uniquely identifies (word,pron) pair, i.e. 
                                    homophones have different Ids */
 typedef unsigned short LMId;
+#define LM_NGRAM_INT
 #else
 typedef unsigned int LMId;
 typedef unsigned int PronId;
+#undef LM_NGRAM_INT
 #endif
 
 

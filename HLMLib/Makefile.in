@@ -41,7 +41,6 @@ oldincludedir = /usr/include
 
 CC = @CC@
 CFLAGS = @CFLAGS@ -DSANITY -I. -I../HTKLib/
-AR = @AR@
 RANLIB = @RANLIB@
 INSTALL = @INSTALL@
 target  = HLMLib.a
@@ -51,7 +50,7 @@ all: $(target)
 
 $(target): $(modules)
 	if [ -f $@ ] ; then  /bin/rm $@ ; fi
-	$(AR) rv $@ $^
+	ar rv $@ $^
 	$(RANLIB) $@
 
 .PHONY: clean cleanup depend mkinstalldir install

@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,9 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hcompv_version = "!HVER!HCompV:   3.4 [CUED 25/04/06]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.8 2008/05/30 07:19:08 zen Exp $";
+char *hcompv_version = "!HVER!HCompV:   3.4.1 [CUED 12/03/09]";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.10 2009/12/11 10:00:54 uratec Exp $";
+
 
 /* 
    This program calculates a single overall variance vector from a
@@ -134,7 +135,7 @@ static char *outDir=NULL;           /* HMM output directory */
 static Boolean meanUpdate = FALSE;  /* update means  */
 static Boolean saveBinary = FALSE;  /* save output in binary  */
 static float vFloorScale = 0.0;     /* if >0.0 then vFloor scaling */
-static Vector vFloorScaleStr = NULL; /* vFloorScale for each stream */ 
+static Vector vFloorScaleStr = NULL; /* vFloorScale for each stream */
 static int nShowElem = 12;           /* # of elements to be shown */
 
 /* Major Data Structures */
@@ -363,7 +364,7 @@ void CalcCovs(void)
          for (i=1; i<=V; i++)
             for (j=1; j<=i; j++) 
                triMat[i][j] = (float)accs[s].inv[i][j];
-         
+
          /* Covariance -> InvCov */
          CovInvert(triMat,fullMat);
          Mat2Tri(fullMat,accs[s].fixed.inv);
@@ -420,14 +421,18 @@ void SetCovs(void)
             if (meanUpdate && !IsSeenV(mp->mean)){      /* meanSum now holds mean */
                if ( VectorSize(mp->mean)==DVectorSize(accs[s].meanSum) )
                   for (k=1;k<=VectorSize(mp->mean);k++)
-                     mp->mean[k] = (float)accs[s].meanSum[k]; 
+                     mp->mean[k] = (float)accs[s].meanSum[k];
                TouchV(mp->mean);
             }
             if (!IsSeenV(mp->cov.var)){
-               if (mp->ckind==FULLC)
+               if (mp->ckind==FULLC) {
+                  if ( TriMatSize(accs[s].fixed.inv)==TriMatSize(mp->cov.inv) )
                   CopyMatrix(accs[s].fixed.inv,mp->cov.inv);
-               else if (fullcNeeded[s])  /* dont need full cov, but its all we have */                
+               }
+               else if (fullcNeeded[s]) {  /* dont need full cov, but its all we have */                
+                  if ( TriMatSize(accs[s].fixed.inv)==VectorSize(mp->cov.var) )
                   TriDiag2Vector(accs[s].fixed.inv,mp->cov.var);
+               }
                else {
                   if ( VectorSize(mp->cov.var)==VectorSize(accs[s].fixed.var) )
                   CopyVector(accs[s].fixed.var,mp->cov.var);
@@ -435,7 +440,7 @@ void SetCovs(void)
                TouchV(mp->cov.var);
             }
          }
-   }
+      }
    ClearSeenFlags(&hset,CLR_ALL);
 }
 

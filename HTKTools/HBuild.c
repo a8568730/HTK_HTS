@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,8 +64,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hbuild_version = "!HVER!HBuild:   3.4 [CUED 25/04/06]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 1.8 2008/06/24 03:19:04 zen Exp $";
+char *hbuild_version = "!HVER!HBuild:   3.4.1 [CUED 12/03/09]";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.9 2009/12/11 10:00:54 uratec Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.
@@ -307,7 +307,7 @@ int main(int argc, char *argv[])
    default:
       HError(3001,"Only Bigram LMs / multiLats currently implemented");
    }
-   
+
    ResetLM();
    ResetNet();
    ResetDict();
@@ -315,7 +315,7 @@ int main(int argc, char *argv[])
    ResetLabel();
    ResetMem();
    ResetShell();
-   
+
    Exit(0);
    return (0);          /* never reached -- make compiler happy */
 }

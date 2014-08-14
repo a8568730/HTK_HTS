@@ -119,7 +119,7 @@ where $\bm{W}$ is the $n \times \left( n + 1 \right)$
 transformation matrix (where $n$ is the dimensionality of the data)
 and $\bm{\xi}$ is the extended mean vector,
 \[
-        \bm{\xi} = \left[\mbox{ }w\mbox{ }\mu_1\mbox{ }\mu_2\mbox{ }\dots\mbox{ }\mu_n\mbox{ }\right]^T
+        \bm{\xi} = \left[\mbox{ }w\mbox{ }\mu_1\mbox{ }\mu_2\mbox{ }\dots\mbox{ }\mu_n\mbox{ }\right]^\transpose
 \]
 where $w$ represents a bias offset whose value is fixed (within \HTK) at 1.\\
 Hence $\bm{W}$ can be decomposed into
@@ -135,13 +135,13 @@ form of transform is referred to in the code as {\tt MLLRMEAN}.
 There are two standard forms of linear adaptation of the variances. The first
 is of the form
 \[
-        \hat{\bm{\Sigma}} = \bm{B}^T\bm{H}\bm{B}
+        \hat{\bm{\Sigma}} = \bm{B}^\transpose\bm{H}\bm{B}
 \]
 where $\bm{H}$ is the linear transformation to be estimated and
 $\bm{B}$ is the inverse of the Choleski factor of $\bm{\Sigma}^{-1}$,
 so
 \[ 
-        \bm{\Sigma}^{-1} = \bm{C}\bm{C}^T
+        \bm{\Sigma}^{-1} = \bm{C}\bm{C}^\transpose
 \]
 and
 \[
@@ -157,7 +157,7 @@ This form of transform is referred to in the code as {\tt MLLRVAR}.
 An alternative more efficient form of variance transformation is also available.
 Here, the transformation of the covariance matrix is  of the form
 \hequation{ 
-        \hat{\bm{\Sigma}} = \bm{H}\bm{\Sigma}\bm{H}, 
+        \hat{\bm{\Sigma}} = \bm{H}\bm{\Sigma}\bm{H}^\transpose, 
 }{covtrans}
 where $\bm{H}$ is the $n\times n$ covariance transformation matrix.
 This form of transformation, referred to in the code as {\tt MLLRCOV}
@@ -199,7 +199,7 @@ where $\bm{W}$ is the $n \times \left( n + 1 \right)$
 transformation matrix (where $n$ is the dimensionality of the data)
 and $\bm{\zeta}$ is the extended observation vector,
 \[
-        \bm{\zeta} = \left[\mbox{ }w\mbox{ }o_1\mbox{ }o_2\mbox{ }\dots\mbox{ }o_n\mbox{ }\right]^T
+        \bm{\zeta} = \left[\mbox{ }w\mbox{ }o_1\mbox{ }o_2\mbox{ }\dots\mbox{ }o_n\mbox{ }\right]^\transpose
 \]
 where $w$ represents a bias offset whose value is fixed (within \HTK) at 1.\\
 Hence $\bm{W}$ can be decomposed into
@@ -404,7 +404,7 @@ either output a set of transformation models, or a single transform
 model file (TMF)\index{adaptation!transform model file}. The advantage
 in storing the transforms as opposed to an adapted MMF is that the
 TMFs are considerably smaller than MMFs (especially triphone
-MMFs). This section dgives examples of the format that the transforms
+MMFs). This section gives examples of the format that the transforms
 are stored in. For a description of the transform definition see
 section~\ref{s:hmmdef}.
 
@@ -450,8 +450,8 @@ adaptation.  Arbitrary block structures are allowable.  The assignment
 of base class to transform number is specified at the end of the file.
 
 The {\tt LOGDET} value stored with the transform is {\em twice} the 
-log-determinant of the transform\footnote{There is no advantge in storing 
-twoce the log determininat, however this is maintained for backward
+log-determinant of the transform\footnote{There is no advantage in storing 
+twice the log determininat, however this is maintained for backward
 compatibility with internal HTK releases.}.
 
 \mysubsect{Hierarchy of Transform}{hieradapt}
@@ -516,7 +516,7 @@ itself.
 Hierarchy of transforms automatically result from using a parent transform
 when estimating a transform. 
 
-\mysubsect{Mutiple Stream Systems}{streamadapt}
+\mysubsect{Multiple Stream Systems}{streamadapt}
 The specification of the base-class components are given in terms
 of the Gaussian component. In HTK this is specified for a particular
 stream of the HMM state. When multiple streams are used there are two 
@@ -564,6 +564,23 @@ becomes
 Specifying that adaptive training is to be used simply requires specifying
 the parent transform that the model set should be built on. Note that usually
 the parent transform will also be used as an input transform.
+
+Discriminative adaptive training can also be implemented in HTK. The normal
+procedure is to adaptively train an ML system as above. Then, fixing the
+ML-estimated CMLLR linear transforms, only the canonical model parameters are
+discriminativeloy updated. Thus the update formula for the mean would be
+(assuming a single stream)
+\newcommand{\liksumdiscs}[1]{
+                  \sum_{i=1}^I\sum_{r=1}^{R_i}  \sum_{t=1}^{T_r} (L^{{\tt num}r}_{#1}(t) - L^{{\tt den}r}_{#1}(t))
+}
+\begin{eqnarray*}
+\hat{\bm{\mu}}_{jm} = \frac{\liksumdiscs{jm}(\bm{A}^{(i)}\bm{o}^r_{t}+\bm{b}^{(i)}) + D_{jm}{\bm{\mu}}_{jm}
++ \tau^{\tt I}{\bm\mu}^{\tt p}_{jm}}
+{\liksumdiscs{jm} + D_{jm} + \tau^{\tt I}}
+\end{eqnarray*}
+For full details of the various options for discriminative training see
+section~\ref{s:discriminative}.   There is currently no support in HTK for
+discriminatively training linear transforms.
 
 \mysect{Model Adaptation using MAP}{mapadapt}
 
@@ -679,7 +696,7 @@ function shown below is used to estimate the transforms.
 \sum_{t=1}^T
 \like\left[
 K^{(m)}+\log(|{\hat{\bm\Sigma}}_{m_r}|)+({\bm o}(t)-
-{\hat{\bm\mu}}_{m_r})^T{{\hat{\bm\Sigma}}}_{m_r}^{-1}({\bm o}(t)-{\hat{\bm\mu}}_{m_r})
+{\hat{\bm\mu}}_{m_r})^\transpose{{\hat{\bm\Sigma}}}_{m_r}^{-1}({\bm o}(t)-{\hat{\bm\mu}}_{m_r})
 \right] \nonumber
 \end{eqnarray}
 where $K^{(m)}$ subsumes all constants and $\like$, the occupation likelihood, is defined as,
@@ -705,13 +722,13 @@ matrices are diagonal, yields
 - \frac{1}{2}
 \sum_{r=1}^R
 \sum_{j=1}^d{
-\left({\bm{w}}_{rj}{\bf G}^{(j)}_r{\bm{w}}^T_{rj} -2 {\bm{w}}_{rj}{\bf k}^{(j)T}_r
+\left({\bm{w}}_{rj}{\bf G}^{(j)}_r{\bm{w}}^\transpose_{rj} -2 {\bm{w}}_{rj}{\bf k}^{(j)\transpose}_r
 \right)} \nonumber
 \end{eqnarray}
 where ${\bm{w}}_{rj}$ is the $j^{th}$ {\em row} of $\bm{W}_r$,
 \begin{eqnarray}
 {\bf G}^{(i)}_r=\sum_{m_r=1}^{M_r}
-\frac{1}{\sigma_{m_ri}^{2}}{\bm\xi}_{m_r}{\bm\xi}^{T}_{m_r}
+\frac{1}{\sigma_{m_ri}^{2}}{\bm\xi}_{m_r}{\bm\xi}^{\transpose}_{m_r}
 \sum_{t=1}^T\like
 \label{eq:gi_mllr}
 \end{eqnarray}
@@ -758,13 +775,13 @@ form of transform can only be estimated in addition to the {\tt MLLRMEAN}
 transform},
 \[
         \hat{\bm{\mu}}_{m_r} = \bm{\mu}_{m_r}, \:\:\:\: 
-        \hat{\bm{\Sigma}}_{r} = \bm{B}_{m_r}^T\bm{H}_r\bm{B}_{m_r}
+        \hat{\bm{\Sigma}}_{r} = \bm{B}_{m_r}^\transpose\bm{H}_r\bm{B}_{m_r}
 \]
 where $\bm{H}_m$ is the linear transformation to be estimated and
 $\bm{B}_m$ is the inverse of the Choleski factor of $\bm{\Sigma}_{m_r}^{-1}$,
 so
 \[ 
-        \bm{\Sigma}_{m_r}^{-1} = \bm{C}_{m_r}\bm{C}_{m_r}^T
+        \bm{\Sigma}_{m_r}^{-1} = \bm{C}_{m_r}\bm{C}_{m_r}^\transpose
 \]
 and
 \[
@@ -773,9 +790,9 @@ and
 After rewriting the auxiliary function, the transform matrix $\bm{H}_m$
 is estimated from,
 \[
-        \bm{H}_r = \frac{ \sum_{m_r=1}^{M_r}\bm{C}_{m_r}^T \left[
+        \bm{H}_r = \frac{ \sum_{m_r=1}^{M_r}\bm{C}_{m_r}^\transpose \left[
                           \like(\bm{o}(t) - \hat{\bm{\mu}}_{m_r})
-                          (\bm{o}(t) - \hat{\bm{\mu}}_{m_r})^T \right]
+                          (\bm{o}(t) - \hat{\bm{\mu}}_{m_r})^\transpose \right]
                           \bm{C}_{m_r} } { \like }
 \]
 Here, $\bm{H}_r$ is forced to be a diagonal transformation by setting
@@ -787,17 +804,17 @@ block and diagonal transforms. Substituting the for expressions for
 variance adaptation
 \begin{eqnarray}
 \hat{\bm{\mu}}_{m_r} = \bm{\mu}_{m_r}, \:\:\:\: 
-\hat{\bm{\Sigma}}_{m_r} = {\bm H}_r{\bm{\Sigma}}_{m_r}{\bm H}_r^T
+\hat{\bm{\Sigma}}_{m_r} = {\bm H}_r{\bm{\Sigma}}_{m_r}{\bm H}_r^\transpose
 \end{eqnarray}
 into the auxiliary function, and using the fact that the covariance
 matrices are diagonal yields
 \begin{eqnarray}
 {\cal Q}({\cal M},{\hat{\cal M}}) = K + 
 \sum_{r=1}^R
-\beta_r\log({\bf c}_{ri}{\bf a}_{ri}^T)-
+\beta_r\log({\bf c}_{ri}{\bf a}_{ri}^\transpose)-
 \frac{1}{2}
 \sum_{j=1}^d{
-\left({\bf a}_{rj}{\bf G}^{(j)}_r{\bf a}^T_{rj}
+\left({\bf a}_{rj}{\bf G}^{(j)}_r{\bf a}^\transpose_{rj}
 \right)} \nonumber
 \end{eqnarray}
 where 
@@ -813,7 +830,7 @@ and  ${\bf G}^{(i)}_r$ is defined as
 {\bf G}^{(i)}_r=\sum_{m_r=1}^{M_r}
 \frac{1}{\sigma_{m_ri}^{2}}
 \sum_{t=1}^T\like(\bm{o}(t)-\hat{\bm{\mu}}_{m_r})
-(\bm{o}(t)-\hat{\bm{\mu}}_{m_r})^T
+(\bm{o}(t)-\hat{\bm{\mu}}_{m_r})^\transpose
 \label{eq:gi_mllr2}
 \end{eqnarray}
 Differentiating the auxiliary function with respect to the transform
@@ -822,7 +839,7 @@ yields the following update
 \begin{eqnarray}
 {\bf a}_{ri} ={\bf c}_{ri}{\bf G}^{(i)-1}_r
 \sqrt{\left(\frac{\beta_r}{{\bf
-c}_{ri}{\bf G}_r^{(i)-1}{\bf c}^T_{ri}}\right)}
+c}_{ri}{\bf G}_r^{(i)-1}{\bf c}^\transpose_{ri}}\right)}
 \end{eqnarray}
 This is an iterative optimisation scheme as the cofactors mean the estimate
 of row $i$ is dependent on all the other rows (in that block). For the 
@@ -839,17 +856,17 @@ efficiency this transformation is implemented as
 }
 \begin{eqnarray}
 \hat{\bm{\mu}}_{m_r} = \bm{H}_r\bm{\mu}_{m_r} + \tilde{\bm{b}}_r, \:\:\:\: 
-\hat{\bm{\Sigma}}_{m_r} = {\bm H}_r{\bm{\Sigma}}_{m_r}{\bm H}_r^T
+\hat{\bm{\Sigma}}_{m_r} = {\bm H}_r{\bm{\Sigma}}_{m_r}{\bm H}_r^\transpose
 \end{eqnarray}
 into the auxiliary function, and using the fact that the covariance
 matrices are diagonal yields
 \begin{eqnarray}
 {\cal Q}({\cal M},{\hat{\cal M}}) = K + 
 \sum_{r=1}^R\left[
-\beta\log({\bf p}_{ri}\bm{w}_{ri}^T)-
+\beta\log({\bf p}_{ri}\bm{w}_{ri}^\transpose)-
 \frac{1}{2}
 \sum_{j=1}^d{
-\left(\bm{w}_{rj}{\bf G}^{(j)}_r\bm{w}^T_{rj} - 2\bm{w}_{rj}{\bf k}^{(j)}_r
+\left(\bm{w}_{rj}{\bf G}^{(j)}_r\bm{w}^\transpose_{rj} - 2\bm{w}_{rj}{\bf k}^{(j)}_r
 \right)}\right] \nonumber
 \end{eqnarray}
 where 
@@ -865,14 +882,14 @@ extended vector of cofactors of ${\bf A}_r$, ${\bf G}^{(i)}_r$ and ${\bf k}^{(i)
 \begin{eqnarray}
 {\bf G}^{(i)}_r=\sum_{m_r=1}^{M_r}
 \frac{1}{\sigma_{m_ri}^{2}}
-\sum_{t=1}^T\like{\bm\zeta}(t){\bm\zeta}^{T}(t)
+\sum_{t=1}^T\like{\bm\zeta}(t){\bm\zeta}^{\transpose}(t)
 \label{eq:gi_mllr3}
 \end{eqnarray}
 and 
 \begin{eqnarray}
 {\bf k}^{(i)}_r=\sum_{m_r=1}^{M_r}
 \frac{\mu_{m_ri}}{\sigma_{m_ri}^{2}}
-\sum_{t=1}^T\like{\bm\zeta}^{T}(t)
+\sum_{t=1}^T\like{\bm\zeta}^{\transpose}(t)
 \label{eq:gi_mllr4}
 \end{eqnarray}
 Differentiating the auxiliary function with respect to the transform
@@ -883,8 +900,8 @@ yields the following update
 \end{eqnarray}
 where $\alpha$ satisfies
 \begin{eqnarray}
-\alpha^2{\bf p}_{ri}{\bf G}^{(i)-1}_r{\bf p}_{ri}^T +
-\alpha{\bf p}_{ri}{\bf G}^{(i)-1}_r{\bf k}^{(i)T}_r - \beta=0\label{eq:alpha_quad}
+\alpha^2{\bf p}_{ri}{\bf G}^{(i)-1}_r{\bf p}_{ri}^\transpose+
+\alpha{\bf p}_{ri}{\bf G}^{(i)-1}_r{\bf k}^{(i)\transpose}_r - \beta=0\label{eq:alpha_quad}
 \end{eqnarray}
 There are thus two possible solutions for $\alpha$. The solutions that
 yields the maximum increase in the auxiliary function (obtained by

@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,8 +64,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hmem_version = "!HVER!HMem:   3.4 [CUED 25/04/06]";
-char *hmem_vc_id = "$Id: HMem.c,v 1.7 2008/05/30 07:19:16 zen Exp $";
+char *hmem_version = "!HVER!HMem:   3.4.1 [CUED 12/03/09]";
+char *hmem_vc_id = "$Id: HMem.c,v 1.8 2009/12/11 10:00:47 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -772,6 +772,7 @@ Matrix CreateMatrix(MemHeap *x, int nrows, int ncols)
    }
    return m;
 }
+
 /* EXPORT->CreateIMatrix:  Allocate space for integer matrix m[1..nrows][1..ncols] */
 IMatrix CreateIMatrix(MemHeap *x, int nrows, int ncols)
 {
@@ -780,7 +781,7 @@ IMatrix CreateIMatrix(MemHeap *x, int nrows, int ncols)
    IntVec *m;   
    char *p;
    
-   p =(char *)  New(x,MatrixElemSize(nrows,ncols)); 
+   p =(char *)  New(x,IMatrixElemSize(nrows,ncols)); 
    i = (int *)p; *i = nrows;
    vsize = IntVecElemSize(ncols);
    m = (IntVec *)p;
@@ -939,7 +940,7 @@ int NumIRows(IMatrix m)
    return *nrows;
 }
 
-/* EXPORT->NumCols: number of columns in matrix m */
+/* EXPORT->NumICols: number of columns in matrix m */
 int NumICols(IMatrix m)
 {
    int *ncols;
@@ -1085,7 +1086,6 @@ Boolean IsSeenV(Ptr m)
    int i;
    
    p = (Ptr *) m; --p; i = *((int *)p);
-   
    if (i<0) 
       return TRUE;
    else

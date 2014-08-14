@@ -33,7 +33,7 @@ includedir = @includedir@
 oldincludedir = /usr/include
 
 CC      = 	@CC@
-CFLAGS  := 	-DNO_LAT_LM -I$(inc) @CFLAGS@ 
+CFLAGS  := 	-DNO_LAT_LM @CFLAGS@ -I$(inc)
 LDFLAGS = 	@LDFLAGS@ -lm
 INSTALL = 	@INSTALL@
 HTKLIB = $(inc)/HTKLiblv.a

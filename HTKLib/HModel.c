@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hmodel_version = "!HVER!HModel:   3.4 [CUED 25/04/06]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.30 2008/06/24 03:19:08 zen Exp $";
+char *hmodel_version = "!HVER!HModel:   3.4.1 [CUED 12/03/09]";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.32 2009/12/11 10:00:47 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -196,7 +196,7 @@ void InitModel(void)
       if (GetConfFlt(cParm,nParm,"PDETHRESHOLD2",&d)) pdeTh2 = d;
       if (GetConfFlt(cParm,nParm,"IGNOREVALUE",&d)) ignoreValue = d;
    }
-}
+   }
 
 /* EXPORT->ResetModel: reset module */
 void ResetModel (void)
@@ -291,7 +291,7 @@ static ReturnStatus CheckStream(char *defName, HLink hmm, StreamInfo *sti, int s
    case PLAINHS:
    case SHAREDHS:
       me = sti->spdf.cpdf+1;
-      for (m=1; m<=sti->nMix; m++,me++) {
+      for (m=1; m<=sti->nMix; m++,me++){
          wt=me->weight; wt = MixWeight(hmm->owner,wt);
          sum += wt;
          if (wt > MINMIX ){
@@ -301,7 +301,7 @@ static ReturnStatus CheckStream(char *defName, HLink hmm, StreamInfo *sti, int s
                return(FAIL);
             }
             mp = me->mpdf;
-            if ((!IsSeen(mp->nUse))&&(CheckMix(defName,me->mpdf,n,s,m,sw,mf)<SUCCESS))
+            if((!IsSeen(mp->nUse))&&(CheckMix(defName,me->mpdf,n,s,m,sw,mf)<SUCCESS))
                return(FAIL);
          }
       }
@@ -342,11 +342,11 @@ static ReturnStatus CheckState(char *defName, HLink hmm, StateInfo *si, int n)
    ste = si->pdf+1;
    for (s=1; s<=S; s++,ste++){
       sti = ste->info;
-      if (sti->spdf.cpdf == NULL) {
+      if (sti->spdf.cpdf == NULL){
          HRError(7030,"CheckState: %s: Stream %d missing in state %d",defName,s,n);
          return(FAIL);
       }
-      if ((!IsSeen(sti->nUse))&&(CheckStream(defName,hmm,sti,s,n)<SUCCESS))
+      if((!IsSeen(sti->nUse))&&(CheckStream(defName,hmm,sti,s,n)<SUCCESS))
          return(FAIL);
    }
    if (S>1)
@@ -402,7 +402,7 @@ static ReturnStatus CheckTMRecs(HMMSet *hset)
       }
       for (m=1; m<=hset->tmRecs[s].nMix; m++){
          mp = hset->tmRecs[s].mixes[m];
-         if (CheckMix("TMRec",mp,0,s,m,sw,mf)<SUCCESS)
+         if(CheckMix("TMRec",mp,0,s,m,sw,mf)<SUCCESS)
             return(FAIL);
       }
    }
@@ -476,8 +476,7 @@ static struct {
    { { "BEGINHMM", BEGINHMM }, { "USE", USEMAC }, 
      { "ENDHMM", ENDHMM }, { "NUMMIXES", NUMMIXES }, 
      { "NUMSTATES", NUMSTATES }, { "STREAMINFO", STREAMINFO }, 
-     { "VECSIZE", VECSIZE }, { "MSDINFO", MSDINFO },
-     { "NULLD", NDUR }, 
+     { "VECSIZE", VECSIZE }, { "MSDINFO", MSDINFO }, { "NULLD", NDUR }, 
      { "POISSOND", PDUR }, { "GAMMAD", GDUR }, 
      { "RELD", RELDUR }, { "GEND", GENDUR }, 
      { "DIAGC", DIAGCOV }, {  "FULLC", FULLCOV }, 
@@ -574,7 +573,7 @@ static ReturnStatus GetToken(Source *src, Token *tok)
    if (c == '~'){                    /* If macro sym return immediately */
       c = tolower(GetCh(src));
       if (c!='s' && c!='m' && c!='u' && c!='x' && c!='d' && c!='c' &&
-          c!='r' && c!='p' && c!='a' && c!='b' && c!='g' && c!='f' && c!='y' && c!='j' &&
+          c!='r' && c!='a' && c!='b' && c!='g' && c!='f' && c!='y' && c!='j' && c!='p' &&
           c!='v' && c!='i' && c!='t' && c!='w' && c!='h' && c!='o')
          {
             HMError(src,"GetToken: Illegal macro type");
@@ -723,8 +722,7 @@ static ReturnStatus GetOption(HMMSet *hset, Source *src, Token *tok, int *nState
          if (!ReadString(src,buf)) 
             HError(7013,"GetOption: semi-tied macro name expected");
          hset->semiTiedMacro = CopyString(hset->hmem,buf);
-      } 
-      else
+      } else
          HError(7013,"GetOption: semi-tied macro expected");
       break;
    case VECSIZE:
@@ -1146,7 +1144,7 @@ static ReturnStatus GetOptions(HMMSet *hset, Source *src, Token *tok, int *nStat
    }
    while (tok->sym == PARMKIND || tok->sym == INVDIAGCOV || 
           tok->sym == HMMSETID  || tok->sym == INPUTXFORM || 
-          tok->sym == PROJSIZE || tok->sym == PARENTXFORM ||
+          tok->sym == PARENTXFORM || tok->sym == PROJSIZE ||
           (tok->sym >= NUMSTATES && tok->sym <= XFORMCOV)){
       if(GetOption(hset,src,tok,&p)<SUCCESS){
          HMError(src,"GetOptions: GetOption failed");
@@ -1199,16 +1197,15 @@ static ReturnStatus CheckBaseClass(HMMSet *hset, BaseClass *bclass)
       if (mp->mIdx>0) {      
 	mp->mIdx = -mp->mIdx;
 	ncomp++;
-         } 
-         else { /* item appears in list multiple times */
-            HRError(999,"CheckBaseClass: Component specified multiple times");  
+      } else { /* item appears in list multiple times */
+        HRError(999,"CheckBaseClass: Component specified multiple times");  
 	return(FAIL);
       }
     }
   }
   /* have all the components been seen? */
   if (ncomp != hset->numMix) {
-      HRError(999,"CheckBaseClass: Components missing from Base Class list (%d %d)",ncomp,hset->numMix);
+    HRError(999,"CheckBaseClass: Components missing from Base Class list (%d %d)",ncomp,hset->numMix);
     return(FAIL);
   }
   /* mIdx is used in HRec, so reset */
@@ -1217,7 +1214,7 @@ static ReturnStatus CheckBaseClass(HMMSet *hset, BaseClass *bclass)
       mp = ((MixtureElem *)i->item)->mpdf;
       if (mp->mIdx<0) mp->mIdx = -mp->mIdx;
       else 
-            HError(999,"CheckBaseClass: corrupted item list");
+        HError(999,"CheckBaseClass: corrupted item list");
     }
   }
   return(SUCCESS);
@@ -1252,8 +1249,7 @@ static void CompressItemList(MemHeap *x, ILink ilist, ILink *bilist)
       mp->mIdx = -mp->mIdx;
       AddXFormItem(x,me,i->owner,bilist);
       ncomp++;
-      } 
-      else { /* delete item from list */
+    } else { /* delete item from list */
       ndel++;
     }
   }
@@ -1308,8 +1304,8 @@ static BaseClass* GetBaseClass(HMMSet *hset,Source *src, Token *tok)
   int nbases, i, b;
   ILink ilist;
 
-   const int maxM = MaxMixInSet(hset);
-   const int maxS = MaxStatesInSet(hset);
+  const int maxM = MaxMixInSet(hset);
+  const int maxS = MaxStatesInSet(hset);
    
   void SetIndexes(HMMSet *hset);
 
@@ -1361,22 +1357,20 @@ static BaseClass* GetBaseClass(HMMSet *hset,Source *src, Token *tok)
 	HMError(src,"GetToken failed");
 	return(NULL);
       }
-      } 
-      else {
+    } else {
       if (hset->swidth[0] != 1)
 	HError(999,"<STREAMINFO> must be specified in multiple stream base classes");
 
-         bclass->swidth = CreateIntVec(hset->hmem,2);
-         bclass->swidth[0] = 1;
-         bclass->swidth[1] = hset->vecSize;
+        bclass->swidth = CreateIntVec(hset->hmem,2);
+        bclass->swidth[0] = 1;
+        bclass->swidth[1] = hset->vecSize;
     }
     if (tok->sym == NUMCLASSES) {
       if (!ReadInt(src,&nbases,1,tok->binForm)){
 	HMError(src,"Number of baseclasses for regression base class expected");
 	return(NULL);
       }
-      } 
-      else {
+    } else {
       HMError(src,"<NUMCLASSES> symbol expected in GetBaseClass");
       return(NULL);
     }
@@ -1388,7 +1382,7 @@ static BaseClass* GetBaseClass(HMMSet *hset,Source *src, Token *tok)
     bclass->ilist = (ILink *)New(hset->hmem,sizeof(ILink)*(nbases+1));
     /* Set the indexes for the models - just in case being loaded from 
        a macro */
-      if (!hset->indexSet) SetIndexes(hset);
+    if (!hset->indexSet) SetIndexes(hset);
     /* BaseClasses Can only refer to physical HMMs for wild cards */
     SetParsePhysicalHMM(TRUE);
     for (i=1;i<=nbases;i++) {
@@ -1403,7 +1397,7 @@ static BaseClass* GetBaseClass(HMMSet *hset,Source *src, Token *tok)
       if (b!=i)
 	HError(999,"Error reading classes in BaseClass");
       ilist= NULL; bclass->ilist[i] = NULL;
-         PItemList(&ilist,&type,hset,src,NULL,maxM,maxS,((trace&T_PAR) ? TRUE:FALSE));
+      PItemList(&ilist,&type,hset,src,NULL,maxM,maxS,((trace&T_PAR) ? TRUE:FALSE));
       CompressItemList(hset->hmem,ilist,bclass->ilist+i);
       ResetUtilItemList();
       /* multiple examples of the same component may be specified */
@@ -1416,13 +1410,13 @@ static BaseClass* GetBaseClass(HMMSet *hset,Source *src, Token *tok)
     if (CheckBaseClass(hset,bclass)<SUCCESS)
       HError(999,"BaseClass check failed");
     bclass->nUse = 0;
-      
-      /* set stream index to each base class */
-      bclass->stream = CreateIntVec(hset->hmem,bclass->numClasses);
-      for (b=1; b<=bclass->numClasses; b++)
-         bclass->stream[b] = GetStreamClass(bclass,b); 
-   }
-   else if (tok->sym==MACRO && tok->macroType=='b') {
+
+    /* set stream index to each base class */
+    bclass->stream = CreateIntVec(hset->hmem,bclass->numClasses);
+    for (b=1; b<=bclass->numClasses; b++)
+      bclass->stream[b] = GetStreamClass(bclass,b);
+
+  } else if (tok->sym==MACRO && tok->macroType=='b'){
     if((bclass=(BaseClass *)GetStructure(hset,src,'b'))==NULL){
       HMError(src,"GetStructure Failed");
       return(NULL);
@@ -1431,14 +1425,14 @@ static BaseClass* GetBaseClass(HMMSet *hset,Source *src, Token *tok)
       HMError(src,"GetToken failed");
       return(NULL);
     }
-   } 
-   else {
+  } else {
     HMError(src,"<MMFIDMASK> symbol expected in GetBaseClass");
     return(NULL);
   }
   bclass->nUse++;
   return bclass;
 }
+
 
 /* Find a node in the regression tree given the index and return the node */
 static RegNode *FindNode(RegTree *rtree, const int id)
@@ -1499,10 +1493,8 @@ static RegTree *GetRegTree(HMMSet *hset, Source *src, Token *tok)
 	HMError(src,"GetToken failed");
 	return(NULL);
       }
-      } 
-      else /* or just load the macro explicitly */
+     } else /* or just load the macro explicitly */
        rtree->bclass = GetBaseClass(hset,src,tok);
-         
      /* Check the BaseClass stream info to see if root can be adapted */
      if (rtree->bclass->swidth == NULL)
        rtree->valid = TRUE;
@@ -1514,16 +1506,17 @@ static RegTree *GetRegTree(HMMSet *hset, Source *src, Token *tok)
 	   rtree->valid = FALSE;
      }
      rtree->root = root = CreateRegNode(hset->hmem,1);
-      rtree->nodes = NULL;
-      AddItem(NULL,root,&rtree->nodes);
-      while ((tok->sym != EOFSYM) && ((tok->sym==NODE) || (tok->sym==TNODE))) {
+     rtree->nodes = NULL;
+     AddItem(NULL,root,&rtree->nodes);
+     while ((tok->sym != EOFSYM) && 
+	    ((tok->sym==NODE) || (tok->sym==TNODE))) {
        switch(tok->sym) {
        case NODE:
 	 if (!ReadInt(src,&index,1,tok->binForm)){
 	   HMError(src,"Node index for regression tree expected");
 	   return(NULL);
 	 }
-            if ((rnode = FindNode(rtree, index)) == NULL)
+         if ((rnode = FindNode(rtree, index)) == NULL)
 	   HError(999,"Nodes are expected in numerical order");
 	 rtree->numNodes ++;
 	 if (!ReadInt(src,&nchild,1,tok->binForm)){
@@ -1538,7 +1531,7 @@ static RegTree *GetRegTree(HMMSet *hset, Source *src, Token *tok)
 	     return(NULL);
 	   }
 	   rnode->child[i] = CreateRegNode(hset->hmem,index);
-               AddItem(NULL,rnode->child[i],&rtree->nodes);
+           AddItem(NULL,rnode->child[i],&rtree->nodes);
 	 }
 	 break;
        case TNODE:
@@ -1546,7 +1539,7 @@ static RegTree *GetRegTree(HMMSet *hset, Source *src, Token *tok)
 	   HMError(src,"Node index for regression tree expected");
 	   return(NULL);
 	 }
-            if ((rnode = FindNode(rtree, index)) == NULL)
+         if ((rnode = FindNode(rtree, index)) == NULL)
 	   HError(999,"Nodes are expected in numerical order");
 	 rtree->numTNodes ++;
 	 if (!ReadInt(src,&nbases,1,tok->binForm)){
@@ -1571,11 +1564,9 @@ static RegTree *GetRegTree(HMMSet *hset, Source *src, Token *tok)
 	 return(NULL);
        }
      }
-      FreeItems(&rtree->nodes);
-   } 
-   else 
+     FreeItems(&rtree->nodes);
+   } else 
      HMError(src,"Regression Tree definition expected");     
-   
    return rtree; 
 }
 
@@ -1598,7 +1589,8 @@ static SVector GetMean(HMMSet *hset, Source *src, Token *tok)
          HMError(src,"Mean Vector expected");
          return(NULL);
       }
-      } else if (size == 0) {
+   }
+      else if (size == 0) {
          m = CreateSVector(hset->hmem,0);
       }
    }
@@ -1638,7 +1630,8 @@ static SVector GetVariance(HMMSet *hset, Source *src, Token *tok)
          HMError(src,"Variance Vector expected");
          return(NULL);
       }
-      } else if (size == 0) {
+   }
+      else if (size == 0) {
          v = CreateSVector(hset->hmem,0);
       }
    }
@@ -1820,11 +1813,10 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
          HMError(src,"GetToken failed");
          return(NULL);
       }
-   } 
-   else {
+   } else {
       mp = (MixPDF *)New(hset->hmem,sizeof(MixPDF));
       mp->nUse = 0; mp->hook = NULL; mp->gConst = LZERO;
-      mp->mIdx = 0; mp->stream = 0; mp->vFloor = NULL;
+      mp->mIdx = 0; mp->stream = 0; mp->vFloor = NULL; mp->info = NULL;
       mp->cov.var = NULL;  mp->cov.inv = NULL; mp->cov.xform = NULL; mp->ckind = NULLC;
       if((mp->mean = GetMean(hset,src,tok))==NULL){      
          HMError(src,"GetMean Failed");
@@ -1841,8 +1833,7 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
             HRError(7032,"GetMixPDF: trying to change global cov type to DiagC");
             return(NULL);
          }
-      } 
-      else if (tok->sym==INVCOVAR || (tok->sym==MACRO && tok->macroType=='i')) {
+      } else if (tok->sym==INVCOVAR || (tok->sym==MACRO && tok->macroType=='i')){
          if((mp->cov.inv = GetCovar(hset,src,tok))==NULL){
             HMError(src,"GetCovar Failed");
             return(NULL);
@@ -1853,8 +1844,7 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
             HRError(7032,"GetMixPDF: trying to change global cov type to FullC");
             return(NULL);
          }
-      } 
-      else if (tok->sym==LLTCOVAR || (tok->sym==MACRO && tok->macroType=='c')) {
+      } else if (tok->sym==LLTCOVAR || (tok->sym==MACRO && tok->macroType=='c')){
          if((mp->cov.inv = GetCovar(hset,src,tok))==NULL){
             HMError(src,"GetCovar Failed");
             return(NULL);
@@ -1865,8 +1855,7 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
             HRError(7032,"GetMixPDF: trying to change global cov type to LLTC");
             return(NULL);
          }
-      } 
-      else if (tok->sym==XFORM || (tok->sym==MACRO && tok->macroType=='x')) {
+      } else if (tok->sym==XFORM || (tok->sym==MACRO && tok->macroType=='x')){
          if((mp->cov.xform = GetTransform(hset,src,tok))==NULL){
             HMError(src,"GetTransform Failed");
             return(NULL);
@@ -1877,8 +1866,7 @@ static MixPDF *GetMixPDF(HMMSet *hset, Source *src, Token *tok)
             HRError(7032,"GetMixPDF: trying to change global cov type to XFormC");
             return(NULL);
          }
-      } 
-      else{
+      } else{
          HMError(src,"Variance or Xform expected in GetMixPDF");
          return(NULL);
       }
@@ -2113,31 +2101,31 @@ static StreamInfo *GetStreamInfo(HMMSet *hset, Source *src, Token *tok, int s)
 static ReturnStatus GetStream(HMMSet *hset, Source *src, Token *tok,
                               StreamElem *ste)
 {
-  int S;
-  short s;
+   int S;
+   short s;
   
-  S=hset->swidth[0];
-  s = 1;
-  if (tok->sym == STREAM) {
-    if (!ReadShort(src,&s,1,tok->binForm)) {
-      HMError(src,"Stream Index expected");
+   S=hset->swidth[0];
+   s = 1;
+   if (tok->sym == STREAM) {
+      if (!ReadShort(src,&s,1,tok->binForm)){
+         HMError(src,"Stream Index expected");
+         return(FAIL);
+      }
+      if (s<1 || s>S){
+         HMError(src,"Stream Index out of range");
+         return(FAIL);
+      }
+      if(GetToken(src,tok)<SUCCESS){
+         HMError(src,"GetToken failed");
+         return(FAIL);
+      }
+   }
+   if ( (ste[s].info = GetStreamInfo(hset, src, tok,s))==NULL ) {
+      HMError(src,"Get Stream Information failed");
       return(FAIL);
-    }
-    if (s<1 || s>S) {
-      HMError(src,"Stream Index out of range");
-      return(FAIL);
-    }
-    if (GetToken(src,tok)<SUCCESS) {
-      HMError(src,"GetToken failed");
-      return(FAIL);
-    }
-  }
-  if ( (ste[s].info = GetStreamInfo(hset, src, tok,s))==NULL ) {
-    HMError(src,"Get Stream Information failed");
-    return(FAIL);
-  }
+   }
+
    return(SUCCESS);
-   
 }
   
 /* GetStateInfo: parse src and return StateInfo structure  */
@@ -2242,8 +2230,7 @@ static SMatrix GetTransMat(HMMSet *hset, Source *src, Token *tok)
       v = m[size];
       for (j=1;j<=size;j++)
          v[j] =  LZERO;
-   } 
-   else {
+   } else {
       if((m = (SMatrix)GetStructure(hset,src,'t'))==NULL){
          HMError(src,"GetStructure failed");
          return(NULL);
@@ -2298,6 +2285,7 @@ static ReturnStatus GetHMMDef(HMMSet *hset, Source *src, Token *tok,
       return(FAIL);
    }
    hmm->numStates = N = nState;
+   hmm->hIdx=0;
    se = (StateElem *)New(hset->hmem,(N-2)*sizeof(StateElem));
    hmm->svec = se - 2;
    while (tok->sym == STATE) {
@@ -2419,8 +2407,7 @@ static LinXForm* GetLinXForm(HMMSet *hset, Source *src, Token *tok)
 	return(NULL);
       }
       xf->bias = GetBias(hset,src,tok);
-      } 
-      else {
+    } else {
       xf->bias = NULL;
     }
     if (tok->sym == LOGDET){
@@ -2433,8 +2420,7 @@ static LinXForm* GetLinXForm(HMMSet *hset, Source *src, Token *tok)
           HMError(src,"GetToken failed");
           return(NULL);
        }
-      } 
-      else {
+    } else {
         xf->det = 0;
     } 
     if (tok->sym!=BLOCKINFO){
@@ -2479,8 +2465,7 @@ static LinXForm* GetLinXForm(HMMSet *hset, Source *src, Token *tok)
           HMError(src,"Get VFloor in transform Failed");
           return(NULL);
        }
-      } 
-      else { /* no variance floor specified - use global */
+    } else { /* no variance floor specified - use global */
        xf->vFloor = NULL;
     }
     xf->nUse = 0;
@@ -2495,8 +2480,7 @@ static LinXForm* GetLinXForm(HMMSet *hset, Source *src, Token *tok)
       HMError(src,"GetToken failed");
       return(NULL);
     }
-   } 
-   else{
+  } else{
     HMError(src,"<VECSIZE> symbol expected in GetXFormSet");
     return(NULL);
   }
@@ -2567,8 +2551,7 @@ static XFormSet* GetXFormSet(HMMSet *hset, Source *src, Token *tok)
       HMError(src,"GetToken failed");
       return(NULL);
     }
-   } 
-   else{
+  } else{
     HMError(src,"<XFORMKIND> symbol expected in GetXFormSet");
     return(NULL);
   }
@@ -2613,8 +2596,7 @@ InputXForm* GetInputXForm(HMMSet *hset, Source *src, Token *tok)
 	HMError(src,"GetToken failed");
 	return(NULL);
       }
-      } 
-      else 
+    } else 
       xf->preQual = FALSE;
     if (tok->sym != LINXFORM){
       HMError(src,"<LINXFORM> symbol expected");
@@ -2637,8 +2619,7 @@ InputXForm* GetInputXForm(HMMSet *hset, Source *src, Token *tok)
       HMError(src,"GetToken failed");
       return(NULL);
     }
-   } 
-   else {
+  } else{
     HMError(src,"<MMFIDMASK> symbol expected in GetInputXForm");
     return(NULL);
   }
@@ -2691,8 +2672,7 @@ static AdaptXForm* GetAdaptXForm(HMMSet *hset, Source *src, Token *tok)
 	HMError(src,"GetToken failed");
 	return(NULL);
       }
-      } 
-      else /* or just load the macro explicitly */
+    } else /* or just load the macro explicitly */
       xform->bclass = GetBaseClass(hset,src,tok);
     if (tok->sym == PARENTXFORM) { /* Is there a parent transform */
       if(GetToken(src,tok)<SUCCESS){
@@ -2708,11 +2688,9 @@ static AdaptXForm* GetAdaptXForm(HMMSet *hset, Source *src, Token *tok)
 	  HMError(src,"GetToken failed");
 	  return(NULL);
 	}
-         } 
-         else /* or just load the macro explicitly */
+      } else /* or just load the macro explicitly */
 	xform->parentXForm = GetAdaptXForm(hset, src, tok);
-      } 
-      else {
+    } else {
       xform->parentXForm = NULL;
     }
     if (tok->sym != XFORMSET){
@@ -2730,8 +2708,7 @@ static AdaptXForm* GetAdaptXForm(HMMSet *hset, Source *src, Token *tok)
     }
     if (HardAssign(xform)) {
       xform->xformWgts.assign = CreateIntVec(hset->hmem,xform->bclass->numClasses);
-      } 
-      else 
+    } else 
       HError(999,"Currently not supported");
     for (i=1;i<=xform->bclass->numClasses;i++) {
       if(GetToken(src,tok)<SUCCESS){
@@ -2755,8 +2732,7 @@ static AdaptXForm* GetAdaptXForm(HMMSet *hset, Source *src, Token *tok)
 	  HMError(src,"XForm class expected");
 	  return(NULL);
 	}      
-         } 
-         else 
+      } else 
 	HError(999,"Currently not supported");
     }
   }
@@ -2768,8 +2744,7 @@ static AdaptXForm* GetAdaptXForm(HMMSet *hset, Source *src, Token *tok)
     if ((id==NULL) || ((m = FindMacroName(hset,'a',id)) == NULL)) { /* macro may be defined elsewhere */
       xform = LoadOneXForm(hset, buf, NULL);
       xform->xformName = CopyString(hset->hmem,buf);
-         } 
-         else {
+    } else {
       m = FindMacroName(hset,'a',id);
       if (m==NULL) 
 	HError(7035,"GetAdaptXForm: no macro %s, type a exists",buf);  
@@ -2778,8 +2753,7 @@ static AdaptXForm* GetAdaptXForm(HMMSet *hset, Source *src, Token *tok)
 	HError(7035,"GetAdaptXForm: inconsistency in HMMSet");           
     }
     xform->nUse++;
-   } 
-   else {
+  } else{
     HMError(src,"<ADAPTKIND> symbol expected in GetXFormSet");
     return(NULL);
   }
@@ -3195,14 +3169,14 @@ static void PutBaseClass(HMMSet *hset, FILE *f, MLink q, BaseClass *bclass,
     PutSymbol(f,PARAMETERS,binary);
     WriteString(f,BaseClassKind2Str(bclass->bkind,buf),DBL_QUOTE);
     if (!binary) fprintf(f,"\n");
-      /* put <StreamInfo> for multiple streams system */
-      if (hset->swidth[0]>1) {
-         PutSymbol(f,STREAMINFO,binary);
-         WriteShort(f, hset->swidth, 1, binary);
-         for (j=1; j<=hset->swidth[0]; j++)
-            WriteShort(f, hset->swidth+j, 1, binary);
-         if (!binary) fprintf(f,"\n");
-      }
+    /* put <StreamInfo> for multiple streams system */
+    if (hset->swidth[0]>1) {
+      PutSymbol(f,STREAMINFO,binary);
+      WriteShort(f, hset->swidth, 1, binary);
+      for (j=1; j<=hset->swidth[0]; j++)
+        WriteShort(f, hset->swidth+j, 1, binary);
+        if (!binary) fprintf(f,"\n");
+    }
     PutSymbol(f,NUMCLASSES,binary);
     numClass = bclass->numClasses;
     WriteInt(f,&(numClass),1,binary);
@@ -3237,8 +3211,7 @@ static void PutRegNode(HMMSet *hset, FILE *f, RegNode *rnode, Boolean binary)
       size = IntVecSize(rnode->baseClasses);
       WriteInt(f,&size,1,binary);
       WriteIntVec(f,rnode->baseClasses, binary);
-   } 
-   else {
+   } else {
       PutSymbol(f,NODE,binary);
       WriteInt(f,&(rnode->nodeIndex),1,binary);      
       WriteInt(f,&(rnode->numChild),1,binary);
@@ -3466,8 +3439,7 @@ static void PutAdaptXForm(HMMSet *hset, FILE *f, MLink q, AdaptXForm *xform,
       WriteInt(f,&i,1,binary);	
       if (HardAssign(xform)) {
 	WriteInt(f,&(xform->xformWgts.assign[i]),1,binary);	
-         } 
-         else 
+      } else 
 	HError(999,"Not currently supported");
       fprintf(f,"\n");
     }
@@ -3491,7 +3463,7 @@ static void PutOptions(HMMSet *hset, FILE *f, Boolean binary)
    for (i=1;i<=S;i++)
       WriteShort(f,hset->swidth+i,1,binary);
    if (!binary) fprintf(f,"\n");
-   
+
    /* MSD check: if any MSDs are not used, we need not to put options about MSD */
    for (s=1,msd=FALSE; s<=hset->swidth[0]; s++) {
       if (hset->msdflag[s]!=0) {
@@ -3617,8 +3589,7 @@ MLink NewMacro(HMMSet *hset, short fidx, char type, LabId id, Ptr structure)
        if (!(strcmp(((BaseClass *)m->structure)->fname,((BaseClass *)structure)->fname))) {
 	 HRError(7036,"Duplicate copy of ~b macro %s loaded from %s",id->name,((BaseClass *)m->structure)->fname);
 	 return m;
-         } 
-         else {
+       } else {
 	 HRError(7036,"WARNING: Duplicate copies of ~b macro %s loaded from %s and %s",
                  id->name,((BaseClass *)m->structure)->fname,((BaseClass *)m->structure)->fname);
 	 return m;
@@ -3882,7 +3853,7 @@ void ApplyVFloor(HMMSet *hset)
             }
          }
          FixDiagGConst(hss.mp); 
-         } 
+         }
          break;
       case INVDIAGC: /* inverse diagonal covariance matrix */ 
          if (vSize == VectorSize(minv)) {  /* check MSD */ 
@@ -3894,7 +3865,7 @@ void ApplyVFloor(HMMSet *hset)
             }
          }
          FixInvDiagGConst(hss.mp); 
-         } 
+         }
          break;
       case FULLC: /* full covariance matrix */ 
          if (vSize == VectorSize(minv)) {  /* check MSD */ 
@@ -4086,7 +4057,7 @@ static ReturnStatus LoadAllMacros(HMMSet *hset, char *fname, short fidx)
             return(FAIL);
          }
          id = GetLabId(buf,TRUE);
-         if (type == 'h') {    /* load an HMM definition */
+         if (type == 'h'){    /* load a HMM definition */
             m = FindMacroName(hset,'h',id);
             if (m == NULL) {
                if (!allowOthers){
@@ -4098,7 +4069,7 @@ static ReturnStatus LoadAllMacros(HMMSet *hset, char *fname, short fidx)
                dset=*hset;
                dset.hmem=&gstack;
                dhmm = (HLink) New(&gstack,sizeof(HMMDef));
-               dhmm->owner=NULL; dhmm->numStates=0; dhmm->nUse=0; dhmm->hook=NULL;
+               dhmm->owner=NULL; dhmm->numStates=0; dhmm->nUse=0; dhmm->hook=NULL; dhmm->hIdx=0;
                if (trace&T_MAC)
                   printf("HModel: skipping HMM Def from macro %s\n",id->name);
                if(GetToken(&src,&tok)<SUCCESS){
@@ -4250,11 +4221,11 @@ void SetIndexes(HMMSet *hset)
    StreamInfo *sti;
    MixPDF *mp;
    MLink m;
-   int h,nm,nsm,ns,nss,nsp,np,nt;
+   int h,nm,nsm,ns,nss,nsp,np,nh,nt;
    
    /* Reset indexes */
    hset->indexSet = TRUE;
-   nt=0;
+   nt=nh=0;
    NewHMMScan(hset,&hss);
    while(GoNextState(&hss,FALSE))
       hss.si->sIdx=-1;
@@ -4281,7 +4252,9 @@ void SetIndexes(HMMSet *hset)
          TouchV(hss.hmm->transP);
       }
       hss.hmm->tIdx=(int)((long)GetHook(hss.hmm->transP));
-   } while (GoNextHMM(&hss));
+      hss.hmm->hIdx=nh++;
+   }
+   while(GoNextHMM(&hss));
    EndHMMScan(&hss);
    NewHMMScan(hset,&hss);
    do {
@@ -4324,7 +4297,11 @@ void SetIndexes(HMMSet *hset)
    if (hset->hsKind == PLAINHS || hset->hsKind == SHAREDHS) {
       NewHMMScan(hset,&hss);
       while(GoNextMix(&hss,FALSE))
-         if (hss.mp->mIdx<0) hss.mp->mIdx=++nm;
+         /* ensure that defunct components are correctly handled */
+         if (hss.mp->mIdx<0) {
+            if (MixWeight(hss.hset,hss.me->weight) > MINMIX) 
+               hss.mp->mIdx=++nm;
+         }
       EndHMMScan(&hss);
    }
    hset->numStates=ns; hset->numSharedStates=nss;
@@ -4819,7 +4796,7 @@ static char *InitXFormScanner(HMMSet *hset, char *macroname, char *fname,
   if ((fname==NULL) || ((f=FOpen(fname,NoFilter,&isPipe)) == NULL)) {
     if ((trace&T_XFD) && (fname!=NULL))
       HRError(7010,"InitXFormScanner: Cannot open source file %s",fname);
-      p = hset->xformDirNames;
+    p = hset->xformDirNames;
     while ((p!=NULL) && 
 	   ((f=FOpen(MakeFN(macroname,p->dirName,NULL,buf),NoFilter,&isPipe)) == NULL)) {
       if (trace&T_XFD) 
@@ -4828,15 +4805,13 @@ static char *InitXFormScanner(HMMSet *hset, char *macroname, char *fname,
     }
     if (p==NULL) { /* Failed to find macroname */
       HError(7035,"Failed to find macroname %s",macroname);
-      } 
-      else { /* Close file and initialise scanner */
+    } else { /* Close file and initialise scanner */
       FClose(f,isPipe);
       InitScanner(buf,src,tok,hset);
     }
     if (trace&T_TOP) printf("Loading macro file %s\n",buf);
     return buf;
-   } 
-   else {
+  } else {
     FClose(f,isPipe);
     if (trace&T_TOP) printf("Loading macro file %s\n",fname);
     InitScanner(fname,src,tok,hset);
@@ -4872,13 +4847,11 @@ BaseClass *LoadBaseClass(HMMSet *hset, char* macroname, char *fname)
       id = GetLabId(macroname,TRUE);
       structure = bclass = GetBaseClass(hset,&src,&tok);
       NewMacro(hset,fidx,'b',id,structure);
-      } 
-      else {
+    } else {
       bclass = (BaseClass *)m->structure;
     }
     TermScanner(&src);
-   } 
-   else { /* macro already exists so just return it */
+  } else { /* macro already exists so just return it */
     bclass = (BaseClass *)m->structure;
   }
   if (trace&T_XFM)
@@ -4914,13 +4887,11 @@ RegTree *LoadRegTree(HMMSet *hset, char* macroname, char *fname)
       id = GetLabId(macroname,TRUE);
       structure = regTree = GetRegTree(hset,&src,&tok);
       NewMacro(hset,fidx,'r',id,structure);
-      } 
-      else {
+    } else {
       regTree = (RegTree *)m->structure;
     }
     TermScanner(&src);
-   } 
-   else { /* macro already exists so just return it */
+  } else { /* macro already exists so just return it */
     regTree = (RegTree *)m->structure;
   }
   if (trace&T_XFM)
@@ -4958,13 +4929,11 @@ AdaptXForm *LoadOneXForm(HMMSet *hset, char* macroname, char *fname)
       if (xform->xformName == NULL) /* may have been stored without the macro header */
 	xform->xformName = CopyString(hset->hmem,macroname);
       NewMacro(hset,fidx,'a',id,structure);
-      } 
-      else {
+    } else {
       xform = (AdaptXForm *)m->structure;
     }
     TermScanner(&src);
-   } 
-   else { /* macro already exists so just return it */
+  } else { /* macro already exists so just return it */
     xform = (AdaptXForm *)m->structure;
   }
   if (trace&T_XFM)
@@ -5016,8 +4985,7 @@ InputXForm *LoadInputXForm(HMMSet *hset, char* macroname, char *fname)
     xf = GetInputXForm(hset,&src,&tok);
     xf->xformName = CopyString(&xformStack,macroname);
     TermScanner(&src);
-   } 
-   else { /* First see whether the macro exists */
+  } else { /* First see whether the macro exists */
     id = GetLabId(macroname,FALSE);
     if ((id == NULL) || ((m = FindMacroName(hset,'j',id))== NULL)) { /* macro doesn't exist go find it */
       fn = InitXFormScanner(hset, macroname, fname, &src, &tok);
@@ -5036,13 +5004,11 @@ InputXForm *LoadInputXForm(HMMSet *hset, char* macroname, char *fname)
 	if (xf->xformName == NULL) /* may have been stored without the macro header */
 	  xf->xformName = CopyString(hset->hmem,macroname);
 	NewMacro(hset,fidx,'j',id,structure);
-         } 
-         else {
+      } else {
 	xf = (InputXForm *)m->structure;
       }
       TermScanner(&src);
-      } 
-      else { /* macro already exists so just return it */
+    } else { /* macro already exists so just return it */
       xf = (InputXForm *)m->structure;
     }
   }
@@ -5084,7 +5050,7 @@ void SaveAllXForms(HMMSet *hset, char *fname, Boolean binary)
   Boolean isPipe;
   int fidx=CREATEFIDX;
       
-   binary = (binary||saveBinary) ? TRUE : FALSE;
+  binary = (binary||saveBinary) ? TRUE : FALSE;
   if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
     HError(7011,"SaveAllXForm: Cannot create output file %s",fname);
   }
@@ -5149,7 +5115,7 @@ void SaveOneXForm(HMMSet *hset, AdaptXForm *xform, char *fname, Boolean binary)
 
   if (xform->nUse>0) 
     HError(999,"Shared AdaptXForm cannot store to a single file");
-   binary = (binary||saveBinary) ? TRUE : FALSE;
+  binary = (binary||saveBinary) ? TRUE : FALSE;
   if (xform->swapXForm != NULL) { /* need to save the parent xform */
      swapxform = xform->swapXForm;
      xform->swapXForm = NULL;
@@ -5180,7 +5146,7 @@ void SaveInputXForm(HMMSet *hset, InputXForm *xf, char *fname, Boolean binary)
   FILE *f;
   Boolean isPipe;
 
-   binary = (binary||saveBinary) ? TRUE : FALSE;
+  binary = (binary||saveBinary) ? TRUE : FALSE;
   if ((f=FOpen(fname,HMMDefOFilter,&isPipe)) == NULL){
     HError(7011,"SaveInputXForm: Cannot create output file %s",fname);
   }
@@ -5306,7 +5272,8 @@ static int gconst_cmp(const void *v1,const void *v2)
 
    me1 = (MixtureElem *)v1; me2 = (MixtureElem *)v2;
    if (me1->mpdf->gConst < me2->mpdf->gConst) return 1;
-   if (me1->mpdf->gConst > me2->mpdf->gConst) return -1;   return 0;
+   if (me1->mpdf->gConst > me2->mpdf->gConst) return -1;
+   return 0;
 }
 
 /* ReOrderComponents: Sort Gaussians into descending order of gConsts */
@@ -5436,9 +5403,8 @@ void ClearStreams(HMMSet *hset, StreamInfo *sti, ClearDepth depth)
    int m;
    
    Untouch(&sti->nUse);
-   
    if (depth==CLR_ALL && (hset->hsKind==PLAINHS || hset->hsKind==SHAREDHS)) {
-      for (m=1; m<=sti->nMix; m++) {
+      for (m=1; m<=sti->nMix; m++){
          mp = sti->spdf.cpdf[m].mpdf;
          Untouch(&mp->nUse);
          UntouchV(mp->mean);
@@ -5476,7 +5442,6 @@ void ClearSeenFlags(HMMSet *hset, ClearDepth depth)
                         ClearStreams(hset,ste->info,depth);
                }
          }
-   
    if ((hset->hsKind == TIEDHS) && (depth==CLR_ALL)) {
       for (s=1;s<=S;s++)
          for (i=1;i<=hset->tmRecs[s].nMix;i++) {
@@ -5628,8 +5593,7 @@ float MixWeight(HMMSet *hset, float weight)
    if (hset->logWt) {
       if (weight<LMINMIX) return 0;
       else return exp(weight);
-   } 
-   else
+   } else 
       return weight;
 }
 
@@ -5892,8 +5856,7 @@ LogFloat SOutP(HMMSet *hset, int s, Observation *x, StreamInfo *sti)
          default:       px=LZERO;
          }
          return px;
-      } 
-      else {
+      } else {
          bx = LZERO;                   /* Multi Mixture Case */
          for (m=1; m<=sti->nMix; m++,me++) {
             wt=MixLogWeight(hset,me->weight);
@@ -5974,7 +5937,6 @@ LogFloat OutP(Observation *x, HLink hmm, int state)
    bx=0.0; ste=si->pdf+1; w = si->weights;
    for (s=1;s<=S;s++,ste++) 
       bx += w[s]*SOutP(hmm->owner,s,x,ste->info);
-
    return bx;
 }
 
@@ -6270,4 +6232,3 @@ float ReturnIgnoreValue (void)
 }
 
 /* ------------------------- End of HModel.c --------------------------- */
-

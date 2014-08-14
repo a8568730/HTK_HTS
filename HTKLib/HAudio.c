@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,8 +64,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *haudio_version = "!HVER!HAudio:   3.4 [CUED 25/04/06]";
-char *haudio_vc_id = "$Id: HAudio.c,v 1.5 2008/05/30 07:19:15 zen Exp $";
+char *haudio_version = "!HVER!HAudio:   3.4.1 [CUED 12/03/09]";
+char *haudio_vc_id = "$Id: HAudio.c,v 1.6 2009/12/11 10:00:47 uratec Exp $";
 
 #include "HShell.h"        /* HTK Libraries */
 #include "HMem.h"
@@ -392,8 +392,8 @@ static Boolean IsVAXOrder(void)
    px = &x;
    pc = (unsigned char *) px;
    *pc = 1; *(pc+1) = 0;         /* store bytes 1 0 */
-   
-   if (x==1)
+
+   if (x==1)          /* does it read back as 1? */
       return TRUE;
    else 
       return FALSE;

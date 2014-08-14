@@ -1,4 +1,4 @@
-		Hidden Markov Toolkit (HTK) 3.4
+		Hidden Markov Toolkit (HTK) 3.4.1
 
 Use of this software is governed by a license agreement, the terms and
 conditions of which are set forth in the file LICENSE in the
@@ -54,7 +54,7 @@ to a configure option of "--prefix=/usr/local").
 1. decide which of the above methods you wish to use
 2. cd to htk, then run ./configure (with appropriate options, run
    "./configure --help" if unsure).
-   If you want to build the programs in HLMTools add the 
+   If you want to build the programs in HLMTools add the
    --enable-hlmtools option.
 3. make all
 4. make install
@@ -132,8 +132,6 @@ Compilation:
 	  cd HLMTools
 	  nmake /f htk_hlmtools_nt.mkf all
 	  cd ..
-	  cd hts_engine
-	  nmake /f hts_engine_nt.mkf all
 
 Installation:
 The HTK tools have now been built and are in the bin.win32

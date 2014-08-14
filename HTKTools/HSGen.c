@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,8 +64,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hsgen_version = "!HVER!HSGen:   3.4 [CUED 25/04/06]";
-char *hsgen_vc_id = "$Id: HSGen.c,v 1.4 2008/05/30 07:19:10 zen Exp $";
+char *hsgen_version = "!HVER!HSGen:   3.4.1 [CUED 12/03/09]";
+char *hsgen_vc_id = "$Id: HSGen.c,v 1.5 2009/12/11 10:00:55 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -116,8 +116,8 @@ void SetConfParms(void)
 
 void ReportUsage(void)
 {
-   printf("\nUSAGE: HSGen [options] latticeFile dictFile\n\n");
    printf("\nModified for HTS\n");
+   printf("\nUSAGE: HSGen [options] latticeFile dictFile\n\n");
    printf(" Option                                       Default\n\n");
    printf(" -l      Include line numbers                 off\n");
    printf(" -n N    Number of sentences to generate      100\n");
@@ -175,7 +175,6 @@ int main(int argc, char *argv[])
       HError(3419, "dictionary file name expected");
    dfn = GetStrArg(); 
    GenSentences(lfn,dfn);
-   
    
    if(InitShell(argc,argv,hsgen_version,hsgen_vc_id)<SUCCESS)
       HError(3400,"HSGen: InitShell failed");

@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -83,7 +83,7 @@
   (ie the forward-backward allignments have been performed).
 */
 
-char *hmap_version = "!HVER!HMap: 3.4 [CUED 25/04/06]";
+char *hmap_version = "!HVER!HMap: 3.4.1 [CUED 12/03/09]";
 char *hmap_vc_id = "$Id: HMap.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
@@ -137,9 +137,9 @@ void InitMap(void)
      if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
      if (GetConfInt(cParm,nParm,"MINEGS",&i)) minEgs = i;
      if (GetConfFlt(cParm,nParm,"MINOBS",&f)) minObs = f;
-      if (GetConfFlt(cParm,nParm,"MINVAR",&f)) { minVar = f; applyVFloor = TRUE; }
+     if (GetConfFlt(cParm,nParm,"MINVAR",&f)) { minVar = f; applyVFloor = TRUE; }
      if (GetConfFlt(cParm,nParm,"MAPTAU",&f)) mapTau = f;
-      if (GetConfBool(cParm,nParm,"APPLYVFLOOR",&b)) applyVFloor = b;
+     if (GetConfBool(cParm,nParm,"APPLYVFLOOR",&b)) applyVFloor = b;
      if (GetConfFlt(cParm,nParm,"MIXWEIGHTFLOOR",&f)) mixWeightFloor = MINMIX*f;
    }
 }
@@ -254,14 +254,14 @@ static void FloorMixtures(HSetKind hskind, StreamInfo *sti, int M, float floor)
 {
   switch (hskind){
   case DISCRETEHS:
-      FloorDProbs(sti->spdf.dpdf,M,floor);
+    FloorDProbs(sti->spdf.dpdf,M,floor);
     break;
   case TIEDHS:
-      FloorTMMixes(sti->spdf.tpdf,M,floor);
+    FloorTMMixes(sti->spdf.tpdf,M,floor);
     break;
   case PLAINHS:
   case SHAREDHS:
-      FloorMixes(sti->spdf.cpdf+1,M,floor);
+    FloorMixes(sti->spdf.cpdf+1,M,floor);
     break;
   }
 }
@@ -282,7 +282,7 @@ static void UpdateWeights(HMMSet *hset, int px, HLink hmm)
    for (i=2; i<N; i++,se++){
       ste = se->info->pdf+1; 
       for (s=1;s<=S; s++,ste++){
-         wa = (WtAcc *)ste->info->hook;
+	wa = (WtAcc *)ste->info->hook;
 	switch (hset->hsKind){
   	case TIEDHS:
 	  M=hset->tmRecs[s].nMix;
@@ -290,22 +290,22 @@ static void UpdateWeights(HMMSet *hset, int px, HLink hmm)
 	case DISCRETEHS:
 	case PLAINHS:
 	case SHAREDHS:
-            M=ste->info->nMix;
+	  M=ste->info->nMix;
 	  break;
 	}
 	if (wa != NULL) {
 	  occi = wa->occ; 
 	  if (occi>0) {
-               me = ste->info->spdf.cpdf + 1; denom=0;
+	    me = ste->info->spdf.cpdf + 1; denom=0;
 	    for (m=1; m<=M; m++,me++){
-                  vSize = VectorSize(me->mpdf->mean);
+              vSize = VectorSize(me->mpdf->mean);
 	      tmp = me->weight*vSize*mapTau -1;
 	      if (tmp<0) tmp = 0;
 	      denom += tmp;
 	    }
-               me = ste->info->spdf.cpdf + 1;
+	    me = ste->info->spdf.cpdf + 1;
 	    for (m=1; m<=M; m++,me++){
-                  vSize = VectorSize(me->mpdf->mean);
+              vSize = VectorSize(me->mpdf->mean);
 	      tmp = me->weight*vSize*mapTau -1;
 	      if (tmp<0) tmp = 0;
 	      x = (tmp + wa->c[m])/(denom + occi); 
@@ -317,34 +317,34 @@ static void UpdateWeights(HMMSet *hset, int px, HLink hmm)
 	      }
 	      switch (hset->hsKind){
 	      case TIEDHS:
-                     ste->info->spdf.tpdf[m] = x;
+		ste->info->spdf.tpdf[m] = x;
 		break;
 	      case DISCRETEHS:
-                     ste->info->spdf.dpdf[m]=DProb2Short(x);
+		ste->info->spdf.dpdf[m]=DProb2Short(x);
 		break;
 	      case PLAINHS:
 	      case SHAREDHS:
-                     me=ste->info->spdf.cpdf+m;
+		me=ste->info->spdf.cpdf+m;
 		me->weight = x;
 		break;
 	      }
 	    }
 	    if (mixWeightFloor>0.0){
-                  FloorMixtures(hset->hsKind,ste->info,M,mixWeightFloor);		 
+	      FloorMixtures(hset->hsKind,ste->info,M,mixWeightFloor);		 
 	    }
 	    /* Force a normalisation becomes of weird zeroing .... */
 	    if ((hset->hsKind == PLAINHS) || (hset->hsKind == SHAREDHS)) {
-                  me = ste->info->spdf.cpdf + 1; x=0;
+	      me = ste->info->spdf.cpdf + 1; x=0;
 	      for (m=1; m<=M; m++,me++)
 		x += me->weight;
 	      if (x>1.001)
 		HError(-1,"Updating Weights, sum too large (%f)\n",x);
-                  me = ste->info->spdf.cpdf + 1;
+	      me = ste->info->spdf.cpdf + 1;
 	      for (m=1; m<=M; m++,me++)
 		me->weight /= x;	      
 	    } 
 	  }
-            ste->info->hook = NULL;
+	  ste->info->hook = NULL;
 	}
       }
    }
@@ -485,8 +485,8 @@ void MAPUpdateModels(HMMSet *hset, UPDSet uFlags)
 {
   HMMScanState hss;
   HLink hmm;
-   int px,nmapped=0,totM;
-   long n;
+  int px,nmapped=0,totM;
+  long n;
 
   if (hset->logWt == TRUE) HError(999,"HMap: requires linear weights");
 
@@ -504,7 +504,7 @@ void MAPUpdateModels(HMMSet *hset, UPDSet uFlags)
   px=1;
   do {   
     hmm = hss.hmm;
-      n = (long)hmm->hook;
+    n = (long)hmm->hook;
     if (n<minEgs && !(trace&T_UPD))
       HError(-2331,"UpdateModels: %s[%d] copied: only %d egs\n",
 	     HMMPhysName(hset,hmm),px,n);
@@ -533,6 +533,6 @@ void MAPUpdateModels(HMMSet *hset, UPDSet uFlags)
     fflush(stdout);
   }
    
-   /* Reset vfloor */
-   ResetVFloor(hset,vFloor);
+  /* Reset vfloor */
+  ResetVFloor(hset,vFloor);
 }

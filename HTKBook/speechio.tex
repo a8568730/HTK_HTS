@@ -699,8 +699,8 @@ then compressed by taking the cubic root.\footnote{the degree of
   compression can be controlled by setting the configuration parameter
   \texttt{COMPRESSFACT}\index{enormalise@\texttt{COMPRESSFACT}} which
   is the power to which the amplitudes are raised and defaults to
-  0.33)} From the resulting auditory spectrum LP coefficents are
-estimated which are then converted to cepstral coefficents in the
+  0.33)} From the resulting auditory spectrum LP coefficients are
+estimated which are then converted to cepstral coefficients in the
 normal way (see above).
 
 
@@ -754,7 +754,7 @@ set to true.  }.
 
 \mysect{Delta, Acceleration and Third Differential Coefficients}{delta}
 
-\index{speech input!dynamic coefficents}
+\index{speech input!dynamic coefficients}
 The performance of a speech recognition system can be greatly enhanced by
 adding time derivatives to the basic static parameters.  In \HTK, these are
 indicated by attaching qualifiers to the basic parameter kind.  The qualifier
@@ -1123,7 +1123,7 @@ be set to over-ride this.  The byte ordering assumed for SCRIBE data files is
 
 \index{file formats!Sound Designer(SDES1)}
 The SDES1 format refers to the ``Sound Designer I'' format defined by
-Digidesign Inc in 1985 for multimedia and general audo applications.  It is
+Digidesign Inc in 1985 for multimedia and general audio applications.  It is
 used for storing short monoaural sound samples.  The SDES1 header is complex
 (1336 bytes) since it allows for associated display window information to be
 stored in it as well as providing facilities for specifying repeat loops.  The
@@ -1176,7 +1176,7 @@ No default byte ordering is assumed for this format. If the data source is
 known to be different to the machine being used, then the environment variable
 \texttt{BYTEORDER} must be set appropriately. Note that when used on Sun Sparc
 machines with 16 bit audio device the sampling rate of 8012.821Hz is not
-supported and playback will be peformed at 8KHz.
+supported and playback will be performed at 8KHz.
 
 \subsection{OGI File Format}
 
@@ -1858,7 +1858,7 @@ Kind &  Meaning  \\ \hline
 \texttt{MELSPEC} & linear filter-bank parameters  \\
 \texttt{USER} & user defined parameters  \\
 \texttt{DISCRETE} &  vector quantised codebook symbols  \\
-\texttt{PLP} &  perceptual linaer prediction coefficients  \\
+\texttt{PLP} &  perceptual linear prediction coefficients  \\
 \texttt{ANON} & matches actual parameter kind \\ \hline
 \end{tabular}
 \tabcap{parmkinds}{Supported Parameter Kinds}

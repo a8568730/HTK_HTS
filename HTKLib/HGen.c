@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -45,7 +45,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hgen_version = "!HVER!HGen:   2.1 [NIT 30/05/08]";
-char *hgen_vc_id = "$Id: HGen.c,v 1.44 2008/05/30 07:19:14 zen Exp $";
+char *hgen_vc_id = "$Id: HGen.c,v 1.48 2009/12/15 01:17:26 uratec Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -65,7 +65,7 @@ char *hgen_vc_id = "$Id: HGen.c,v 1.44 2008/05/30 07:19:14 zen Exp $";
 #include "lbfgs.h"
 
 #define LBFGSMEM 7
-#define MAXWINLEN 10
+#define MAXWINLEN 30
 
 /* ------------------- Trace Information ------------------------------ */
 /* Trace Flags */
@@ -99,6 +99,7 @@ static double w1 = 1.0;             /* weight for HMM output prob. */
 static double w2 = 1.0;             /* weight for GV output prob. */
 static Boolean cdGV = FALSE;        /* use context-dependent GV */
 static Boolean logGV = FALSE;       /* use logarithmic GV */
+static double initweight = 1.0;
 
 typedef enum {STEEPEST=0,NEWTON=1,LBFGS=2} OptKind;
 #ifdef _HAS_FORTRAN 
@@ -207,6 +208,7 @@ void InitGen(void)
       if (GetConfFlt (cParm,nParm,"STEPINC",   &d))  stepInc    = d;
       if (GetConfFlt (cParm,nParm,"HMMWEIGHT", &d))  w1         = d;
       if (GetConfFlt (cParm,nParm,"GVWEIGHT",  &d))  w2         = d;
+      if (GetConfFlt (cParm,nParm,"GVINITWEIGHT",&d))initweight = d;
       if (GetConfStr (cParm,nParm,"OPTKIND",   buf)) optKind    = Str2OptKind(buf);
       if (GetConfStr (cParm,nParm,"RNDFLAGS",  buf)) SetrFlags(buf);
       if (GetConfStr (cParm,nParm,"GVMODELMMF",buf)) strcpy(gvMMF,buf);
@@ -676,7 +678,7 @@ static void SetStateSequence (GenInfo *genInfo)
 }
 
 /* CountDurStat: count duration statistics */
-static void CountDurStat (Vector mean, Vector ivar, float *sum, float *sqr, IntVec sindex)
+static void CountDurStat (DVector mean, DVector ivar, double *sum, double *sqr, IntVec sindex)
 {
    int i,j;
    
@@ -693,20 +695,22 @@ static void CountDurStat (Vector mean, Vector ivar, float *sum, float *sqr, IntV
 static void SetStateDurations (GenInfo *genInfo)
 {
    int i,j,k,s,cnt,nStates,modeldur,start=0,tframe=0;
-   float sum,sqr,dur,rho=0.0,diff=0.0;
-   Vector *mean, *ivar;
+   double sum,sqr,dur,rho=0.0,diff=0.0;
+   DVector *mean, *ivar;
    Label *label;
    HLink dm;
-   
+   int l,crho=0;
+   HTime pre_end=0.0;
+
    if (genInfo->speakRate!=1.0 && rFlags&RNDDUR)
       HError(9999,"SetStateDurations: Cannot change speaking rate in random duration generation");
    if (genInfo->modelAlign && rFlags&RNDDUR)
       HError(9999,"SetStateDurations: Cannot use model-level alignments in random duration generation");
    
    /* state duration statistics storage */
-   if ((mean = (Vector *) New(genInfo->genMem, genInfo->labseqlen*sizeof(Vector)))== NULL)
+   if ((mean = (DVector *) New(genInfo->genMem, genInfo->labseqlen*sizeof(DVector)))== NULL)
       HError(9905,"SetStateDurations: Cannot allocate memory for mean");
-   if ((ivar = (Vector *) New(genInfo->genMem, genInfo->labseqlen*sizeof(Vector)))== NULL)
+   if ((ivar = (DVector *) New(genInfo->genMem, genInfo->labseqlen*sizeof(DVector)))== NULL)
       HError(9905,"SetStateDurations: Cannot allocate memory for inverse variance");
    mean--; ivar--;
    
@@ -718,17 +722,17 @@ static void SetStateDurations (GenInfo *genInfo)
       
       /* # of states in the i-th model */
       nStates = genInfo->hmm[i]->numStates-2;
-      mean[i] = CreateVector(genInfo->genMem, nStates);
-      ivar[i] = CreateVector(genInfo->genMem, nStates);
+      mean[i] = CreateDVector(genInfo->genMem, nStates);
+      ivar[i] = CreateDVector(genInfo->genMem, nStates);
       
       /* set statistics of the i-th state */
       for (s=cnt=1; s<=genInfo->dset->swidth[0]; s++) {
          for (k=1; k<=genInfo->dset->swidth[s]; k++,cnt++) {
             mean[i][cnt] = dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->mean[k];
             switch(dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->ckind) {
-            case DIAGC:    ivar[i][cnt] = 1.0 / dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.var[k]; break;
-            case INVDIAGC: ivar[i][cnt] = dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.var[k]; break;
-            case FULLC:    ivar[i][cnt] = dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.inv[k][k]; break;
+            case DIAGC:    ivar[i][cnt] = 1.0 / (double) dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.var[k]; break;
+            case INVDIAGC: ivar[i][cnt] = (double) dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.var[k]; break;
+            case FULLC:    ivar[i][cnt] = (double) dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.inv[k][k]; break;
             }
          }
       }
@@ -754,16 +758,33 @@ static void SetStateDurations (GenInfo *genInfo)
       label = genInfo->label[i];
       
       /* use model-level aligment */
-      if (genInfo->modelAlign) {
-         if (label->start<=0 && label->end<=0) {   /* model-level alignment of the i-th label is not specified */
-            HError(-9999,"SetStateDurations: model duration is not specified in %d-th label",i); 
-            rho = 0.0;
+      if (genInfo->modelAlign && crho==0) {
+         sum = sqr = 0.0;
+         CountDurStat(mean[i], ivar[i], &sum, &sqr, genInfo->sindex[i]);
+         crho = 1;
+         if (label->end>=0.0) {  /* model-level alignment of the i-th label is specified */
+            rho = (((label->end-pre_end)/genInfo->frameRate)-sum)/sqr;
          }
-         else {  /* model-level alignment of the i-th label is specified */
-            modeldur = (int) (label->end - label->start)/genInfo->frameRate;
-            sum = sqr = 0.0;
-            CountDurStat(mean[i], ivar[i], &sum, &sqr, genInfo->sindex[i]);
-            rho = (modeldur-sum)/sqr;
+         else {  /* model-level alignment of the i-th label is not specified */
+            for (l=i+1; l<=genInfo->labseqlen; l++) {
+               if (genInfo->label[l]->start>=0.0) {
+                  rho = (((genInfo->label[l]->start-pre_end)/genInfo->frameRate)-sum)/sqr;
+                  break;
+               }
+               CountDurStat(mean[l], ivar[l], &sum, &sqr, genInfo->sindex[l]);
+               crho++;
+               if (genInfo->label[l]->end>=0.0) {
+                  if (genInfo->label[l]->end<pre_end)
+                     HError(9999,"SetStateDurations: start time %f is smaller than end time %f", (double)pre_end, (double)genInfo->label[l]->end);
+                  rho = (((genInfo->label[l]->end-pre_end)/genInfo->frameRate)-sum)/sqr;
+                  break;
+               }
+            }
+            if (l>genInfo->labseqlen) {
+               HError(-9999,"SetStateDurations: model duration is not specified in the finel label");
+               genInfo->modelAlign = FALSE;
+               rho = 0.0;
+            }
          }
       }
       
@@ -779,7 +800,7 @@ static void SetStateDurations (GenInfo *genInfo)
          if (genInfo->durations[i][j]<1)
             genInfo->durations[i][j] = 1;
 
-         diff += dur-(float)genInfo->durations[i][j];
+         diff += dur-(double)genInfo->durations[i][j];
          tframe += genInfo->durations[i][j];
          modeldur += genInfo->durations[i][j];
       }
@@ -788,6 +809,11 @@ static void SetStateDurations (GenInfo *genInfo)
       label->start = (HTime)start*genInfo->frameRate;
       label->end   = (HTime)(start+modeldur)*genInfo->frameRate;
       start += modeldur;
+
+      if (genInfo->modelAlign) {
+         pre_end = label->end;
+         crho--;
+      }
    }
    genInfo->tframe = tframe;
    
@@ -801,7 +827,7 @@ static void SetStateDurations (GenInfo *genInfo)
 static void GetLabStateDurations (GenInfo *genInfo)
 {
    int i,j,k,tframe=0;
-   float diff=0.0;
+   double diff=0.0;
    Label *label;
    
    /* get state durations from given label sequence */ 
@@ -813,7 +839,7 @@ static void GetLabStateDurations (GenInfo *genInfo)
       
       /* get state duration from label */
       genInfo->durations[j][k] = (int)((label->end - label->start)/genInfo->frameRate+diff+0.5);
-      diff += (label->end - label->start)/genInfo->frameRate - (float)genInfo->durations[j][k];
+      diff += (label->end - label->start)/genInfo->frameRate - (double)genInfo->durations[j][k];
       
       /* count total frame */
       tframe += genInfo->durations[j][k++];
@@ -1185,12 +1211,14 @@ static void Forward_Substitution (PdfStream *pst)
       for (i=1; (i<width) && (t-i>0); i++)
          g[t] -= U[t-i][i+1] * g[t-i];
       g[t] /= U[t][1];
-      
-      /* random generation */
-      if (rFlags&RNDPAR)
+   }
+
+   /* random generation */
+   if (rFlags&RNDPAR) {
+      for(t=1; t<=T; t++)
          g[t] += GaussDeviate(rndParMean, rndParVar);
    }
-   
+
    if (trace & T_MAT) {
       ShowDVector("\n  g", g, T);
       fflush(stdout);
@@ -1298,7 +1326,7 @@ static void Conv_GV (PdfStream *pst, const int bias, DVector mean, DVector var)
    for (t=1; t<=T; t++) {
      if (pst->gvFlag[(t+M-1)/M]) {
         m = (t+M-1)%M+1+bias;
-        c[t] = ratio[m] * (c[t]-mean[m]) + mean[m];
+        c[t] = initweight*ratio[m] * (c[t]-mean[m]) + mean[m];
      }
    }
    

@@ -35,7 +35,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -73,7 +73,7 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-/* !HVER!HArc:   3.4 [CUED 08/07/05] */
+/* !HVER!HArc:   3.4.1 [CUED 12/03/09] */
 
 
 /*
@@ -262,4 +262,3 @@ Boolean LatInLat(Lattice *numLat, Lattice *denLat);
 
 void InitArc(void);
 void ResetArc(void);
-

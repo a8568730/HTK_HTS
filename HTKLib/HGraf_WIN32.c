@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -66,7 +66,7 @@
 
 /* Win32 port Peter Silsbee                                    */
 
-char *hgraf_version = "!HVER!HGraf(NT):   3.4 [CUED 25/04/06]";
+char *hgraf_version = "!HVER!HGraf(NT):   3.4.1 [CUED 12/03/09]";
 char *hgraf_vc_id = "$Id: HGraf_WIN32.c,v 1.1.1.1 2006/10/11 09:54:57 jal58 Exp $";
 
 /* define CAPTURE_ALT to allow application to respond to Alt-key presses. */

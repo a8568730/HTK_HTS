@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hwave_version = "!HVER!HWave:   3.4 [CUED 25/04/06]";
-char *hwave_vc_id = "$Id: HWave.c,v 1.7 2008/06/24 03:19:08 zen Exp $";
+char *hwave_version = "!HVER!HWave:   3.4.1 [CUED 12/03/09]";
+char *hwave_vc_id = "$Id: HWave.c,v 1.8 2009/12/11 10:00:48 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

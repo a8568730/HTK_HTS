@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -72,8 +72,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hfblat_version = "!HVER!HFBLat:   3.4 [CUED 25/04/06]";
-char *hfblat_vc_id = "$Id: HFBLat.c,v 1.14 2008/06/24 03:19:08 zen Exp $";
+char *hfblat_version = "!HVER!HFBLat:   3.4.1 [CUED 12/03/09]";
+char *hfblat_vc_id = "$Id: HFBLat.c,v 1.15 2009/12/11 10:00:47 uratec Exp $";
 
 /*
   Performs forward/backward alignment
@@ -674,7 +674,7 @@ static void SetCorrectnessAsError(FBLatInfo *fbInfo, Lattice *numLat){    /* re 
 #endif
                if(!ZeroCorrectness){ /* ZeroCorrectness is true for non-start models in quinphone case */
 		 int compute_count = 100; /* Limit computation... */
-                  currCorrect = GetLowestNegError(i_start, i_end, i_start, 0, 0, correctArc, iphone, &compute_count, (Boolean)IsSilence(phone->name));
+                 currCorrect = GetLowestNegError(i_start, i_end, i_start, 0, 0, correctArc, iphone, &compute_count, (Boolean)IsSilence(phone->name));
 	       }
          
                if( /* IsSilence(phone->name) || */ ZeroCorrectness) /* If for some reason we arent counting this phone... relates to quinphones,
@@ -880,6 +880,7 @@ static void Setotprob (const int t)
    if (fbInfo->hsKind == TIEDHS)
       PrecomputeTMix(fbInfo->hset,&(fbInfo->al_ot),minFrwdP,0);
   
+  
    for (q=fbInfo->aInfo->qHi[t];q>=fbInfo->aInfo->qLo[t];q--) {
       if(t>=fbInfo->aInfo->ac[q].t_start && t<=fbInfo->aInfo->ac[q].t_end) { /* HMM is active at this time... */
          Acoustic *ac = fbInfo->aInfo->ac+q;
@@ -893,19 +894,23 @@ static void Setotprob (const int t)
                switch (fbInfo->hsKind){
                case TIEDHS:	 /* SOutP deals with tied mix calculation */
                case DISCRETEHS:
-		  outprob[j][0] = NewOtprobVec(fbInfo->aInfo->mem,1);
-                  outprob[j][0][0] = SOutP(fbInfo->hset, s, &fbInfo->al_ot, sti);
+                  if (fbInfo->S==1) {
+                     outprob[j][0] = NewOtprobVec(fbInfo->aInfo->mem,1);
+                     outprob[j][0][0] = SOutP(fbInfo->hset,s,&fbInfo->al_ot, sti);
+                  } else {
+                     outprob[j][s] = NewOtprobVec(fbInfo->aInfo->mem,1);
+                     outprob[j][s][0] = SOutP(fbInfo->hset,s,&fbInfo->al_ot, sti);
+                  }
 		  break;
                case PLAINHS: /* x = SOutP(fbInfo->hset,s,&ot,sti);    break; commented out by dp10006 since
                                 sharing is needed in any case for lattices. */
                case SHAREDHS:
 		  if (fbInfo->S==1)
-                     outprob[j][0] = ShStrP(fbInfo->al_ot.fv[s],t+StartTime,sti,fbInfo->inXForm,fbInfo->aInfo->mem);
+		     outprob[j][0] = ShStrP(fbInfo->al_ot.fv[s],t+StartTime,sti,fbInfo->inXForm,fbInfo->aInfo->mem);
 		  else
-                     outprob[j][s] = ShStrP(fbInfo->al_ot.fv[s],t+StartTime,sti,fbInfo->inXForm,fbInfo->aInfo->mem);
+		     outprob[j][s] = ShStrP(fbInfo->al_ot.fv[s],t+StartTime,sti,fbInfo->inXForm,fbInfo->aInfo->mem);
 		  break;
-               default:       
-                  HError(1, "Unknown hset kind.");
+               default:       HError(1, "Unknown hset kind.");
                }
                if (fbInfo->S==1)
 		  outprob[j][0][0] *= local_probscale;
@@ -924,7 +929,7 @@ static void Setotprob (const int t)
    }
 }
 
-void SetModelBetaPlus (const int t, const int q) 
+void SetModelBetaPlus (const int t, const int q)
 {
    double x=LZERO;
    Acoustic *ac = fbInfo->aInfo->ac+q;
@@ -1006,8 +1011,8 @@ void UpSkipTranParms(int q, int t){
 }
 
 /* UpTranParms: update the transition counters of given hmm */
-static void UpTranParms(int t, int q)
-{ 
+
+static void UpTranParms(int t, int q){ 
    TrAcc *ta,*tammi=NULL;   
    Acoustic *ac = fbInfo->aInfo->ac+q;
    HLink hmm = ac->hmm;
@@ -1279,7 +1284,6 @@ static double UpMixParms(int q, HLink hmm, int t, DVector aqt,
       for (s=1;s<=fbInfo->S;s++,ste++){
          /* Get observation vector for this state/stream */
          vSize = fbInfo->hset->swidth[s];
-
          sti = ste->info;
 
          switch (fbInfo->hsKind){
@@ -1433,6 +1437,7 @@ static void StepForward()
    DVector aqt,aqt1,bqt,bqt1,tmp;
    double occ, total_occ;
    HLink hmm, up_hmm;
+
    ResetObsCache(fbInfo->xfinfo);
    ZeroAlpha(1, fbInfo->Q); /*Zero the alphat column,*/
    for(q=1;q<=fbInfo->Q;q++){ /*And switch: now the alphat1 column is zero.*/
@@ -1567,10 +1572,8 @@ int MPE_GetFileLen(Lattice *lat){
 
 void FBLatClearUp(FBLatInfo *fbInfo); 
 
-void FBLatFirstPass(FBLatInfo *_fbInfo, FileFormat dff, char * datafn, char *datafn2, Lattice *MPECorrLat)
-{
-   int q, T2=0; 
-   Boolean MPE;
+void FBLatFirstPass(FBLatInfo *_fbInfo, FileFormat dff, char * datafn, char *datafn2, Lattice *MPECorrLat){
+   int q,T2=0; Boolean MPE;
   
    fbInfo = _fbInfo;
    if(fbInfo->InUse) FBLatClearUp(fbInfo); 
@@ -1881,6 +1884,7 @@ void InitFBLat(void)
    }
    SET_totalProbScale;
 }
+
 
 
 /* EXPORT->ResetFBLat: reset module */

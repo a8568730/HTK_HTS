@@ -35,7 +35,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -289,7 +289,7 @@ static void LatTraceBackCount (DecoderInst *dec, WordendHyp *path, int *nnodes, 
 
          s = (pron->outSym) ? pron->outSym->name : "!NULL";
 
-         printf ("   n %d t %.3f W %s\n", (int) path->user, path->frame / 100.0, s);
+         printf ("   n %d t %.3f W %s\n", (int) path->user, path->frame*dec->frameDur, s);
       }
 #endif
 
@@ -320,7 +320,7 @@ static void Paths2Lat (DecoderInst *dec, Lattice *lat, WordendHyp *path,
       ln->hook = (Ptr) path;
 
       ln->n = n;
-      ln->time = path->frame / 100.0;   /* fix frame duration! */
+      ln->time = path->frame*dec->frameDur;   /* fix frame duration! */
       pron = dec->net->pronlist[path->pron];
 
       if ((path->user & 3) == 1)
@@ -335,7 +335,7 @@ static void Paths2Lat (DecoderInst *dec, Lattice *lat, WordendHyp *path,
       ln->v = pron->pnum;
 
       if (trace & T_LAT)
-         printf ("I=%d t=%.2f W=%d\n", n, path->frame/100.0, path->pron);
+         printf ("I=%d t=%.2f W=%d\n", n, path->frame*dec->frameDur, path->pron);
 
       
       la = &lat->larcs[*na];
@@ -677,7 +677,7 @@ void CheckLAlign (DecoderInst *dec, Lattice *lat)
       assert (la->nAlign == pron->nphones);
 #endif
 
-      if (fabs (dur - laDur > dec->frameDur/2))
+      if (fabs (dur - laDur) > dec->frameDur/2)
          printf ("CheckLAlign: MODALIGN Sanity check failed! %d laDur %.2f  dur %.2f\n", i, laDur, dur);
    }
 }

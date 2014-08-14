@@ -29,7 +29,7 @@
 /*         File: LBuild.c - generate LM                         */
 /* ----------------------------------------------------------- */
 
-char *lbuild_version = "!HVER!LBuild:   3.4 [CUED 25/04/06]";
+char *lbuild_version = "!HVER!LBuild:   3.4.1 [CUED 12/03/09]";
 char *lbuild_vc_id = "$Id: LBuild.c,v 1.1.1.1 2006/10/11 09:54:44 jal58 Exp $";
 
 #include "HShell.h"

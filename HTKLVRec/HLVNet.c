@@ -27,7 +27,7 @@
 /*         File: HLVNet.c Network handling for HTK LV Decoder  */
 /* ----------------------------------------------------------- */
 
-char *hlvnet_version = "!HVER!HLVNet:   3.4 [GE 25/04/06]";
+char *hlvnet_version = "!HVER!HLVNet:   3.4.1 [GE 12/03/09]";
 char *hlvnet_vc_id = "$Id: HLVNet.c,v 1.1.1.1 2006/10/11 09:54:55 jal58 Exp $";
 
 #include "HShell.h"

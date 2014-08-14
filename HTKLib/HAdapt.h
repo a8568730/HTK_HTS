@@ -35,12 +35,15 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
 /*                           Interdisciplinary Graduate School of    */
 /*                           Science and Engineering                 */
+/*                                                                   */
+/*                2008-2009  University of Edinburgh                 */
+/*                           Centre for Speech Technology Research   */
 /*                                                                   */
 /* All rights reserved.                                              */
 /*                                                                   */
@@ -92,7 +95,7 @@ typedef struct _ObsCache{
 typedef struct _AccCache{
    int     baseclass;
    DVector bVector;
-   TriMat *bTriMat;
+   DTriMat *bTriMat;
    struct _AccCache *next;
 } AccCache;  
 
@@ -180,8 +183,17 @@ typedef struct {
    /* -1 indicates that this is the first frame of a new file */
    int baseTriMatTime;
 
-   ObsCache *headoc;
+   ObsCache *headboc;
+   ObsCache *headpoc;
    AccCache *headac;
+
+   MemHeap bobcaStack; /* base obscache */
+   MemHeap pobcaStack; /* parent obscache */
+   MemHeap acccaStack;			
+
+   /* specifies whether the transforms change the model variances */
+   Boolean covarChanged;
+   Boolean covarPChanged;
 } XFInfo;
 
 /* -------------------- Initialisation Functions -------------------------- */
@@ -191,7 +203,7 @@ void InitAdapt(XFInfo *xfinfo_hmm, XFInfo *xfinfo_dur);
    Initialise configuration parameters
 */
 
-void ResetAdapt (void);
+void ResetAdapt (XFInfo *xfinfo_hmm, XFInfo *xfinfo_dur);
 /*
    Reset adaptation module 
 */

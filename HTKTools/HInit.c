@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hinit_version = "!HVER!HInit:   3.4 [CUED 25/04/06]";
-char *hinit_vc_id = "$Id: HInit.c,v 1.8 2008/05/30 07:19:10 zen Exp $";
+char *hinit_version = "!HVER!HInit:   3.4.1 [CUED 12/03/09]";
+char *hinit_vc_id = "$Id: HInit.c,v 1.10 2009/12/14 04:11:43 uratec Exp $";
 
 /*
    This program is used to initialise (or tune) a single hidden
@@ -639,6 +639,9 @@ void UniformSegment(void)
    Vector floor;
    SpaceInfo *si;
 
+   void FloorMixes  (MixtureElem *mixes, const int M, const float floor);
+   void FloorTMMixes(Vector mixes,       const int M, const float floor);
+
    if (trace & T_UNI)
       printf(" Uniform Segmentation\n");
    seqMat = CreateSeqMat();
@@ -683,7 +686,7 @@ void UniformSegment(void)
                   HError(2123,"UniformSegment: different covkind within a mix\n");
                c = cset->cl+m;
                if (uFlags&UPMIXES)
-                        sti->spdf.cpdf[si->sindex[m]].weight = (float)c->csize/(float)sumItems;
+                        sti->spdf.cpdf[si->sindex[m]].weight = (float)((double)c->csize/(double)sumItems);
                if (uFlags&UPMEANS)
                         CopyRVector(c->vCtr,mp->mean,si->order);
                      if (uFlags&UPVARS){
@@ -710,6 +713,7 @@ void UniformSegment(void)
                   }
                }
             }
+            FloorMixes(sti->spdf.cpdf+1,M,mixWeightFloor);
             break;
          case DISCRETEHS:
             size = hset.swidth[s];
@@ -764,6 +768,7 @@ void UniformSegment(void)
                      HError(2124,"UniformSegment: bad cov kind %d\n",ck);
                   }                 
             }
+            FloorTMMixes(sti->spdf.tpdf,M,mixWeightFloor);
             break;       
          }
          ResetHeap(&clustSetStack);
@@ -875,7 +880,6 @@ void FindBestMixes(int segNum, int segLen, IntVec states, IntVec *mixes)
             bestm = 1;   
          else{
             v = obs.fv[s];
-            /* printf("segNum = %d   pos = %d   vector = %f\n",segNum,i,v[1]); */ 
             bestP = LZERO; bestm=0;
             if (trace&T_MIX)
                printf("  seg %d, stream %d: ",i,s);
@@ -1060,8 +1064,6 @@ void UpdateCounts(int segNum, int segLen, IntVec states,IntVec *mixes)
             size = VectorSize(mp->mean);
             for (j=1; j<=size; j++) {
                x = v[j] - mp->mean[j];
-               /* if (s==2)
-               printf("segLen = %d  vec = %d  difference = %f \n",i,j,x); */
                ma->mu[j] += x;
                if (uFlags&UPVARS)
                   switch(mp->ckind){

@@ -29,7 +29,7 @@
 /*         File: LAdapt.c - adapt LM with new text             */
 /* ----------------------------------------------------------- */
 
-char *ladapt_version = "!HVER!LAdapt:   3.4 [CUED 25/04/06]";
+char *ladapt_version = "!HVER!LAdapt:   3.4.1 [CUED 12/03/09]";
 char *ladapt_vc_id = "$Id: LAdapt.c,v 1.1.1.1 2006/10/11 09:54:44 jal58 Exp $";
 
 #include "HShell.h"

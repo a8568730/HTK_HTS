@@ -48,9 +48,16 @@ the voice dialling task itself is quite simple, the system design is
 general-purpose and would be useful for a range of applications.  
 }
 
+In addition to the construction of a simple voice-dialling system, examples for
+using more advanced options, such as decorrelating transforms, the large
+vocabulary decoder and discriminative training, are also given. These sections
+do not necessarily link fully with the other parts of the tutorial, but aim to
+give the user an idea of the form of command-lines and steps that might be
+involved in using these options.
+
 The system will be built from scratch even to the extent of recording training
 and test data using the \HTK\ tool \htool{HSLab}.  To make this tractable, the
-system will be speaker dependent\footnote{The final stage of the tutorial deals 
+system will be speaker dependent\footnote{A stage of the tutorial deals 
 with adapting the speaker dependent models for new speakers}, but the same design 
 would be followed to build a speaker independent system.  The only difference being 
 that data would be required from a large number of speakers and there would 
@@ -475,7 +482,7 @@ the first few lines might look like\index{extensions!mfc@\texttt{mfc}}
     (etc.)
 \end{verbatim}
 Files containing lists of files are referred to as script files\footnote{
-Not to be confused with files containing \textit{edit} scripts
+Not to be confused with files containing \textit{edit} scripts.
 }
 and\index{extensions!scp@\texttt{scp}}
 by convention are given the extension \texttt{scp} (although 
@@ -591,7 +598,7 @@ new prototype model stored in the directory
 \texttt{hmm0}, a \textit{Master Macro File}\index{master macro files} 
 (MMF) called \texttt{hmmdefs} \index{MMF}
 containing a copy for each of the required monophone HMMs is constructed 
-by manually copying the prototype and relabeling it for each required 
+by manually copying the prototype and relabelling it for each required 
 monophone (including ``sil'').  
 The format of an MMF is similar to that
 of an MLF and it serves a similar purpose in that it avoids having
@@ -754,6 +761,51 @@ Once the new phone alignments have been created, another  2 passes
 of \htool{HERest} can be applied to reestimate the HMM set parameters
 again.  Assuming that this is done, the final monophone HMM set will
 be stored in directory \texttt{hmm9}.
+
+When aligning the data, it is sometimes clear that there is significant
+amounts of silence at the beginning and end of some utterances (to spot this the 
+time-stamp information would need to be output during the alignment 
+so the option {\tt -o SW} would need to be used). Rather than explicitly 
+extracting the portion of the utterance with the appropriate amount of silence at the start and end, the script file specified using the {\tt -S} option can 
+be used for this purpose. Suppose that \texttt{train.scp} contains the 
+following lines
+\begin{verbatim}
+/root/sjy/data/S0001.mfc
+/root/sjy/data/S0002.mfc
+/root/sjy/data/S0003.mfc
+...
+\end{verbatim}
+To specify a particular segmentation from this a new scp-file would be
+generated containing
+\begin{verbatim}
+S0001.mfc=/root/sjy/data/S0001.mfc[20,297]
+S0002.mfc=/root/sjy/data/S0002.mfc[25,496]
+S0003.mfc=/root/sjy/data/S0003.mfc[22,308]
+...
+\end{verbatim}
+Where for the first utterance only the segment from the 21st frame (the first frame is labelled as frame 0) to the 298th frame inclusive of the original MFCC file should be used. Note with this form of scp file the label file would also have to be modified to (here the word level MLF is considered, but both word and phone-level MLFs would need to be changed)
+\begin{verbatim}
+    #!MLF!#
+    "S0001.lab"
+    ONE 
+    VALIDATED 
+    ACTS 
+    OF 
+    SCHOOL 
+    DISTRICTS
+    .
+    "S0002.lab"
+    TWO 
+    ....
+\end{verbatim}
+This is a general process for specifying segmentations of the training
+and test data without explicitly extracting the data (and thus requiring a new
+MFCC file to be stored). For tasks where data must be segmented as part of the
+recognition task, for example Broadcast News transcription, this form of
+approach is very useful.
+
+Note for the rest of this tutorial it is assumed that this segmentation
+process was {\em not} necessary.
 
 \mysect{Creating Tied-State Triphones}{egcreattri}
 
@@ -1124,7 +1176,7 @@ Assuming that the MLF \texttt{testref.mlf} contains word level transcriptions
 for each test file\footnote{The \htool{HLEd} tool may have to be used to insert silences 
 at the start and end of each transcription or alternatively
 \htool{HResults} can be used to ignore silences (or any other symbols) using
-the \texttt{-e} option}, the actual
+the \texttt{-e} option.}, the actual
 performance can be determined by running 
 \htool{HResults} as follows
 \begin{verbatim}
@@ -1302,7 +1354,7 @@ The final stage of preparation involves generating context dependent phone
 transcriptions of the adaptation data and word level transcriptions of the test 
 data for use in adapting the models and evaluating their performance.
 The transcriptions of the test data can be obtained using \texttt{prompts2mlf}.
-To minimize the problem of multiple pronunciations the phone level 
+To minimise the problem of multiple pronunciations the phone level 
 transcriptions of the adaptation data can be obtained by using \htool{HVite}
 to perform a \textit{forced alignment} of the adaptation data. Assuming 
 that word level transcriptions are listed in \texttt{adaptWords.mlf}, then the
@@ -1342,8 +1394,8 @@ in the \texttt{classes} directory.  The \htool{HHEd} edit script
 
 
 \noindent
-The \texttt{RN}\index{rn@\texttt{RN} command} command assigns an
-identifier to the HMM set.
+%% The \texttt{RN}\index{rn@\texttt{RN} command} command assigns an
+%% identifier to the HMM set.
 The \texttt{LS}\index{ls@\texttt{LS} command} command loads the state 
 occupation statistics file 
 \texttt{stats} generated by the last application of \htool{HERest} which 
@@ -1427,7 +1479,7 @@ The last two entries yield useful log information to do with which
 transforms are being used and from where.  \texttt{-h} is a mask that
 is used to detect when the speaker changes and also is used to
 determine the name of the speaker transform. File Masks may also be 
-seperately specified specified using configuration variables:
+separately specified specified using configuration variables:
 \begin{verbatim}
   INXFORMMASK
   PAXFORMMASK
@@ -1435,6 +1487,13 @@ seperately specified specified using configuration variables:
 The output transform mask is assumed to be specified using the {\tt -h} option
 and by default the input and parent transforms are assumed to be the same.
 
+The transformed models can also be stored. This is specified by adding
+\begin{verbatim}
+ HADAPT:SAVESPKRMODELS          = TRUE
+\end{verbatim}
+To the configuration. Note this option should NOT be used with
+transforms that modify the feature-space, such as {\tt MLLRCOV} and
+{\tt CMLLR}.
 
 One important difference between the standard HMM macros and the
 adaptation macros, is that for adaptation multiple directories may be
@@ -1442,8 +1501,8 @@ specified using the {\tt -J} option to search for the appropriate macro.
 This is useful when using multiple {\em parent} transforms. The set of adaptation
 transforms are: {\tt a, b, r, f, g, x, y, j}. The {\tt -J} (along with the
 {\tt -K} and {\tt -E} for output and parent transforms respectively) flag 
-takes an optional arguement that specifies the input transform transform
-file extension. For the {\tt -J} flag this can {\em only} be speicified on the
+takes an optional argument that specifies the input transform transform
+file extension. For the {\tt -J} flag this can {\em only} be specified on the
 first time that a {\tt -J} flag is encountered in the command line. It
 is strongly recommended that this option is used as it allows easy tracking
 of transforms.
@@ -1472,9 +1531,50 @@ The RM Demo contains a section on speaker adaptation (section 10). These describ
 the various options available  in detail along with example configuration files that
 may be used.
 
-\mysect{Semi-Tied and HLDA transforms}{exsysadapt}
+\mysect{Adaptive training}{exadaptive}
+\htool{HERest} also supports adaptive training with {\tt CMLLR} transforms. In
+adaptive training adaptation transforms are used to represent speaker
+differences during training so that a ``neutral'' {\em canonical model}  can be
+trained. 
+
+The first stage is to generate a {\tt CMLLR} transform for each training
+speaker. All the data for each speaker must be contiguous in the script file,
+in this case \texttt{train.scp}. Using the regression tree from the previous
+section, the following command can be run to generate the transforms
+\begin{verbatim}
+    HERest -C config -C config.cmllr -S train.scp -I wintri.mlf \
+           -J classes -h '*/%%%%%%_*.mfc' -K hmm15/cmllr cmllr1 \
+           -H hmm15/macros -u a -H hmm15/hmmdefs  -M hmm15/cmllr tiedlist
+\end{verbatim}
+where the configuration file \texttt{config.cmllr} contains
+\begin{verbatim}
+ HADAPT:TRANSKIND              = CMLLR
+ HADAPT:USEBIAS                = TRUE
+ HADAPT:REGTREE                = rtree.tree
+ HADAPT:ADAPTKIND              = TREE
+ HADAPT:SPLITTHRESH            = 1000.0
+ HADAPT:KEEPXFORMDISTINCT      = TRUE
+
+ HADAPT:TRACE   = 61
+ HMODEL:TRACE   = 512
+\end{verbatim}
+The transforms will be stored in the directory \texttt{hmm15/cmllr} with a file
+extension \texttt{cmllr1}. 
+To update the canonical model the following command would be run
+\begin{verbatim}
+    HERest -C config -S train.scp -I wintri.mlf \
+           -J hmm15/cmllr cmllr1 -J classes -h '*/%%%%%%_*.mfc' \
+           -E hmm15/cmllr cmllr1 -a \
+           -H hmm15/macros -H hmm15/hmmdefs  -M hmm15a tiedlist
+\end{verbatim}
+The estimated model-set is put in directory \texttt{hmm15a}. It is 
+possible to interleave updates of the transforms with updates of the
+canonical model, or simply use the same set of transforms with multiple
+iterations of \htool{HERest}.
+ 
+\mysect{Semi-Tied and HLDA transforms}{exsyslintran}
 \htool{HERest} also supports estimation of a semi-tied transform. Here only a global
-semitied transform is described, however multiple baseclasses can be used. A new
+semi-tied transform is described, however multiple baseclasses can be used. A new
 configuration file, \texttt{config.semi}, is required. This contains
 \begin{verbatim}
  HADAPT:TRANSKIND              = SEMIT
@@ -1487,27 +1587,27 @@ configuration file, \texttt{config.semi}, is required. This contains
  HADAPT:TRACE   = 61
  HMODEL:TRACE   = 512
 \end{verbatim}
-The \texttt{global} macros in step 13 is required to have been generated. The example
+The \texttt{global} macro in step 13 is required to have been generated. The example
 command below can then be run. This generate a new model set stored in hmm16 and 
-a semitied transform in \texttt{hmm16/SEMITIED}.
+a semi-tied transform in \texttt{hmm16/SEMITIED}.
 \begin{verbatim}
 
-    HERest -C config -C config.semi -S train.scp -I adaptPhones.mlf \
+    HERest -C config -C config.semi -S train.scp -I wintri.mlf \
            -H hmm15/macros -u stw -H hmm15/hmmdefs  -K hmm16 -M hmm16 tiedlist
 
 \end{verbatim}
 An additional iteration of \htool{HERest} can then be run using
 \begin{verbatim}
 
-    HERest -C config -S train.scp -I adaptPhones.mlf -H hmm16/macros -u tmvw\
+    HERest -C config -S train.scp -I wintri.mlf -H hmm16/macros -u tmvw\
            -J hmm16 -J classes -H hmm16/hmmdefs -M hmm17 tiedlist
 
 \end{verbatim}
 To evaluate the semi-tied estimated model the following command can be used
 \begin{verbatim}
 
-    HVite -H hmm17/macros -H hmm17/hmmdefs -S testAdapt.scp -l '*' \ 
-          -J hmm16 -J classes -i recoutAdapt.mlf -w wdnet \ 
+    HVite -H hmm17/macros -H hmm17/hmmdefs -S test.scp -l '*' \ 
+          -J hmm16 -J classes -i recout_st.mlf -w wdnet \ 
           -C config -p 0.0 -s 5.0 dict tiedlist
 
 \end{verbatim}
@@ -1534,8 +1634,8 @@ HLDA. If \texttt{config.semi} is replaced by \texttt{config.hlda} containing
 \end{verbatim}
 An HLDA \texttt{InputXForm} that reduces the number of dimensions by 5 is estimated
 and stored with the model-set. A copy of the transform is stored also stored in 
-a file called \texttt{hmm16/HLDA}. For input transforms (and globla semi-tied transforms)
-there are two forms in which the transform can be stored. First it may be stired as
+a file called \texttt{hmm16/HLDA}. For input transforms (and global semi-tied transforms)
+there are two forms in which the transform can be stored. First it may be stored as
 an \texttt{AdaptXForm} of type \texttt{SEMIT}. The second form is as an input transform.
 The latter is preferable if the feature-vector size is modified. The form of transform
 is determined by how \texttt{HADAPT:SEMITIED2INPUTXFORM} is set. 
@@ -1544,10 +1644,513 @@ One of the advantages of storing a global transform as an input transform is tha
 is no need to specify any {\tt -J} options as the {\tt INPUTXFORM} is by default
 stored with the model set options. To prevent the {\tt INPUTXFORM} being stored
 with the model set (for example to allow backward compatibility) set the 
-followin configuration option
+following configuration option
 \begin{verbatim}
  HMODEL:SAVEINPUTXFORM          = FALSE
 \end{verbatim}
+
+\newpage
+\mysect{Using the HTK Large Vocabulary Decoder {\tt HDecode}}{eghdecode}
+
+{\bf
+WARNING: The HTK Large Vocabulary
+Decoder \htool{HDecode} has
+been specifically written for speech recognition tasks
+using cross-word triphone models. Known restrictions are:
+\begin{itemize}
+\item only works for cross-word triphones;
+\item supports N-gram language models up to tri-grams;
+\item \texttt{sil} and \texttt{sp} models are reserved as silence
+models and are, by default, automatically added to the end of all
+pronunciation variants of each word in the recognition dictionary;
+\item  \texttt{sil} must be used as the pronunciation for the sentence start
+  and sentence end tokens;
+\item \texttt{sil} and \texttt{sp} models cannot occur in the dictionary,
+  except for the dictionary entry of the sentence start
+  and sentence end tokens;
+\item word lattices generated with \htool{HDecode} must be made {\em
+deterministic} using \htool{HLRescore} to remove duplicate paths
+prior to being used for acoustic model rescoring
+with \htool{HDecode} or \htool{HVite}.
+\end{itemize}
+}
+
+The decoder distributed with HTK, \htool{HVite}, is only suitable for small
+and medium vocabulary systems\footnote{\htool{HVite} becomes progressively less
+efficient as the vocabulary size is increased and cross-word triphones are used.} and systems using bigrams. For larger vocabulary systems, or
+those requiring trigram language models to be used directly in the search, \htool{HDecode} is
+available as an extension\footnote{An additional, more restrictive, licence
+  must be agreed to in order to download \htool{HDecode}.} to HTK.
+\htool{HDecode} has been specifically written for large vocabulary
+speech recognition using cross-word triphone models.
+Known restrictions are listed above. For detailed usage, see the
+\htool{HDecode} reference page~\ref{s:HDecode} for more information. \htool{HDecode} will also
+be used to generate lattices for discriminative training described in the next
+section. 
+
+In this section, examples are given for using \htool{HDecode} for large vocabulary
+speech recognition. Due to the limitations described above, the word-internal
+tripone systems generated in the previous stages {\em cannot} be used with
+\htool{HDecode}. For this section it is assumed that there is a cross-word
+triphone system in the directory \texttt{hmm20} along with a model-list in
+{\tt xwrdtiedlist}. In contrast to the previous sections both the macros and
+HMM definitions are stored in the same file \texttt{hmm20/models}. For an
+example of how to build a cross-word state-clustered triphone system, see the
+Resource Management (RM) example script step 9, in the RM \texttt{samples}
+tar-ball.
+
+Note: the grammar scale factors used in this section, and the next section on
+discriminative training, are consistent with the values used in the previous
+tutorial sections. However for large vocabulary speech recognition systems
+grammar scale factors in the range 12-15 are commonly used.
+
+\subsection{Dictionary and Language Model}
+
+\htool{HDecode} automatically adds {\tt sp} or {\tt sil} to the end of each
+pronunciation to represent an optionally deletable or non-deletable inter-word
+silences. These silences are {\em not} allowed to be in the dictionary entries
+other than for the tokens at the start and end of the sentences,
+\texttt{SENT-START} and \texttt{SENT-END} in the previous sections. It may
+therefore be necessary to modify the dictionary. For example, the dictionary used
+for recognition in the previous section should be modified to look like
+
+\begin{verbatim}
+    A               ah
+    A               ax
+    A               ey
+    CALL            k ao l
+    DIAL            d ay ax l
+    EIGHT           ey t
+    PHONE           f ow n
+    SENT-END    []  sil
+    SENT-START  []  sil
+    SEVEN           s eh v n
+    TO              t ax
+    TO              t uw
+    ZERO            z ia r ow
+\end{verbatim}
+This recognition dictionary will be assumed to be scored in the file
+\texttt{dict.hdecode}.
+
+A range of bigram and trigram language models, which must match the dictionary
+in \texttt{dict.hdecode}, can be used.  For example the first few entries of a
+bigram language model are shown below.
+\begin{verbatim}
+\data\
+ngram 1=994
+ngram 2=1490
+ 
+\1-grams:
+-4.6305 !!UNK
+-1.0296 SENT-END       -1.9574
+-1.0295 SENT-START     -1.8367
+-2.2940 A       -0.6935
+... ... 
+\end{verbatim}
+where \texttt{!!UNK} is a symbol representing the out-of-vocabulary
+word-class. For more details of the form of language models that can be used
+see chapter~\ref{c:hlmtutor}. Note if  \texttt{!!UNK} (or \texttt{<unk>}) is not the symbol used for the
+OOV class a large number of warnings will be printed in the log-file. To avoid
+this \htool{HLMCopy} may be used to extract the word-list \texttt{excluding}
+the unknown word symbol.
+
+For large vocabulary speech recognition tasks these language model files may become
+very large. It is therefore common to store them in a compressed format. For
+this section the language model is assumed be compressed using \texttt{gzip}
+and stored in a file \texttt{bg\_lm.gz} in the ARPA-MIT format.
+
+\subsection{Option  1 - Recognition}
+
+\htool{HDecode} can be used to generate 1-best output, or 
+lattices. For both options the same configuration file, assumed to be stored
+in  \texttt{config.hdecode}, may be used. This should
+contain the following entries
+\begin{verbatim}
+TARGETKIND     = MFCC_0_D_A   
+HLANGMODFILTER = 'gunzip -c $.gz'
+HNETFILTER     = 'gunzip -c $.gz'
+HNETOFILTER    = 'gzip -c > $.gz'
+RAWMITFORMAT   = T
+STARTWORD      = SENT-START
+ENDWORD        = SENT-END
+
+\end{verbatim}
+This configuration file has specified the frontend, the filter for reading the
+language model\footnote{\texttt{gzip} and \texttt{gunzip} are assumed to be in the current
+  path.}, \texttt{HLANGMODFILTER} and filters for reading and writing
+lattices, \texttt{HNETFILTER} and \texttt{HNETOFILTER} respectively.
+
+Recognition can then be run on the files specified in \texttt{test.scp} using
+the following command.
+\begin{verbatim}
+    HDecode -H hmm20/models -S test.scp \
+          -t 220.0 220.0 \
+          -C config.hdecode -i recout.mlf -w bg_lm \
+          -p 0.0 -s 5.0 dict.hdecode xwrdtiedlist
+
+\end{verbatim}
+The output will be written to an MLF in
+\texttt{recout.mlf}.  The \texttt{-w} option specifies the  $n$-gram model, in
+this case a bigram to be used. The final recognition results may be analysed using
+\htool{HResults} in the same way as \htool{HVite}. 
+
+In common with \htool{HVite}, there are a number of options that need to be
+set empirically to obtain good recognition performance and speed.  The options
+\texttt{-p} and \texttt{-s} specify the \textit{word insertion penalty}
+\index{word insertion penalty} and the \textit{grammar scale factor}
+\index{grammar scale factor} respectively as in \htool{HVite}.  There are also
+a number of pruning options that may be tuned to adjust the run time. These
+include the main beam (see the \texttt{-t} option), word end beam (see the
+\texttt{-v} option) and the maximum model pruning (see the \texttt{-u}
+option).
+
+\subsection{Option  2 - Speaker Adaptation}
+
+\htool{HDecode} also supports the use of speaker
+adaptation transforms, as described in the tutorial steps 12-14. Note incremental
+adaptation and transform estimation are {\em not} currently supported for 
+\htool{HDecode}.
+
+Similar command line options are used for speaker adaptation with
+\htool{HDecode} as \htool{HVite}. The main difference is that the use of an
+input transform is specified using the \texttt{-m} option in \htool{HDecode}
+rather than the \texttt{-k} option in \htool{HVite}. Assuming that a set of
+MLLR transforms have been generated using \htool{HERest} as described in
+section~\ref{s:exsysadapt} and are stored in directory \texttt{xforms} with a
+transform extension \texttt{mllr2}.  Decoding can be run using
+\begin{verbatim}
+    HDecode -H hmm20/models -S testAdapt.scp  \ 
+          -t 220.0 220.0 \
+          -J xforms mllr2 -h '*/%%%%%%_*.mfc' -m -i recoutAdapt.mlf -w bg_lm \ 
+          -J classes -C config.hdecode -p 0.0 -s 5.0 dict.hdecode xwrdtiedlist
+\end{verbatim}
+The recognition output is written to  \texttt{recoutAdapt.mlf}.
+
+\subsection{Option 3 - Lattice Generation}
+
+\htool{HDecode} also support lattice generation to allow more complex language
+models to be applied, or for lattice-based discriminative training. The
+\texttt{-z ext} option, where \texttt{ext} specifies the extension to be used
+for the lattice, specifies that lattices should be generated.
+
+The lattices are to stored in a directory (which must be generated)
+\texttt{lat\_bg}. The following command will perform lattice generation
+\begin{verbatim}
+    HDecode -H hmm20/models -S test.scp \
+          -t 220.0 220.0 \
+          -C config.hdecode -i recout.mlf -w bg_lm \
+          -o M -z lat -l lat_bg -X lat \
+          -p 0.0 -s 5.0 dict.hdecode xwrdtiedlist
+\end{verbatim}
+
+In addition to the standard printing options, word insertion and grammar scale
+factors, an option to specify the number of tokens used per state (see the
+\texttt{-n} option) is available This can significantly affect the decoding time and the
+size of lattices generated. Increasing the value (the default is 32) increases
+the decoding time and size of the lattices. Note the lattice will be
+compressed using \texttt{gzip} as specified with the \texttt{HNETOFILTER}.
+
+Prior to rescoring the
+lattices generated by \htool{HDecode} must be made deterministic using
+\htool{HLRescore}. The first stage is to generate a list of the lattices that
+need to be made deterministic. Let \texttt{test.lcp} hold this
+list, for example a few possible  entries are given below
+\begin{verbatim}
+adg0_4_sr009.lat
+adg0_4_sr049.lat
+adg0_4_sr089.lat
+adg0_4_sr129.lat
+adg0_4_sr169.lat
+... ...
+
+\end{verbatim}
+For the bigram lattices previously generated in \texttt{lat\_bg} the following
+command needs to be run
+\begin{verbatim}
+    HLRescore -C config.hlrescore -S test.lcp \
+          -t 200.0 1000.0 \
+          -m f -L lat_bg -w -l lat_bg_det dict.hdecode 
+\end{verbatim}
+The resulting deterministic bigram lattices are now stored under directory
+\texttt{lat\_bg\_det}. The configuration file
+\texttt{config.hlrescore} should contain the following
+settings,
+\begin{verbatim}
+HLANGMODFILTER = 'gunzip -c $.gz'
+HNETFILTER     = 'gunzip -c $.gz'
+HNETOFILTER    = 'gzip -c > $.gz'
+RAWMITFORMAT   = T
+STARTWORD      = SENT-START
+ENDWORD        = SENT-END
+FIXBADLATS     = T 
+\end{verbatim}
+The \texttt{FIXBADLATS} configuration option ensures that if the final word in the lattice is
+\texttt{!NULL}, and the word specified in \texttt{ENDWORD} is missing, then
+\texttt{!NULL} is replaced by the word specified in \texttt{ENDWORD}.  This is
+found to make lattice generation more robust.
+
+
+\subsection{Option 4 - Lattice Rescoring}
+
+More complicated language models, for instance, higher order $n$-gram
+models, may be applied to expand the initial lattices and
+improve recognition performance. Assume that a compressed version of a
+trigram language model with the same vocabulary as the bigram above is stored
+in \texttt{tg\_lm.gz}. 
+
+The 1-best path in the lattice after applying the trigram language
+model may be obtained using the following command.
+\begin{verbatim}
+    HLRescore -C config.hlrescore -S test.lcp \
+          -f -i recout_tg.mlf -n tg_lm -L lat_bg -w -l lat_tg \
+          -p 0.0 -s 5.0 dict.hdecode
+\end{verbatim}
+The 1-best output is placed in \texttt{recout\_tg.mlf}. In addition,
+compressed version of the lattices now with trigram language model are stored
+in \texttt{lat\_tg}. 
+
+
+It is then possible to rescore these trigram lattices using \htool{HDecode}
+with either a different set of acoustic models, or a different grammar scale
+factor. However, prior to this it is again necessary to ensure that
+the lattices are deterministic. Thus the following command is required
+\begin{verbatim}
+    HLRescore -C config.hlrescore -S test.lcp \
+          -t 200.0 1000.0 -m f -L lat_tg \
+          -w -l lat_tg_det dict.hdecode 
+\end{verbatim}
+These lattices can then be rescored using 
+\begin{verbatim}
+    HDecode -H hmm21/models -S test.scp \
+          -t 220.0 220.0 \
+          -C config.hdecode -i recout_rescore.mlf -L lat_tg_det \
+          -p 0.0 -s 5.0 dict.hdecode xwrdtiedlist2
+\end{verbatim}
+where the new set of acoustic models are assumed to be stored in
+\texttt{hmm21/models} and  model-list in \texttt{xwrdtiedlist2}.
+
+%% Lattices with HMM model alignment and time stamps may also be
+%% obtained using 
+%% \begin{verbatim}
+%%     HDecode.mod -H hmm20/models -S test.scp \
+%%           -t 220.0 220.0 -z lat -l lattices.align/ -q tvaldm \
+%%           -C config.hdecode -l '*' -i recout.mlf -w -L ./ \
+%%           -o M -p 0.0 -s 5.0 dict.hdecode xwrdtiedlist
+%% \end{verbatim}
+%% and the generated lattices with model alignment will be stored under
+%% \texttt{lattices.align}. 
+
+\newpage
+\mysect{Discriminative Training}{egdiscriminative}
+
+A further refinement to the acoustic models is to use a \textit{Discriminative Training}
+approach to HMM parameter estimation. Discriminative training
+can bring considerable improvements in recognition accuracy
+and is increasingly being used in large vocabulary speech recognition
+systems.
+
+{\bf  Note that as \htool{HDecode} is run to create the lattices, a cross-word
+  triphone model set must be used. The form of dictionary described in the
+  HDecode section is also required.}
+
+\centrefig{discriminative}{90}{Discriminative Training}
+
+The implementation of discriminative training with HTK requires the following
+steps summarised in Fig.~\ref{f:discriminative}. The individual steps and
+related command-lines are given below.
+
+\subsection{Step 1 - Generation of Initial Maximum Likelihood Models} 
+A cross-word triphone set of HMMs must be initially trained
+using standard maximum likelihood estimation (with \htool{HERest}). Since
+\htool{HDecode} is used in this recipe for both word lattice generation
+and phone-marking of the lattices, cross-word triphone models are assumed in
+this section, as in the previous section. These models are again
+stored in the MMF \texttt{hmm20/MODELS}.
+
+\subsection{Step 2 - Training Data LM Creation}
+A ``weak'' language model, i.e. a unigram or bigram,  must be created for use in discriminative training.
+It is essential that the vocabulary includes (at least) the words in the
+correct word-level transcripts.  Since a weak language model is required, it
+is possible to use only the transcripts of the acoustic training data in LM
+creation. If a bigram LM is used, typically the count cutoff is set so that
+there are approximately the same number of bigrams as unigrams.  Details of
+how this can be done can be found in the \htool{HLM} tutorial section~\ref{c:hlmtutor}, but a
+brief outline is given below.
+
+First of all the data in the training set MLF must be modified into a suitable
+form for language model training with sentence start and sentence end symbols.
+Traditionally in language modelling \texttt{<s>} and \texttt{</s>} are used
+for these symbols. However in keeping with the \htool{HDecode} section above,
+\texttt{SENT-START} and \texttt{SENT-END} will be used in this section. The form of one
+sentence per line with word-start/end markers can be simply created from a
+word-level MLF using e.g. \texttt{awk}.
+
+It is assumed that the word-level training transcripts with one sentence per
+lines is in the file \texttt{lmtrain.txt}, and a sub-directory \texttt{lmdb}
+has been created to store the database files needed for LM creation. First
+\htool{LNewMap} is used to 
+create a new word-map, then \htool{LGPrep} run to create the database.
+
+\begin{verbatim}
+LNewMap empty.wmap
+LGPrep -A -b 500000 -n 2 empty.wmap -d lmdb lmtrain.txt
+\end{verbatim}
+
+The data files in \texttt{lmdb} can then be used to create a language
+model. The file \texttt{lmdb/wmap} has a short header, and then gives a list
+of all the words encountered in training.
+%This first
+%field can be extracted and used as a training data wordlist. Assume
+%this is \texttt{wordlist.train}. 
+The \htool{LBuild} command can now be used to build the required bigram
+model. If it is assumed that a suitable cut-off value for the bigram is known
+in order to have a model with the desired number of bigrams (in the command
+below it is set to 5) then the required \htool{LBuild} command would be
+\begin{verbatim}
+LBuild -A -C config.lbuild lmdb/wmap -c 5 -n 2 trainbg lmdb/gram.* 
+\end{verbatim}
+The cut-off parameter (value supplied to \texttt{-c}) should be varied until a
+bigram of a suitable size is obtained (it is also possible to find this
+information in advance with the aid of the \htool{LFoF} command). In order to
+compress the resulting language model (using \texttt{gzip}) the file
+\texttt{config.lbuild} should contain
+\begin{verbatim}
+HLANGMODOFILTER = 'gzip -c > $.gz'
+\end{verbatim}
+The result of the above command is that a bigram LM for the training data in file \texttt{trainbg.gz}.
+
+\subsection{Step 3 - Word Lattice Creation} 
+Two sets of ``phone-marked'' lattices, called the denominator and numerator lattices, are
+required for discriminative training. The first stage in generating these
+phone-marked lattices is to produce word lattices.
+
+The denominator word lattices represent the set of most likeliy word sequences
+for a particular training sentence.  These denominator word lattices are
+created using \htool{HDecode} in a recognition mode (similar to the
+\htool{HDecode} lattice generation section above) with the initial ML-trained
+models, the training data language model and speech data. Numerator word-level
+lattices are created using \htool{HLRescore} and include language model log
+probabilities.
+
+The denominator word lattices creation stage uses \htool{HDecode}. The
+lattices will be placed in a subdirectory \texttt{wlat.den}. The dictionary
+for the training data is assumed to be available in \texttt{dict.hdecode} and a list of
+training files in \texttt{train.scp}. Lattices are created using
+\begin{verbatim}
+    HDecode -A -H hmm20/models -S train.scp -t 220.0 220.0 -C config.hdecode \ 
+          -i wlat.den/recout.mlf -w trainbg -o M -z lat -l wlat.den -X lat \
+          -p 0.0 -s 5.0 dict.hdecode xwrdtiedlist
+\end{verbatim}
+where it has been assumed that a suitable grammar scale factor is \texttt{-s
+  5.0}, consistent with the previous section describing the use of
+\htool{HDecode}.
+
+Similarly numerator word lattices will be created in \texttt{wlat.num}. Assuming that the training word-level
+MLF file is located in \texttt{trainwords.mlf} and a list of these labels is
+contained in \texttt{train.labscp}, the following command can be run
+\begin{verbatim}
+    HLRescore -A -C config.hlrescore -S train.labscp -I words.mlf \
+      -n trainbg -f -t tvalqr -w -s 5.0 -l wlat.num dict.hdecode 
+\end{verbatim}
+using the config file \texttt{config.hlrescore} defined in the section above
+for \texttt{HDecode}. An example of the first few lines of \texttt{train.labscp} might be
+\begin{verbatim}
+*/adg0_4_sr009.lab
+*/adg0_4_sr049.lab
+*/adg0_4_sr089.lab
+*/adg0_4_sr129.lab
+*/adg0_4_sr169.lab
+... ...
+
+\end{verbatim}
+Note that not all lattices may be generated successfully in the \htool{HDecode} step, and a check should be
+made that all the lattices exist before continuing. If some have failed the pruning parameters can be 
+altered or a new list of successful training files created for subsequent stages.
+
+\subsection{Step 4 - Phone Marking of Numerator and Denominator
+  Lattices}
+
+The word-level lattices are further processed using \htool{HDecode.mod}, the
+initial models and the speech data to produce the phone-marked lattices used
+for discriminative training. Note lattices can also be phone-marked using
+\htool{HVite}. Model-marking with \htool{HVite} does not have the same
+restrictions, in terms of the nature of the acoustic models, as
+\htool{HDecode} and \htool{HDecode.mod}.
+
+Before the phone-marked denominator lattices can be created, the denominator word lattices must 
+be made determininstic. These will be written into the directory \texttt{wlat.den.det} assuming a list of lattices
+is in \texttt{denwordlat.lcp} with the command
+\begin{verbatim}
+    HLRescore -C config.hlrescore -S test.lcp \
+          -t 220.0 1000.0 -s 5.0 \
+          -m f -L wlat.den -w -l wlat.den.det dict.hdecode
+\end{verbatim}
+Lattices with HMM model alignment and time stamps for the numerator can then be obtained using the command
+\begin{verbatim}
+    HDecode.mod -H hmm20/models -S train2.scp -t 1000.0 1000.0 \
+    -z lat -l plat.num -q tvaldm -C config.hdecode  \
+     -i plat.num/rec.mlf -w -L wlat.num -o M -p 0.0 -s 5.0 \
+    dict.hdecode xwrdtiedlist
+\end{verbatim}
+The generated numerator lattices with model alignment will be stored under the directory
+\texttt{plat.num}, \texttt{train2.scp} should contain the list of training files for which word lattices could
+be created. The same procedure can be used to create the denominator phone-marked lattices, stored in
+\texttt{plat.den}, from the determinised word lattices:
+\begin{verbatim}
+    HDecode.mod -H hmm20/models -S train2.scp -t 220.0 220.0 \
+    -z lat -l plat.den -q tvaldm -C config.hdecode  \
+     -i plat.den/rec.mlf -w -L wlat.den.det -o M -p 0.0 -s 5.0 \
+    dict.hdecode xwrdtiedlist
+\end{verbatim}
+Again a check should be made on the phone-marked lattices that are created and the set of training
+files for which both the numerator and denominator lattices exist will be stored in \texttt{train3.scp}.
+
+\subsection{Step 5 - Generating Discriminatively Trained Models} 
+
+Having generated the required numerator and denominator phone-marked lattices,
+\htool{HMMIRest} can be run to discriminatively train the HMMs.
+A number (typically 4-8) of iterations of the Extended Baum-Welch (EBW)
+algorithm are run, each invocation of \htool{HMMIRest} corresponds to one iteration of
+EBW.  There are a number of configuration options to \htool{HMMIRest} that
+allow the choice of objective function to be varied; the amount and type of
+smoothing; learning rate in EBW updates etc. For large amounts of data, each
+iteration of \htool{HMMIRest} can be run in two phases: the first phase in
+which blocks of data are processed in parallel and accumulators are created
+for each block of data; and the second estimation phase in which the sets of
+accumulators are loaded and the HMM parameters re-estimated.  Here the
+commands are given that assume that the data is not processed in a parallel
+mode.
+
+For basic MMI training the following form could be used for the first iteration creating a model set in directory \texttt{hmm21}
+\begin{verbatim}
+    HMMIRest -C config.mmirest -A -H hmm20/models -S train3.scp -q plat.num 
+        -r plat.den -u tmvw -M hmm21  xwrdtiedlist
+\end{verbatim}
+There are a wide variety of options in MMI training, but normally I-smoothing 
+ would be used (typically with a value of 100 for MMI) and the file \texttt{config.mmirest}
+would contain:
+\begin{verbatim}
+TARGETKIND = MFCC_0_D_A
+HNETFILTER = 'gunzip -c $.gz'
+LATPROBSCALE = 0.2
+ISMOOTHTAU =  100
+E = 2
+ARC: TRACE = 3
+HMMIREST: TRACE = 3
+MPE = FALSE
+
+\end{verbatim}
+The value \texttt{E=2} sets a learning rate parameter, and the trace options
+allow some detail on the processing of \htool{HMMIRest} to be printed.  The
+invocation of \htool{HMMIRest} above will perform a single iteration of the
+EBW algorithm.  Note that the value of \texttt{LATPROBSCALE} has been set to
+the reciprocal of the normal grammar scale factor.
+
+For MPE training, the above configuration file can simply be altered to have the line 
+\begin{verbatim}           
+MPE = TRUE
+\end{verbatim}
+and the value of \texttt{ISMOOTHTAU} might be reduced by a factor of 2.
 
 \mysect{Summary}{exsyssum}
 This chapter has described the construction of a tied-state phone-based

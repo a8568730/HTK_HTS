@@ -301,6 +301,7 @@ struct _DecoderInst {
    MemHeap altweHypHeap;        /* MHEAP for alt word end hyps (for latgen) */
    MemHeap *tokSetHeap;         /* MHEAPs for N TokenSet arrays */
    MemHeap relTokHeap;          /* MHEAP for RelToken arrays (dec->nTok-1 elements) */
+   MemHeap lrelTokHeap;         /* MHEAP for larger size RelToken arrays (e.g. 6 * dec->nTok-1 elements) */
 
    TokenSet **tempTS;           /* temp tokset arrays for PropagateInternal() */
    RelToken *winTok;            /* RelTok array fro MergeTokSet() */

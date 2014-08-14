@@ -115,8 +115,8 @@ struct _FSLM_LatNode {
 
 
 */
-
-#define LM_NGRAM_INT
+/* now to be set in the config.h files */
+/* #define LM_NGRAM_INT */
 
 #ifdef LM_NGRAM_INT
    typedef unsigned short NGLM_Prob;
@@ -125,6 +125,7 @@ struct _FSLM_LatNode {
 #define NGLM_PROB_LZERO 65535
 #define NGLM_PROB_ZERO 0
 #define NGLM_PROB_GREATER(x,y) ((x)<(y))
+#define NGLM_PROB_ADD(x,y)((((NGLM_Prob)((x)+(y))<(x))||((NGLM_Prob)((x)+(y))<(y)))?NGLM_PROB_LZERO:((x)+(y)))
 #else
    typedef float NGLM_Prob;
 #define NGLM_PROB_TO_FLOAT(x) (x)

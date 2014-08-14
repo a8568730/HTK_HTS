@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hrest_version = "!HVER!HRest:   3.4 [CUED 25/04/06]";
-char *hrest_vc_id = "$Id: HRest.c,v 1.9 2008/05/30 07:19:08 zen Exp $";
+char *hrest_version = "!HVER!HRest:   3.4.1 [CUED 12/03/09]";
+char *hrest_vc_id = "$Id: HRest.c,v 1.10 2009/12/11 10:00:55 uratec Exp $";
 
 /*
    This program is used to estimate the transition parameters,
@@ -365,7 +365,7 @@ int main(int argc, char *argv[])
 
    if(SaveHMMSet(&hset,outDir,NULL,NULL,saveBinary)<SUCCESS)
       HError(2211,"HRest: SaveHMMSet failed");
-   
+
    ResetUtil();
    ResetTrain();
    ResetParm();
@@ -1116,15 +1116,15 @@ void UpDurCounts(const LogDouble pr, const int seq)
 
                if (t1==T) { 
                   x = hmm->transP[j][nStates];
-   }
+               }
                else {
                   x = LZERO;
                   for (k=2; k<nStates; k++)
                      if (k!=j && hmm->transP[j][k]>LSMALL)
                         x = LAdd(x, (double)hmm->transP[j][k]
                                    +(double)outprob[k][t1+1]+beta[k][t1+1]);
-}
-
+               } 
+                  
                x = x+Sumx-pr;
                   
                /* update statistics */
@@ -1150,8 +1150,6 @@ void UpdateCounters(const LogDouble pr, const int seg)
       UpTranCounts(pr,seg);
    if (uFlags&(UPMEANS|UPVARS|UPMIXES))
       UpPDFCounts(pr,seg);
-   if (calcDuration)
-      UpDurCounts(pr,seg);
 }
 
 /* ------------------------- Model Update ----------------------- */
@@ -1510,6 +1508,7 @@ void SaveDuration(void)
    
    return;
 }
+
 /* ------------------------- Top Level Control ----------------------- */
 
 
@@ -1559,8 +1558,30 @@ void ReEstimateModel(void)
       }
    } while ((iteration < maxIter) && !converged);
    
-   if (calcDuration)
+   if (calcDuration) {
+      nTokUsed = 0;
+      for (i=1;i<DVectorSize(durOcc);i++) 
+         durOcc[i] = durSum[i] = durSqr[i] = LZERO;
+      
+      for (seg=1;seg<=nSeg;seg++) {
+         T=SegLength(segStore,seg);
+         SetOutP(seg);
+         if ((ap=SetAlpha(seg)) > LSMALL){
+            bp = SetBeta(seg);
+            if (trace & T_LGP)
+               printf("%d.  Pa = %e, Pb = %e, Diff = %e\n",seg,ap,bp,ap-bp);
+            segProb = (ap + bp) / 2.0;  /* reduce numeric error */
+            ++nTokUsed;
+            UpDurCounts(segProb,seg);
+         } else
+            if (trace&T_TOP) 
+               printf("Example %d skipped\n",seg);
+      }
+      if (nTokUsed==0)
+         HError(2226,"ReEstimateModel: No Usable Training Examples");
+
       SaveDuration();
+   }
    
    if (trace&T_TOP) {
       if (converged)

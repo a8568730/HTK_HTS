@@ -29,7 +29,7 @@
 /*         File: LGPrep - prepare a sorted GramBase           */
 /* ----------------------------------------------------------- */
 
-char *lgprep_version = "!HVER!LGPrep:   3.4 [CUED 25/04/06]";
+char *lgprep_version = "!HVER!LGPrep:   3.4.1 [CUED 12/03/09]";
 char *lgprep_vc_id = "$Id: LGPrep.c,v 1.1.1.1 2006/10/11 09:54:44 jal58 Exp $";
 
 #include "HShell.h"

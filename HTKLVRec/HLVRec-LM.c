@@ -35,7 +35,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -111,7 +111,7 @@ static void UpdateLMlookahead(DecoderInst *dec, LexNode *ln)
       }
       else {    /* if we ever do fastLMLA, be careful as tok->lmscore might increase! */
          lmscore = LMCacheLookaheadProb (dec, tok->lmState, lmlaIdx, 
-                                         ((tok->delta < dec->fastlmlaBeam) ? TRUE:FALSE));
+                                         (tok->delta < dec->fastlmlaBeam) ? TRUE:FALSE);
          if (lmscore > tok->lmscore)    /* if lmla goes up, leave old estimate */
             lmscore = tok->lmscore;
       }

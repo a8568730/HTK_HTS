@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,8 +64,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hgraf_version = "!HVER!HGraf(null):   3.4 [CUED 25/04/06]";
-char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.6 2008/05/30 07:19:16 zen Exp $";
+char *hgraf_version = "!HVER!HGraf(null):   3.4.1 [CUED 12/03/09]";
+char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.7 2009/12/11 10:00:47 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

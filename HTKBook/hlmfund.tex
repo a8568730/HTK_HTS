@@ -26,7 +26,7 @@ counted and stored in a database of \textit{gram} files.  In the
 second stage some words may be mapped to an out of vocabulary class or
 other class mapping may be applied, and then in the final stage
 the counts in the resulting gram files are used to compute
-$n$-gram probabalities which are stored in the \textit{language model}
+$n$-gram probabilities which are stored in the \textit{language model}
 file.  Lastly, the \textit{goodness} of a language model can be
 estimated by using it to compute a measure called \textit{perplexity}
 on a previously unseen test set.  In general, the better a language model
@@ -486,7 +486,7 @@ In [Good 1953]\footnote{I.J. Good, \textbf{``The Population Frequencies
 of Species and the Estimation of Population Parameters''};
 \textit{Biometrika} 1953, vol. 40 (3,4) pp. 237-264}
 a method of discounting maximum likelihood estimates was proposed
-whereby the count of an event occuring $a$ times is discounted with
+whereby the count of an event occurring $a$ times is discounted with
 \begin{equation}
 d_a = (a+1) \frac{c_{a+1}}{a\,.\,c_a}
 \end{equation}
@@ -519,7 +519,7 @@ An alternative discounting method is {\it absolute}
 discounting,\footnote{H. Ney, U. Essen and R. Kneser, \textbf{``On
 Structuring Probabilistic Dependences in Stochastic Language
 Modelling''}; \textit{Computer Speech and Language} 1994, vol.8 no.1
-pp.1-38} in which a constant value $m$ is substracted from each
+pp.1-38} in which a constant value $m$ is subtracted from each
 count. The effect of this is that the events with the lowest counts
 are discounted relatively more than those with higher counts. The
 discount coefficient is defined as

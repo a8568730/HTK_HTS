@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,7 +64,7 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-/* !HVER!HMem:   3.3 [CUED 28/04/05] */
+/* !HVER!HMem:   3.4.1 [CUED 12/03/09] */
 
 /*
    This module provides a type MemHeap which once initialised
@@ -206,7 +206,7 @@ void PrintAllHeapStats(void);
 /* Basic Numeric Types */
 typedef short *ShortVec;   /* short vector[1..size] */
 typedef int   *IntVec;     /* int vector[1..size] */
-typedef int   **IMatrix;/* int matrix[1...nrows][1...ncols] */
+typedef int   **IMatrix;   /* int matrix[1...nrows][1...ncols] */
 typedef float *Vector;     /* vector[1..size]   */
 typedef float **Matrix;    /* matrix[1..nrows][1..ncols] */
 typedef Matrix TriMat;     /* matrix[1..nrows][1..i] (lower triangular) */
@@ -270,7 +270,6 @@ size_t STriMatElemSize(int size);
    columns.  These functions should be used for creating 
    MHEAP heaps.
 */
- 
 Matrix  CreateMatrix(MemHeap *x,int nrows,int ncols);
 IMatrix CreateIMatrix(MemHeap *x,int nrows,int ncols);
 DMatrix CreateDMatrix(MemHeap *x,int nrows,int ncols);

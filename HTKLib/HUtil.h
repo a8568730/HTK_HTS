@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -64,7 +64,7 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-/* !HVER!HUtil:   3.3 [CUED 28/04/05] */
+/* !HVER!HUtil:   3.4.1 [CUED 12/03/09] */
 
 #ifndef _HUTIL_H_
 #define _HUTIL_H_
@@ -254,7 +254,7 @@ Boolean IsMember(IntSet s, int x);
 Boolean IsFullSet(IntSet s);
 void ClearSet(IntSet s);
 void SetSet(IntSet s);
-void DupSet(IntSet oldSet, IntSet newSet);
+void DupSet(IntSet oldSet, IntSet *newSet);
 void CopySet(IntSet oldSet, IntSet newSet);
 
 /*

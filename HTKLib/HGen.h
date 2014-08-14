@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -54,7 +54,7 @@
 extern "C" {
 #endif
 
-#define MAXWINNUM 10   /* maximum number of static + deltas */
+#define MAXWINNUM 30   /* maximum number of static + deltas */
 
 typedef enum {WLEFT=0, WRIGHT=1} WINWIDTH;
 typedef enum {CHOLESKY=0, MIX=1, FB=2} ParmGenType;

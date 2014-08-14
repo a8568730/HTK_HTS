@@ -11,3 +11,5 @@ HDecode.
 
 Anna Langley <jal58@cam.ac.uk>
 2.5.2006
+
+WINDOWS users: Note after compilation you need to rename HDecode.orig.exe into HDecode.exe and place both HDecode.exe and HDecode.mod.exe into bin.win32 or any other directory storing the rest of HTK executables.

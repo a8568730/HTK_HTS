@@ -32,7 +32,6 @@
 /*         File: HTrain.c   HMM Training Support Routines      */
 /* ----------------------------------------------------------- */
 
-
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
 /* ----------------------------------------------------------------- */
 /*           The HMM-Based Speech Synthesis System (HTS)             */
@@ -40,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,8 +77,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *htrain_version = "!HVER!HTrain:   3.4 [CUED 25/04/06]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.16 2008/06/13 06:48:08 zen Exp $";
+char *htrain_version = "!HVER!HTrain:   3.4.1 [CUED 12/03/09]";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.18 2009/12/11 10:00:48 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1059,6 +1058,7 @@ void AttachAccsParallel(HMMSet *hset, MemHeap *x, UPDSet uFlags, int nPara)
                         SetHook(hss.mp->mean,CreateMuAcc(x,size,nPara));
                      else 
                         SetHook(hss.mp->mean,NULL);
+                     TouchV(hss.mp->mean);
                   }
 		  if (!IsSeenV(hss.mp->cov.var)) {
                      if (uFlags&UPSEMIT)
@@ -1118,8 +1118,8 @@ void TMZeroAccs(HMMSet *hset, int start, int end)
 	     HError(7170,"TMZeroAccs: bad cov kind %d",
 		    mp->ckind);
 	   }
+	   va[i].occ = 0.0;
 	 }
-         va[i].occ = 0.0;
       }
    }
 }
@@ -1170,8 +1170,7 @@ void ZeroAccsParallel(HMMSet *hset, UPDSet uFlags, int nPara)
                         va[i].occ = 0.0;
 		     }
                      TouchV(hss.mp->cov.var);
-                  } 
-                  else if ((uFlags&UPVARS) && (!IsSeenV(hss.mp->cov.var))) {
+                  } else if ((uFlags&UPVARS) && (!IsSeenV(hss.mp->cov.var))) {
 		     va = (VaAcc *)GetHook(hss.mp->cov.var);
 		     for(i=start;i<=end;i++){
                         switch(hss.mp->ckind){
@@ -1191,14 +1190,13 @@ void ZeroAccsParallel(HMMSet *hset, UPDSet uFlags, int nPara)
                      TouchV(hss.mp->cov.var);
                   }
                }
-          
          }
       }
       if (!IsSeenV(hmm->transP)) {
          ta = (TrAcc *)GetHook(hmm->transP);
 	 for(i=start;i<=end;i++){
-            ZeroMatrix(ta->tran);
-            ZeroVector(ta->occ);
+	   ZeroMatrix(ta[i].tran);
+	   ZeroVector(ta[i].occ);
 	 }
          TouchV(hmm->transP);       
       }
@@ -1542,7 +1540,7 @@ FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, UPDSet uFlags, int ind
       hmm = hss.hmm;
       DumpPName(f,hss.mac->id->name);     
       i = (int)((long) hmm->hook);
-      WriteInt(f,&i,1,ldBinary); 
+      WriteInt(f,&i,1,ldBinary);
       while (GoNextState(&hss,TRUE)) {
          DumpStateOcc(f,hset,hss.si);
          while (GoNextStream(&hss,TRUE)) {
@@ -1550,15 +1548,14 @@ FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, UPDSet uFlags, int ind
             if (hss.isCont){
                while (GoNextMix(&hss,TRUE)) {
                   if ((uFlags&UPMEANS) && (!IsSeenV(hss.mp->mean))) {
-                     DumpMuAcc(f,((MuAcc *)GetHook(hss.mp->mean)+index));
+                     DumpMuAcc(f,((MuAcc *)GetHook(hss.mp->mean))+index);
                      TouchV(hss.mp->mean);
                   }
                   if ((uFlags&UPSEMIT) && (!IsSeenV(hss.mp->cov.var))) {
                      DumpVaAcc(f,((VaAcc *)GetHook(hss.mp->cov.var))+index,FULLC);
                      TouchV(hss.mp->cov.var);
-                  }
-                  else if ((uFlags&UPVARS) && (!IsSeenV(hss.mp->cov.var))) {
-                     DumpVaAcc(f,((VaAcc *)GetHook(hss.mp->cov.var)+index),hss.mp->ckind);
+                  }else if ((uFlags&UPVARS) && (!IsSeenV(hss.mp->cov.var))) {
+                     DumpVaAcc(f,((VaAcc *)GetHook(hss.mp->cov.var))+index,hss.mp->ckind);
                      TouchV(hss.mp->cov.var);
                   }
                }
@@ -1752,8 +1749,7 @@ Source LoadAccsParallel(HMMSet *hset, char *fname, UPDSet uFlags, int index)
                      LoadVaAcc(&src,((VaAcc *)GetHook(hss.mp->cov.var))+index,
                                size,FULLC);
                      TouchV(hss.mp->cov.var);
-                  } 
-                  else if ((uFlags&UPVARS) && (!IsSeenV(hss.mp->cov.var))) {
+                  } else if ((uFlags&UPVARS) && (!IsSeenV(hss.mp->cov.var))) {
                      LoadVaAcc(&src,((VaAcc *)GetHook(hss.mp->cov.var))+index,
                                size,hss.mp->ckind);
                      TouchV(hss.mp->cov.var);
@@ -1782,28 +1778,23 @@ Source LoadAccsParallel(HMMSet *hset, char *fname, UPDSet uFlags, int index)
    return src;
 }
 
-void RestorePDF(MixPDF *mp, int index)
-{
+void RestorePDF(MixPDF *mp, int index){
    int i,j;
    MuAcc *ma = ((MuAcc *)GetHook(mp->mean))+index;
    VaAcc *va = ((VaAcc*)GetHook(mp->cov.var))+index;
    int size = VectorSize(mp->mean);
 
-   for (i=1;i<=size;i++) 
-      ma->mu[i] += ma->occ * mp->mean[i];
-
+   for(i=1;i<=size;i++){ ma->mu[i] += ma->occ * mp->mean[i]; }
    switch(mp->ckind){
-   case DIAGC: 
-   case INVDIAGC:
-      for (i=1;i<=size;i++)
-         va->cov.var[i] += 2*ma->mu[i]*mp->mean[i]-va->occ*mp->mean[i]*mp->mean[i];
+   case DIAGC: case INVDIAGC:
+      for(i=1;i<=size;i++){ va->cov.var[i] += 2*ma->mu[i]*mp->mean[i] - va->occ*mp->mean[i]*mp->mean[i]; }
       break;
-   case FULLC: 
-   case LLTC:
-      for (i=1;i<=size;i++) 
-         for (j=1;j<=i;j++)
-            va->cov.inv[i][j] += ma->mu[i]*mp->mean[j]+ma->mu[j]*mp->mean[i] 
-                               - va->occ*mp->mean[i]*mp->mean[j]; 
+   case FULLC: case LLTC:
+      for(i=1;i<=size;i++){ 
+         for(j=1;j<=i;j++){
+            va->cov.inv[i][j] += ma->mu[i]*mp->mean[j] + ma->mu[j]*mp->mean[i] - va->occ*mp->mean[i]*mp->mean[j]; 
+         }
+      }
       break;
    default: HError(7191, "Unknown ckind [RestoreAccsParallel]");
    }
@@ -1818,12 +1809,10 @@ void RestoreAccsParallel(HMMSet *hset, int index)
 
    if(hset->hsKind==TIEDHS){
       for (s=1; s<=hset->swidth[0]; s++){
-         for (m=1;m<=hset->tmRecs[s].nMix; m++) {
+         for (m=1;m<=hset->tmRecs[s].nMix; m++)
             RestorePDF(hset->tmRecs[s].mixes[m], index);
       }
-      }
-   } 
-   else {
+   } else {
       NewHMMScan(hset, &hss);
       while (GoNextMix(&hss,FALSE)) {
          RestorePDF(hss.mp, index);
@@ -1866,16 +1855,17 @@ double ScaleAccsParallel(HMMSet *hset, float wt, int index)
    int s,m,size;
    float ans=0;
   
-   if ( hset->ckind != DIAGC   || 
-       !(hset->hsKind==PLAINHS || hset->hsKind==SHAREDHS || hset->hsKind==TIEDHS))
+   if(hset->ckind != DIAGC || !(hset->hsKind==PLAINHS || hset->hsKind==SHAREDHS || 
+                                hset->hsKind==TIEDHS))
       HError(-1, "ScaleAccsParallel: wrong kind of hset.");
 
    /* Do gaussians. */
    if(hset->hsKind==TIEDHS){
-      for (s=1; s<=hset->swidth[0]; s++)
-         for (m=1;m<=hset->tmRecs[s].nMix; m++) {
+      for (s=1; s<=hset->swidth[0]; s++){
+	 for (m=1;m<=hset->tmRecs[s].nMix; m++) {
             size = VectorSize(hset->tmRecs[s].mixes[m]->mean);
             ans += ScalePDF(hset->tmRecs[s].mixes[m], size, index, wt);
+      }
       }
    } else {
       NewHMMScan(hset, &hss);

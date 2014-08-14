@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2009  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -43,7 +43,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmgens_version = "!HVER!HMGenS:   2.1beta [NIT 15/01/08]";
-char *hmgens_vc_id = "$Id: HMGenS.c,v 1.44 2008/05/30 07:19:08 zen Exp $";
+char *hmgens_vc_id = "$Id: HMGenS.c,v 1.45 2009/12/11 10:00:55 uratec Exp $";
 
 /*  
     This program is used to generate feature vector sequences 
@@ -551,7 +551,7 @@ int main (int argc,char *argv[])
    
    /* Reset modules */
    ResetGen();
-   ResetAdapt();
+   ResetAdapt(&xfInfo_hmm,&xfInfo_dur);
    ResetFB();
    ResetUtil();
    ResetParm();
