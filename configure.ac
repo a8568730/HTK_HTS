@@ -77,6 +77,7 @@ AC_PROG_MAKE_SET
 AC_PROG_AWK
 AC_PROG_CC
 AC_PROG_CXX
+AC_PROG_F77
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_RANLIB
@@ -88,8 +89,9 @@ AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL(AR, ar, :)])
 AC_PROG_AR
 
 # Checks for libraries.
-AC_CHECK_LIB([X11], [main])
-AC_CHECK_LIB([m], [main])
+AC_CHECK_LIB([X11],[main],,AC_MSG_ERROR(Cannot find libX11))
+AC_CHECK_LIB([m],  [main],,AC_MSG_ERROR(Cannot find libm))
+AC_CHECK_LIB([g2c],[main],,AC_MSG_ERROR(Cannot find libg2c))
 
 # Checks for header files.
 AC_CONFIG_HEADERS
@@ -153,11 +155,16 @@ AC_ARG_ENABLE(hts_engine,
 	AS_HELP_STRING([--disable-hts_engine],
 	[don't build hts_engine]))
 
-# Use -Wall if using gcc
+# Use -Wall if using gcc/g77
 case "$CC" in
 	 gcc*)
 		CFLAGS="-Wall -Wno-switch $CFLAGS"
 		;;		
+esac
+case "$F77" in
+	g77*)
+		FFLAGS="-Wall $FFLAGS"
+	;;
 esac
 
 # customise for htk comilpation
@@ -172,6 +179,7 @@ esac
 case "$host" in
 		*x86_64*linux*)
 		CFLAGS="-ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
+		FFLAGS="$FFLAGS"
 		AC_MSG_CHECKING(whether to compile in 32-bit or 64-bit mode)
 		if test x$ac_cv_sizeof_int_p = x"4"; then
 			AC_MSG_RESULT(32-bit)
@@ -185,28 +193,34 @@ case "$host" in
 		;;
 		*linux*)
 				CFLAGS="-ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
+		FFLAGS="$FFLAGS"
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
 				ARCH=linux
 				trad_bin_dir=linux
 		;;
 		*pc-solaris*)
 				CFLAGS="-ansi -I/usr/openwin/include -O2 -DSOLARIS16_AUDIO -DBSD_COMP -D'ARCH=\"$host_cpu\"' $CFLAGS"
+		FFLAGS="-O2 $FFLAGS"
 				LDFLAGS="-L/usr/openwin/lib -ldl -lsocket -lnsl -lintl $LDFLAGS"
 		;;
 		*sun*)
 				CFLAGS="-ansi -I/usr/openwin/include -O2 -DSOLARIS16_AUDIO -DBSD_COMP -D'ARCH=\"$host_cpu\"' $CFLAGS"
+		FFLAGS="-O2 $FFLAGS"
 				LDFLAGS="-L/usr/openwin/lib -ldl -lsocket -lnsl -lintl $LDFLAGS"
 		;;
 		*sgi*)
 				CFLAGS="-O -DSGI_AUDIO  -D'ARCH=\"$host_cpu\"' $CFLAGS"
+		FFLAGS="$FFLAGS"
 				LDFLAGS="-laudio -lmalloc $LDFLAGS"
 		;;
 		*hp*)
 				CFLAGS="+e -O -I/usr/include/X11R5 -I/usr/include/audio -I/opt/audio/include -D_HPUX_SOURCE -Aa -DHPUX_AUDIO -DUSE_TIMER  -D'ARCH=\"$host_cpu\"' $CFLAGS"
+		FFLAGS="$FFLAGS"
 				LDFLAGS="-L/opt/audio/lib -lAlib $LDFLAGS"
 		;;
 		*cygwin)
 				CFLAGS="-ansi -DCYGWIN -D'ARCH=\"ASCII\"' $CFLAGS"
+		FFLAGS="$FFLAGS"
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
 				ARCH=ASCII
 		CPU=cygwin
@@ -214,6 +228,7 @@ case "$host" in
 		;;				
 	*darwin*)
 		CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' -I/usr/include/malloc $CFLAGS"
+		FFLAGS="-g -O2 $FFLAGS"
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
 				ARCH=darwin
 				Objcopy=echo
@@ -251,9 +266,11 @@ case "$enable_hdecode" in
 	make_all="$make_all hdecode"
 	make_install="$make_install install-hdecode"
 	build_notes="$build_notes Large Vocabulary recogniser HDecode will be built."
+		LIBLV="HTKLiblv.a"
 	;;
      *)
 		build_notes="$build_notes HDecode will not be built. You can build it manually later by running 'make hdecode install-hdecode'."
+		LIBLV=""
 	;;
 esac
 case "$enable_htkbook" in
@@ -293,6 +310,7 @@ AC_SUBST(make_install, $make_install)
 AC_SUBST(HSLAB, $HSLAB)
 AC_SUBST(HGRAF, $HGRAF)
 AC_SUBST(BINARY_EXTENSION, $BINARY_EXTENSION)
+AC_SUBST(LIBLV)
 
 AC_OUTPUT(HTKLib/Makefile HTKTools/Makefile HLMLib/Makefile HLMTools/Makefile HTKLVRec/Makefile hts_engine/Makefile Makefile)
 

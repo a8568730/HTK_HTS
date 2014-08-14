@@ -101,6 +101,8 @@ all: $(PROGS)
 	if [ ! -d $(bindir) -a X_@TRADHTK@ = X_yes ] ; then mkdir -p $(bindir) ; fi
 	if [ x$@ = xHSLab ] ; then \
 		$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS) -lX11 ; \
+	elif [ x$@ = xHMGenS ] ; then \
+		$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS) -lg2c ; \
 		else \
 		$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS) ; fi
 	if [ X_@TRADHTK@ = X_yes ] ; then $(INSTALL) -m 755 $@ $(bindir)  ; fi

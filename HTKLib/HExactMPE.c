@@ -73,7 +73,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hexactmpe_version = "!HVER!HExactMPE:   3.4 [CUED 25/04/06]";
-char *hexactmpe_vc_id = "$Id: HExactMPE.c,v 1.7 2007/10/03 07:20:14 zen Exp $";
+char *hexactmpe_vc_id = "$Id: HExactMPE.c,v 1.8 2007/10/04 06:50:25 zen Exp $";
 
 /*
     Performs forward/backward alignment
@@ -325,7 +325,7 @@ float DoCorrectness(FBLatInfo *fbInfo, MemHeap *mem, ArcInfo *ai, float prune,
     if(locc > prune){   /* ... if above prune threshold then attach the 'cn' structure */
       if(!PhoneMEE && StartOfWord(a)/*expands to a->pos==0*/){  /* This is the MWE case. Create a cn structure for the first phone of the word. */
 	LArc *la = a->parentLarc; 
-	long iword = (int)((long)/*from LabId*/ la->end->word->wordName);
+	int iword = (int)((long)/*from LabId*/ la->end->word->wordName);
 	int id = (a->calcArc ? a->calcArc->id : a->id);
 	HArc *b,*lastArc; int x;
 
@@ -718,7 +718,7 @@ void DoExactCorrectness(FBLatInfo *fbInfo, Lattice *lat){
     w=0;
     for(node=lat->lnodes+0; node->foll; node=node->foll->end)
       if(node->foll->nAlign > 1 ||  (node->foll->nAlign==1 && ! IsSilence(node->foll->lAlign[0].label->name))) /* a word [ not sil. ]...*/
-	iwords[w++][0] = (long)node->foll->end->word->wordName; /* word is at the node at the end of the arc. */
+	iwords[w++][0] = (int)((long)node->foll->end->word->wordName); /* word is at the node at the end of the arc. */
 	 
     for(larc=lat->larcs,a=0;a<lat->na;larc++,a++){   
       if(IsNonSilArc(larc)){  /* Is a word [not sil]*/

@@ -47,7 +47,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hgen_version = "!HVER!HGen:   2.0.1 [NIT 01/10/07]";
-char *hgen_vc_id = "$Id: HGen.c,v 1.23 2007/09/17 11:26:41 zen Exp $";
+char *hgen_vc_id = "$Id: HGen.c,v 1.31 2007/11/01 08:32:06 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -64,53 +64,135 @@ char *hgen_vc_id = "$Id: HGen.c,v 1.23 2007/09/17 11:26:41 zen Exp $";
 #include "HAdapt.h"
 #include "HFB.h"
 #include "HGen.h"
+#include "lbfgs.h"
+
+#define LBFGSMEM 7
 
 /* ------------------- Trace Information ------------------------------ */
 /* Trace Flags */
 #define T_TOP   0001  /* Top level tracing */
 #define T_MAT   0002  /* trace matrices */
 #define T_STA   0004  /* trace state sequence */
+#define T_GV    0010  /* trace gv param gen */
 
-static int trace = 0;
+static int trace =  0010;
 
 static ConfParam *cParm[MAXGLOBS];  /* config parameters */
 static int nParm = 0;
 
-static int maxIter   = 20;          /* max iterations in EM-based parameter generation */
-static float epsilon = 1.0E-4;      /* convergence criterion */
+static int maxEMIter = 20;          /* max iterations in the EM-based parameter generation */
+static double EMepsilon = 1.0E-4;   /* convergence factor for EM iteration */
 static Boolean rndpg = FALSE;       /* random generation instead of ML one */
-static float rndMean = 0.0;         /* mean of Gaussian noise for random generation */
-static float rndVar  = 1.0;         /* variance of Gaussian noise for random generation */
+static double rndMean = 0.0;        /* mean of Gaussian noise for random generation */
+static double rndVar  = 1.0;        /* variance of Gaussian noise for random generation */
+
+/* GV related variables */
+static Boolean useGV = FALSE;
+static int maxGVIter = 50;          /* max iterations in the speech parameter generation considering GV */
+static double GVepsilon = 1.0E-4;   /* convergence factor for GV iteration */
+static double minEucNorm = 1.0E-2;  /* minimum Euclid norm of a gradient vector */ 
+static double stepInit = 1.0;       /* initial step size */
+static double stepDec = 0.5;        /* step size deceralation factor */
+static double stepInc = 1.2;        /* step size acceleration factor */
+static double w1 = 1.0;             /* weight for HMM output prob. */
+static double w2 = 1.0;             /* weight for GV output prob. */
+
+typedef enum {STEEPEST=0,NEWTON=1,LBFGS=2} OptKind;
+static OptKind optKind = LBFGS;     /* optimization method */
+  
+
+static char gvDir[MAXFNAMELEN];  /* dir to look for GV defs */
+static char gvExt[MAXSTRLEN];    /* GV def file extension */
+static char gvMMF[MAXFNAMELEN];  /* GV MMF */
+static char gvLst[MAXFNAMELEN];  /* GV list */
+static HMMSet gvset;             /* GV set */
+static MemHeap gvStack;          /* Stack holds all GV related info */
 
 /* -------------------------- Initialisation ----------------------- */
+
+/* Str2OptKind: parse the string into the correct OptKind */
+static OptKind Str2OptKind(char *str)
+{
+   OptKind okind = STEEPEST;
+   if (!(strcmp(str,"STEEPEST"))) okind = STEEPEST;
+   else if (!(strcmp(str,"NEWTON"))) okind = NEWTON;
+   else if (!(strcmp(str,"LBFGS")))  okind = LBFGS;
+   else HError(9999,"Str2OptKind: Unknown OptKind kind");
+   return okind;
+}
+
+/* OptKind2Str: Return string representation of enum OptKind */
+char *OptKind2Str(OptKind okind, char *buf)
+{
+   static char *okindmap[] = {"STEEPEST","NEWTON","LBFGS"};
+   return strcpy(buf,okindmap[okind]);
+}
 
 /* EXPORT->InitGen: initialise module */
 void InitGen(void)
 {
-   int m;
    int i;
    double d;
    Boolean b;
+   char buf[MAXSTRLEN];
 
    Register(hgen_version,hgen_vc_id);
 
-   for (m=0; m<2; m++) {
-      nParm = GetConfig("HGEN", TRUE, cParm, MAXGLOBS);
-      if (nParm>0){
-         if (GetConfInt (cParm,nParm,"TRACE",     &i)) trace   = i;
-         if (GetConfInt (cParm,nParm,"MAXITER",   &i)) maxIter = i;
-         if (GetConfFlt (cParm,nParm,"EPSILON",   &d)) epsilon = d;
-         if (GetConfBool(cParm,nParm,"RNDPG",     &b)) rndpg   = b;
-         if (GetConfFlt (cParm,nParm,"RNDMEAN",   &d)) rndMean = d;
-         if (GetConfFlt (cParm,nParm,"RNDVAR",    &d)) rndVar  = d;
+   nParm = GetConfig("HGEN", TRUE, cParm, MAXGLOBS);
+   if (nParm>0){
+      if (GetConfInt (cParm,nParm,"TRACE",     &i))  trace      = i;
+      if (GetConfInt (cParm,nParm,"MAXEMITER", &i))  maxEMIter  = i;
+      if (GetConfFlt (cParm,nParm,"EMEPSILON", &d))  EMepsilon  = d;
+      if (GetConfBool(cParm,nParm,"RNDPG",     &b))  rndpg      = b;
+      if (GetConfFlt (cParm,nParm,"RNDMEAN",   &d))  rndMean    = d;
+      if (GetConfFlt (cParm,nParm,"RNDVAR",    &d))  rndVar     = d;
+      if (GetConfBool(cParm,nParm,"USEGV",     &b))  useGV      = b;
+      if (GetConfInt (cParm,nParm,"MAXGVITER", &i))  maxGVIter  = i;
+      if (GetConfFlt (cParm,nParm,"GVEPSILON", &d))  GVepsilon  = d;
+      if (GetConfFlt (cParm,nParm,"MINEUCNORM",&d))  minEucNorm = d;
+      if (GetConfFlt (cParm,nParm,"STEPINIT" , &d))  stepInit   = d;
+      if (GetConfFlt (cParm,nParm,"STEPDEC",   &d))  stepDec    = d;
+      if (GetConfFlt (cParm,nParm,"STEPINC",   &d))  stepInc    = d;
+      if (GetConfFlt (cParm,nParm,"HMMWEIGHT", &d))  w1         = d;
+      if (GetConfFlt (cParm,nParm,"GVWEIGHT",  &d))  w2         = d;
+      if (GetConfStr (cParm,nParm,"OPTKIND",   buf)) optKind    = Str2OptKind(buf);
+      if (GetConfStr (cParm,nParm,"GVMODELMMF",buf)) strcpy(gvMMF,buf);
+      if (GetConfStr (cParm,nParm,"GVHMMLIST", buf)) strcpy(gvLst,buf);
+      if (GetConfStr (cParm,nParm,"GVMODELDIR",buf)) strcpy(gvDir,buf);
+      if (GetConfStr (cParm,nParm,"GVMODELEXT",buf)) strcpy(gvExt,buf);
+   }
+
+   if (useGV) {
+      /* Stack for GV */
+      CreateHeap(&gvStack, "gvStore", MSTAK, 1, 1.0, 50000, 500000);
+
+      /* load GV set */
+      CreateHMMSet(&gvset,&gvStack,TRUE);
+      AddMMF(&gvset,gvMMF);
+      if (MakeHMMSet(&gvset, gvLst)<SUCCESS)
+         HError(9928,"InitGen: MakeHMMSet failed");
+      if (LoadHMMSet(&gvset, gvDir, gvExt)<SUCCESS)
+         HError(9928,"InitGen: LoadHMMSet failed");
+      ConvDiagC(&gvset,TRUE);
+      ConvLogWt(&gvset);
+
+      /* and echo status */
+      if (trace&T_TOP) {
+         printf("GV enabled\n");
+         printf(" %d Logical/%d Physical Models Loaded, VecSize=%d\n", gvset.numLogHMM, gvset.numPhyHMM, gvset.vecSize);
       }
    }
+   
+   return;
 }
 
 /* EXPORT->ResetGen: reset module */
 void ResetGen(void)
 {
-   return;  /* do nothing */
+   if (useGV) 
+      ResetHeap(&gvStack);
+
+   return;
 }
 
 /* EXPORT->SetConfGen: set trace flag for this module */
@@ -143,8 +225,6 @@ static void InitWindow (MemHeap *x, PdfStream *pst)
 
       /* Read window coefficients */
       pst->win.coef[i] = (float *) New(x,winlen*sizeof(float));
-      /* for (j=0; j<winlen; j++)
-         pst->win.coef[i][j] = 0.0; */
       ReadFloat(&src, pst->win.coef[i], winlen, FALSE);
 
       /* Set pointer */
@@ -177,21 +257,8 @@ static void InitWindow (MemHeap *x, PdfStream *pst)
 static void CreatePdfStreams (GenInfo *genInfo)
 {
    int p,t,M;
-   Boolean fullCov=FALSE;
    PdfStream *pst;
    MemHeap *x = genInfo->genMem;
-
-   switch(genInfo->hset->ckind) {
-   case DIAGC:
-   case INVDIAGC:
-      fullCov = FALSE;
-      break;
-   case FULLC:
-      fullCov = TRUE;
-      break;
-   default:
-      HError(9999,"CreatePdfStreams: Currently only DIAGC, INVDIAGC and FULLC are supported.");
-   }
 
    for (p=1; p<=genInfo->nPdfStream[0]; p++) {
       /* p-th PdfStream */
@@ -201,7 +268,7 @@ static void CreatePdfStreams (GenInfo *genInfo)
       InitWindow(x, pst);
 
       /* full or diag covariance */
-      pst->fullCov = fullCov;
+      pst->fullCov = ((genInfo->hset->ckind==FULLC) || (useGV && (gvset.ckind==FULLC))) ? TRUE : FALSE;
 
       /* prepare mean vector and inverse covariance matrix sequences */
       pst->mseq = CreateMatrix(x, pst->T, pst->vSize);               /* mean vectors */
@@ -209,18 +276,35 @@ static void CreatePdfStreams (GenInfo *genInfo)
       pst->vseq--;
 
       for (t=1; t<=pst->T; t++) {
-         if (fullCov)
+         if (pst->fullCov)
             pst->vseq[t].inv = CreateSTriMat(x, pst->vSize);  /* inverse covariance (precision) matrices */
          else
             pst->vseq[t].var = CreateVector (x, pst->vSize);  /* inverse variances */
       }
 
       /* prepare vector and matrices for a set of linear equations */
-      M = (fullCov) ? pst->order : 1;
+      M = (pst->fullCov) ? pst->order : 1;
       pst->C    = CreateMatrix (x, pst->T, pst->order);     /* generated parameter sequence */
-      pst->g    = CreateDVector(x, M*pst->T);               /* vector for forward and backward substitution */
+      pst->g    = CreateDVector(x, M*pst->T);               /* vector for forward and backward substitution and gradient */
+      pst->c    = CreateDVector(x, M*pst->T);               /* vector for generated parameter sequence */
       pst->WUM  = CreateDVector(x, M*pst->T);               /* W'*U^{-1}*W */
       pst->WUW  = CreateDMatrix(x, M*pst->T, M*pst->width); /* W'*U^{-1}*M */
+      
+      if (useGV) {
+         /* gv mean */
+         pst->gvmean = CreateVector(x, pst->vSize);
+         ZeroVector(pst->gvmean);
+
+         /* gv covariance */
+         if (gvset.ckind==FULLC) {
+            pst->gvcov.inv = CreateSTriMat(x, pst->vSize); 
+            ZeroTriMat(pst->gvcov.inv);
+         }
+         else {
+            pst->gvcov.var = CreateVector(x, pst->vSize);  
+            ZeroVector(pst->gvcov.var);
+         }
+      }
    }
 
    return;
@@ -237,7 +321,7 @@ static Boolean ChkBoundary (PdfStream *pst, const int k, const int absolute_t, c
 
    /* check */
    for (j=pst->win.width[i][0]; j<=pst->win.width[i][1]; j++)
-      if ( t+j<0 || t+j>T || (pst->win.coef[i][j]!=0.0 && absolute_t+j>=1 && absolute_t+j<=absolute_T && !pst->ContSpace[absolute_t+j]) )
+      if (t+j<1 || t+j>T || (pst->win.coef[i][j]!=0.0 && absolute_t+j>=1 && absolute_t+j<=absolute_T && !pst->ContSpace[absolute_t+j]))
          return TRUE;
 
    return FALSE;
@@ -254,12 +338,14 @@ static void SetupPdfStreams (GenInfo *genInfo)
    MixPDF *mpdf;
    Vector mseq_t;
    Covariance vseq_t;
+   LabId id;
+   MLink macro;
 
    /* absolute time */
    const int T = genInfo->tframe;
 
    /* initialize time counter and statistics of each PdfStream */
-   for (p=1; p<=genInfo->nPdfStream[0]; p++) {
+   for (p=stream=1; p<=genInfo->nPdfStream[0]; stream+=genInfo->nPdfStream[p++]) {
       /* p-th PdfStream */
       pst = &(genInfo->pst[p]);
 
@@ -272,8 +358,39 @@ static void SetupPdfStreams (GenInfo *genInfo)
          else
             ZeroVector(pst->vseq[t].var);
       }
+      
+      /* get gv mean and covariance */
+      if (useGV) {
+         id = GetLabId("gv",TRUE);
+         if ((macro=FindMacroName(&gvset,'h',id))!=NULL) {
+            for (s=stream,v=1; s<stream+genInfo->nPdfStream[p]; v+=genInfo->hset->swidth[s++]) {
+               mpdf = ((HLink)macro->structure)->svec[2].info->pdf[p].info->spdf.cpdf[1].mpdf;  /* currently only sigle-mixture GV pdf is supported */
+               for (k=1; k<=VectorSize(mpdf->mean); k++) {
+                  /* gv mean */
+                  pst->gvmean[v+k-1] = mpdf->mean[k];
+                  /* gv covariance */
+                  switch(mpdf->ckind) {  /* store inverse variance */
+                  case DIAGC:
+                     pst->gvcov.var[v+k-1] = 1.0/mpdf->cov.var[k]; 
+                     break;
+                  case INVDIAGC:
+                     pst->gvcov.var[v+k-1] = mpdf->cov.var[k]; 
+                     break;
+                  case FULLC:
+                     /* diagonal elements */
+                     pst->gvcov.inv[v+k-1][v+k-1] = mpdf->cov.inv[k][k];
+                     /* off-diagonal elements */
+                     for (l=1; l<k; l++)
+                        pst->gvcov.inv[v+k-1][v+l-1] = mpdf->cov.inv[k][l];
+                     break;
+                  default: HError(9999,"SetupPdfStreams: Only DIAGC, INVDIAGC, or FULLC is supported for GV Pdf.");
+                  }
+               }
+            }
+         }
+      }
    }
-
+   
    /* load mean and variance and set mseq and vseq */
    for (i=1,t=1; i<=genInfo->labseqlen; i++) {
       for (j=1; genInfo->sindex[i][j]!=0; j++) {
@@ -309,29 +426,46 @@ static void SetupPdfStreams (GenInfo *genInfo)
                      mpdf = si->pdf[s].info->spdf.cpdf[max].mpdf;
                      for (k=1; k<=genInfo->hset->swidth[s]; k++) {
                         bound = ChkBoundary(pst, v+k-1, t, T);
-                        switch (mpdf->ckind) {
-                        case DIAGC:
-                           mseq_t    [v+k-1] += (bound) ? 0.0 : 1.0 / mpdf->cov.var[k] * mpdf->mean[k];
-                           vseq_t.var[v+k-1] += (bound) ? 0.0 : 1.0 / mpdf->cov.var[k];
-                           break;
-                        case INVDIAGC:
-                           mseq_t    [v+k-1] += (bound) ? 0.0 : mpdf->cov.var[k] * mpdf->mean[k];
-                           vseq_t.var[v+k-1] += (bound) ? 0.0 : mpdf->cov.var[k];
-                           break;
-                        case FULLC:
-                           /* diagonal elements */
-                           mseq_t    [v+k-1]        += (bound) ? 0.0 : mpdf->cov.inv[k][k] * mpdf->mean[k];
-                           vseq_t.inv[v+k-1][v+k-1] += (bound) ? 0.0 : mpdf->cov.inv[k][k];
+                        if (pst->fullCov) {
+                           /* full case */
+                           switch (mpdf->ckind) {
+                           case DIAGC:
+                              mseq_t    [v+k-1]        += (bound) ? 0.0 : 1.0/mpdf->cov.var[k] * mpdf->mean[k];
+                              vseq_t.inv[v+k-1][v+k-1] += (bound) ? 0.0 : 1.0/mpdf->cov.var[k];
+                              break;
+                           case INVDIAGC:
+                              mseq_t    [v+k-1]        += (bound) ? 0.0 : mpdf->cov.var[k] * mpdf->mean[k];
+                              vseq_t.inv[v+k-1][v+k-1] += (bound) ? 0.0 : mpdf->cov.var[k];
+                              break;
+                           case FULLC:
+                              /* diagonal elements */
+                              mseq_t    [v+k-1]        += (bound) ? 0.0 : mpdf->cov.inv[k][k] * mpdf->mean[k];
+                              vseq_t.inv[v+k-1][v+k-1] += (bound) ? 0.0 : mpdf->cov.inv[k][k];
 
-                           /* off-diagonal elements */
-                           for (l=1; l<k; l++) {
-                              mseq_t    [v+k-1]        += (bound) ? 0.0 : mpdf->cov.inv[k][l] * mpdf->mean[l];
-                              mseq_t    [v+l-1]        += (bound) ? 0.0 : mpdf->cov.inv[k][l] * mpdf->mean[k];
-                              vseq_t.inv[v+k-1][v+l-1] += (bound) ? 0.0 : mpdf->cov.inv[k][l];
+                              /* off-diagonal elements */
+                              for (l=1; l<k; l++) {
+                                 mseq_t    [v+k-1]        += (bound) ? 0.0 : mpdf->cov.inv[k][l] * mpdf->mean[l];
+                                 mseq_t    [v+l-1]        += (bound) ? 0.0 : mpdf->cov.inv[k][l] * mpdf->mean[k];
+                                 vseq_t.inv[v+k-1][v+l-1] += (bound) ? 0.0 : mpdf->cov.inv[k][l];
+                              }
+                              break;
+                           default:
+                              HError(9999, "SetupPdfStreams: Only DIAGC, INVDIAGC or FULLC is supported.");
                            }
-                           break;
-                        default:
-                           HError(9999, "SetupPdfStreams: Only DIAGC, INVDIAGC and FULLC are supported.");
+                        }
+                        else {
+                           switch (mpdf->ckind) {
+                           case DIAGC:
+                              mseq_t    [v+k-1] += (bound) ? 0.0 : 1.0/mpdf->cov.var[k] * mpdf->mean[k];
+                              vseq_t.var[v+k-1] += (bound) ? 0.0 : 1.0/mpdf->cov.var[k];
+                              break;
+                           case INVDIAGC:
+                              mseq_t    [v+k-1] += (bound) ? 0.0 : mpdf->cov.var[k] * mpdf->mean[k];
+                              vseq_t.var[v+k-1] += (bound) ? 0.0 : mpdf->cov.var[k];
+                              break;
+                           default:
+                              HError(9999, "SetupPdfStreams: Only DIAGC or INVDIAGC is supported.");
+                           }
                         }
                      }
                   }
@@ -702,7 +836,7 @@ void InitialiseGenInfo (GenInfo *genInfo, Transcription *tr)
             n = 0;
          }
       }
-      else {
+      else {         
          /* find state duration model */
          id = label->labid;
          if ((dmacro = FindMacroName(genInfo->dset, 'l', id)) == NULL)
@@ -804,7 +938,7 @@ static void OutProb (GenInfo *genInfo, UttInfo *utt)
             prob += POutP(genInfo->hset, &(utt->o[t]), si);
       }
    }
-   
+
    utt->pr = prob;
 }
 
@@ -940,11 +1074,11 @@ static void Forward_Substitution (PdfStream *pst)
 static void Backward_Substitution (PdfStream *pst, const int bias)
 {
    int t,i;
-   double c;
 
    Matrix  C = pst->C;
    DMatrix U = pst->WUW;
    DVector g = pst->g;
+   DVector c = pst->c;
 
    /* sizes of matrix and vector */
    const int M = (pst->fullCov) ? pst->order : 1;
@@ -956,56 +1090,328 @@ static void Backward_Substitution (PdfStream *pst, const int bias)
 
    /* backward substitution */
    for (t=T; t>0; t--) {
-      c = g[t];
+      c[t] = g[t];
       for (i=1; (i<width) && (t+i<=T); i++)
-         c -= U[t][i+1]*C[(t+i+M-1)/M][(t+i+M-1)%M+1+bias];
-      c /= U[t][1];
-      C[(t+M-1)/M][(t+M-1)%M+1+bias] = (float) c;
+         c[t] -= U[t][i+1]*c[t+i];
+      c[t] /= U[t][1];
 
       if (trace & T_MAT) {
-         printf("%8.2f ", C[(t+M-1)/M][(t+M-1)%M+1+bias]);
+         printf("%8.2lf ", c[t]);
          fflush(stdout);
       }
    }
+   
+   /* store generated parameters */
+   for (t=1; t<=T; t++)
+      C[(t+M-1)/M][(t+M-1)%M+1+bias] = (float) c[t];
+   
+   return;
+}
+
+/* -------------------------------- GV related functions ------------------------------------- */
+/* Calc_GV: calculate GV of the current c */
+static void Calc_GV (PdfStream *pst, const int bias, DVector mean, DVector var)
+{
+   int m,t;
+   DVector c = pst->c;
+   
+   /* constant values */
+   const int M = (pst->fullCov) ? pst->order : 1;
+   const int T = M*pst->T;
+   
+   /* mean */
+   ZeroDVector(mean);
+   for (t=1; t<=T; t++) {
+      m = (t+M-1)%M+1+bias;
+      mean[m] += c[t];
+   }
+   for (m=1; m<=M; m++)
+      mean[m+bias] /= pst->T;
+
+   /* variance */
+   ZeroDVector(var);
+   for (t=1; t<=T; t++) {
+      m = (t+M-1)%M+1+bias;
+      var[m] += (c[t]-mean[m])*(c[t]-mean[m]);
+   }
+   for (m=1; m<=M; m++)
+      var[m+bias] /= pst->T;
 
    return;
 }
 
+/* Conv_GV: expand c according to mean value of a given GV pdf */
+static void Conv_GV (PdfStream *pst, const int bias, DVector mean, DVector var)
+{
+   int m,t;
+   
+   /* constant values */
+   const int M = (pst->fullCov) ? pst->order : 1;
+   const int T = M*pst->T;
+
+   /* Vector/Matrices */
+   DVector c = pst->c;
+   DVector ratio = CreateDVector(&gvStack, pst->order);
+      
+   /* calculate GV of c */
+   Calc_GV(pst, bias, mean, var);
+   
+   /* ratio between GV mean and variance of c */
+   for (m=1; m<=M; m++)
+      ratio [m+bias] = sqrt(pst->gvmean[m+bias]/var[m+bias]);
+   
+   /* expand c */
+   for (t=1; t<=T; t++) {
+      m = (t+M-1)%M+1+bias;
+      c[t] = ratio[m] * (c[t]-mean[m]) + mean[m];
+   }
+   
+   FreeDVector(&gvStack, ratio);
+   
+   return;
+}
+
+/* Calc_Gradient: calculate a gradient vector of the GV objective function with respect to c */
+static LogDouble Calc_Gradient (PdfStream *pst, const int bias, DVector mean, DVector var, 
+                                LogDouble *GVobj, LogDouble *HMMobj, double *norm)
+{
+   int m,l,t,i;
+   double inv,h;
+   
+   /* constant values */
+   const int M = (pst->fullCov) ? pst->order : 1;
+   const int T = M*pst->T;
+   const int width = M*pst->width;
+   const double w = 1.0/(pst->win.num*pst->T);
+
+   /* Vector/Matrices */
+   DMatrix R = pst->WUW;
+   DVector r = pst->WUM;
+   DVector c = pst->c;
+   DVector g = pst->g;
+
+   /* GV pdf statistics */
+   DVector vd = CreateDVector(&gvStack, pst->order);
+   Vector gvmean = pst->gvmean;
+   Covariance gvcov = pst->gvcov;
+   Boolean fullGV = (gvset.ckind==FULLC) ? TRUE : FALSE;
+
+   /* recalculate GV of the current c */
+   Calc_GV(pst, bias, mean, var);
+   
+   /* GV objective function and its derivative with respect to c */
+   ZeroDVector(vd);
+   for (m=1,*GVobj=0.0; m<=M; m++) {
+      for (l=((fullGV)?1:m); l<=((fullGV)?M:m); l++) {
+         inv = (fullGV) ? ((l<m) ? gvcov.inv[m+bias][l+bias] : gvcov.inv[l+bias][m+bias]) : gvcov.var[l+bias];
+         *GVobj -= 0.5*w2*(var[m+bias]-gvmean[m+bias])*inv*(var[l+bias]-gvmean[l+bias]);
+         vd[m+bias] += inv*(var[l+bias]-gvmean[l+bias]);
+      }
+   }
+
+   /* calculate g = R*c */
+   for (t=1; t<=T; t++) {
+      g[t] = R[t][1]*c[t];
+      for (i=2; i<=width; i++) {
+         if (t+i-1<=T)
+            g[t] += R[t][i]*c[t+i-1];
+         if (t-i+1>0)
+            g[t] += R[t-i+1][i]*c[t-i+1];
+      }
+   }
+      
+   for (t=1,*HMMobj=0.0,*norm=0.0; t<=pst->T; t++) {
+      for (m=1; m<=M; m++) {
+         /* index */ 
+         i = M*(t-1)+m;
+
+         /* objective function */
+         *HMMobj += -0.5*w1*w*c[i]*(g[i]-2.0*r[i]);
+
+         /* Hessian */
+         switch(optKind) {
+         case NEWTON:
+            /* only diagonal elements of Hessian matrix are used */
+            inv = (fullGV) ? gvcov.inv[m+bias][m+bias] : gvcov.var[m+bias];
+            h = -w1*w*R[i][1] - w2*2.0/(pst->T*pst->T)*((pst->T-1)*vd[m+bias]+2.0*inv*(c[i]-mean[m+bias])*(c[i]-mean[m+bias]));
+            h = -1.0/h;
+            break;
+         case LBFGS:
+         case STEEPEST:
+            /* do not use hessian */
+            h = 1.0;
+         }
+
+         /* gradient vector */
+         g[i] = h * ( w1*w*(-g[i]+r[i]) + w2*(-2.0/pst->T*(c[i]-mean[m+bias])*vd[m+bias]) );
+         
+         /* norm of gradient vector */
+         *norm += g[i]*g[i];
+      }
+   }
+
+   /* Euclidian norm of gradient vector */
+   *norm = sqrt(*norm);
+   
+   /* free vector */
+   FreeDVector(&gvStack, vd);
+
+   return(*HMMobj+*GVobj);
+}
+
+/* GV_ParmGen: optimize C considering global variance */
+static void GV_ParmGen (PdfStream *pst, const int bias)
+{
+   int t,iter;
+   double norm, step=stepInit;
+   LogDouble obj,prev,GVobj,HMMobj;
+   
+   /* matrix/vectors */
+   Matrix  C = pst->C;
+   DVector c = pst->c;
+   DVector g = pst->g;
+   DVector diag,w;
+   
+   /* constant values */
+   const int M = (pst->fullCov) ? pst->order : 1;
+   const int T = M*pst->T;
+
+   /* GV pdf statistics */
+   DVector mean = CreateDVector(&gvStack, pst->order); ZeroDVector(mean);
+   DVector var  = CreateDVector(&gvStack, pst->order); ZeroDVector(var);
+   
+   /* variables for L-BFGS */
+   int dim=T, mem=LBFGSMEM, diagco=0, iprint[]={-1,0}, iflag=0;
+   double f,eps=1.0e-6, xtol=1.0e-15;
+   diag  = CreateDVector(&gvStack, T);
+   w     = CreateDVector(&gvStack, T*(2*LBFGSMEM+1)+2*LBFGSMEM);
+   ZeroDVector(diag); ZeroDVector(w);
+
+   /* first convert c according to GV pdf and use it as the initial value */
+   Conv_GV(pst, bias, mean, var);
+
+   /* recalculate R and r */
+   Calc_WUM_and_WUW(pst,bias);
+
+   /* iteratively optimize c */
+   for (iter=1; iter<=maxGVIter; iter++) {
+      /* calculate GV objective and its derivative with respect to c */
+      obj = Calc_Gradient(pst, bias, mean, var, &GVobj, &HMMobj, &norm);
+
+      /* accelerate/decelerate step size */
+      if (iter>1 && optKind!=LBFGS) {
+         /* objective function improved -> increase step size */
+         if (obj>prev) step *= stepInc;
+         
+         /* objective function degraded -> go back c and decrese step size */
+         if (obj<prev) {
+            for (t=1; t<=T; t++)  /* go back c to that at the previous iteration */
+               c[t] -= step * diag[t];
+            step *= stepDec;
+            for (t=1; t<=T; t++)  /* gradient c */
+               c[t] += step * diag[t];
+            iter--; continue;
+         }
+      }
+
+      if (trace & T_GV) {
+         printf("   Iteration %2d: GV Obj = %e (HMM:%e GV:%e)", iter, obj, HMMobj, GVobj);
+         if (iter>1)
+            printf("  Change = %f", obj-prev);
+         printf("\n");
+         fflush(stdout);
+      }
+            
+      /* convergence check (Euclid norm, objective function, and LBFGS report) */
+      if ((optKind!=LBFGS && norm<minEucNorm) || (iter>1 && fabs(obj-prev)<GVepsilon) || (iter>1 && optKind==LBFGS && iflag==0)) { 
+         if (trace&T_GV) {
+            if (iter>1)
+               printf("   Converged (norm=%e, change=%e).\n", norm, fabs(obj-prev));
+            else
+               printf("   Converged (norm=%e).\n", norm);
+            fflush(stdout);
+         }
+         break;
+      }
+      
+      switch (optKind) {
+      case STEEPEST:  /* steepest ascent */
+      case NEWTON:    /* quasi Newton (only diagonal elements of Hessian matrix are used */
+         for (t=1; t<=T; t++)
+           c[t] += step * g[t];
+         CopyDVector(g,diag);
+         break;
+      case LBFGS:
+         for (t=1; t<=T; t++)
+            g[t] = -g[t];  /* swap sign because L-BFGS minimizes objective function */
+         f = -obj;
+         /* call LBFGS FORTRAN routine */
+         lbfgs_(&dim, &mem, &c[1], &f, &g[1], &diagco, &diag[1], iprint, &eps, &xtol, &w[1], &iflag);
+         break;
+      default:
+         HError(9999,"GV_ParmGen: Not supported optimization kind.");
+      }
+
+      prev = obj;
+   }
+   
+   /* convergence check (Euclid norm, objective function, and LBFGS report) */
+   if (iter>maxGVIter && trace&T_GV) { 
+      printf("   Optimization stopped by reaching max # of iterations (%d).\n",maxGVIter);
+      fflush(stdout);
+   }
+
+   /* store generated parameters */
+   for (t=1; t<=T; t++)
+      C[(t+M-1)/M][(t+M-1)%M+1+bias] = (float) c[t];
+
+   /* free vectors allocated in this function */
+   FreeDVector(&gvStack, mean);
+   
+   return;
+}
+   
 /* Cholesky_ParmGen: Generate parameter sequence using Cholesky decomposition */
-static void Cholesky_ParmGen (GenInfo *genInfo)
+static void Cholesky_ParmGen (GenInfo *genInfo, const Boolean GV)
 {
    int p,m;
    PdfStream *pst;
 
-   for (p=1; p<=genInfo->nPdfStream[0]; p++) {
-      /* p-th PdfStream */
-      pst = &(genInfo->pst[p]);
-      
+  if (GV && (trace & T_GV)) {
+      char buf[MAXSTRLEN];
+      printf(" Parameter generation considering global variance (GV)\n");
+      printf("  Optimization=%s  ", OptKind2Str(optKind,buf));
+      if (optKind!=LBFGS)
+         printf("step size (init=%.3f, inc=%.2f, dec=%.2f)", stepInit, stepInc, stepDec);
+      printf("\n  HMM weight=%.2f, GV weight=%.2f\n", w1, w2);
+      fflush(stdout);
+   }
+
+   for (p=1,pst=genInfo->pst+1; p<=genInfo->nPdfStream[0]; p++,pst++) {
       if (pst->T<1)
          continue;
 
-      if (pst->fullCov) {
-         /* full covariance */
-         /* generate all feature simultaneously */
-         Calc_WUM_and_WUW(pst, 0);
-         Cholesky_Factorization(pst);    /* Cholesky decomposition */
-         Forward_Substitution(pst);      /* forward substitution   */
-         Backward_Substitution(pst, 0);  /* backward substitution  */
+      if ((trace&T_MAT) || (GV && (trace & T_GV))) {
+         printf("  Stream: %d\n", p);
+         fflush(stdout);
       }
-      else {
-         /* diagonal covariance */
-         for (m=1; m<=pst->order; m++) {
-            if (trace & T_MAT) {
-               printf("  Feature %d:\n", m);
-               fflush(stdout);
-            }
 
-            /* generate m-th feature */
-            Calc_WUM_and_WUW(pst, m-1);
-            Cholesky_Factorization(pst);     /* Cholesky decomposition */
-            Forward_Substitution(pst);       /* forward substitution   */
-            Backward_Substitution(pst, m-1); /* backward substitution  */
+      for (m=1; m<=((pst->fullCov)?1:pst->order); m++) {
+         if ((trace&T_MAT) || (GV && (trace & T_GV))) {
+            if (pst->fullCov) 
+               printf("  Feature: all\n");
+            else
+               printf("  Feature: %d\n", m);
+            fflush(stdout);
          }
+
+         /* generate m-th feature */
+         Calc_WUM_and_WUW(pst, m-1);
+         Cholesky_Factorization(pst);     /* Cholesky decomposition */
+         Forward_Substitution(pst);       /* forward substitution   */
+         Backward_Substitution(pst, m-1); /* backward substitution  */
+         if (GV)
+            GV_ParmGen(pst, m-1);    /* iterative optimization */
       }
    }
 
@@ -1261,9 +1667,9 @@ static Boolean MixUtt (GenInfo *genInfo, FBInfo *fbInfo, UttInfo *utt)
 /* EXPORT->ParamGen: Generate parameter sequence */
 void ParamGen (GenInfo *genInfo, UttInfo *utt, FBInfo *fbInfo, const ParmGenType type)
 {
-   int n=1;
-   Boolean success=TRUE;
-   LogFloat prev, curr=LZERO;
+   int iter;
+   Boolean success=TRUE,converged=FALSE;
+   LogFloat prev, curr;
 
    /* # of frames */
    const int T = genInfo->tframe;
@@ -1274,7 +1680,7 @@ void ParamGen (GenInfo *genInfo, UttInfo *utt, FBInfo *fbInfo, const ParmGenType
    
    /* First perform Cholesky-based parameter generation */
    SetupPdfStreams(genInfo);
-   Cholesky_ParmGen(genInfo);
+   Cholesky_ParmGen(genInfo, (((type==CHOLESKY)&&useGV)?TRUE:FALSE) );
    UpdateUttObs(genInfo, utt);
 
    /* Cholesky case */
@@ -1296,7 +1702,7 @@ void ParamGen (GenInfo *genInfo, UttInfo *utt, FBInfo *fbInfo, const ParmGenType
    }
 
    /* Optimize pst->C using EM algorithm */
-   do {
+   for (iter=1; iter<=maxEMIter; iter++) {
       switch(type) {
       case MIX: 
          success = MixUtt(genInfo, fbInfo, utt);  /* compute mixture-level posterior */
@@ -1311,25 +1717,40 @@ void ParamGen (GenInfo *genInfo, UttInfo *utt, FBInfo *fbInfo, const ParmGenType
          HError(9999,"ParamGen: failed to compute output prob");
 
       /* output prob */
-      prev = curr;
       curr = utt->pr;
-
-      /* generate parameters */
-      UpdatePdfStreams(genInfo, fbInfo, utt);  /* update PdfStreams */
-      Cholesky_ParmGen(genInfo);
-      UpdateUttObs(genInfo, utt);
-      
-      /* reset heap */
-      ResetHeap(&fbInfo->ab->abMem);
-      
       if (trace & T_TOP) {
-         printf("  Iteration %d: Average LogP = %e", n, curr/T);
-         if (n>1)
+         printf("  Iteration %d: Average LogP = %e", iter, curr/T);
+         if (iter>1)
             printf("  Change = %f", (curr-prev)/T);
          printf("\n");
          fflush(stdout);
       }
-   } while(fabs((curr-prev)/T)>epsilon && n++<=maxIter);
+      
+      /* convergence check */
+      if (iter>1 && fabs(curr-prev)/T<EMepsilon) {
+         converged = TRUE;
+         if (trace&T_TOP) {
+            printf("  Converged (change=%e).\n", fabs(curr-prev)/T);
+            fflush(stdout);
+         }
+      }
+      if (iter==maxEMIter && trace&T_TOP) {
+         printf("  EM iteration stopped by reaching max # of iterations (%d).\n",maxEMIter);
+      }
+      
+      /* generate parameters */
+      UpdatePdfStreams(genInfo, fbInfo, utt);  /* update PdfStreams */
+      Cholesky_ParmGen(genInfo, (((converged||iter==maxEMIter)&&useGV)?TRUE:FALSE));
+      UpdateUttObs(genInfo, utt);
+      
+      /* reset heap */
+      ResetHeap(&fbInfo->ab->abMem);
+            
+      if (converged)
+         break;
+      
+      prev = curr;
+   }
 
    return;
 }

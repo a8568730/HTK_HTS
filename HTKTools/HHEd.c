@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hhed_version = "!HVER!HHEd:   3.4 [CUED 25/04/06]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.38 2007/10/10 04:26:11 zen Exp $";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.41 2007/10/29 09:01:10 zen Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -234,6 +234,7 @@ void Summary(void)
    printf("CM directory         - Convert models to pdf for speech synthesizer\n");
    printf("CO newHmmList        - COmpact identical HMM's by sharing same phys model\n");
    printf("CT directory         - Convert trees/questions for speech synthesizer\n");
+   printf("DM type macroname    - Delete macro from model-set\n");
    printf("DP s n id ...        - Duplicate the hmm set n times using id to differentiate\n");
    printf("                       the new hmms and macros.  Only macros the type of which\n");
    printf("                       appears in s will be duplicated, others will be shared.\n");
@@ -1188,11 +1189,15 @@ void TieState(ILink ilist, LabId macId)
       ti = TypicalState(ilist,macId);
    se = (StateElem *) ti->item;
    tsi = se->info;
+   if (tsi->nUse>0)
+      DeleteMacroStruct(hset,'s',tsi);
+   else
    tsi->nUse = 1;
    NewMacro(hset,fidx,'s',macId,tsi);
    for (i=ilist; i!=NULL; i=i->next) {
       se = (StateElem *)i->item; si = se->info;
       if (si != tsi) {
+         if (si->nUse>0) si->nUse--;
          se->info = tsi;
          ++tsi->nUse;
       }
@@ -1226,11 +1231,15 @@ void TieTrans(ILink ilist, LabId macId)
    
    hmm = ilist->owner;
    tran = hmm->transP;
+   if (GetUse(tran)>0)
+      DeleteMacroStruct(hset,'t',tran);
+   else
    SetUse(tran,1); 
    NewMacro(hset,fidx,'t',macId,tran);
-   for (i=ilist; i!=NULL; i=i->next) {
+   for (i=ilist->next; i!=NULL; i=i->next) {
       hmm = i->owner;
       if (hmm->transP != tran) {
+         if (GetUse(hmm->transP)>0) DecUse(hmm->transP);
          hmm->transP = tran;
          IncUse(tran);
       }
@@ -1248,6 +1257,9 @@ void TieDur(ILink ilist, LabId macId)
    if ((v=si->dur)==NULL)
       HError(2630,"TieDur: Attempt to tie null duration as macro %s",
              macId->name);
+   if (GetUse(v)>0)
+      DeleteMacroStruct(hset,'d',v);
+   else
    SetUse(v,1);
    NewMacro(hset,fidx,'d',macId,v);
    for (i=ilist->next; i!=NULL; i=i->next) {
@@ -1256,6 +1268,7 @@ void TieDur(ILink ilist, LabId macId)
          HError(-2630,"TieDur: Attempt to tie null duration to macro %s",
                 macId->name);
       if (si->dur != v) {
+         if (GetUse(si->dur)>0) DecUse(si->dur);
          si->dur = v;
          IncUse(v);
       }
@@ -1274,6 +1287,9 @@ void TieWeights(ILink ilist, LabId macId)
    if (v==NULL)
       HError(2630,"TieWeights: Attempt to tie null stream weights as macro %s",
              macId->name);
+   if (GetUse(v)>0)
+      DeleteMacroStruct(hset,'w',v);
+   else
    SetUse(v,1);
    NewMacro(hset,fidx,'w',macId,v);
    for (i=ilist->next; i!=NULL; i=i->next) {
@@ -1281,6 +1297,7 @@ void TieWeights(ILink ilist, LabId macId)
       if (si->weights==NULL)
          HError(-2630,"TieWeights: Attempt to tie null stream weights to macro %s",macId->name);
       if (si->weights != v) {
+         if (GetUse(si->weights)>0) DecUse(si->weights); 
          si->weights = v;
          IncUse(v);
       }
@@ -1294,6 +1311,15 @@ void VAdd(Vector a, Vector b)
    
    V = VectorSize(a);
    for (k=1; k<=V; k++) a[k] += b[k];
+}
+
+/* VMult: multiply vector a by n */
+void VMult(Vector a, int n)
+{
+   int k,V;
+   
+   V = VectorSize(a);
+   for (k=1; k<=V; k++) a[k] *= n;
 }
 
 /* VMax: max vector b to vector a */
@@ -1325,6 +1351,11 @@ void TieMean(ILink ilist, LabId macId)
    
    mp = (MixPDF *)ilist->item; tmean = mp->mean;
    tSize = VectorSize(tmean);
+   if (GetUse(tmean)>0) {
+      DeleteMacroStruct(hset,'u',tmean);
+      VMult(tmean,GetUse(tmean));
+   }
+   else
    SetUse(tmean,1);
    NewMacro(hset,fidx,'u',macId,tmean);
    for (i=ilist->next; i!=NULL; i=i->next) {
@@ -1335,6 +1366,7 @@ void TieMean(ILink ilist, LabId macId)
             HError(2630,"TieMean: Vector size mismatch %d vs %d",
                    tSize, vSize);
          VAdd(tmean,mp->mean);
+         if (GetUse(mp->mean)>0) DecUse(mp->mean);
          mp->mean = tmean;
          IncUse(tmean);
       }
@@ -1352,6 +1384,9 @@ void TieVar(ILink ilist, LabId macId)
    
    mp = (MixPDF *)ilist->item; tvar = mp->cov.var;
    tSize = VectorSize(tvar);
+   if (GetUse(tvar)>0)
+      DeleteMacroStruct(hset,'v',tvar);
+   else
    SetUse(tvar,1);
    NewMacro(hset,fidx,'v',macId,tvar);
    for (i=ilist->next; i!=NULL; i=i->next) {
@@ -1362,6 +1397,7 @@ void TieVar(ILink ilist, LabId macId)
             HError(2630,"TieVar: Vector size mismatch %d vs %d",
                    tSize, vSize);
          VMax(tvar,mp->cov.var);
+         if (GetUse(mp->cov.var)>0) DecUse(mp->cov.var);
          mp->cov.var = tvar; IncUse(tvar);
       }
    }
@@ -1378,6 +1414,9 @@ void TieInv(ILink ilist, LabId macId)
    
    mp = (MixPDF *)ilist->item; tinv = mp->cov.inv;
    tSize = NumRows(mp->cov.inv);
+   if (GetUse(tinv)>0)
+      DeleteMacroStruct(hset,'i',tinv);
+   else
    SetUse(tinv,1);
    NewMacro(hset,fidx,'i',macId,tinv);
    for (i=ilist->next; i!=NULL; i=i->next) {
@@ -1387,6 +1426,7 @@ void TieInv(ILink ilist, LabId macId)
          if (tSize != mSize)
             HError(2630,"TieInv: Matrix size mismatch %d vs %d",
                    tSize, mSize);
+         if (GetUse(mp->cov.inv)>0) DecUse(mp->cov.inv);
          mp->cov.inv = tinv; IncUse(tinv);
       }
    }
@@ -1403,6 +1443,9 @@ void TieXform(ILink ilist, LabId macId)
    
    mp = (MixPDF *)ilist->item; txform = mp->cov.xform;
    tr = NumRows(mp->cov.xform); tc = NumCols(mp->cov.xform);
+   if (GetUse(txform)>0)
+      DeleteMacroStruct(hset,'x',txform);
+   else
    SetUse(txform,1);
    NewMacro(hset,fidx,'x',macId,txform);
    for (i=ilist->next; i!=NULL; i=i->next) {
@@ -1411,6 +1454,7 @@ void TieXform(ILink ilist, LabId macId)
          mr = NumRows(mp->cov.xform); mc = NumCols(mp->cov.xform);
          if (tc != mc || tr != mr)
             HError(2630,"TieXform: Matrix size mismatch");
+         if (GetUse(mp->cov.xform)>0) DecUse(mp->cov.xform);
          mp->cov.xform = txform; IncUse(txform);
       }
    }
@@ -1426,11 +1470,15 @@ void TieMix(ILink ilist, LabId macId)
    
    me = (MixtureElem *)ilist->item; /* should choose max(Sigma) for */
    tmpdf = me ->mpdf;           /* consistency with tie states */
+   if (tmpdf->nUse>0)
+      DeleteMacroStruct(hset,'m',tmpdf);
+   else
    tmpdf->nUse = 1;
    NewMacro(hset,fidx,'m',macId,tmpdf);
    for (i=ilist->next; i!=NULL; i=i->next) {
       me = (MixtureElem *)i->item;
       if (me->mpdf!=tmpdf) {
+         if (me->mpdf->nUse>0) me->mpdf->nUse--;
          me->mpdf = tmpdf;
          ++tmpdf->nUse;
       }
@@ -1604,11 +1652,15 @@ void TiePDF(ILink ilist, LabId macId)
    if (joinSize==0) {  /* Tie StreamInfo */
       ste = (StreamElem *) ilist->item;
       tsti = ste->info;
-      tsti->nUse = 1;
+      if (tsti->nUse>0)
+         DeleteMacroStruct(hset,'p',tsti);
+      else
+         tsti->nUse = 1;
       NewMacro(hset,fidx,'p',macId,tsti);
-      for (i=ilist; i!=NULL; i=i->next) {
+      for (i=ilist->next; i!=NULL; i=i->next) {
          ste = (StreamElem *)i->item; sti = ste->info;
          if (sti != tsti) {
+            if (sti->nUse>0) sti->nUse--;
             ste->info = tsti;
             ++tsti->nUse;
          }
@@ -3014,7 +3066,7 @@ void IncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes)
    int vSize;
    DVector tsum, tsqr, asum, asqr;
    Boolean first=TRUE; 
-
+   
    const int S = no->nStream;
    
    for (s=1,first=TRUE; s<=S; s++) {
@@ -3365,7 +3417,7 @@ void GetCentroidStr (StreamInfo *sti, AccSumStrE *astr, Vector vfloor)
    MixPDF *mp;
    DVector sum, sqr;
    AccSumMixE *amix;
-   
+
    for (m=1; m<=astr->nMix; m++) {
       mp = sti->spdf.cpdf[m].mpdf;
       amix = astr->accme+m;
@@ -3381,7 +3433,7 @@ void GetCentroidStr (StreamInfo *sti, AccSumStrE *astr, Vector vfloor)
             if (applyVFloor && v<vfloor[k])
                v = (double)vfloor[k];
             mp->cov.var[k] = (float)v;
-         }
+   }
          tocc += occ; 
 
          FixDiagGConst(mp);  /* fix gConst */
@@ -3437,8 +3489,8 @@ void TieLeafNodes(Tree *tree, char *macRoot)
    double occ;
    ILink ilist,i;
    CLink cl;
-   char clnum[20];              /* cluster number */
-   int clidx;                   /* cluster index */
+   char clnum[20];                      /* cluster number */
+   int clidx;                           /* cluster index  */
    char buf[MAXSTRLEN],str[MAXSTRLEN];  /* construct mac name in this */
    Node *node;
    int s,j,numItems = 0;
@@ -3496,8 +3548,8 @@ void TieLeafNodes(Tree *tree, char *macRoot)
                if (useLeafStats)
                   GetCentroid(node->macro[j], cl, &no, s);
                j++;
-            }
          }
+      }
          if (tree->nActiveStr>1)
             id=GetLabId(buf,TRUE);
       }
@@ -4270,35 +4322,35 @@ void ConvertModelsCommand(void)
    Node *leaf, **array;
    StreamInfo *sti;
    Boolean isPipe;
-   
+
    ChkedAlpha("CM output directory name", dn);
    if (trace & T_BID) {
       printf("\nCM %s\n Convert current HMMSet into the hts_engine format\n",dn);
       fflush(stdout);
    }
-   
+
    /* check hset is valid for converting */
    if (hset->hsKind==DISCRETEHS)
       HError(9999,"ConvertModels: Only continuous HMMSet is supported");
    if (treeList==NULL)
       HError(2655,"ConvertModels: No trees loaded - use LT command");
-   
+
    /* if parent/adapt transforms have been set, apply them */
    if (hset->curXForm==NULL && hset->parentXForm!=NULL)
       ApplyHMMSetXForm(hset, hset->parentXForm, TRUE);
    if (hset->curXForm!=NULL)
       ApplyHMMSetXForm(hset, hset->curXForm, TRUE);
-   
+
    /* start conversion */
    strcpy(head,"pdf.");
-   
+
    for (s=1; s<=hset->swidth[0]; s++) {
       nMix = MaxMixInSetS(hset, s);
       if ((hset->msdflag[s] && nMix>2) || (!hset->msdflag[s] && nMix>1)) 
          HError(9999,"ConvertModels: Only single mixture system is supported");
       out[s]=FALSE;
-   }
-   
+}
+
    for (s=1; s<=hset->swidth[0]; s++) {
       if (!out[s]) {
          /* output vector size and number of pdfs for each tree */
@@ -4324,7 +4376,7 @@ void ConvertModelsCommand(void)
                }
             }
          }
-         
+
          /* output pdf (mixture weight, mean vector and covariance matrix) */
          for (i=2; i<=MaxStatesInSet(hset)+1; i++) {
             for (tree=treeList; tree!=NULL; tree=tree->next) {
@@ -4371,11 +4423,11 @@ void ConvertModelsCommand(void)
                               default:
                                  HError(999,"ConvertModels: not supported CovKind");
                               }
-                              
+
                               /* output variance value */
                               WriteFloat(file, &var, 1, TRUE);  /* this part is very dirty!! */
-                           }
-                           
+}
+
                            /* output space weight */
                            weight = sti->spdf.cpdf[1].weight;
                            WriteFloat(file, &weight, 1, TRUE);
@@ -5161,7 +5213,34 @@ void TieCommand(void)
    FreeItems(&ilist);
 }
 
-/* -------------------- TI - Tie Command ---------------------- */
+/* ----------------- DM - Delete Macro Command ---------------- */
+
+void DeleteMacroCommand(void)
+{
+   char type, macName[MAXSTRLEN];
+   LabId macId;
+   MLink macro;
+   
+   type = GetCh(&source);
+   ChkedAlpha("DM macro name", macName);
+   macId = GetLabId(macName,FALSE);
+   
+   if (trace & (T_BID | T_MAC)) {
+      printf("\nDM {}\n Delete given macro from model-set\n");
+      fflush(stdout);
+   }
+
+   DeleteMacro(hset, FindMacroName(hset,type,macId));
+   
+   if (trace & T_BID) {
+      printf(" DM: Macro ~%c %s was deleted\n", type, macName);
+      fflush(stdout);
+   }
+   
+   return;
+}
+
+/* ------------------ MM - Tie All Command -------------------- */
 
 /* MakeIntoMacrosCommand: tie all components in following itemlist */
 void MakeIntoMacrosCommand(void)
@@ -6786,7 +6865,7 @@ int MaxVecSize (CoList *list)
    
    if (list==NULL)
       return 0;
-      
+
    vSize = VectorSize(list->mp->mean);
 
    for (c=list->next; c!=NULL; c=c->next)
@@ -7481,13 +7560,13 @@ int BuildRegClusters (RegNode *rtree, const int nTerminals, Boolean nonSpeechNod
          nStrTerminals[n->list->stream]++;
       
       k++;
-  }
+   }
    
    if (trace&T_BID) {
       for (s=1; s<=hset->swidth[0]; s++)
          printf("stream %d: #terminals=%d\n", s, nStrTerminals[s]);
       fflush(stdout);
-   }
+  }
    
    /* free strTerminals, ch1, and ch2 */
    FreeSet(strTerminals);
@@ -8129,21 +8208,21 @@ void Initialise(char *hmmListFn)
 /* -------------------- Top Level of Editing ---------------- */
 
 
-static int  nCmds = 48;
+static int  nCmds = 49;
 
 static char *cmdmap[] = {"AT","RT","SS","CL","CM","CO","CT","JO","MU","TI","UF","NC",
                          "TC","UT","MT","SH","SU","SW","SK",
                          "RC",
                          "RO","RM","RN","RP",
                          "LS","QS","TB","TR","AU","GQ","MD","ST","LT",
-                         "MM","DP","HK","FC","DV","FA","FV","IX","PX","AX","PS","PR","DR","//","" };
+                         "MM","DP","HK","FC","DV","FA","FV","IX","PX","AX","PS","PR","DR","DM","//","" };
 
 typedef enum           { AT=1,RT , SS , CL , CM , CO , CT , JO , MU , TI , UF , NC ,
                          TC , UT , MT , SH , SU , SW , SK ,
                          RC ,
                          RO , RM , RN , RP ,
                          LS , QS , TB , TR , AU , GQ , MD , ST , LT ,
-                         MM , DP , HK , FC , DV, FA , FV , IX , PX , AX , PS , PR , DR , XX }
+                         MM , DP , HK , FC , DV, FA , FV , IX , PX , AX , PS , PR , DR , DM , XX }
 cmdNum;
 
 /* CmdIndex: return index 1..N of given command */
@@ -8212,6 +8291,7 @@ void DoEdit(char * editFn)
       case ST: ShowTreesCommand(); break;
       case LT: LoadTreesCommand(); break;
       case MM: MakeIntoMacrosCommand(); break;
+      case DM: DeleteMacroCommand(); break;
       case DP: DuplicateCommand(); break;
       case IX: InputXFormCommand(); break;
       case PX: ParentXFormCommand(); break;

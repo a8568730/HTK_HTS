@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *herest_version = "!HVER!HERest:   3.4 [CUED 25/04/06]";
-char *herest_vc_id = "$Id: HERest.c,v 1.19 2007/10/03 07:20:10 zen Exp $";
+char *herest_vc_id = "$Id: HERest.c,v 1.20 2007/10/04 06:50:23 zen Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -891,7 +891,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, HMMSet *dset, char *hm
 /* ------------------- Statistics Reporting  -------------------- */
 
 /* PrintStats: for given hmm */
-void PrintStats(HMMSet *hset,FILE *f, int n, HLink hmm, int numEgs)
+void PrintStats(HMMSet *hset,FILE *f, int n, HLink hmm, long numEgs)
 {
    WtAcc *wa;
    char buf[MAXSTRLEN];
@@ -900,7 +900,7 @@ void PrintStats(HMMSet *hset,FILE *f, int n, HLink hmm, int numEgs)
     
    N = hmm->numStates;
    ReWriteString(HMMPhysName(hset,hmm),buf,DBL_QUOTE);
-   fprintf(f,"%4d %14s %4d ",n,buf,numEgs);
+   fprintf(f,"%4d %14s %4ld ",n,buf,numEgs);
    for (i=2;i<N;i++) {
       si = hmm->svec[i].info;
       wa = (WtAcc *)((si->pdf+1)->info->hook);
@@ -1615,7 +1615,8 @@ void MLUpdateModels(HMMSet *hset, UPDSet uFlags)
    HSetKind hsKind;
    HMMScanState hss;
    HLink hmm;
-   int px,n,maxM;
+   int px,maxM;
+   long n;
 
    hsKind = hset->hsKind;
    maxM = MaxMixInSet(hset);
@@ -1635,14 +1636,14 @@ void MLUpdateModels(HMMSet *hset, UPDSet uFlags)
       hmm = hss.hmm;
       n = (long)hmm->hook;
       if (n<minEgs && !(trace&T_UPD))
-         HError(-2331,"UpdateModels: %s[%d] copied: only %d egs\n",
+         HError(-2331,"UpdateModels: %s[%d] copied: only %ld egs\n",
                 HMMPhysName(hset,hmm),px,n);
       if (trace&T_UPD) {
          if (n<minEgs)
-            printf("Model %s[%d] copied: only %d examples\n",
+            printf("Model %s[%d] copied: only %ld examples\n",
                    HMMPhysName(hset,hmm),px,n);
          else
-            printf("Model %s[%d] to be updated with %d examples\n",
+            printf("Model %s[%d] to be updated with %ld examples\n",
                    HMMPhysName(hset,hmm),px,n);
          fflush(stdout);
       }

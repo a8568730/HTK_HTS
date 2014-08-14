@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hmodel_version = "!HVER!HModel:   3.4 [CUED 25/04/06]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.20 2007/10/03 07:20:13 zen Exp $";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.21 2007/10/04 04:31:06 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -4249,8 +4249,7 @@ void SetIndexes(HMMSet *hset)
    StreamInfo *sti;
    MixPDF *mp;
    MLink m;
-   int h,nm,nsm,ns,nss,nsp,np;
-   long nt;
+   int h,nm,nsm,ns,nss,nsp,np,nt;
    
    /* Reset indexes */
    hset->indexSet = TRUE;
@@ -4277,10 +4276,10 @@ void SetIndexes(HMMSet *hset)
    NewHMMScan(hset,&hss);
    do {
       if (!IsSeenV(hss.hmm->transP)) {
-         SetHook(hss.hmm->transP,(Ptr)(++nt));
+         SetHook(hss.hmm->transP,(Ptr)((long)(++nt)));
          TouchV(hss.hmm->transP);
       }
-      hss.hmm->tIdx=(long)GetHook(hss.hmm->transP);
+      hss.hmm->tIdx=(int)((long)GetHook(hss.hmm->transP));
    } while (GoNextHMM(&hss));
    EndHMMScan(&hss);
    NewHMMScan(hset,&hss);

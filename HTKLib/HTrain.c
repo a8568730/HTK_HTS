@@ -77,7 +77,7 @@
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
 char *htrain_version = "!HVER!HTrain:   3.4 [CUED 25/04/06]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.9 2007/10/03 07:20:14 zen Exp $";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.10 2007/10/04 06:50:26 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1689,7 +1689,8 @@ Source LoadAccsParallel(HMMSet *hset, char *fname, UPDSet uFlags, int index)
    Source src;
    HLink hmm;
    HMMScanState hss;
-   int size,negs,m,s;
+   int size,m,s,i;
+   long negs;
    MixPDF* mp;
    
    if (trace & T_ALD)
@@ -1701,8 +1702,8 @@ Source LoadAccsParallel(HMMSet *hset, char *fname, UPDSet uFlags, int index)
    do {
       hmm = hss.hmm;
       CheckPName(&src,hss.mac->id->name); 
-      ReadInt(&src,&negs,1,ldBinary);
-      negs += (int)((long)hmm->hook); hmm->hook = (void *)((long)negs);
+      ReadInt(&src,&i,1,ldBinary); negs = (long) i;
+      negs += (long)hmm->hook; hmm->hook = (void *)negs;
       while (GoNextState(&hss,TRUE)) {
          while (GoNextStream(&hss,TRUE)) {
             LoadWtAcc(&src,((WtAcc *)hss.sti->hook)+index,hss.M);

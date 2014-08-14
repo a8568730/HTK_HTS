@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hlm_version = "!HVER!HLM:   3.4 [CUED 25/04/06]";
-char *hlm_vc_id = "$Id: HLM.c,v 1.4 2007/10/03 07:20:14 zen Exp $";
+char *hlm_vc_id = "$Id: HLM.c,v 1.5 2007/10/04 06:50:26 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -476,7 +476,7 @@ static int ReadNGrams(NGramLM *nglm,int n,int count, Boolean bin)
             else {
                ReadLMWord(wd);
                wdid = GetLabId(wd, FALSE);
-               idx = (wdid==NULL?0:(long)wdid->aux);
+               idx = (wdid==NULL?0:(int)((long)wdid->aux));
             }
             if (idx<1 || idx>nglm->vocSize)
                HError(8150,"ReadNGrams: Unseen word (%s) in %dGram",wd,n);

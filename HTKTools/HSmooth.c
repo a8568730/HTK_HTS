@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hsmooth_version = "!HVER!HSmooth:   3.4 [CUED 25/04/06]";
-char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.5 2007/10/03 07:20:10 zen Exp $";
+char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.6 2007/10/04 06:50:23 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -501,7 +501,7 @@ void Initialise(char *hmmListFn)
 /* ------------------- Statistics Reporting  -------------------- */
 
 /* PrintStats: for given hmm */
-void PrintStats(FILE *f, int n, HLink hmm, int numEgs)
+void PrintStats(FILE *f, int n, HLink hmm, long numEgs)
 {
    WtAcc *wa;
    char buf[MAXSTRLEN];
@@ -510,7 +510,7 @@ void PrintStats(FILE *f, int n, HLink hmm, int numEgs)
     
    N = hmm->numStates;
    ReWriteString(HMMPhysName(&hset,hmm),buf,DBL_QUOTE);
-   fprintf(f,"%4d %14s %4d ",n,buf,numEgs);
+   fprintf(f,"%4d %14s %4ld ",n,buf,numEgs);
    for (i=2;i<N;i++) {
       si = hmm->svec[i].info;
       wa = (WtAcc *)si->pdf[1].info->hook;
@@ -535,7 +535,7 @@ void StatReport(void)
    px=1;
    do {
       hmm = hss.hmm;
-      PrintStats(f,px,hmm,(int)((long)hmm->hook));
+      PrintStats(f,px,hmm,(long)hmm->hook);
       px++;
    } while (GoNextHMM(&hss));
    EndHMMScan(&hss);
@@ -1060,7 +1060,7 @@ void ResetHeaps(void)
    new files have newExt if set */
 void UpdateModels(void)
 {
-   int n;
+   long n;
    HLink hmm;
    HMMScanState hss;
    
@@ -1082,7 +1082,7 @@ void UpdateModels(void)
       hmm = hss.hmm;   
       n = (long)hmm->hook;
       if (n<minEgs && !(trace&T_OPT))
-         HError(-2428,"%s copied: only %d egs\n",HMMPhysName(&hset,hmm),n);
+         HError(-2428,"%s copied: only %ld egs\n",HMMPhysName(&hset,hmm),n);
       if (n>=minEgs) {
          if (uFlags & UPTRANS)
             UpdateTrans(hmm);
@@ -1091,10 +1091,10 @@ void UpdateModels(void)
       }
       if (trace&T_OPT) {
          if (n<minEgs)
-            printf("Model %s copied: only %d examples\n",
+            printf("Model %s copied: only %ld examples\n",
                    HMMPhysName(&hset,hmm),n);
          else
-            printf("Model %s updated with %d examples\n",
+            printf("Model %s updated with %ld examples\n",
                    HMMPhysName(&hset,hmm),n);
          fflush(stdout);
       }

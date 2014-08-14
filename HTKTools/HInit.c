@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hinit_version = "!HVER!HInit:   3.4 [CUED 25/04/06]";
-char *hinit_vc_id = "$Id: HInit.c,v 1.5 2007/10/03 07:20:10 zen Exp $";
+char *hinit_vc_id = "$Id: HInit.c,v 1.6 2007/10/04 04:32:44 zen Exp $";
 
 /*
    This program is used to initialise (or tune) a single hidden
@@ -625,7 +625,8 @@ void UniformSegment(void)
 {
    Sequence ***seqMat;   /* Matrix [2..numStates-1][1..numStreams][1..nKindS]*/
    Sequence seq;
-   int count,size,i,vqidx,s,n,m,M,j,k,sumItems;
+   int count,size,i,s,n,m,M,j,k,sumItems;
+   long vqidx;
    ClusterSet *cset;
    Cluster *c;
    StreamInfo *sti;
@@ -718,7 +719,7 @@ void UniformSegment(void)
             for (i=1; i<=seq->nItems; i++){
                vqidx = (long)GetItem(seq,i);
                if (vqidx<1 || vqidx>M)
-                  HError(2170,"UniformSegment: vqidx out of range[%d]",vqidx);
+                  HError(2170,"UniformSegment: vqidx out of range[%ld]",vqidx);
                ++dw[vqidx]; ++count;
             }
             for (m=1; m<=M; m++){

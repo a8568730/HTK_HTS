@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hbuild_version = "!HVER!HBuild:   3.4 [CUED 25/04/06]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 1.5 2007/10/03 07:20:10 zen Exp $";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.6 2007/10/04 06:50:23 zen Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.
@@ -430,8 +430,7 @@ Lattice *ProcessBoBiGram(MemHeap *latHeap, Vocab *voc, NGramLM *nLM)
    LArc *la;
 
    lmId ndx[NSIZE+1];  
-   int i,k;
-   long j;
+   int i,j,k;
    Lattice *lat;
    Boolean enterFound=FALSE;
    Boolean exitFound=FALSE;
@@ -471,7 +470,7 @@ Lattice *ProcessBoBiGram(MemHeap *latHeap, Vocab *voc, NGramLM *nLM)
                 nLM->wdlist[i]->name);
       ln = lat->lnodes+j;
       ln->word = wd; ln->n=0; ln->v=0;
-      wd->aux = (Ptr) j;
+      wd->aux = (Ptr)((long) j);
       if (nLM->wdlist[i] != enterId) {
          la = lat->larcs+k;
          la->start = lat->lnodes;
@@ -522,8 +521,7 @@ Lattice *ProcessMatBiGram(MemHeap *latHeap, Vocab *voc, MatBiLM *bg)
    LNode *ln,*fromNode,*toNode;
    LArc *la;
    Word wd,fromWd,toWd;
-   int i;
-   long j;
+   int i,j;
    int skipWord=0;
    Lattice *lat;
    Vector row;
@@ -550,7 +548,7 @@ Lattice *ProcessMatBiGram(MemHeap *latHeap, Vocab *voc, MatBiLM *bg)
                 bg->wdlist[i]->name);
       ln = lat->lnodes+j;
       ln->word = wd; ln->n=0; ln->v=0;
-      wd->aux = (Ptr) j;
+      wd->aux = (Ptr)((long) j);
       j++;
    }
    lat->nn = j;

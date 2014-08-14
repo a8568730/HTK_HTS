@@ -1,3 +1,126 @@
+2007-11-01 17:32  Heiga Zen
+
+	* HTKLib/HGen.c: Fix comment.
+
+2007-11-01 17:17  Heiga Zen
+
+	* HTKLib/HGen.c: Add go back mechanism to steepest ascent and
+	  Newton's method-based GV optimization.  Fix convergence check in
+	  EM-based iterative optimization.
+
+2007-11-01 15:04  Heiga Zen
+
+	* HTKLib/HGen.c: Modify convergence check part in GV_ParmGen().
+
+2007-11-01 13:45  Heiga Zen
+
+	* HTKLib/HGen.c: Fix the convergence check part of GV_ParmGen().
+
+2007-10-31 16:16  Heiga Zen
+
+	* configure, configure.ac, HTKLib/Makefile.in: Do not generate
+	  HTKLiblv.a if HDecode is not compiled.
+
+2007-10-31 15:39  Heiga Zen
+
+	* HTKLib/lbfgs.f: Use double.
+
+2007-10-30 03:52  Heiga Zen
+
+	* HTKLib/HGen.c: LBFGS-related fixes.
+
+2007-10-29 18:01  Heiga Zen
+
+	* HTKTools/HHEd.c: Fix the previous commit.
+
+2007-10-29 17:47  Heiga Zen
+
+	* HTKTools/HHEd.c, configure.ac: Add new command DM to delete
+	  macro.
+
+2007-10-29 17:20  Heiga Zen
+
+	* HTKLib/HGen.c: Change xtol from 1.0e-5 to 1.0e-15 (machine
+	  precision on x86).
+
+2007-10-17 18:08  Heiga Zen
+
+	* configure: Generate a new configure script for the new
+	  configure.ac.
+
+2007-10-17 17:46  Heiga Zen
+
+	* configure.ac: Fix the previous commit.
+
+2007-10-17 17:45  Heiga Zen
+
+	* configure.ac: Output an error message if required library is not
+	  find.
+
+2007-10-17 14:11  Heiga Zen
+
+	* HTKLib/HGen.c: Fix bug reported by Yi-Jian Wu: Boundary handling
+	  at the first frame doesn't work correctly.  It sometimes causes
+	  disorders in generated LSPs.
+
+2007-10-16 16:43  Heiga Zen
+
+	* .cvsignore, configure: Update configure.
+
+2007-10-16 01:37  Heiga Zen
+
+	* HTKLib/Makefile.in: Fix previous commit.
+
+2007-10-16 01:36  Heiga Zen
+
+	* HTKTools/Makefile.in, HTKLib/Makefile.in: Modify Makefile.in to
+	  compile lbfgs.f and link libg2c.
+
+2007-10-15 15:58  Heiga Zen
+
+	* HTKLib/: HGen.c, HGen.h: Modifications to support GV.
+
+2007-10-15 15:13  Heiga Zen
+
+	* configure.ac: Modifications to check settings for FORTRAN.
+
+2007-10-15 15:05  Heiga Zen
+
+	* HTKLib/: lbfgs.f, lbfgs.h: Add L-BFGS codes for GV.
+
+2007-10-15 14:57  Heiga Zen
+
+	* HTKTools/HCompV.c: Fix bug reported by Yi-Jian Wu: totalCount
+	  should be prepared for each stream separately because it may
+	  differ in MSD-HMMs.
+
+2007-10-15 11:10  Heiga Zen
+
+	* HTKTools/HCompV.c: Fix bug: totalCount should be prepared for
+	  each stream separately because it differs in MSD-HMMs.
+
+2007-10-14 15:45  Heiga Zen
+
+	* HTKTools/HHEd.c: Fix bug: unused macros are not perged if we try
+	  to run TI command for models which have tying structure.
+
+2007-10-10 13:26  Heiga Zen
+
+	* HTKTools/HHEd.c: Fix fatal bug: forget break in switch :-(
+
+2007-10-04 15:50  Heiga Zen
+
+	* HTKTools/HLEd.c, HTKTools/HMMIRest.c, HTKTools/HBuild.c,
+	  HTKTools/HERest.c, HTKTools/HLStats.c, HTKTools/HResults.c,
+	  HTKTools/HSmooth.c, HTKLib/HExactMPE.c, HTKLib/HFBLat.c,
+	  HTKLib/HLM.c, HTKLib/HTrain.c: Fix the previous 64-bit support
+	  fix.
+
+2007-10-04 13:31  Heiga Zen
+
+	* HTKLib/HModel.c, HTKTools/HInit.c: Fix the previous 64-bit
+	  support fix.
+
 2007-10-03 16:20  Heiga Zen
 
 	* HTKTools/HBuild.c, HTKTools/HDMan.c, HTKTools/HERest.c,

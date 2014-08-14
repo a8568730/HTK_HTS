@@ -1058,7 +1058,7 @@ void Initialise(char *hmmListFn)
 /* ------------------- Statistics Reporting  -------------------- */
 
 /* PrintStats: for given hmm */
-void PrintStats(FILE *f, int n, HLink hmm, int numEgs)
+void PrintStats(FILE *f, int n, HLink hmm, long numEgs)
 {
    WtAcc *wa;
    char buf[MAXSTRLEN];
@@ -1067,7 +1067,7 @@ void PrintStats(FILE *f, int n, HLink hmm, int numEgs)
     
    N = hmm->numStates;
    ReWriteString(HMMPhysName(&hset,hmm),buf,DBL_QUOTE);
-   fprintf(f,"%4d %14s %4d ",n,buf,numEgs);
+   fprintf(f,"%4d %14s %4ld ",n,buf,numEgs);
    for (i=2;i<N;i++) {
       si = hmm->svec[i].info;
       wa = (WtAcc *)(si->pdf[1].info->hook);

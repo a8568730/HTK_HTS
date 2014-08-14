@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hlstats_version = "!HVER!HLStats:   3.4 [CUED 25/04/06]";
-char *hlstats_vc_id = "$Id: HLStats.c,v 1.4 2007/10/03 07:20:10 zen Exp $";
+char *hlstats_vc_id = "$Id: HLStats.c,v 1.5 2007/10/04 06:50:23 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -574,7 +574,7 @@ void GatherStats(Transcription *t)
    /* Deal with transition into EXIT */
    if (doBigram) {
       for (j=ASIZE-1;j>0;j--) in[j]=in[j-1];
-      in[0]=(long)exitId->aux;
+      in[0]=(int)((long)exitId->aux);
       ae = GetAEntry(in,TRUE);
       ae->count++;
    }
@@ -592,7 +592,7 @@ int CmpCntr(const void *p1, const void *p2)
 
    c1=(Cntr *)p1; c2=(Cntr *)p2;
    diff=c1->count-c2->count;
-   if (diff==0) return((long)c2->name->aux-(long)c1->name->aux);
+   if (diff==0) return((int)((long)c2->name->aux-(long)c1->name->aux));
    else return(diff);
 }
 
@@ -882,7 +882,7 @@ void OutputMatBigram(void)
             ae->count=0;
       scale = (1.0 - fsum) / vsum;
       for (j=1;j<=lSize;j++) {
-         if (j==(long)enterId->aux) vec[j]=0.0;
+         if (j==(int)((long)enterId->aux)) vec[j]=0.0;
          else if (tot==0.0) vec[j]=1.0/(lSize-1);
          else vec[j]=bigFloor;
       }
@@ -904,7 +904,7 @@ void OutputMatBigram(void)
                ent += fent;
                nf--;  np++;
             }
-         if (i!=(long)exitId->aux){
+         if (i!=(int)((long)exitId->aux)){
             j=lTab[i].count;
             bent+=j*ent;tn+=j;
             if (tot==0.0)

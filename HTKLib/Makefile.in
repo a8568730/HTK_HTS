@@ -88,7 +88,9 @@ hlib = .
 HLIBS = ${exec_prefix}/lib/HTKLib.a
 
 CC     = @CC@
-CFLAGS := $(CFLAGS) -I. @CFLAGS@ 
+FC     = @F77@
+CFLAGS := $(CFLAGS) -I. @CFLAGS@
+FFLAGS := $(FFLAGS) -I. @FFLAGS@ 
 RANLIB = @RANLIB@
 AR     = @AR@
 INSTALL= @INSTALL@
@@ -121,6 +123,7 @@ objects = @HGRAF@ esig_asc.o \
 	HUtil.o \
 	HVQ.o \
 	HWave.o \
+	lbfgs.o \
 	strarr.o 
 
 lvobjects = $(basename @HGRAF@).lv.o esig_asc.lv.o \
@@ -152,7 +155,7 @@ lvobjects = $(basename @HGRAF@).lv.o esig_asc.lv.o \
 	HWave.lv.o \
 	strarr.lv.o 
 
-all:    HTKLib.a HTKLiblv.a
+all:	HTKLib.a @LIBLV@
 
 # This is the library used by HTKTools and HLMTools
 HTKLib.a: $(objects)

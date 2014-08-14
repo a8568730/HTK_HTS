@@ -43,117 +43,60 @@
 /*  PERFORMANCE OF THIS SOFTWARE.                                    */
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
-/*         File: HGen.c: Generate parameter sequence from HMM        */
+/*                 File: lbfgs.h: L-BFGS routine                     */
 /*  ---------------------------------------------------------------  */
 
+/* 
 
-/* !HVER!HGen:   2.0.1 [NIT 01/10/07] */
+ This L-BFGS FORTRAN source code is originally distributed in
 
-#ifndef _HGEN_H_
-#define _HGEN_H_
+   http://www.ece.northwestern.edu/~nocedal/lbfgs.html
+
+ We thank Prof. Jorge Nocedal of Northwestern University for permission to 
+ redistribute this LBFGS code in the HTS releases.
+
+
+ L-BFGS: Software for Large-scale Unconstrained Optimization
+   
+   L-BFGS is a limited-memory quasi-Newton code for unconstrained optimization. 
+   The code has been developed at the Optimization Technology Center, a joint 
+   venture of Argonne National Laboratory and Northwestern University.
+
+ Condition for Use: 
+
+   This software is freely available for educational or commercial purposes. We 
+   expect that all publications describing work using this software quote at 
+   least one of the references given below.
+
+ References
+
+   * J. Nocedal, "Updating Quasi-Newton Matrices with Limited Storage," 
+     Mathematics of Computation 35, pp. 773-782, 1980.
+
+   * D.C. Liu and J. Nocedal, "On the Limited Memory BFGS Method for Large Scale 
+     Optimization," Mathematical Programming B, 45, 3, pp. 503-528, 1989.
+
+*/
+
+
+/* !HVER!lbfgs:   2.1 [NIT 31/10/07] */
+
+#ifndef _LBFGS_H_
+#define _LBFGS_H_
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif 
 
-#define MAXWINNUM 10   /* maximum number of static + deltas */
+void lbfgs_(int* n, int* m, double* x, double* f, double* g,
+            int* diagco, double* diag, int* iprint, double* eps,
+            double* xtol, double* w, int* iflag);
 
-typedef enum {WLEFT=0, WRIGHT=1} WINWIDTH;
-typedef enum {CHOLESKY=0, MIX=1, FB=2} ParmGenType;
-
-typedef struct {
-   char fn[MAXWINNUM][MAXFNAMELEN];  /* window coefficient file(s) */
-   int num;                          /* number of windows */
-   int maxw[2];                      /* max width [0(left) 1(right)] */
-   int  **width;                     /* width [0..num-1][0(left) 1(right)] */
-   float **coef;                     /* window coefficient [0..num][length[1]..length[2]] */
-} Window;
-
-typedef struct {
-   char ext[MAXSTRLEN];  /* filename extension for this PdfStream */
-   Boolean *ContSpace;   /* space indexes */
-   Boolean fullCov;      /* full covariance flag */
-   int vSize;            /* vector size of observation vector */
-   int order;            /* vector size of static feature vector */
-   int t;                /* time counter */
-   int T;                /* number of frames */
-   int width;            /* band width */
-   Window win;           /* window coefficients */
-   Matrix mseq;          /* sequence of mean vector */
-   Covariance *vseq;     /* sequence of covariance matrices */
-   Matrix C;             /* generated parameter c */
-   DVector g;   
-   DVector c;
-   DMatrix WUW;
-   DVector WUM;
-   Vector gvmean;
-   Covariance gvcov;
-} PdfStream;
-
-typedef struct {
-   MemHeap *genMem;       /* generation memory heap */
-   
-   float speakRate;       /* speaking rate */
-   float MSDthresh;       /* MSD threshold */
-   Boolean modelAlign;    /* use model-level alignment from label */
-   Boolean stateAlign;    /* use state-level alignment from label */
-   HTime frameRate;       /* frame rate in 100ns */
-   
-   HMMSet *hset;          /* set of HMMs */
-   HMMSet *dset;          /* set of duration models */
-   int maxStates;         /* max # of states in hset */
-   
-   PdfStream pst[SMAX];   /* PdfStream for generation */
-   int nPdfStream[SMAX];  /* # of PdfStreams and its size */ 
-   
-   Transcription *labseq; /* input label sequence */
-   int labseqlen;         /* # of labels */
-   Label **label;         /* labels sequence */
-   
-   HLink *hmm;            /* a sentence HMM for given label */
-   HLink *dm;             /* a sentence duration models for given label */
-   
-   IMatrix sindex;        /* state sequence indexes */
-   IMatrix durations;     /* state durations */
-   int tframe;            /* total # of frames */
-} GenInfo;
-
-/* EXPORTED functions ------------------ */ 
-
-void InitGen(void);
-/*
-   Initialise module
-*/
-
-void ResetGen(void);
-/*
-   Reset module
-*/
-
-void SetTraceGen(void);
-/* 
-   Set trace level 
-*/
-
-void InitialiseGenInfo (GenInfo *, Transcription *);
-/*
- * Initialise GenInfo 
- */
-
-void ResetGenInfo (GenInfo *);
-/*
- * Reset GenInfo 
- */
- 
-void ParamGen (GenInfo *, UttInfo *, FBInfo *, ParmGenType);
-/*
-   Generate parameter sequence 
- */
-   
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* _HGEN_H_ */
+#endif  /* _LBFGS_H_ */
 
-/* ------------------------- End of HGen.h --------------------------- */
+/* ------------------------- End of lbfgs.h -------------------------- */
+

@@ -73,7 +73,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hfblat_version = "!HVER!HFBLat:   3.4 [CUED 25/04/06]";
-char *hfblat_vc_id = "$Id: HFBLat.c,v 1.8 2007/10/03 07:20:13 zen Exp $";
+char *hfblat_vc_id = "$Id: HFBLat.c,v 1.9 2007/10/04 06:50:26 zen Exp $";
 
 /*
   Performs forward/backward alignment
@@ -1428,7 +1428,8 @@ static void CheckData(char *fn, BufferInfo *info)
 /* StepForward: Step from 1 to T calc'ing Alpha columns and updating parms */
 static void StepForward()
 {
-   int q,t,negs;
+   int q,t;
+   long negs;
    DVector aqt,aqt1,bqt,bqt1,tmp;
    double occ, total_occ;
    HLink hmm, up_hmm;
@@ -1442,8 +1443,8 @@ static void StepForward()
   
    for (q=1;q<=fbInfo->Q;q++){  /* inc access counters */
       up_hmm = fbInfo->aInfo->ac[q].hmm;
-      negs = (int)((long)up_hmm->hook+1);
-      up_hmm->hook = (void *)((long)negs);
+      negs = (long)up_hmm->hook+1;
+      up_hmm->hook = (void *)negs;
    }
 
    for (t=1;t<=fbInfo->T;t++) {

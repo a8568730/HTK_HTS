@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hresults_version = "!HVER!HResults:   3.4 [CUED 25/04/06]";
-char *hresults_vc_id = "$Id: HResults.c,v 1.6 2007/10/03 07:20:10 zen Exp $";
+char *hresults_vc_id = "$Id: HResults.c,v 1.7 2007/10/04 06:50:23 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1172,7 +1172,7 @@ void ReadHMMList(char *fn)
    Source source;
    LabId labid;
    char buf[MAXSTRLEN];
-   long i;
+   int i;
 
    /* Once to find out how many lines */
    if(InitSource(fn,&source,HMMListFilter)<SUCCESS)
@@ -1192,16 +1192,16 @@ void ReadHMMList(char *fn)
       ReadWordFromLine(&source,buf);
       labid=GetLabId(buf,TRUE);
       names[i]=labid;
-      labid->aux = (Ptr)i;
+      labid->aux = (Ptr)((long) i);
    }
    CloseSource(&source);
 }
 
 int Index(LabId labid)
 {
-   long i;
+   int i;
    
-   i=(long)labid->aux;
+   i=(int)((long)labid->aux);
    if (wSpot && i==0) return(0);
    if (i<1 || i>nLabs || names[i]!=labid)
       HError(3331,"Index: Label %s not in list[%d of %d]",

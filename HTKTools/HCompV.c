@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hcompv_version = "!HVER!HCompV:   3.4 [CUED 25/04/06]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.5 2007/09/18 12:24:07 zen Exp $";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.7 2007/10/15 05:57:31 zen Exp $";
 
 /* 
    This program calculates a single overall variance vector from a
@@ -131,11 +131,11 @@ static FileFormat lff=UNDEFF;       /* label file format */
 static char *hmmfn=NULL;            /* HMM definition file name */
 static char *outfn=NULL;            /* output HMM file name (name only) */
 static char *outDir=NULL;           /* HMM output directory */
-static long totalCount=0;           /* total number of vector samples*/
 static Boolean meanUpdate = FALSE;  /* update means  */
 static Boolean saveBinary = FALSE;  /* save output in binary  */
 static float vFloorScale = 0.0;     /* if >0.0 then vFloor scaling */
 static Vector vFloorScaleStr = NULL; /* vFloorScale for each stream */ 
+static int nShowElem = 12;           /* # of elements to be shown */
 
 /* Major Data Structures */
 static MLink macroLink;             /* Link to specific HMM macro */
@@ -150,6 +150,7 @@ typedef struct {
    DMatrix      inv;                /* acc for sum of squares (full) */
    DVector      var;                /* acc for sum of squares (diag) */
    Covariance   fixed;              /* fixed (co)variance values */
+   long         totalCount;         /* total number of vector samples */
 } CovAcc;
 static CovAcc accs[SMAX];           /* one CovAcc for each stream */
 static Boolean fullcNeeded[SMAX];   /* true for each stream that needs full
@@ -196,6 +197,7 @@ void SetConfParms(void)
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
       if (GetConfBool(cParm,nParm,"UPDATEMEANS",&b)) meanUpdate = b;
       if (GetConfBool(cParm,nParm,"SAVEBINARY",&c)) saveBinary = c;
+      if (GetConfInt(cParm,nParm,"NSHOWELEM",&i)) nShowElem = i;
       if (GetConfFlt(cParm,nParm,"MINVARFLOOR",&d)) minVar = d;
       if (GetConfFlt(cParm,nParm,"VFLOORSCALE",&d)) vFloorScale = d;
       if (GetConfStr(cParm,nParm,"VFLOORSCALESTR",buf))
@@ -290,6 +292,7 @@ void Initialise(void)
          accs[s].fixed.var=CreateVector(&gstack,V);
          ZeroDVector(accs[s].var);
       }
+      accs[s].totalCount = 0;
    }
 
    /* Create an object to hold the input parameters */
@@ -326,12 +329,12 @@ void CalcCovs(void)
    Matrix fullMat;
    TriMat triMat;
    
-   if (totalCount<2)
-      HError(2021,"CalcCovs: Only %d speech frames accumulated",totalCount);
-   if (trace&T_TOP)
-      printf("%ld speech frames accumulated\n", totalCount);
-   n = (double)totalCount;     /* to prevent rounding to integer below */
    for (s=1; s<=hset.swidth[0]; s++){  /* For each stream   */
+      if (accs[s].totalCount<2)
+         HError(2021,"CalcCovs: Only %ld speech frames accumulated for stream %d", accs[s].totalCount, s);
+      if (trace&T_TOP)
+         printf("%ld speech frames accumulated for stream %d\n", accs[s].totalCount, s);
+      n = (double)accs[s].totalCount; /* to prevent rounding to integer below */
       V = hset.swidth[s];
       for (x=1; x<=V; x++)            /* For each coefficient ... */
          accs[s].meanSum[x] /= n;         /* ... calculate mean */
@@ -372,11 +375,11 @@ void CalcCovs(void)
       if (trace&T_COVS) {
          printf("Stream %d\n",s);
          if (meanUpdate)
-            ShowDVector(" Mean Vector ", accs[s].meanSum,12);
+            ShowDVector(" Mean Vector ", accs[s].meanSum, nShowElem);
          if (fullcNeeded[s]) {
-            ShowTriMat(" Inverse Covariance Matrix ",accs[s].fixed.inv,12,12);
+            ShowTriMat(" Inverse Covariance Matrix ",accs[s].fixed.inv,nShowElem,nShowElem);
          } else
-            ShowVector(" Variance Vector ", accs[s].fixed.var,12);
+            ShowVector(" Variance Vector ", accs[s].fixed.var,nShowElem);
       }
    }
 }
@@ -477,10 +480,9 @@ void AccVar(Observation obs)
    double val;
    Vector v;
 
-   totalCount++;
    for (s=1; s<=hset.swidth[0]; s++){
       v = obs.fv[s]; V = hset.swidth[s];
-      if (SpaceOrder(v)==V) 
+      if (SpaceOrder(v)==V) {
       for (x=1;x<=V;x++) { 
             val=(double)v[x];            
          accs[s].meanSum[x] += val;     /* accumulate mean */                             
@@ -490,6 +492,8 @@ void AccVar(Observation obs)
                   accs[s].inv[x][y] += val*(double)v[y];
          } else                         /* accumulate var */
                accs[s].var[x] += val*val;
+         }
+         accs[s].totalCount++;   /* accumulate occ */
       }
    }
 }
