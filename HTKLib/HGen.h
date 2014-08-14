@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -62,6 +62,7 @@ typedef struct {
    int maxw[2];                 /* max width [0(left) 1(right)] */
    int **width;                 /* width [0..num-1][0(left) 1(right)] */
    float **coef;                /* window coefficient [0..num][length[1]..length[2]] */
+   int **chkbound;              /* check boundary flag [0..num][length[1]..length[2]] */
    int max_L;
 } Window;
 
@@ -160,7 +161,7 @@ void JointProb(GenInfo * genInfo, UttInfo * utt);
    joint probability of given observations and state sequence
 */
 
-void ParamGen(GenInfo *, UttInfo *, FBInfo *, ParmGenType);
+Boolean ParamGen(GenInfo *, UttInfo *, FBInfo *, ParmGenType);
 /*
    Generate parameter sequence 
  */

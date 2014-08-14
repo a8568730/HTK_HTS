@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -43,7 +43,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmgens_version = "!HVER!HMGenS: 2.2 [NIT 07/07/11]";
-char *hmgens_vc_id = "$Id: HMGenS.c,v 1.52 2011/06/16 04:27:17 uratec Exp $";
+char *hmgens_vc_id = "$Id: HMGenS.c,v 1.54 2012/12/22 07:01:31 uratec Exp $";
 
 /*  
     This program is used to generate feature vector sequences 
@@ -843,7 +843,7 @@ void DoGeneration(char *labfn)
 {
    char labFn[MAXFNAMELEN], buf[MAXSTRLEN];
    int t;
-   Boolean eSep;
+   Boolean eSep, success;
    Transcription *tr;
 
    if (trace & T_TOP) {
@@ -871,20 +871,22 @@ void DoGeneration(char *labfn)
       utt->o[t] = MakeObservation(&gstack, hmset.swidth, hmset.pkind, FALSE, eSep);
 
    /* parameter generation */
-   ParamGen(genInfo, utt, fbInfo, type);
+   success = ParamGen(genInfo, utt, fbInfo, type);
 
-   /* output state durations and generated parameter sequences */
-   if (!stateAlign)
-      WriteStateDurations(labfn, genInfo);
-   WriteParms(labfn, genInfo);
+   if (success) {
+      /* output state durations and generated parameter sequences */
+      if (!stateAlign)
+         WriteStateDurations(labfn, genInfo);
+      WriteParms(labfn, genInfo);
+
+      /* increment total number of generated frames */
+      totalT += utt->T;
+      totalPr += utt->pr;
+   }
 
    /* free memory */
    Dispose(&gstack, ++utt->o);
    ResetGenInfo(genInfo);
-
-   /* increment total number of generated frames */
-   totalT += utt->T;
-   totalPr += utt->pr;
 
    return;
 }

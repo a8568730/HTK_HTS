@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmem_version = "!HVER!HMem:   3.4.1 [CUED 12/03/09]";
-char *hmem_vc_id = "$Id: HMem.c,v 1.11 2011/06/16 04:18:29 uratec Exp $";
+char *hmem_vc_id = "$Id: HMem.c,v 1.12 2012/12/22 07:01:28 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hfb_version = "!HVER!HFB:   3.4.1 [CUED 12/03/09]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.51 2011/06/16 04:18:28 uratec Exp $";
+char *hfb_vc_id = "$Id: HFB.c,v 1.55 2012/12/22 07:01:28 uratec Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -518,8 +518,8 @@ static void CreateTraceOcc(AlphaBeta *ab, UttInfo *utt)
    Vector *occa;
 
    ab->occa=(Vector *)New(&ab->abMem, utt->Q*sizeof(Vector));
+   ab->occa--;
    occa = ab->occa;
-   --occa;
    for (q=1;q<=utt->Q;q++){
       occa[q] = CreateVector(&ab->abMem, ab->al_qList[q]->numStates);
       ZeroVector(occa[q]);
@@ -1375,8 +1375,8 @@ static void Setdurprob(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
          }
          else {
             /* currently only single Gaussian is supported */
-            sti = ab->al_dList[q]->svec[2].info->pdf[j-1].info;
-            stw = ab->al_dList[q]->svec[2].info->weights[j-1];   /* stream weight */
+            sti = si->pdf[j-1].info;
+            stw = (si->weights!=NULL) ? si->weights[j-1] : 1.0;   /* stream weight */
             wa = (WtAcc *)sti->hook;
             if (GetHook(wa->c)==NULL) {
                /* calculate max duration */
@@ -2051,7 +2051,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
             norm = LZERO;
             for (mx=1; mx<=M; mx++) {
                if (alCompLevel) {
-                  al_ste = al_hmm->svec[j].info->pdf+1;
+                  al_ste = al_hmm->svec[j].info->pdf+s;
                   al_sti = al_ste->info;
                   if (al_sti->nMix != M)
                      HError(999,"Cannot align at the component level if number of components is different!");

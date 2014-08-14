@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmath_version = "!HVER!HMath:   3.4.1 [CUED 12/03/09]";
-char *hmath_vc_id = "$Id: HMath.c,v 1.15 2011/06/16 04:18:29 uratec Exp $";
+char *hmath_vc_id = "$Id: HMath.c,v 1.17 2012/12/22 07:01:28 uratec Exp $";
 
 /*
    This library provides math support in the following three areas
@@ -1347,7 +1347,7 @@ static void HholdVec(DVector tmp, int i0, int size,
    }
    norm = sqrt(norm);
 
-   if ( norm <= 0.0 ) {
+   if ( norm <= MINLARG ) { /* threshold is applied for nan and inf */
       *beta = 0.0;
    }
    else {

@@ -35,7 +35,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,7 +77,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hadapt_version = "!HVER!HAdapt:   3.4.1  [CUED 12/03/09]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.64 2011/06/16 04:15:50 uratec Exp $";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.66 2012/12/22 07:01:28 uratec Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>
@@ -174,9 +174,6 @@ static Boolean keepXFormDistinct = TRUE;
 static Boolean swapXForms = FALSE;     /* swap the transforms around after generating transform */
 static Boolean mllrCov2CMLLR= FALSE;   /* apply mllrcov transforms as cmllr transform */ 
 static Boolean mllrDiagCov = FALSE;    /* perform diagonal covariance adaptation */
-static Boolean useSMAPcriterion = FALSE;  /* perform SMAPLR and CSMAPLR adaptation */
-static Boolean SaveAllSMAPXForms = FALSE; /* Save intermediate matrices estimated in SMAP */
-static float   sigmascale = 1.0;          /* prior parameter for SMAP creterion*/
 
 static IntVec enableBlockAdapt = NULL;
 
@@ -194,6 +191,14 @@ static Boolean staticSemiTied = FALSE;
 static Boolean initNuisanceFR = TRUE;
 static Boolean initNuisanceFRIdent = FALSE;
 static Boolean saveSemiTiedBinary = FALSE;
+
+/* new variables to support MAPLR and VBLR */
+static Boolean useStructuralPrior = FALSE; /* perform Structural approach */
+static Boolean SaveAllNodeXForms = FALSE;  /* Save all XForms of intermediate nodes */
+static Boolean useMAPLR = FALSE;           /* perform MAPLR adaptation */
+static Boolean useVBLR = FALSE;            /* perform VBLR adaptation */
+static float   priorscale = 1.0;           /* prior parameter for VBLR */
+static float   vbvarfloor = 1.0E-20;       /* floor for VB posterior variance */
 
 /*------------------------------------------------------------------------*/
 /*    Support Routines for determining internal structures required       */
@@ -290,10 +295,17 @@ static void CheckAdaptOptions(XFInfo *xfinfo)
       if (xKind != SEMIT) 
          HError(999,"Can only use static semiTied with SEMIT transforms");
    }
-   if (((mllrDiagCov)|| (xKind == MLLRCOV)||(xKind == SEMIT)) && (useSMAPcriterion))
-     HError(999,"Can use only SMAP with MLLRMEAN and CMLLR currently");
-   if ((xfinfo->xformAdaptKind == BASE) && (useSMAPcriterion))
-     HError(999,"Can use only SMAP with TREE currently");
+   if (((mllrDiagCov)|| (xKind == MLLRCOV)||(xKind == SEMIT)) && (useStructuralPrior))
+     HError(999,"Can use only structural prior with MLLRMEAN and CMLLR currently");
+   if ((xfinfo->xformAdaptKind == BASE) && (useStructuralPrior))
+      HError(999,"Can use only STRUCTURALPRIOR with TREE currently");
+   if (!useMAPLR && !useVBLR && useStructuralPrior)
+      HError(999,"Can use only STRUCTURALPRIOR with MAPLR and VBLR");
+   if (((mllrDiagCov) || (xKind == MLLRCOV) || (xKind == SEMIT)) && (useMAPLR))
+      HError(999,"Can use only MAPLR with MLLRMEAN and CMLLR currently");
+   if (((mllrDiagCov) || (xKind == MLLRCOV) || (xKind == SEMIT) || (xKind == CMLLR)) && (useVBLR))
+      HError(999,"Can use only VBLR with MLLRMEAN currently");
+
 }
 
 /* EXPORT->CheckAdaptSetUp: check adapt setting */
@@ -357,8 +369,8 @@ void CheckAdaptSetUp (HMMSet *hset, XFInfo *xfinfo)
          default:
             break;
          }
+      }
    }
-}
 
    /* check band width */
    for (s=1; s<=hset->swidth[0]; s++) {
@@ -400,13 +412,13 @@ void CheckAdaptSetUp (HMMSet *hset, XFInfo *xfinfo)
          }
       }
    }
-
+   
    /* check threshold */
    if (xformSplitThresh==NULL) {
       xfinfo->xformSplitThresh = xformSplitThresh = CreateVector(&infoStack, hset->swidth[0]);
       for (s=1; s<=hset->swidth[0]; s++)
          xformSplitThresh[s] = -1000.0;
-      }
+   }
    switch (xKind) {
    case MLLRMEAN: 
       if (mllrMeanSplitThresh==NULL) {
@@ -567,9 +579,6 @@ void InitAdapt (XFInfo *xfinfo_hmm, XFInfo *xfinfo_dur)
       /* Adaptation transformation set-up for HMMs */
       if (xfinfo_hmm!=NULL) {
          if (GetConfBool(cParm,nParm,"SAVEFULLC",&b)) xfinfo_hmm->outFullC = b;
-         if (GetConfBool(cParm,nParm,"USESMAP",&b)) useSMAPcriterion = b;
-         if (GetConfBool(cParm,nParm,"SAVEALLSMAPXFORM",&b)) SaveAllSMAPXForms = b;
-         if (GetConfFlt(cParm,nParm,"SMAPSIGMA",&d)) sigmascale = (float) d;
          if (GetConfBool(cParm,nParm,"USEBIAS",&b)) xfinfo_hmm->useBias = b;
          if (GetConfStr (cParm,nParm,"SPLITTHRESH",buf)) 
             xfinfo_hmm->xformSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
@@ -683,9 +692,15 @@ void InitAdapt (XFInfo *xfinfo_hmm, XFInfo *xfinfo_dur)
       if (GetConfStr (cParm,nParm,"CMLLRADAPTKIND",buf))
             xfinfo_hmm->cmllrAdaptKind = Str2AdaptKind(buf);
          
-         CheckAdaptOptions(xfinfo_hmm);
-   }
+         if (GetConfBool(cParm,nParm,"USEMAPLR",&b)) useMAPLR = b;
+         if (GetConfBool(cParm,nParm,"USEVBLR",&b))  useVBLR = b;
+         if (GetConfBool(cParm,nParm,"USESTRUCTURALPRIOR",&b)) useStructuralPrior = b;
+         if (GetConfFlt(cParm,nParm,"PRIORSCALE",&d)) priorscale = (float) d;
+         if (GetConfBool(cParm,nParm,"SAVEALLNODEXFORMS",&b)) SaveAllNodeXForms = b;
 
+         CheckAdaptOptions(xfinfo_hmm);
+      }
+      
       /* Adaptation transformation set-up for duration models */
       if (xfinfo_dur!=NULL) {
          if (GetConfBool(cParm,nParm,"DURUSEBIAS",&b)) xfinfo_dur->useBias = b;
@@ -700,7 +715,7 @@ void InitAdapt (XFInfo *xfinfo_hmm, XFInfo *xfinfo_dur)
                   c = ParseString(c,tmp);
                if (ParseString(c,tmp)==NULL)
                   break;
-            }
+   }
          }
          if (GetConfStr (cParm,nParm,"DURBANDWIDTH",buf)) {
             for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
@@ -857,7 +872,7 @@ static float GetSplitThresh(XFInfo *xfinfo, float *thresh)
    }
       if (thresh[s]<min)
          min = thresh[s];
-   }
+}
 
    return min;
 }
@@ -1132,7 +1147,6 @@ static MInfo *CreateMInfo(MemHeap *x, MixPDF *mp, AdaptXForm *xform)
       case INVDIAGC:
          mi->cov.var = CreateSVector(x,size);
          CopyVector(mp->cov.var,mi->cov.var);
-         mi->gConst = mp->gConst;
          mi->ckind  = mp->ckind;
          break;
       default:
@@ -1144,13 +1158,14 @@ static MInfo *CreateMInfo(MemHeap *x, MixPDF *mp, AdaptXForm *xform)
       case DIAGC:
       case INVDIAGC:
          mi->cov.var = NULL;
-         mi->gConst = 0.0;
          mi->ckind = NULLC;
          break;
       default:
          HError(999,"CreateMInfo: bad ckind %d",mp->ckind);
       }
    }
+   mi->gConst = mp->gConst;
+
    return mi;
 }
 
@@ -1262,7 +1277,6 @@ static void UpdateMInfo(HMMSet *hset, AdaptXForm *xform)
 			   size = VectorSize(mp->mean);
                            mi->cov.var = CreateSVector(hset->hmem,size);
                            CopyVector(mp->cov.var,mi->cov.var);
-                           mi->gConst = mp->gConst;
                            mi->ckind  = mp->ckind; 
                         }
                         break;
@@ -1271,6 +1285,7 @@ static void UpdateMInfo(HMMSet *hset, AdaptXForm *xform)
                      }
                      nMInfo++;
                   }
+                  mi->gConst = mp->gConst;
                }
          }
       }
@@ -1428,14 +1443,14 @@ static void ResetComp(MixPDF *mp)
       case INVDIAGC:
          case FULLC:
             CopyVector(mi->cov.var,mp->cov.var);
-            mp->gConst = mi->gConst;
             mp->ckind  = mi->ckind;
          break;
       default:
             HError(999,"ResetComp: bad ckind %d",mi->ckind);
-         }
       }
    } 
+      mp->gConst = mi->gConst;
+   }
 }
 
 static DTriMat *CreateBlockTriMat(MemHeap *x, IntVec blockSize)
@@ -2079,13 +2094,13 @@ static double SetNodeOcc (RegNode *node, BaseClass *bclass)
             if (node->vsize>-1) {
                if (vsize != node->vsize)
                   HError(999,"Inconsistent vector size in baseclasses (%d %d)", vsize, node->vsize);
-         }
+            }
             else
                 node->vsize = vsize;
 
             node->nodeOcc += (GetRegAcc(mp))->occ;
+         }
       }
-   }
    }
 
    return node->nodeOcc;
@@ -2108,19 +2123,19 @@ static void SearchLeafNodes (RegNode *node, IntVec classes)
 
 
 static Boolean ParseNode (XFInfo *xfinfo, RegNode *node,  
-                          RegTree *rtree, IntVec classes, int xfindex)
+                          RegTree *rtree, IntVec classes, int pxfindex)
 {
-   int b,c,size,parentxfindex=0;
+   int b,c,size,xfindex=0;
    Boolean genXForm;
    IntVec lclasses;
 
-   Boolean GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes, int xfindex);
+   Boolean GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes, int pxfindex);
 
    genXForm = FALSE;
    if (trace&T_TRE) printf("Node %d (stream=%d, vsize=%d, occ=%f)\n",
                            node->nodeIndex,node->stream,node->vsize,node->nodeOcc);
 
-   if(useSMAPcriterion){
+   if(useStructuralPrior) {
 
      if (node->nodeOcc > rtree->thresh[node->stream]) {
        size = IntVecSize(classes);
@@ -2128,15 +2143,15 @@ static Boolean ParseNode (XFInfo *xfinfo, RegNode *node,
        ZeroIntVec(lclasses);
        SearchLeafNodes(node, lclasses);
        if (trace&T_TRE) 
-         printf("Prior Transform index: %d\n",xfindex);
-       if(GenXForm(node,xfinfo,lclasses,xfindex)){
-         parentxfindex = xfinfo->outXForm->xformSet->numXForms;
+         printf("Prior Transform index: %d\n",pxfindex);
+       if(GenXForm(node,xfinfo,lclasses,pxfindex)){
+          xfindex = xfinfo->outXForm->xformSet->numXForms;
        }
        FreeIntVec(&gstack,lclasses);
      } 
      if (node->numChild>0) { /* Not a terminal node */
        for (c=1;c<=node->numChild;c++)
-         ParseNode(xfinfo, node->child[c], rtree, classes, parentxfindex);
+         ParseNode(xfinfo, node->child[c], rtree, classes, xfindex);
      } 
      genXForm = TRUE;
 
@@ -2148,27 +2163,27 @@ static Boolean ParseNode (XFInfo *xfinfo, RegNode *node,
       ZeroIntVec(lclasses);
       if (node->numChild>0) { /* Not a terminal node */
          for (c=1;c<=node->numChild;c++)
-           if (ParseNode(xfinfo, node->child[c], rtree, lclasses, xfindex)) genXForm = TRUE;
+           if (ParseNode(xfinfo, node->child[c], rtree, lclasses, 0)) genXForm = TRUE;
          /* any of the children need a xform generate it */
-         if (genXForm) GenXForm(node,xfinfo,lclasses,xfindex);
+         if (genXForm) GenXForm(node,xfinfo,lclasses,0);
        } 
        else { /* Generate xform for this node */
          for (b=1;b<=IntVecSize(node->baseClasses);b++) lclasses[node->baseClasses[b]] = 1;
-         GenXForm(node,xfinfo,lclasses,xfindex);
-      }
-      FreeIntVec(&gstack,lclasses);
-      genXForm = FALSE;
+         GenXForm(node,xfinfo,lclasses,0);
+       }
+       FreeIntVec(&gstack,lclasses);
+       genXForm = FALSE;
      } 
      else {
-      if (node->numChild>0) { /* Not a terminal node */
+       if (node->numChild>0) { /* Not a terminal node */
          for (c=1;c<=node->numChild;c++)
-           ParseNode(xfinfo, node->child[c], rtree, classes, xfindex);
+           ParseNode(xfinfo, node->child[c], rtree, classes, 0);
        } 
        else { /* Mark baseclasses for adaptation */
          for (b=1;b<=IntVecSize(node->baseClasses);b++) classes[node->baseClasses[b]] = 1;
       }
-      genXForm = TRUE;
-   }
+       genXForm = TRUE;
+     }
    }
 
    return genXForm;
@@ -2186,7 +2201,7 @@ static void SearchOutputXforms(AdaptXForm *xform)
    if (HardAssign(xform)) {
      outassign = CreateIntVec(xform->mem,xform->bclass->numClasses);
      ZeroIntVec(outassign);
-   }
+      }
    else 
       HError(999,"Not currently supported");
 
@@ -2211,9 +2226,9 @@ static void SearchOutputXforms(AdaptXForm *xform)
         else 
           HError(999,"Not currently supported");
       }
-    }
-  }
-  
+   }
+}
+
   CopyIntVec(outassign, xform->xformWgts.assign);
   xform->xformSet->numXForms = numxforms;
   xform->xformSet->xforms = NULL;
@@ -2245,7 +2260,7 @@ static Boolean ParseTree (XFInfo *xfinfo)
    ParseNode(xfinfo, rtree->root, rtree, classes, 0);
    FreeIntVec(&gstack,classes);
 
-   if(useSMAPcriterion && (!SaveAllSMAPXForms))
+   if(useStructuralPrior && (!SaveAllNodeXForms))
      SearchOutputXforms(xform);
 
    if (xform->xformSet->numXForms == 0) return FALSE;
@@ -2518,17 +2533,40 @@ static void AccNodeStats(RegNode *node, AccStruct *accs, AdaptXForm *xform, IntV
    }
 }
 
-/* Add SMAP Prior to the accumulates */ 
-static void AddXFPrior(AccStruct *accs, AdaptXForm *xform, int xfindex)
+/* Add prior to the accumulates */ 
+static void AddIPrior(AccStruct *accs)
+{
+   int i,j;
+   int cnt,cnti,b,bsize;
+   Boolean useBias = accs->useBias;
+
+   for (b=1,cnti=1,cnt=1; b<=IntVecSize(accs->blockSize); b++) {
+      bsize = accs->blockSize[b];
+      for (i=1; i<=bsize; i++,cnti++) {
+         for (j=1; j<=bsize; j++) {
+            if (i==j)
+               accs->K[cnti][j] += priorscale;
+            accs->G[cnti][j][j] += priorscale;
+         }
+         if (useBias)
+            accs->G[cnti][bsize+1][bsize+1] += priorscale;
+      }
+      cnt += bsize;
+   }
+}
+
+/* Add structural prior to the accumulates */ 
+static void AddXFPrior(AccStruct *accs, AdaptXForm *xform, int pxfindex)
 {
    int i,j;
    int cnt,cnti,b,bsize;
    Boolean useBias = accs->useBias;
    LinXForm *pxf;
    XFormSet *xformSet;
+   double scale;
 
    xformSet = xform->xformSet;
-   pxf = xformSet->xforms[xfindex]; 
+   pxf = xformSet->xforms[pxfindex]; 
    if(IntVecSize(accs->blockSize) != IntVecSize(pxf->blockSize)){
      HError(999,"AddXFPrior (%d) does not match block number for transform (%d)",
         IntVecSize(accs->blockSize),IntVecSize(pxf->blockSize));
@@ -2544,33 +2582,51 @@ static void AddXFPrior(AccStruct *accs, AdaptXForm *xform, int xfindex)
          HError(999,"AddXFPrior (%d) does not match block size for transform (%d)",
             accs->blockSize[b],pxf->blockSize[b]);
       }
-      for (i=1; i<=bsize; i++,cnti++) {
-         for (j=1; j<=bsize; j++) {
-            accs->K[cnti][j] += pxf->xform[b][i][j]*sigmascale;
-            accs->G[cnti][j][j] += sigmascale;
+      if (useVBLR) {
+         scale = priorscale/(pxf->vbocc+priorscale);
+         for (i=1; i<=bsize; i++,cnti++) {
+            for (j=1; j<=bsize; j++) {
+               accs->K[cnti][j] += pxf->xform[b][i][j]*scale/pxf->vbvar[b][i][j];
+               accs->G[cnti][j][j] += scale/pxf->vbvar[b][i][j];
+            }
+            if (useBias) {
+               accs->K[cnti][bsize+1] += pxf->bias[cnti]*scale/pxf->vbvar[b][i][bsize+1];
+               accs->G[cnti][bsize+1][bsize+1] += scale/pxf->vbvar[b][i][bsize+1];
+            }
          }
-         if (useBias) {
-            accs->K[cnti][bsize+1] += pxf->bias[cnti]*sigmascale;
-            accs->G[cnti][bsize+1][bsize+1] += sigmascale;
-         }
+      }
+      else {
+         for (i=1; i<=bsize; i++,cnti++) {
+            for (j=1; j<=bsize; j++) {
+               accs->K[cnti][j] += pxf->xform[b][i][j]*priorscale;
+               accs->G[cnti][j][j] += priorscale;
+            }
+            if (useBias) {
+               accs->K[cnti][bsize+1] += pxf->bias[cnti]*priorscale;
+               accs->G[cnti][bsize+1][bsize+1] += priorscale;
+            }
     }
+  }
       cnt += bsize;
    }
 }
 
 /* Add Piror to the statistics Currently MLLRMEAN and CMLLR are supported */
-static void AddPrior(AccStruct *accs, AdaptXForm *xform, int xfindex)
+static void AddPrior(AccStruct *accs, AdaptXForm *xform, int pxfindex)
 {
   
    switch (accs->xkind) {
    case MLLRMEAN:
    case CMLLR:
-     AddXFPrior(accs,xform,xfindex);
+     if (pxfindex==0)
+        AddIPrior(accs);
+     else
+        AddXFPrior(accs,xform,pxfindex);
      break;
    default :
      HError(999,"Transform kind not currently supported");
      break;
-  }
+   }
 
 }
 
@@ -2867,6 +2923,80 @@ void ResetObsCache(XFInfo *xfinfo)
 /*                          Adaptation Application                         */
 /*------------------------------------------------------------------------*/
 
+/* CalcVBLRConst: calculate constant value for VB E-step */
+static float CalcVBLRConst(LinXForm *linXForm, MixPDF *mp)
+{
+   float vblrConst;
+   double tmp;
+   int i,j;
+   int size,bsize;
+   int cnt,cnti,cntj;
+   int b;
+   Vector mean,var;
+   Vector vbvar;
+
+   size = VectorSize(linXForm->vbvar[1][1]);
+   if (((linXForm->bias == NULL) && (size == linXForm->vecSize + 1)) || ((linXForm->bias != NULL) && (size == linXForm->vecSize)))
+      HError(999,"Size of VBVAR is not correct: VectorSize(linXForm->vbvar[1][1]) = %d", size);
+
+   mean = mp->mean;
+   var  = mp->cov.var;
+   tmp  = 0.0;
+   for (b=1,cnti=1,cnt=1;b<=IntVecSize(linXForm->blockSize);b++) {
+      bsize = linXForm->blockSize[b];
+      for (i=1;i<=bsize;i++,cnti++) {
+         vbvar = linXForm->vbvar[b][i];
+         for (j=1,cntj=cnt;j<=bsize;j++,cntj++) {
+            tmp += vbvar[j] * mean[cntj] * mean[cntj] / var[cnti];
+         }
+         if (linXForm->bias != NULL) {
+            tmp += vbvar[bsize+1] / var[cnti];
+         }
+      }
+      cnt += bsize;
+   }
+   vblrConst = tmp;
+
+   return vblrConst;
+}
+
+/* CalcVBLRConstINV: calculate constant value for VB E-step */
+static float CalcVBLRConstINV(LinXForm *linXForm, MixPDF *mp)
+{
+   float vblrConst;
+   double tmp;
+   int i,j;
+   int size,bsize;
+   int cnt,cnti,cntj;
+   int b;
+   Vector mean,var;
+   Vector vbvar;
+
+   size = VectorSize(linXForm->vbvar[1][1]);
+   if (((linXForm->bias == NULL) && (size == linXForm->vecSize + 1)) || ((linXForm->bias != NULL) && (size == linXForm->vecSize)))
+      HError(999,"Size of VBVAR is not correct: VectorSize(linXForm->vbvar[1][1]) = %d", size);
+
+   mean = mp->mean;
+   var  = mp->cov.var;
+   tmp  = 0.0;
+   for (b=1,cnti=1,cnt=1;b<=IntVecSize(linXForm->blockSize);b++) {
+      bsize = linXForm->blockSize[b];
+      for (i=1;i<=bsize;i++,cnti++) {
+         vbvar = linXForm->vbvar[b][i];
+         for (j=1,cntj=cnt;j<=bsize;j++,cntj++) {
+            tmp += vbvar[j] * mean[cntj] * mean[cntj] * var[cnti];
+         }
+         if (linXForm->bias != NULL) {
+            tmp += vbvar[bsize+1] * var[cnti];
+         }
+      }
+      cnt += bsize;
+   }
+   vblrConst = tmp;
+
+   return vblrConst;
+}
+
 /* ApplyXForm2Vector: apply xform to a given vector (mean' = A*mean+b) */
 static void ApplyXForm2Vector(LinXForm *linXForm, Vector mean)
 {  
@@ -2907,7 +3037,7 @@ static void ApplyXForm2Vector(LinXForm *linXForm, Vector mean)
 
 /* ApplyCMLLRXForm2Vector: apply CMLLR XForm to mean vector (mean' = A^{-1}*(mean-b)) */
 static void ApplyCMLLRXForm2Vector(LinXForm *linXForm, Vector mean)
-{  
+{
    Vector vec, bias;
    int b,bsize;
    Matrix A;
@@ -2991,8 +3121,8 @@ static void ApplyXForm2Cov(LinXForm *linXForm, Covariance *cov, CovKind ckind)
 }
 
 /* ApplyXForm2TriMat: Apply XForm to a given triangular matrix (m = A*t) */ 
-static void ApplyXForm2TriMat (LinXForm *linXForm, TriMat t, Matrix m)
-{
+static void ApplyXForm2TriMat(LinXForm *linXForm, TriMat t, Matrix m)
+{  
    int size,b,bsize;
    Matrix A,mat;
    float tmp;
@@ -3049,7 +3179,7 @@ static void DiagApplyMat2TXForm(LinXForm *linXForm, Matrix m, Vector v)
       }
       cnt += bsize;
    }
-   if (linXForm->bias != NULL) HError(999,"Assumes there is no bias in transform");  
+   if (linXForm->bias != NULL) HError(999,"Assumes there is no bias in transform");
 }
 
 /* ConvFullCov: store diag covariance in full covariance form */
@@ -3101,7 +3231,7 @@ static void ConvFullCov (HMMSet *hset, MixPDF *mp)
    
    return;
 }
-      
+
 /* CompFXForm: Feature-Space adaptation */
 static Vector CompFXForm(MixPDF *mp, Vector svec, AdaptXForm *xform, AInfo *ai, LogFloat *det)
 {
@@ -3173,6 +3303,14 @@ static void CompXForm(MixPDF *mp, AdaptXForm *xform, AInfo *ai, Boolean full)
     xformSet = xform->xformSet;
     switch (xformSet->xkind) {
     case MLLRMEAN:
+         if (useVBLR) {
+            if (mp->ckind != DIAGC && mp->ckind != INVDIAGC)
+               HError(999,"Only DIAGC and INVDIAG supported for VBLR");
+            if (mp->ckind == DIAGC)
+               mp->gConst += CalcVBLRConst(xformSet->xforms[numXf],mp);
+            else if (mp->ckind == INVDIAGC)
+               mp->gConst += CalcVBLRConstINV(xformSet->xforms[numXf],mp);
+         }
       ApplyXForm2Vector(xformSet->xforms[numXf],mp->mean);
       break;
     case MLLRCOV:
@@ -3233,7 +3371,7 @@ static void CompXForm(MixPDF *mp, AdaptXForm *xform, AInfo *ai, Boolean full)
 static LinXForm *CreateLinXForm(MemHeap *x,int vsize,IntVec blockSize,Boolean useBias)
 {
    LinXForm *xf;
-   int b,bsize,size;
+   int b,bsize,size,j,k;
 
    xf = (LinXForm *)New(x,sizeof(LinXForm));
    xf->det = 0;
@@ -3252,6 +3390,25 @@ static LinXForm *CreateLinXForm(MemHeap *x,int vsize,IntVec blockSize,Boolean us
       HError(999,"Incompatable xform sizes %d and %d (block)",vsize,size);
    if (useBias) xf->bias = CreateSVector(x,size);
    else xf->bias = NULL;
+
+   if (useVBLR) {
+      xf->vbvar = (Vector **)New(x,(IntVecSize(blockSize)+1)*sizeof(Vector *));
+      for (b=1;b<=IntVecSize(blockSize);b++) {
+         bsize = blockSize[b];
+         xf->vbvar[b] = (Vector *)New(x,(bsize+1)*sizeof(Vector));
+         size = bsize;
+         if (useBias) size++;
+         for (j=1;j<=bsize;j++) {
+            xf->vbvar[b][j] = CreateVector(x,size);
+            ZeroVector(xf->vbvar[b][j]);
+            for (k=1;k<=size;k++)
+               xf->vbvar[b][j][k] = 1.0/priorscale;
+         }
+      }
+   }
+   else xf->vbvar = NULL;
+   xf->vbocc = 0.0;
+
    return xf;
 }
 
@@ -3386,6 +3543,7 @@ static void EstMLLRMeanXForm(AccStruct *accs, LinXForm *xf)
    bias = xf->bias; 
    if (bias==NULL) uBias = FALSE;
    else uBias = TRUE;
+   if (useVBLR) xf->vbocc = accs->occ;
    for (b=1,cnti=1;b<=IntVecSize(accs->blockSize);b++) {
       if ((enableBlockAdapt == NULL) || (enableBlockAdapt[b] == 1)) {
          bsize = accs->blockSize[b];
@@ -3396,6 +3554,18 @@ static void EstMLLRMeanXForm(AccStruct *accs, LinXForm *xf)
          A = xf->xform[b]; 
          ZeroMatrix(A); 
          for (i=1;i<=bsize;i++,cnti++) {
+            if (useVBLR) {
+               for (j=1; j<=bsize; j++) {
+                  xf->vbvar[b][i][j] = 1.0 / accs->G[cnti][j][j];
+                  if (xf->vbvar[b][i][j] < vbvarfloor)
+                     xf->vbvar[b][i][j] = vbvarfloor;
+               }
+               if (uBias) {
+                  xf->vbvar[b][i][dim] = 1.0 / accs->G[cnti][dim][dim];
+                  if (xf->vbvar[b][i][dim] < vbvarfloor)
+                     xf->vbvar[b][i][dim] = vbvarfloor;
+               }
+            }
             Tri2DMat(accs->G[cnti],invG);
             InvertG(invG, invG, i, bsize, accs->bandWidth[b], uBias);
             for (j=1; j<=bsize; j++) {
@@ -4634,12 +4804,12 @@ static void EstXForm(AccStruct *accs, XFInfo *xfinfo, IntVec classes)
     printf("Estimated XForm %d using %f observations\n",xformSet->numXForms,accs->occ);
 }
 
-Boolean GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes, int xfindex)
+Boolean GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes, int pxfindex)
 {
    AccStruct *accs;
    int class=1,b;
    IntVec blockSize,bandWidth;
-   
+  
    AdaptXForm *xform = xfinfo->outXForm;
    AdaptXForm *diagCovXForm = xfinfo->diagCovXForm;
   
@@ -4660,8 +4830,8 @@ Boolean GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes, int xfindex)
    else 
          accs = CreateAccStruct(&gstack,xfinfo,node->vsize,blockSize,bandWidth);
    AccNodeStats(node,accs,xform,classes);
-      if(xfindex>0)
-         AddPrior(accs,xform, xfindex);
+      if (useVBLR || useMAPLR)
+         AddPrior(accs,xform,pxfindex);
       EstXForm(accs,xfinfo,classes);
    for (b=1;b<=IntVecSize(classes);b++)
       if (classes[b] == 1) {
@@ -4723,8 +4893,8 @@ static Boolean GenClassXForm(XFInfo *xfinfo)
       mp = ((MixtureElem *)i->item)->mpdf;
       AccMixPDFStats(xform->hset,mp,accs);
     }
-    /* Use last component of the baseclass to access baseclass stats */
-    if (AccAdaptBaseTriMat(xform))  AccBaseClassStats(mp,accs);
+         /* Use last component of the baseclass to access baseclass stats */
+         if (AccAdaptBaseTriMat(xform))  AccBaseClassStats(mp,accs);
    
          /* get threshold for this base class */
          s = bclass->stream[b];
@@ -4737,18 +4907,20 @@ static Boolean GenClassXForm(XFInfo *xfinfo)
             printf(")\n"); 
    
          if ((accs->dim>0) && ((xform->xformSet->xkind==SEMIT) || (accs->occ > thresh[s]))) {
+            if (useVBLR || useMAPLR)
+               AddIPrior(accs);
             EstXForm(accs,xfinfo,classes);
-      xform->xformWgts.assign[b] = xform->xformSet->numXForms;
-      if (mllrDiagCov) 
-	diagCovXForm->xformWgts.assign[b] = diagCovXForm->xformSet->numXForms;
+            xform->xformWgts.assign[b] = xform->xformSet->numXForms;
+            if (mllrDiagCov) 
+               diagCovXForm->xformWgts.assign[b] = diagCovXForm->xformSet->numXForms;
          } 
          else {
-       xform->xformWgts.assign[b] = 0;
-    }
-    Dispose(&gstack,accs);
-  }
+            xform->xformWgts.assign[b] = 0;
+         }
+         Dispose(&gstack,accs);
+      }
    }
-  return TRUE;
+   return TRUE;
 }
 
 InputXForm *AdaptXForm2InputXForm (HMMSet *hset, AdaptXForm *xform)
@@ -4795,7 +4967,7 @@ InputXForm *AdaptXForm2InputXForm (HMMSet *hset, AdaptXForm *xform)
             v[i] = ixform->xform->vFloor[i];
          m->structure = v;
       }
-   } 
+    }
    else {
       for (s=1,cnt=1; s<=hset->swidth[0]; s++) {
          strcpy(mac,"varFloor");
@@ -4806,7 +4978,7 @@ InputXForm *AdaptXForm2InputXForm (HMMSet *hset, AdaptXForm *xform)
             v = (SVector)m->structure;
             for (i=1; i<=hset->swidth[s]; i++,cnt++)
                v[i] = ixform->xform->vFloor[cnt];
-         }
+  }
       }
    }
    ixform->xform->vFloor = NULL;
@@ -4864,7 +5036,7 @@ static AdaptXForm *CreateBaseAdaptXForm(HMMSet *hset, XFInfo *xfinfo, char *xfor
    else 
       HError(999,"Not currently supported");
    /* create space for maximum number of transforms */
-   if(useSMAPcriterion){
+   if(useStructuralPrior){
       xformSet->xforms = 
          (LinXForm **)New(hset->hmem,(xform->rtree->numNodes+xform->rtree->numTNodes+1)*sizeof(LinXForm *));
    }else{
@@ -5272,7 +5444,7 @@ void ResetXFormHMMSet(HMMSet *hset)
 LinXForm *CopyLinXForm(MemHeap *x, LinXForm *xf)
 {
    LinXForm *nxf;
-   int bl,bsize;
+   int bl,bsize,j,size;
 
    nxf = (LinXForm *)New(x,sizeof(LinXForm));
    nxf->vecSize = xf->vecSize;
@@ -5280,6 +5452,9 @@ LinXForm *CopyLinXForm(MemHeap *x, LinXForm *xf)
    CopyIntVec(xf->blockSize,nxf->blockSize);
    nxf->det = xf->det;
    nxf->nUse = 0; /* new linXForm */
+   nxf->vbvar = NULL;
+   nxf->vbocc = 0.0;
+
    if (xf->bias != NULL) {
       nxf->bias = CreateSVector(x,xf->vecSize);
       CopyVector(xf->bias,nxf->bias);
@@ -5299,6 +5474,22 @@ LinXForm *CopyLinXForm(MemHeap *x, LinXForm *xf)
       nxf->xform[bl] = CreateSMatrix(x,bsize,bsize);
       CopyMatrix(xf->xform[bl],nxf->xform[bl]);
    }
+
+   if (useVBLR && xf->vbvar != NULL) {
+      nxf->vbvar = (Vector **)New(x,(IntVecSize(xf->blockSize)+1)*sizeof(Vector *));
+      for (bl=1;bl<=IntVecSize(xf->blockSize);bl++) {
+         bsize = xf->blockSize[bl];
+         nxf->vbvar[bl] = (Vector *)New(x,(bsize+1)*sizeof(Vector));
+         size = bsize;
+         if (xf->bias != NULL) size++;         
+         for (j=1;j<=bsize;j++) {
+            nxf->vbvar[bl][j] = CreateVector(x,size);
+            CopyVector(xf->vbvar[bl][j],nxf->vbvar[bl][j]);
+         }
+      }
+      nxf->vbocc = xf->vbocc;
+   }
+
    return nxf;
 }
 
@@ -5501,7 +5692,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                   xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
                      SetParentXForm(hset,xfinfo,xfinfo->paXForm);
                      SetAccCache(xfinfo);
-                  }
+               }
                   if (xfinfo->al_hset!=NULL && xfinfo->use_alPaXForm) {
                      MakeFN(xfinfo->cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
                      MakeFN(xfinfo->cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
@@ -5512,8 +5703,8 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                   else
                      xfinfo->al_paXForm = xfinfo->paXForm;
                }
-               }
             }
+         } 
          else if (xfinfo->usePaXForm || xfinfo->use_alPaXForm) { /* set-up the initial parent transform information */
             maskMatch = MaskMatch(xfinfo->paSpkrPat,paspkr,datafn);
             if (!maskMatch)
@@ -5532,7 +5723,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                xfinfo->al_paXForm = LoadOneXForm(xfinfo->al_hset,newMn,newFn);
                SetParentXForm(xfinfo->al_hset,xfinfo,xfinfo->al_paXForm);
                SetAccCache(xfinfo);
-         }
+            }
             else
                xfinfo->al_paXForm = xfinfo->paXForm;
          }
@@ -5540,8 +5731,8 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
          if (datafn!=NULL) {
             xfinfo->nspkr++;
             strcpy(xfinfo->coutspkr,spkr);
-         }      
-      } 
+            }
+         }
       else if (xfinfo->usePaXForm || xfinfo->use_alPaXForm) { 
          /* check to see whether the parent transform changes */
          /* this should not happen */
@@ -5550,7 +5741,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
             HError(999,"Changing parent transform out of sync with output transform (%s %s)",
                    paspkr,xfinfo->cpaspkr);
       }
-      }
+   } 
    else if ((xfinfo->usePaXForm || xfinfo->use_alPaXForm) && (datafn != NULL)) {
       /* Parent transform specified with no output transform */
       maskMatch = MaskMatch(xfinfo->paSpkrPat,paspkr,datafn);

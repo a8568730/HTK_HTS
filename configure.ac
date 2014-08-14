@@ -27,7 +27,7 @@
 #           http://hts.sp.nitech.ac.jp/                             #
 # ----------------------------------------------------------------- #
 #                                                                   #
-#  Copyright (c) 2001-2011  Nagoya Institute of Technology          #
+#  Copyright (c) 2001-2012  Nagoya Institute of Technology          #
 #                           Department of Computer Science          #
 #                                                                   #
 #                2001-2008  Tokyo Institute of Technology           #
@@ -67,12 +67,12 @@
 
 # After editing this file, run "autoconf" to regenerate "configure".
 
-AC_INIT(HTS,2.2, hts-users@sp.nitech.ac.jp)
+AC_INIT(HTS,2.3 alpha, hts-users@sp.nitech.ac.jp)
 AC_COPYRIGHT(Copyright 2003-2009 University of Cambridge)
-AC_COPYRIGHT(Copyright 2001-2011 Nagoya Institute of Technology)
+AC_COPYRIGHT(Copyright 2001-2012 Nagoya Institute of Technology)
 AC_COPYRIGHT(Copyright 2001-2008 Tokyo Institute of Technology)
 
-AC_PREFIX_DEFAULT(/usr/local/HTS-2.2beta)
+AC_PREFIX_DEFAULT(/usr/local/HTS-2.3alpha)
 
 dnl Checks for programs.
 AC_PROG_MAKE_SET
@@ -238,7 +238,7 @@ case "$host" in
 		;;				
 		i386*darwin*)
 				CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' -I/usr/include/malloc $CFLAGS"
-				FFLAGS="-gdwarf-2 -O2 $$FFLAGS"
+				FFLAGS="-gdwarf-2 -O2 $FFLAGS"
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
 				ARCH=darwin
 				Objcopy=echo
@@ -249,7 +249,7 @@ case "$host" in
 		;;				
 		*darwin*)
 				CFLAGS="-ansi -g -O2 -DNO_AUDIO -D'ARCH=\"darwin\"' -I/usr/include/malloc $CFLAGS"
-				FFLAGS="-gdwarf-2 -O2 $$FFLAGS"
+				FFLAGS="-gdwarf-2 -O2 $FFLAGS"
 				LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
 				ARCH=darwin
 				Objcopy=echo

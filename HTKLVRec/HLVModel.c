@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -73,7 +73,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hlvmodel_version = "!HVER!HLVmodel:   3.4.1 [GE 12/03/09]";
-char *hlvmodel_vc_id = "$Id: HLVModel.c,v 1.8 2011/02/10 08:23:06 uratec Exp $";
+char *hlvmodel_vc_id = "$Id: HLVModel.c,v 1.9 2012/12/22 07:01:28 uratec Exp $";
 
 
 #include "HShell.h"

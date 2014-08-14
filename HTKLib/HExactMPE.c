@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -73,7 +73,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hexactmpe_version = "!HVER!HExactMPE:   3.4.1 [CUED 12/03/09]";
-char *hexactmpe_vc_id = "$Id: HExactMPE.c,v 1.13 2011/06/16 04:18:28 uratec Exp $";
+char *hexactmpe_vc_id = "$Id: HExactMPE.c,v 1.14 2012/12/22 07:01:28 uratec Exp $";
 
 /*
     Performs forward/backward alignment

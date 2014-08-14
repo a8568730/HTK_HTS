@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -43,7 +43,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmgetool_version = "!HVER!HMgeTool: 2.2 [NIT 07/07/11]";
-char *hmgetool_vc_id = "$Id: HMgeTool.c,v 1.3 2011/06/19 11:53:07 uratec Exp $";
+char *hmgetool_vc_id = "$Id: HMgeTool.c,v 1.6 2012/12/22 07:01:31 uratec Exp $";
 
 /*
   This program is used for MGE training
@@ -296,8 +296,8 @@ static void CheckGenSetUp(void)
          printf("  #streams: %d (vSize=%d)\n", genInfo->nPdfStream[p], genInfo->pst[p].vSize);
          printf("  #order:   %d\n", genInfo->pst[p].order);
          printf("  file ext: %s\n", genInfo->pst[p].ext);
-         for (d = 0; d < pst->win.num; d++)
-            printf("  %d-th window: %s\n", d, pst->win.fn[d]);
+         for (d = 0; d < genInfo->pst[p].win.num; d++)
+            printf("  %d-th window: %s\n", d, genInfo->pst[p].win.fn[d]);
       }
       printf("\n");
       fflush(stdout);
@@ -1156,7 +1156,7 @@ static void PerformMgeEval()
 
    /* apply transform to related models */
    if (hset.curXForm != NULL)
-      ApplyHMMSetXForm(&hset, hset.curXForm, TRUE);
+      ApplyHMMSetXForm(&hset, hset.curXForm, FALSE);
 
    /* iteration from startIter to endIter */
    for (nIter = startIter; nIter <= endIter; nIter++) {
@@ -1294,9 +1294,9 @@ static void PerformMgeTrain()
 
    /* apply transform to related models */
    if (hset.curXForm != NULL) {
-      ApplyHMMSetXForm(&hset, hset.curXForm, TRUE);
+      ApplyHMMSetXForm(&hset, hset.curXForm, FALSE);
       if (mtInfo->bOrigHmmRef)
-         ApplyHMMSetXForm(&orighset, orighset.curXForm, TRUE);
+         ApplyHMMSetXForm(&orighset, orighset.curXForm, FALSE);
    }
 
    /* iteration from startIter ~ endIter */

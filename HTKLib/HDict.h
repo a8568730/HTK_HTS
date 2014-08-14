@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,7 +77,7 @@ extern "C" {
 #define VHASHSIZE 701
 
 /* max number of phones in a pronunciation */
-#define MAXPHONES 256
+#define MAXPHONES 2048
 
 /* lowest prob not floored to LZERO */
 #define MINPRONPROB 1E-6

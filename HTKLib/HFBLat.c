@@ -34,7 +34,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -73,7 +73,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hfblat_version = "!HVER!HFBLat:   3.4.1 [CUED 12/03/09]";
-char *hfblat_vc_id = "$Id: HFBLat.c,v 1.18 2011/06/16 04:18:29 uratec Exp $";
+char *hfblat_vc_id = "$Id: HFBLat.c,v 1.19 2012/12/22 07:01:28 uratec Exp $";
 
 /*
   Performs forward/backward alignment

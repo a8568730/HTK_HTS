@@ -1,6 +1,6 @@
 ===============================================================================
-            The HMM-based Speech Synthesis System (HTS) version 2.2
-                             release July 7, 2011
+         The HMM-based Speech Synthesis System (HTS) version 2.3 alpha
+                           release December 25, 2012
 
 
 The HMM-Based Speech Synthesis System (HTS) (http://hts.sp.nitech.ac.jp/) has
@@ -13,11 +13,11 @@ implemented as a modified version of the Hidden Markov Model Toolkit (HTK)
                                     Copying
 *******************************************************************************
 
-The basic core system of HTS version 2.2 is released as a patch code to HTK
-version 3.4.1. The patch code is released under the New and Simplified BSD
-license (see http://www.opensource.org/). However, it should be noted that once
-you apply the patch to the HTK source code, you must obey the license of HTK.
-Using and distributing this software in the form of patch code to HTK and its
+The basic core system of HTS version 2.3 alpha is released as a patch code to
+HTK version 3.4.1. The patch code is released under the Modified BSD license
+(see http://www.opensource.org/). However, it should be noted that once you
+apply the patch to the HTK source code, you must obey the license of HTK. Using
+and distributing this software in the form of patch code to HTK and its
 documentation is free (without restriction including without limitation the
 rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
 sell copies of this work, and to permit persons to whom this work is furnished
@@ -29,7 +29,7 @@ to do so) subject to the conditions in the following license:
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -131,6 +131,7 @@ Synthesis System. Current members are
  (Design and Development, Main Maintainer)
  Kei Hashimoto       http://www.sp.nitech.ac.jp/~bonanza/
  Sayaka Shiota       http://www.sp.nitech.ac.jp/~sayaka/
+ Shinji Takaki       http://www.sp.nitech.ac.jp/~k-prr44/
  Heiga Zen
  Junichi Yamagishi   http://homepages.inf.ed.ac.uk/jyamagis/
  Tomoki Toda         http://spalab.naist.jp/~tomoki/index_e.html

@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hinit_version = "!HVER!HInit:   3.4.1 [CUED 12/03/09]";
-char *hinit_vc_id = "$Id: HInit.c,v 1.13 2011/06/16 04:18:30 uratec Exp $";
+char *hinit_vc_id = "$Id: HInit.c,v 1.16 2012/12/22 07:01:31 uratec Exp $";
 
 /*
    This program is used to initialise (or tune) a single hidden
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
       case 'v':
          minVar = GetChkedFlt(0.0,10.0,s); break;
       case 'w':
-         mixWeightFloor = MINMIX * GetChkedFlt(0.0,10000.0,s); 
+         mixWeightFloor = MINMIX * GetChkedFlt(0.0,100000.0,s); 
          break;
       case 'B':
          saveBinary = TRUE;
@@ -402,7 +402,7 @@ void Initialise(void)
 
    /* Stacks for global structures requiring memory allocation */
    CreateHeap(&segmentStack,"SegStore", MSTAK, 1, 0.0, 100000, LONG_MAX);
-   CreateHeap(&sequenceStack,"SeqStore", MSTAK, 1, 0.0, 1000, 1000);
+   CreateHeap(&sequenceStack,"SeqStore", MSTAK, 1, 0.0, 10000, 10000);
    CreateHeap(&clustSetStack,"ClustSetStore", MSTAK, 1, 0.0, 1000, 1000);
    CreateHeap(&transStack,"TransStore", MSTAK, 1, 0.0, 1000, 1000);
    CreateHeap(&traceBackStack,"TraceBackStore", MSTAK, 1, 0.0, 1000, 1000);
@@ -561,7 +561,7 @@ Sequence *** CreateSeqMat(void)
          seqMat[i][j] = (Sequence*)New(&gstack, nKindS*sizeof(Sequence));
          --seqMat[i][j];
          for(k=1; k<=nKindS; k++)
-            seqMat[i][j][k] = CreateSequence(&sequenceStack, 100);
+            seqMat[i][j][k] = CreateSequence(&sequenceStack, 1000);
       }
    }
    return seqMat;

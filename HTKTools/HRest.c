@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hrest_version = "!HVER!HRest:   3.4.1 [CUED 12/03/09]";
-char *hrest_vc_id = "$Id: HRest.c,v 1.13 2011/06/16 04:18:30 uratec Exp $";
+char *hrest_vc_id = "$Id: HRest.c,v 1.15 2012/12/22 07:01:31 uratec Exp $";
 
 /*
    This program is used to estimate the transition parameters,
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
          outfn = GetStrArg();
          break;
       case 'w':
-         mixWeightFloor = MINMIX * GetChkedFlt(0.0,10000.0,s); break;
+         mixWeightFloor = MINMIX * GetChkedFlt(0.0,100000.0,s); break;
       case 'B':
          saveBinary = TRUE;
          break;

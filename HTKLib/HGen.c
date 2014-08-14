@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -45,7 +45,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hgen_version = "!HVER!HGen: 2.2 [NIT 07/07/11]";
-char *hgen_vc_id = "$Id: HGen.c,v 1.54 2011/06/16 04:27:17 uratec Exp $";
+char *hgen_vc_id = "$Id: HGen.c,v 1.59 2012/12/22 07:01:28 uratec Exp $";
 
 #include "HShell.h"             /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -116,6 +116,10 @@ static char gvLst[MAXFNAMELEN]; /* GV list */
 static char **gvOffmodel = NULL;        /* model names which are excluded to calculate GV */
 static HMMSet gvset;            /* GV set */
 static MemHeap gvStack;         /* Stack holds all GV related info */
+
+static Boolean useDAEM = FALSE; /* DAEM flag */
+static int DAEMIter = 20;       /* number of iterations in the DAEM-based parameter generation */
+static float DAEMTempSchedule = 1.0;    /* temperature schedule parameter for DAEM */
 
 /* -------------------------- Initialisation ----------------------- */
 
@@ -271,6 +275,12 @@ void InitGen(void)
          gvOffmodel = ParseConfStrVec(&gstack, buf, TRUE);
       if (GetConfStr(cParm, nParm, "USEGVPST", buf))
          useGVPst = ParseConfIntVec(&gstack, buf, TRUE);
+      if (GetConfBool(cParm, nParm, "USEDAEM", &b))
+         useDAEM = b;
+      if (GetConfInt(cParm, nParm, "DAEMITER", &i))
+         DAEMIter = i;
+      if (GetConfFlt(cParm, nParm, "DAEMTEMPSCHEDULE", &d))
+         DAEMTempSchedule = d;
    }
 
    if (useGV) {
@@ -321,13 +331,14 @@ void SetTraceGen(void)
 static void InitWindow(MemHeap * x, PdfStream * pst)
 {
    Source src;
-   int i, winlen;
+   int i, j, winlen;
 
    /* Allocate array for window coefficients */
    pst->win.width = (int **) New(x, pst->win.num * sizeof(int *));
    for (i = 0; i < pst->win.num; i++)
       pst->win.width[i] = (int *) New(x, 2 * sizeof(int));
    pst->win.coef = (float **) New(x, pst->win.num * sizeof(float *));
+   pst->win.chkbound = (int **) New(x, pst->win.num * sizeof(int *));
 
    /* Load window coefficients */
    for (i = 0; i < pst->win.num; i++) {
@@ -345,8 +356,27 @@ static void InitWindow(MemHeap * x, PdfStream * pst)
       pst->win.coef[i] = (float *) New(x, winlen * sizeof(float));
       ReadFloat(&src, pst->win.coef[i], winlen, FALSE);
 
+      /* Check boundary flags */
+      pst->win.chkbound[i] = (int *) New(x, winlen * sizeof(int));
+      for (j = 0; j < winlen; j++) {
+         pst->win.chkbound[i][j] = 1;
+      }
+      for (j = 0; j < winlen; j++) {
+         if (pst->win.coef[i][j] == 0.0)
+            pst->win.chkbound[i][j] = 0;
+         else
+            break;
+      }
+      for (j = winlen - 1; j >= 0; j--) {
+         if (pst->win.coef[i][j] == 0.0)
+            pst->win.chkbound[i][j] = 0;
+         else
+            break;
+      }
+
       /* Set pointer */
       pst->win.coef[i] += winlen / 2;
+      pst->win.chkbound[i] += winlen / 2;
       pst->win.width[i][WLEFT] = -winlen / 2;
       pst->win.width[i][WRIGHT] = winlen / 2;
       if (winlen % 2 == 0)
@@ -460,8 +490,8 @@ static Boolean ChkBoundary(PdfStream * pst, const int k, const int absolute_t, c
    const int i = (k - 1) / pst->order;  /* window index for k-th dimension */
 
    /* check */
-   for (j = pst->win.width[i][0]; j <= pst->win.width[i][1]; j++)
-      if (t + j < 1 || t + j > T || (pst->win.coef[i][j] != 0.0 && absolute_t + j >= 1 && absolute_t + j <= absolute_T && !pst->ContSpace[absolute_t + j]))
+   for (j = pst->win.width[i][WLEFT]; j <= pst->win.width[i][WRIGHT]; j++)
+      if (t + j < 1 || t + j > T || (pst->win.chkbound[i][j] == 1 && absolute_t + j >= 1 && absolute_t + j <= absolute_T && !pst->ContSpace[absolute_t + j]))
          return TRUE;
 
    return FALSE;
@@ -813,17 +843,13 @@ static void CountDurStat(DVector mean, DVector ivar, double *sum, double *sqr, I
 static void SetStateDurations(GenInfo * genInfo)
 {
    int i, j, k, s, cnt, nStates, modeldur, start = 0, tframe = 0;
-   double sum, sqr, dur, rho = 0.0, diff = 0.0;
+   double sum, sqr, dur, rho = 0.0;
    DVector *mean, *ivar;
    Label *label;
    HLink dm;
-   int l, crho = 0;
-   HTime pre_end = 0.0;
 
    if (genInfo->speakRate != 1.0 && rFlags & RNDDUR)
       HError(9999, "SetStateDurations: Cannot change speaking rate in random duration generation");
-   if (genInfo->modelAlign && rFlags & RNDDUR)
-      HError(9999, "SetStateDurations: Cannot use model-level alignments in random duration generation");
 
    /* state duration statistics storage */
    if ((mean = (DVector *) New(genInfo->genMem, genInfo->labseqlen * sizeof(DVector))) == NULL)
@@ -882,49 +908,18 @@ static void SetStateDurations(GenInfo * genInfo)
       /* i-th label */
       label = genInfo->label[i];
 
-      /* use model-level aligment */
-      if (genInfo->modelAlign && crho == 0) {
-         sum = sqr = 0.0;
-         CountDurStat(mean[i], ivar[i], &sum, &sqr, genInfo->sindex[i]);
-         crho = 1;
-         if (label->end >= 0.0) {       /* model-level alignment of the i-th label is specified */
-            rho = (((label->end - pre_end) / genInfo->frameRate) - sum) / sqr;
-         } else {               /* model-level alignment of the i-th label is not specified */
-            for (l = i + 1; l <= genInfo->labseqlen; l++) {
-               if (genInfo->label[l]->start >= 0.0) {
-                  rho = (((genInfo->label[l]->start - pre_end) / genInfo->frameRate) - sum) / sqr;
-                  break;
-               }
-               CountDurStat(mean[l], ivar[l], &sum, &sqr, genInfo->sindex[l]);
-               crho++;
-               if (genInfo->label[l]->end >= 0.0) {
-                  if (genInfo->label[l]->end < pre_end)
-                     HError(9999, "SetStateDurations: start time %f is smaller than end time %f", (double) pre_end, (double) genInfo->label[l]->end);
-                  rho = (((genInfo->label[l]->end - pre_end) / genInfo->frameRate) - sum) / sqr;
-                  break;
-               }
-            }
-            if (l > genInfo->labseqlen) {
-               HError(-9999, "SetStateDurations: model duration is not specified in the finel label");
-               genInfo->modelAlign = FALSE;
-               rho = 0.0;
-            }
-         }
-      }
-
       /* calculate state durations for the i-th label */
       modeldur = 0;
       for (j = 1; genInfo->sindex[i][j] != 0; j++) {
          k = genInfo->sindex[i][j] - 1;
          dur = (rFlags & RNDDUR) ? GaussDeviate(mean[i][k], sqrt(1.0 / ivar[i][k]))     /* random duration sampling */
              : mean[i][k] + rho / ivar[i][k];
-         genInfo->durations[i][j] = (int) (dur + diff + 0.5);
+         genInfo->durations[i][j] = (int) (dur + 0.5);
 
          /* set minimum duration -> 1 */
          if (genInfo->durations[i][j] < 1)
             genInfo->durations[i][j] = 1;
 
-         diff += dur - (double) genInfo->durations[i][j];
          tframe += genInfo->durations[i][j];
          modeldur += genInfo->durations[i][j];
       }
@@ -933,11 +928,6 @@ static void SetStateDurations(GenInfo * genInfo)
       label->start = (HTime) start *genInfo->frameRate;
       label->end = (HTime) (start + modeldur) * genInfo->frameRate;
       start += modeldur;
-
-      if (genInfo->modelAlign) {
-         pre_end = label->end;
-         crho--;
-      }
    }
    genInfo->tframe = tframe;
 
@@ -947,11 +937,149 @@ static void SetStateDurations(GenInfo * genInfo)
    return;
 }
 
+/* GetLabModelDurations: set state durations */
+static void GetLabModelDurations(GenInfo * genInfo)
+{
+   int i, j, k, l, m;
+   int tstate;
+   int next_frame;
+
+   MixPDF **mpdf;
+   IntVec durs;
+   Vector d;
+
+   int mpdf_index1, mpdf_index2;
+   int nframe, nstate;
+
+   Matrix lprob_table;
+   IMatrix next_table;
+   Matrix sum_table;
+
+   if (genInfo->modelAlign && rFlags & RNDDUR)
+      HError(9999, "SetStateDurations: Cannot use model-level alignments in random duration generation");
+
+   /* get total number of states */
+   tstate = 0;
+   for (i = 1; i <= genInfo->labseqlen; i++)
+      tstate += genInfo->hmm[i]->numStates - 2;
+
+   /* state duration statistics storage */
+   mpdf = (MixPDF **) New(genInfo->genMem, tstate * sizeof(MixPDF *));
+   if (mpdf == NULL)
+      HError(9905, "GetLabModelDurations: Cannot allocate memory for MixPDF");
+   mpdf--;
+   durs = CreateIntVec(genInfo->genMem, tstate);
+   d = CreateVector(genInfo->genMem, 1);
+
+   /* prepare state duration probability distribution */
+   for (i = 1, j = 1; i <= genInfo->labseqlen; i++)
+      for (k = 1; k <= genInfo->dset->swidth[0]; k++)
+         mpdf[j++] = genInfo->dm[i]->svec[2].info->pdf[k].info->spdf.cpdf[1].mpdf;
+
+   /* check labels */
+   for (i = 1; i < genInfo->labseqlen; i++) {
+      if (i == 1)
+         genInfo->label[i]->start = 0.0;
+      if (genInfo->label[i]->end < 0.0 && genInfo->label[i + 1]->start >= 0.0)
+         genInfo->label[i]->end = genInfo->label[i + 1]->start;
+      if (genInfo->label[i]->end >= 0.0 && genInfo->label[i + 1]->start < 0.0)
+         genInfo->label[i + 1]->start = genInfo->label[i]->end;
+   }
+
+   /* set duration from label */
+   mpdf_index1 = 1;
+   mpdf_index2 = 1;
+   next_frame = 0;
+   for (i = 1; i <= genInfo->labseqlen; i++) {
+      mpdf_index2 += genInfo->hmm[i]->numStates - 2;
+      if (genInfo->label[i]->end > 0.0) {
+         nframe = (int) (genInfo->label[i]->end / genInfo->frameRate + 0.5) - next_frame;
+         nstate = mpdf_index2 - mpdf_index1;
+         if (nframe <= nstate) {
+            if (nframe < nstate)
+               HError(-9999, "GetLabModelDurations: The specified duration is too short");
+            for (j = mpdf_index1; j < mpdf_index2; j++)
+               durs[j] = 1;
+         } else {
+            /* create log probability table for DP */
+            lprob_table = CreateMatrix(genInfo->genMem, nframe, nstate);
+            for (j = 1; j <= nframe; j++) {
+               for (k = 1; k <= nstate; k++) {
+                  d[1] = j;
+                  lprob_table[j][k] = MOutP(d, mpdf[mpdf_index1 + k - 1]);
+               }
+            }
+            /* DP */
+            next_table = CreateIMatrix(genInfo->genMem, nframe, nstate - 1);
+            sum_table = CreateMatrix(genInfo->genMem, nframe, nstate - 1);
+            for (k = nstate - 1; k >= 1; k--) {
+               for (j = 1; j <= nframe; j++) {
+                  sum_table[j][k] = LZERO;
+                  next_table[j][k] = 0;
+                  for (l = 1; l <= j - 1; l++) {
+                     if (k == nstate - 1) {
+                        if (sum_table[j][k] < lprob_table[l][k + 1] + lprob_table[j - l][k]) {
+                           sum_table[j][k] = lprob_table[l][k + 1] + lprob_table[j - l][k];
+                           next_table[j][k] = l;
+                        }
+                     } else {
+                        if (sum_table[j][k] < sum_table[l][k + 1] + lprob_table[j - l][k]) {
+                           sum_table[j][k] = sum_table[l][k + 1] + lprob_table[j - l][k];
+                           next_table[j][k] = l;
+                        }
+                     }
+                  }
+               }
+            }
+            /* save the results */
+            j = nframe;
+            for (k = 1; k < nstate; k++) {
+               durs[mpdf_index1 + k - 1] = j - next_table[j][k];
+               j = next_table[j][k];
+            }
+            durs[mpdf_index1 + nstate - 1] = j;
+            FreeMatrix(genInfo->genMem, sum_table);
+            FreeIMatrix(genInfo->genMem, next_table);
+            FreeMatrix(genInfo->genMem, lprob_table);
+         }
+         for (j = mpdf_index1; j < mpdf_index2; j++)
+            next_frame += durs[j];
+         mpdf_index1 = mpdf_index2;
+      } else if (i == genInfo->labseqlen) {
+         HError(-9999, "GetLabModelDurations: Model duration is not specified in the finel label");
+         for (j = mpdf_index1; j < mpdf_index2; j++) {
+            durs[j] = (int) (mpdf[j]->mean[1] + 0.5);
+            next_frame += durs[j];
+         }
+         mpdf_index1 = mpdf_index2;
+      }
+   }
+
+   /* assign durations */
+   genInfo->tframe = 0;
+   for (i = 1, k = 1, l = 0; i <= genInfo->labseqlen; i++) {
+      m = 0;
+      for (j = 1; genInfo->sindex[i][j] != 0; j++) {
+         genInfo->durations[i][j] = durs[k];
+         m += durs[k];
+         genInfo->tframe += durs[k];
+         k++;
+      }
+      genInfo->label[i]->start = (HTime) l *genInfo->frameRate;
+      genInfo->label[i]->end = (HTime) (l + m) * genInfo->frameRate;
+      l += m;
+   }
+
+   /* free memory */
+   FreeVector(genInfo->genMem, d);
+   FreeIntVec(genInfo->genMem, durs);
+   Dispose(genInfo->genMem, ++mpdf);
+}
+
 /* GetLabStateDurations: parse state durations from label */
 static void GetLabStateDurations(GenInfo * genInfo)
 {
    int i, j, k, tframe = 0;
-   double diff = 0.0;
    Label *label;
 
    /* get state durations from given label sequence */
@@ -963,8 +1091,9 @@ static void GetLabStateDurations(GenInfo * genInfo)
       }
 
       /* get state duration from label */
-      genInfo->durations[j][k] = (int) ((label->end - label->start) / genInfo->frameRate + diff + 0.5);
-      diff += (label->end - label->start) / genInfo->frameRate - (double) genInfo->durations[j][k];
+      genInfo->durations[j][k] = (int) (label->end / genInfo->frameRate + 0.5) - tframe;
+      if (genInfo->durations[j][k] < 1)
+         genInfo->durations[j][k] = 1;
 
       /* count total frame */
       tframe += genInfo->durations[j][k++];
@@ -1135,6 +1264,8 @@ void InitialiseGenInfo(GenInfo * genInfo, Transcription * tr, Boolean training)
    ZeroIMatrix(genInfo->durations);
    if (genInfo->stateAlign)
       GetLabStateDurations(genInfo);
+   else if (genInfo->modelAlign)
+      GetLabModelDurations(genInfo);
    else
       SetStateDurations(genInfo);
 
@@ -1892,6 +2023,7 @@ static Boolean MixUtt(GenInfo * genInfo, FBInfo * fbInfo, UttInfo * utt)
    PruneInfo *p;
    StateInfo *si;
    MixPDF *mp;
+   LogFloat mixp, wt;
 
    ab->pInfo = (PruneInfo *) New(&ab->abMem, sizeof(PruneInfo));
    p = ab->pInfo;
@@ -1925,11 +2057,14 @@ static Boolean MixUtt(GenInfo * genInfo, FBInfo * fbInfo, UttInfo * utt)
                   ab->occm[t][i][k][s] = CreateVector(&ab->abMem, si->pdf[s].info->nMix);
                   for (m = 1; m <= si->pdf[s].info->nMix; m++) {
                      mp = si->pdf[s].info->spdf.cpdf[m].mpdf;
-                     if (k == genInfo->sindex[i][j])
-                        ab->occm[t][i][k][s][m] = MixLogWeight(genInfo->hset, si->pdf[s].info->spdf.cpdf[m].weight)
-                            + MOutP(utt->o[t].fv[s], mp);
-                     else
-                        ZeroVector(ab->occm[t][i][k][s]);
+                     if (k == genInfo->sindex[i][j]) {
+                        wt = MixLogWeight(genInfo->hset, si->pdf[s].info->spdf.cpdf[m].weight);
+                        wt = ApplyDAEM(wt);
+                        mixp = MOutP(utt->o[t].fv[s], mp);
+                        mixp = ApplyDAEM(mixp);
+                        ab->occm[t][i][k][s][m] = wt + mixp;
+                     } else
+                        ab->occm[t][i][k][s][m] = 0.0;
                   }
                }
             }
@@ -1963,11 +2098,12 @@ static Boolean MixUtt(GenInfo * genInfo, FBInfo * fbInfo, UttInfo * utt)
 }
 
 /* EXPORT->ParamGen: Generate parameter sequence */
-void ParamGen(GenInfo * genInfo, UttInfo * utt, FBInfo * fbInfo, const ParmGenType type)
+Boolean ParamGen(GenInfo * genInfo, UttInfo * utt, FBInfo * fbInfo, const ParmGenType type)
 {
-   int iter;
+   int iter, diter;
    Boolean success = TRUE, converged = FALSE;
    LogFloat prev = LZERO, curr;
+   float temp;
 
    /* # of frames */
    const int T = genInfo->tframe;
@@ -1986,12 +2122,15 @@ void ParamGen(GenInfo * genInfo, UttInfo * utt, FBInfo * fbInfo, const ParmGenTy
       OutProb(genInfo, utt);
       if (trace & T_TOP)
          printf("  Average LogP = %e\n", utt->pr / T);
-      return;
+      return TRUE;
    }
 
    /* EM-based parameter generation */
    if (trace & T_TOP) {
-      printf(" EM-based parameter generation ");
+      if (useDAEM)
+         printf(" DAEM-based parameter generation ");
+      else
+         printf(" EM-based parameter generation ");
       switch (type) {
       case MIX:
          printf("(Hidden: MIX, Given: STATE)\n");
@@ -2003,57 +2142,75 @@ void ParamGen(GenInfo * genInfo, UttInfo * utt, FBInfo * fbInfo, const ParmGenTy
    }
 
    /* Optimize pst->C using EM algorithm */
-   for (iter = 1; iter <= maxEMIter; iter++) {
-      switch (type) {
-      case MIX:
-         success = MixUtt(genInfo, fbInfo, utt);        /* compute mixture-level posterior */
-         break;
-      case FB:
-         success = FBUtt(fbInfo, utt);  /* perform forward-backward */
-         break;
-      default:
-         HError(9999, "ParamGen: not supported parameter generation type");
-      }
-      if (!success)
-         HError(-9999, "ParamGen: failed to compute output prob");
-
-      /* output prob */
-      curr = utt->pr;
-      if (trace & T_TOP) {
-         printf("  Iteration %d: Average LogP = %e", iter, curr / T);
-         if (iter > 1)
-            printf("  Change = %f", (curr - prev) / T);
-         printf("\n");
-         fflush(stdout);
-      }
-
-      /* convergence check */
-      if (iter > 1 && fabs(curr - prev) / T < EMepsilon) {
-         converged = TRUE;
+   if (!useDAEM)
+      DAEMIter = 1;
+   for (diter = 1; diter <= DAEMIter; diter++) {
+      if (useDAEM) {
+         temp = pow((double) diter / DAEMIter, DAEMTempSchedule);
+         SetDAEMTemp(temp);
          if (trace & T_TOP) {
-            printf("  Converged (change=%e).\n", fabs(curr - prev) / T);
+            printf("  DAEM Iteration %d: temperature = %e\n", diter, temp);
             fflush(stdout);
          }
       }
-      if (iter == maxEMIter && trace & T_TOP) {
-         printf("  EM iteration stopped by reaching max # of iterations (%d).\n", maxEMIter);
+      converged = FALSE;
+      prev = LZERO;
+      for (iter = 1; iter <= maxEMIter; iter++) {
+         switch (type) {
+         case MIX:
+            success = MixUtt(genInfo, fbInfo, utt);     /* compute mixture-level posterior */
+            break;
+         case FB:
+            success = FBUtt(fbInfo, utt);       /* perform forward-backward */
+            break;
+         default:
+            HError(9999, "ParamGen: not supported parameter generation type");
+         }
+         if (!success) {
+            HError(-9999, "ParamGen: failed to compute output prob");
+            /* reset heap */
+            ResetHeap(&fbInfo->ab->abMem);
+            return FALSE;
+         }
+
+         /* output prob */
+         curr = utt->pr;
+         if (trace & T_TOP) {
+            printf("  Iteration %d: Average LogP = %e", iter, curr / T);
+            if (iter > 1)
+               printf("  Change = %f", (curr - prev) / T);
+            printf("\n");
+            fflush(stdout);
+         }
+
+         /* convergence check */
+         if (iter > 1 && fabs(curr - prev) / T < EMepsilon) {
+            converged = TRUE;
+            if (trace & T_TOP) {
+               printf("  Converged (change=%e).\n", fabs(curr - prev) / T);
+               fflush(stdout);
+            }
+         }
+         if (iter == maxEMIter && trace & T_TOP) {
+            printf("  EM iteration stopped by reaching max # of iterations (%d).\n", maxEMIter);
+         }
+
+         /* generate parameters */
+         UpdatePdfStreams(genInfo, fbInfo, utt);        /* update PdfStreams */
+         Cholesky_ParmGen(genInfo, (((converged || iter == maxEMIter) && diter == DAEMIter && useGV) ? TRUE : FALSE));
+         UpdateUttObs(genInfo, utt);
+
+         /* reset heap */
+         ResetHeap(&fbInfo->ab->abMem);
+
+         if (converged)
+            break;
+
+         prev = curr;
       }
-
-      /* generate parameters */
-      UpdatePdfStreams(genInfo, fbInfo, utt);   /* update PdfStreams */
-      Cholesky_ParmGen(genInfo, (((converged || iter == maxEMIter) && useGV) ? TRUE : FALSE));
-      UpdateUttObs(genInfo, utt);
-
-      /* reset heap */
-      ResetHeap(&fbInfo->ab->abMem);
-
-      if (converged)
-         break;
-
-      prev = curr;
    }
 
-   return;
+   return TRUE;
 }
 
 /* ------------------------ End of HGen.c -------------------------- */

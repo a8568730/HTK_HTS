@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hslab_version = "!HVER!HSLab:   3.4.1 [CUED 12/03/09]";
-char *hslab_vc_id = "$Id: HSLab.c,v 1.10 2011/06/16 04:18:30 uratec Exp $";
+char *hslab_vc_id = "$Id: HSLab.c,v 1.11 2012/12/22 07:01:31 uratec Exp $";
 
 /* 
    --------------------------------------------------------------

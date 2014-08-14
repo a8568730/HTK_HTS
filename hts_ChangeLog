@@ -1,3 +1,163 @@
+2012-12-22 16:01  uratec
+
+	* Makefile.in, configure, configure.ac, HTKLVRec/HDecode.c,
+	  HTKLVRec/HDecode.mod.c, HTKLVRec/HLVLM.c, HTKLVRec/HLVModel.c,
+	  HTKLVRec/HLVNet.c, HTKLVRec/HLVRec-LM.c, HTKLVRec/HLVRec-outP.c,
+	  HTKLVRec/HLVRec-propagate.c, HTKLVRec/HLVRec-traceback.c,
+	  HTKLVRec/HLVRec.c, HTKLib/HAdapt.c, HTKLib/HAdapt.h,
+	  HTKLib/HArc.c, HTKLib/HArc.h, HTKLib/HAudio.c, HTKLib/HAudio.h,
+	  HTKLib/HDict.c, HTKLib/HDict.h, HTKLib/HExactMPE.c,
+	  HTKLib/HExactMPE.h, HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HFBLat.c,
+	  HTKLib/HFBLat.h, HTKLib/HGen.c, HTKLib/HGen.h, HTKLib/HGraf.c,
+	  HTKLib/HGraf.h, HTKLib/HGraf.null.c, HTKLib/HGraf_WIN32.c,
+	  HTKLib/HLM.c, HTKLib/HLM.h, HTKLib/HLabel.c, HTKLib/HLabel.h,
+	  HTKLib/HLat.c, HTKLib/HLat.h, HTKLib/HMTrain.c, HTKLib/HMTrain.h,
+	  HTKLib/HMap.c, HTKLib/HMap.h, HTKLib/HMath.c, HTKLib/HMath.h,
+	  HTKLib/HMem.c, HTKLib/HMem.h, HTKLib/HModel.c, HTKLib/HModel.h,
+	  HTKLib/HNet.c, HTKLib/HNet.h, HTKLib/HParm.c, HTKLib/HParm.h,
+	  HTKLib/HRec.c, HTKLib/HRec.h, HTKLib/HShell.c, HTKLib/HShell.h,
+	  HTKLib/HSigP.c, HTKLib/HSigP.h, HTKLib/HTrain.c, HTKLib/HTrain.h,
+	  HTKLib/HUtil.c, HTKLib/HUtil.h, HTKLib/HVQ.c, HTKLib/HVQ.h,
+	  HTKLib/HWave.c, HTKLib/HWave.h, HTKLib/Makefile.in,
+	  HTKLib/lbfgs.h, HTKTools/HBuild.c, HTKTools/HCompV.c,
+	  HTKTools/HCopy.c, HTKTools/HDMan.c, HTKTools/HERest.c,
+	  HTKTools/HHEd.c, HTKTools/HInit.c, HTKTools/HLEd.c,
+	  HTKTools/HLRescore.c, HTKTools/HLStats.c, HTKTools/HList.c,
+	  HTKTools/HMGenS.c, HTKTools/HMMIRest.c, HTKTools/HMgeTool.c,
+	  HTKTools/HParse.c, HTKTools/HQuant.c, HTKTools/HRest.c,
+	  HTKTools/HResults.c, HTKTools/HSGen.c, HTKTools/HSLab.c,
+	  HTKTools/HSMMAlign.c, HTKTools/HSmooth.c, HTKTools/HVite.c,
+	  HTKTools/Makefile.in: Update copyright.
+
+2012-12-21 12:38  sayaka
+
+	* HTKLib/HGen.c, HTKLib/HGen.h, HTKTools/HMGenS.c: Modified
+	  ParamGen in order to skip sentenses which have no path
+
+2012-12-17 12:53  bonanza
+
+	* HTKTools/HHEd.c: Remove an unused variable 'diff' in
+	  DiffClusterLogL
+
+2012-12-13 14:34  bonanza
+
+	* HTKLib/: HGen.c, HGen.h: Fix a bug in ChkBoundary (reported by
+	  Matt Shannon [hts-users:03175])
+
+2012-12-06 13:11  bonanza
+
+	* HTKTools/HHEd.c: Add DiffClusterLogL and DiffIncSumSqr provided
+	  by Oliver Watts.  Update statistics of yes and no by differences
+	  between answers to current and previous questions.
+
+2012-11-24 20:02  bonanza
+
+	* HTKLib/: HAdapt.c, HModel.c, HModel.h: Add Variational Bayes
+	  methid based Linear Regression
+
+2012-11-20 16:07  bonanza
+
+	* HTKLib/HGen.c: Add DAEM-based parameter generation algorithm Add
+	  USEDAEM, DAEMITER, DAEMTEMPSCHEDULE to Config
+
+2012-11-06 14:11  uratec
+
+	* HTKLib/HFB.c: Fix tracing error in HERest with HFB:TRACE=0020
+	  option suggested by Takashi Nose (code optimization by Heiga Zen
+	  of Google).
+
+2012-10-10 00:04  uratec
+
+	* HTKTools/HHEd.c: Change file format of hts_engine API.
+
+2012-09-07 19:45  bonanza
+
+	* HTKTools/HHEd.c: LoadTree allows regular expressions using "-"
+	  character for streams.
+
+2012-08-19 17:05  uratec
+
+	* HTKLib/HMath.c: Apply threshold for nan/inf to HholdVec() in
+	  HMath.c.
+
+2012-08-17 10:47  k-prr44
+
+	* HTKTools/HHEd.c: fix a tiny bug reported by Shinnosuke Takamichi:
+	  the likelihood is calculated with variance floors in the
+	  clustering
+
+2012-06-26 15:58  uratec
+
+	* HTKTools/HSMMAlign.c: Fix a serious bug: HSMMAlign do not select
+	  best-path in final frame.
+
+2012-06-26 15:54  uratec
+
+	* HTKTools/HSMMAlign.c: Add option to output stream probability for
+	  HSMMAlign.
+
+2012-06-26 15:49  uratec
+
+	* HTKTools/HSMMAlign.c: Add minimum model duration option to
+	  HSMMAlign.
+
+2012-06-26 15:46  uratec
+
+	* HTKTools/HSMMAlign.c: Change prune option from '-c' to '-e' for
+	  HSMMAlign.
+
+2012-06-26 15:44  uratec
+
+	* HTKTools/HSMMAlign.c: Support parent xform for HSMMAlign.
+
+2012-06-26 15:31  uratec
+
+	* HTKTools/HMgeTool.c: Fix a tiny bug for using xform in MGE
+	  training.
+
+2012-06-26 15:24  uratec
+
+	* HTKTools/: HERest.c, HHEd.c, HInit.c, HRest.c: Increase the range
+	  of options.
+
+2012-06-26 15:22  uratec
+
+	* HTKTools/HHEd.c: Add an option to save untied regression trees
+	  for HHEd.
+
+2012-06-26 15:18  uratec
+
+	* HTKLib/HTrain.c, HTKTools/HInit.c: Increase heap size for HInit.
+
+2012-06-26 15:15  uratec
+
+	* HTKLib/HGen.c: Modify the algorithm to set state duration by
+	  using DP.
+
+2012-03-16 14:42  uratec
+
+	* HTKLib/HFB.c: Merge patch code by Heiga Zen of Google: Fix
+	  segmentation fault caused by 1 stream without weight
+
+2012-03-16 12:38  uratec
+
+	* HTKLib/HFB.c: Merge patch code by Heiga Zen of Google: Fix two
+	  model reestimation with mixture component level alignments
+
+2011-07-19 14:18  bonanza
+
+	* HTKTools/HHEd.c: Fix bugs about -q option
+
+2011-07-13 21:46  uratec
+
+	* HTKTools/HMgeTool.c: Fix log message in HMgeTool suggested by Na
+	  Xingyu.
+
+2011-07-11 18:02  uratec
+
+	* configure, configure.ac: Fix a configure bug for Mac OS suggested
+	  by Junichi Yamagishi.
+
 2011-06-19 20:53  uratec
 
 	* HTKTools/HMgeTool.c: update

@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hhed_version = "!HVER!HHEd:   3.4.1 [CUED 12/03/09]";
-char *hhed_vc_id = "$Id: HHEd.c,v 1.105 2011/06/16 05:18:47 uratec Exp $";
+char *hhed_vc_id = "$Id: HHEd.c,v 1.114 2012/12/22 07:01:31 uratec Exp $";
 
 /*
    This program is used to read in a set of HMM definitions
@@ -177,6 +177,7 @@ static Boolean equivState = TRUE;      /* TRUE if states can be equivalent */
 static Boolean useModelName = TRUE;    /* Use base-phone name as tree name */
 static Boolean usePattern   = FALSE;   /* Use pattern as tree name */
 static int useRefTree = -1;            /* Use reference tree for tree-based clustering */
+static int saveUntiedRegTree = FALSE;  /* Save untied regression tree */
 static Boolean saveHMMSet   = TRUE;    /* Save the HMMSet */
 
 /* information about transforms */
@@ -366,7 +367,7 @@ int main(int argc, char *argv[])
          HError(2619,"HHEd: Bad switch %s; must be single letter",s);
       switch(s[0]) {
       case 'a':
-         MDLfactor = GetChkedFlt(0.0,100000000.0,s); break;
+         MDLfactor = GetChkedFlt(0.0,10000000000.0,s); break;
       case 'd':
          if (NextArg()!=STRINGARG)
             HError(2619,"HHEd: Input HMM definition directory expected");
@@ -387,6 +388,8 @@ int main(int argc, char *argv[])
          reduceMem = GetChkedInt(0,2,s); break;
       case 's':
          singleTree = TRUE; break;
+      case 'u':
+         saveUntiedRegTree = TRUE; break;
       case 'v':
          minVar = GetChkedFlt(0.0,100.0,s); break;
       case 'w':
@@ -581,7 +584,7 @@ void ParsePattern (ILink *patList, char *pattern)
       if (p==NULL) HError(2660,"ParsePattern: no { in itemlist");
    ++p;
    if (*p=='(')
-      ++p;
+   ++p;
    
    /* parse tail '}' and ')' */
    for (r=pattern+strlen(pattern)-1;r>=pattern && isspace((int) *r);r--);
@@ -2024,6 +2027,7 @@ typedef struct _CRec{
    ILink item;                  /* a single item in this cluster (group) */
    int idx;                     /* index of this item */
    Boolean ans;                 /* answer to current question */
+   Boolean pre_ans;             /* answer to previous question */
    short state;                 /* state of clink */
    Ptr owner;                   /* owner of clink */
    CLink next;                  /* next item in group */
@@ -3146,8 +3150,8 @@ double AccSumProb(AccSum *acc)
                x = 0.0;
                for (k=1; k<=vSize; k++) {
                   variance=(sqr[k]-(sum[k]*sum[k]/occ))/occ;
-         if (variance<=MINLARG) return(LZERO);
                   if (applyVFloor && variance<vf[s][k]) variance=vf[s][k];
+         if (variance<=MINLARG) return(LZERO);
                   x+=-0.5*occ*(1.0+log(TPI*variance));
                }
                prob+=weight*(x+occ*log(occ/acc->occ));
@@ -3167,7 +3171,7 @@ void IncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes)
    int vSize;
    DVector tsum, tsqr, asum, asqr;
    Boolean first=TRUE; 
-
+   
    const int S = no->nStream;
    
    for (s=1,first=TRUE; s<=S; s++) {
@@ -3186,6 +3190,56 @@ void IncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes)
                tsum[k] += asum[k];
                tsqr[k] += asqr[k];
             }
+         }
+         first=FALSE;
+      }
+   }
+}
+
+/* DiffIncSumSqr: add or subtract sums and sqrs from given state into
+   yes or no depending on value of ans */
+void DiffIncSumSqr(StateInfo *si, Boolean ans, AccSum *no, AccSum *yes)
+{
+   AccSum *acc,*tacc;
+   int s,m,k;
+   int vSize;
+   DVector tsum, tsqr, asum, asqr;
+   Boolean first=TRUE;
+
+   const int S = no->nStream;
+
+   for (s=1,first=TRUE; s<=S; s++) {
+      if (streams.set[s]) {
+         for(m=1; m<=no->accse[s].nMix; m++){
+            acc = (AccSum *) si->pdf[s].info->spdf.cpdf[m].mpdf->hook;
+            if (!acc) return;
+
+            /* ADD */
+            tacc =  (ans) ? yes : no;
+            if(first) tacc->occ+=acc->occ;
+            tacc->accse[s].accme[m].occ+=acc->occ;
+            vSize = tacc->accse[s].accme[m].vSize;
+            tsum = tacc->accse[s].accme[m].sum;  tsqr = tacc->accse[s].accme[m].sqr;
+            asum = acc->sum;                     asqr = acc->sqr;
+
+            for (k=1; k<=vSize; k++) {
+               tsum[k] += asum[k];
+               tsqr[k] += asqr[k];
+            }
+
+            /* SUBTRACT */
+            tacc =  (ans) ? no : yes;
+            if(first) tacc->occ-=acc->occ;
+            tacc->accse[s].accme[m].occ-=acc->occ;
+            vSize = tacc->accse[s].accme[m].vSize;
+            tsum = tacc->accse[s].accme[m].sum;  tsqr = tacc->accse[s].accme[m].sqr;
+            asum = acc->sum;                     asqr = acc->sqr;
+
+            for (k=1; k<=vSize; k++) {
+               tsum[k] -= asum[k];
+               tsqr[k] -= asqr[k];
+            }
+
          }
          first=FALSE;
       }
@@ -3237,6 +3291,50 @@ double ClusterLogL(CLink clist, AccSum *no, AccSum *yes, double *occs)
    return(prob);
 }
 
+/* DiffClusterLogL: return log likelihood of given cluster, this is used for only
+   the split clusters.  Update yes and no based on answers to previous and current
+   questions. This won't be used for tProb */
+double DiffClusterLogL(CLink clist, AccSum *no, AccSum *yes, double *occs)
+{
+   CLink p;
+   double prob;
+   StateElem *se;
+   int i;
+  
+   if (clist->item->item == clist->item->owner) {
+      prob=0.0;
+      occs[FALSE]=0.0;occs[TRUE]=0.0;
+      for (i=2;i<clist->item->owner->numStates;i++) {
+         ZeroAccSum(no);
+         if (yes != NULL) ZeroAccSum(yes);
+         for(p=clist;p!=NULL;p=p->next) {
+            IncSumSqr(p->item->owner->svec[i].info,p->ans,no,yes);
+         }
+         prob += AccSumProb(no);
+         if (yes != NULL) prob += AccSumProb(yes);
+         if (occs != NULL) {
+            occs[FALSE] += no->occ;
+            if (yes != NULL)
+               occs[TRUE] += yes->occ;
+         }
+      }
+   }
+   else {
+      for(p=clist;p!=NULL;p=p->next) {
+         se=(StateElem*)p->item->item;
+         if (p->ans!=p->pre_ans)
+            DiffIncSumSqr(se->info,p->ans,no,yes);
+      }
+      prob = AccSumProb(no);
+      if (yes != NULL) prob += AccSumProb(yes);
+      if (occs != NULL) {
+         occs[FALSE] = no->occ;
+         occs[TRUE] = (yes != NULL) ? yes->occ : 0.0;
+      }
+   }
+   return(prob);
+}
+
 /* SetQMTable: Set Question x Model bit table */
 void SetQMTable (void)
 {
@@ -3247,22 +3345,22 @@ void SetQMTable (void)
    Boolean answer;
    IPat *ip;
    Question *question;
-  
+
    const int size=(hset->numPhyHMM>>3)+1;
 
    if (trace&T_BAS) {
       printf("   setting question*model table...");
       fflush(stdout);
-}
+   }
 
    /* set pattern * model table */
    PMTable = (char **) New(&tmpHeap, nPatterns*sizeof(char *));
-   
+
    for (i=0; i<nPatterns; i++) {
       PMTable[i] = (char *) New(&tmpHeap, size*sizeof(char));
       memset(PMTable[i], 0, size);
    }
-      
+
 #pragma omp parallel for private(m,h,i,j,name,p,ip,answer)
    for (h=0; h<MACHASHSIZE; h++) {
       for (m=hset->mtab[h]; m!=NULL; m=m->next) {
@@ -3332,6 +3430,7 @@ Boolean AnswerQuestion(Node *node, Question *q)
    case 2:
       for (p=node->clist;p!=NULL;p=p->next) {
          m = (MLink)p->item->owner->hook;
+         p->pre_ans = p->ans;
          p->ans = QMatch(m->id->name, q);
          if (p->ans) yes++;
          else        no++;
@@ -3342,6 +3441,7 @@ Boolean AnswerQuestion(Node *node, Question *q)
       if (!setQMTable) SetQMTable();
       for (p=node->clist; p!=NULL; p=p->next) {
          j = p->item->owner->hIdx & 7;  /* residue by 8 */
+         p->pre_ans = p->ans;
          p->ans = (QMTable[index][p->item->owner->hIdx>>3] & (1<<j)) ? TRUE : FALSE;
          if (p->ans) yes++;
          else        no++;
@@ -3351,6 +3451,7 @@ Boolean AnswerQuestion(Node *node, Question *q)
    default: 
       /* set ans=FALSE for items in this cluster */
       for (p=node->clist;p!=NULL;p=p->next) {
+         p->pre_ans = p->ans;
          p->ans = FALSE;
          p->owner = node;
          no++;
@@ -3379,6 +3480,8 @@ void ValidProbNode(Node *node, const double thresh, const Boolean ref)
    Question *q, *qbest;
    double best,sProb;
    char buf[20];
+   CLink cl;
+   Boolean first_question = TRUE;
    
    node->tProb = ClusterLogL(node->clist,&no,NULL,occs);
    node->occ = occs[FALSE];
@@ -3400,7 +3503,13 @@ void ValidProbNode(Node *node, const double thresh, const Boolean ref)
       for (i=(node->parent==NULL || ref) ? qList : node->parent->qlist; i!=NULL; i=i->next) {
          q = (ref) ? node->quest : (Question *)i->item;
          if (AnswerQuestion(node, q)) {
+            if (first_question) {
       sProb = ClusterLogL(node->clist,&no,&yes,occs);
+               first_question = FALSE;
+            }
+            else
+               sProb = DiffClusterLogL(node->clist,&no,&yes,occs);
+
             if (node->occ<=0.0 || (outlierThresh >= 0.0 && (occs[FALSE]<outlierThresh || occs[TRUE]<outlierThresh)))
          sProb=node->tProb;
 
@@ -3419,6 +3528,11 @@ void ValidProbNode(Node *node, const double thresh, const Boolean ref)
             else if (sProb>LSMALL && !ref) 
                AddItem(NULL,q,&node->qlist);
          }
+         else {
+            for (cl=node->clist;cl!=NULL;cl=cl->next)
+               cl->ans = cl->pre_ans;
+         }
+
 	 if (ref)
 	    break;
    }
@@ -3878,6 +3992,7 @@ void BuildTree (ILink ilist, double threshold, char *macRoot, char *pattern)
       p->owner->hook = cl; /* HMM hook links to CRec */
       cl->item = p;  cl->ans = FALSE;
       cl->idx = i; cl->next = clHead;
+      cl->pre_ans = FALSE;
       clHead = cl;
    }
    
@@ -3952,18 +4067,18 @@ void BuildTree (ILink ilist, double threshold, char *macRoot, char *pattern)
       while(node != NULL && snum < tree->size) {
 	 node->id=NULL;
 	 node->snum=snum++; node->quest->used=TRUE;
-         if (trace & T_DET) {
-            char buf[20];
-            if (node->parent==NULL) sprintf(buf," ROOT ");
-            else sprintf(buf,"%3d[%c]",node->parent->snum,
+      if (trace & T_DET) {
+         char buf[20];
+         if (node->parent==NULL) sprintf(buf," ROOT ");
+         else sprintf(buf,"%3d[%c]",node->parent->snum,
                          ((node->parent->yes==node)?'Y':'N'));
-            printf("\n  Split %s == %-3d (%.1f)\n",
-                   buf,node->snum,node->occ);
-            printf("          %20s   LogL %7.3f -> %7.3f  Imp %.2f\n",
-                   node->quest->qName->name,node->tProb/node->occ,
-                   node->sProb/node->occ,node->sProb-node->tProb);
-            fflush(stdout);
-         }
+         printf("\n  Split %s == %-3d (%.1f)\n",
+                buf,node->snum,node->occ);
+         printf("          %20s   LogL %7.3f -> %7.3f  Imp %.2f\n",
+                node->quest->qName->name,node->tProb/node->occ,
+                node->sProb/node->occ,node->sProb-node->tProb);
+         fflush(stdout);
+      }
          SplitTreeNode(tree,node,TRUE);
          ValidProbNode(node->yes,(useRefTree==1||useRefTree==3)?0.0:threshold,TRUE);
          ValidProbNode(node->no, (useRefTree==1||useRefTree==3)?0.0:threshold,TRUE);
@@ -3972,24 +4087,32 @@ void BuildTree (ILink ilist, double threshold, char *macRoot, char *pattern)
          AddLeafList(node->no, tree,(useRefTree==1||useRefTree==3)?0.0:threshold,TRUE);
 
          if (trace & T_TREE_BESTQ) {
-            printf("   Node %-3d  [Y] LogL %.3f (%.1f)    [N] LogL %.3f (%.1f)\n",
-                   node->snum,node->yes->tProb/node->yes->occ,node->yes->occ,
-                   node->no->tProb/node->no->occ,node->no->occ);
-            fflush(stdout);
-         }
+         printf("   Node %-3d  [Y] LogL %.3f (%.1f)    [N] LogL %.3f (%.1f)\n",
+                node->snum,node->yes->tProb/node->yes->occ,node->yes->occ,
+                node->no->tProb/node->no->occ,node->no->occ);
+         fflush(stdout);
+      }
          node = FindBestSplit(tree->leaf,(useRefTree==1||useRefTree==3)?0.0:threshold);
       }
    }
-
+   
    if (useRefTree>=0) {
-      if (useRefTree>=2)
+      if (useRefTree>=2) {
+         for (node=tree->leaf;node!=NULL;node=node->next) {
+            node->snum = -1;
+            node->yes  = NULL;
+            node->no   = NULL;
+            node->id   = NULL;
+	 }
          node=NULL;
+      }
       else {
          for (node=tree->leaf,j=1;node!=NULL;node=n,j++) {
             n = node->next;
             if (node->parent != NULL)
    	       node->parent->qlist = qList;
             ValidProbNode(node,threshold,FALSE);
+            node->snum= -1;
             node->yes = NULL;
             node->no  = NULL;
             node->next= NULL;
@@ -4002,7 +4125,7 @@ void BuildTree (ILink ilist, double threshold, char *macRoot, char *pattern)
       }
    }
    else
-   node=FindBestSplit(tree->leaf,threshold);
+      node=FindBestSplit(tree->leaf,threshold);
    while(node != NULL) {
       node->snum=snum++; node->quest->used=TRUE;
       if (trace & T_DET) {
@@ -4225,14 +4348,14 @@ HMMDef *SynthModel(LabId id)
                }
             }
             if (!strShare)
-               HError(2695,"SynthModel: untied state found for state %d",i);
+            HError(2695,"SynthModel: untied state found for state %d",i);
             else {
                se->info->dur = CloneSVector(hset->hmem, proto->svec[i].info->dur, TRUE);
                se->info->weights = CloneSVector(hset->hmem, proto->svec[i].info->weights, TRUE);
             }
          }
          else
-            se->info->nUse++;
+         se->info->nUse++;
       }
       NewMacro(hset,fidx,'h',id,hmm);
    }
@@ -4400,7 +4523,7 @@ float GetNodeOcc (MLink macro, char type)
 
 Tree *LoadTree(char *name,Source *src)
 {
-   int n,nt,num_no,num_yes,s,nStream=1;
+   int n,nt,num_no,num_yes,s,s1,s2,nStream=1;
    char type;
    LabId lab_no,lab_yes,qname;
    Tree *tree;
@@ -4435,29 +4558,33 @@ Tree *LoadTree(char *name,Source *src)
    tree->root->snum=0;
 
    if (strTree) {
-     p = strrchr(index,'[')+1;
+     p = strrchr(index,'[');
 
-     while (*p==' ') p++;
-     s = atoi(p);
-     if (s<=0 || s>hset->swidth[0])
-       HError(9999,"LoadTree: stream index out of range");
-     tree->streams.set[s] = TRUE;
-     while (*p!=',' && *p!=']') p++;
-     while (*p==' ') p++;
-
-     while (*p==',') {
+     do {
         p++;
-        s = atoi(p);
-        if (s<=0 || s>hset->swidth[0])
+        s1 = s2 = atoi(p);
+        if (s1<=0 || s1>hset->swidth[0])
            HError(9999,"LoadTree: stream index out of range");
-        tree->streams.set[s] = TRUE;
-        nStream++;
-        while (*p!=',' && *p!=']') p++;
-        while (*p==' ') p++;
-     }
-     
+        while (*p!='-' && *p!=',' && *p!=']') p++;
+        if (*p=='-') {
+           p++;
+           s2 = atoi(p);
+           if (s2<=0 || s2>hset->swidth[0])
+              HError(9999,"LoadTree: stream index out of range");
+           while (*p!=',' && *p!=']') p++;
+        }
+        for (s=s1; s<=s2; s++)
+           tree->streams.set[s] = TRUE;
+     } while (*p==',');
+
      if (*p != ']')
        HError(9999,"LoadTree: stream index ] expected");
+     
+     nStream=0;
+     for (s=1;s<=hset->swidth[0];s++) {
+        if (tree->streams.set[s])
+           nStream++;
+     }
      
      if (IsFullSet(tree->streams)) {
         type = 's';
@@ -4715,25 +4842,18 @@ void ConvertModelsCommand(void)
                         sSize++;
                      }
                   if (first) {
-                     /* write header */
+                     /* fopen */
                      sprintf(ext,"%d",s);
                      MakeFN(head,dn,ext,fn);
                      if ((file=FOpen(fn,NoOFilter,&isPipe))==NULL)
                         HError(2611,"ConvertModels: Cannot create output file %s",fn);
-                     if(hset->msdflag[s])
-                        k=1;
-                     else
-                        k=0;
-                     WriteInt(file, &k, 1, TRUE);
-                     WriteInt(file, &sSize, 1, TRUE);
-                     WriteInt(file, &vSize, 1, TRUE); 
                      first=FALSE;
                   }
                   WriteInt(file, &tree->nLeaves, 1, TRUE);
                }
             }
          }
-
+         
          /* output pdf (mixture weight, mean vector and covariance matrix) */
          for (i=2; i<=MaxStatesInSet(hset)+1; i++) {
             for (tree=treeList; tree!=NULL; tree=tree->next) {
@@ -4749,13 +4869,26 @@ void ConvertModelsCommand(void)
                   
                   /* output array */
                   for (j=1; j<=tree->nLeaves; j++) {
+                     /* write mean */
                      for (k=0; k<tree->nActiveStr; k++) {
                         if (IsFullSet(tree->streams))
                            sti = ((StateInfo *)array[j]->macro[0]->structure)->pdf[k+1].info; /* state tying */
                         else
                            sti = (StreamInfo *)array[j]->macro[k]->structure;                 /* stream tying */
                         vSize = VectorSize(sti->spdf.cpdf[1].mpdf->mean);
-                        for (v=1; v<=VectorSize(sti->spdf.cpdf[1].mpdf->mean); v++) {
+                        for (v=1; v<=vSize; v++) {
+                           mean = sti->spdf.cpdf[1].mpdf->mean[v];
+                           WriteFloat(file, &mean, 1, TRUE);
+                        }
+                     }
+                     /* wirte variance */
+                     for (k=0; k<tree->nActiveStr; k++) {
+                        if (IsFullSet(tree->streams))
+                           sti = ((StateInfo *)array[j]->macro[0]->structure)->pdf[k+1].info; /* state tying */
+                        else
+                           sti = (StreamInfo *)array[j]->macro[k]->structure;                 /* stream tying */
+                        vSize = VectorSize(sti->spdf.cpdf[1].mpdf->mean);
+                        for (v=1; v<=vSize; v++) {
                            switch (sti->spdf.cpdf[1].mpdf->ckind) {
                            case DIAGC:
                               vari = sti->spdf.cpdf[1].mpdf->cov.var[v];
@@ -4769,11 +4902,16 @@ void ConvertModelsCommand(void)
                            default:
                               HError(999,"ConvertModels: not supported CovKind");
                            }
-                           mean = sti->spdf.cpdf[1].mpdf->mean[v];
-                           /* output mean & variance value */
-                           WriteFloat(file, &mean, 1, TRUE);
                            WriteFloat(file, &vari, 1, TRUE);
                         }
+                     }
+                     /* write MSD weight */
+                     for (k=0; k<tree->nActiveStr; k++) {
+                        if (IsFullSet(tree->streams))
+                           sti = ((StateInfo *)array[j]->macro[0]->structure)->pdf[k+1].info; /* state tying */
+                        else
+                           sti = (StreamInfo *)array[j]->macro[k]->structure;                 /* stream tying */
+                        vSize = VectorSize(sti->spdf.cpdf[1].mpdf->mean);
                         /* for multi space probability distribution */
                         if (sti->nMix>1) {
                            if (vSize!=hset->swidth[sti->stream])
@@ -4781,8 +4919,7 @@ void ConvertModelsCommand(void)
                            /* output space weight */
                            weight = sti->spdf.cpdf[1].weight;
                            WriteFloat(file, &weight, 1, TRUE);
-                           weight = 1-weight;
-                           WriteFloat(file, &weight, 1, TRUE);
+                           break;
                         }
                      }
                   }
@@ -4815,14 +4952,14 @@ void ConvertTreesCommand(void)
       printf("\nCT %s\n Convert current questions/trees into the hts_engine format\n",dn);
       fflush(stdout);
    }
-   
+
    if (treeList==NULL)
       HError(2655,"ConvertTrees: No trees loaded - use LT command");
 
    strcpy(head,"trees.");
    for (s=1; s<=hset->swidth[0]; s++)
       out[s]=FALSE;
-
+   
    for (s=1; s<=hset->swidth[0]; s++) {
       if (!out[s]) {      
          first = TRUE;
@@ -4851,7 +4988,7 @@ void ConvertTreesCommand(void)
          }
          if (!first)
             FClose(file,isPipe);
-   }
+      }
    }
 
    saveHMMSet = FALSE;
@@ -6764,9 +6901,9 @@ void ImposeTreeCommand (void)
       fflush(stdout);
    }
 
-   if (hset->hsKind!=PLAINHS)
-      HError(9999,"ImposeTreeCommand: only PLAINHS is supported");
-   
+   if (hset->hsKind != PLAINHS)
+      HError(-9999,"ImposeTreeCommand: only PLAINHS is supported");
+
    if (!occStatsLoaded)
       HError(2672, "ImposeTreeCommand: Use LoadStats (LS <whatever-dir/stats>) before doing this.");
    
@@ -6824,6 +6961,7 @@ void ImposeTreeCommand (void)
                   cl->item = ilist;  cl->ans = FALSE;
                   cl->idx = -1;
                   cl->next = node->clist;
+                  cl->pre_ans = FALSE;
                   node->clist = cl;
                   totalItems++;
                }
@@ -9088,7 +9226,8 @@ void PrintNodeBaseClass (FILE *f, ILink ilist, const int state, const int stream
                         fprintf(f,",%d", m);
                   }
                   first = FALSE;
-                  Touch(&sti->spdf.cpdf[m].mpdf->nUse);
+                  if(saveUntiedRegTree == FALSE)
+                     Touch(&sti->spdf.cpdf[m].mpdf->nUse);
                }
             }
          }

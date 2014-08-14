@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -45,7 +45,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmtrain_version = "!HVER!HMTrain: 2.2 [NIT 07/07/11]";
-char *hmtrain_vc_id = "$Id: HMTrain.c,v 1.2 2011/06/16 04:27:17 uratec Exp $";
+char *hmtrain_vc_id = "$Id: HMTrain.c,v 1.3 2012/12/22 07:01:28 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

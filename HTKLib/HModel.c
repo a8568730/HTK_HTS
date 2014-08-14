@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmodel_version = "!HVER!HModel:   3.4.1 [CUED 12/03/09]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.42 2011/06/16 05:07:56 bonanza Exp $";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.44 2012/12/22 07:01:28 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -196,7 +196,7 @@ void InitModel(void)
       if (GetConfFlt(cParm,nParm,"PDETHRESHOLD2",&d)) pdeTh2 = d;
       if (GetConfFlt(cParm,nParm,"IGNOREVALUE",&d)) ignoreValue = d;
    }
-}
+   }
 
 /* EXPORT->ResetModel: reset module */
 void ResetModel (void)
@@ -462,7 +462,7 @@ typedef enum {   /* Only a character big !! */
    LINXFORM, OFFSET, BIAS, LOGDET, BLOCKINFO, BLOCK, BASECLASS, 
    CLASS, XFORMWGTSET, CLASSXFORM, MMFIDMASK, PARAMETERS,
    NUMCLASSES, ADAPTKIND, PREQUAL, INPUTXFORM,
-   RCLASS=110, REGTREE, NODE, TNODE,
+   RCLASS=110, REGTREE, NODE, TNODE, DIMVBVAR, XFORMVBVAR,
    HMMSETID=119,
    PARMKIND=120, 
    MACRO, EOFSYM, NULLSYM   /* Special Syms - not literals */
@@ -504,6 +504,7 @@ static struct {
      {"MMFIDMASK", MMFIDMASK }, {"PARAMETERS", PARAMETERS },
      {"NUMCLASSES", NUMCLASSES }, {"ADAPTKIND", ADAPTKIND },
      {"PREQUAL", PREQUAL }, {"INPUTXFORM", INPUTXFORM },
+     {"DIMVBVAR", DIMVBVAR }, {"XFORMVBVAR", XFORMVBVAR },
      { "", NULLSYM }
 };
 
@@ -2342,6 +2343,49 @@ static ReturnStatus GetHMMDef(HMMSet *hset, Source *src, Token *tok,
    return(SUCCESS);
 }
 
+/* GetXFormVBVar: parse src and return XFormVBVar */
+static Vector GetXFormVBVar(HMMSet *hset, Source *src, Token *tok)
+{
+   Vector m = NULL;
+   MemHeap *hmem;
+   int dim,size;
+   
+   if (trace&T_PAR) printf("HModel: GetXFormVBVar\n");
+   if (hset==NULL) hmem = &xformStack;
+   else hmem = hset->hmem;
+
+   if (tok->sym != DIMVBVAR) {
+      HMError(src,"<DIMVBVAR> symbol expected in GetXFormVBVar");
+      return(NULL);
+   }
+   if (!ReadInt(src,&dim,1,tok->binForm)){
+      HMError(src,"Dimension index for XformVBVar expected");
+      return(NULL);
+   }
+   if (GetToken(src,tok)<SUCCESS) {
+      HMError(src,"GetToken failed");
+      return(NULL);
+   }
+   if (tok->sym != XFORMVBVAR) {
+      HMError(src,"<XFORMVBVAR> symbol expected in GetTransformVBVar");
+      return(NULL);
+   }
+   if (!ReadInt(src,&size,1,tok->binForm)) {
+      HMError(src,"Size of XformVBVar vector expected");
+      return(NULL);
+   }
+   m = CreateVector(hmem,size);
+   if (!ReadVector(src,m,tok->binForm)){
+      HMError(src,"XformVBVar expected");
+      return(NULL);
+   }
+   if (GetToken(src,tok)<SUCCESS) {
+      HMError(src,"GetToken failed");
+      return(NULL);
+   }
+   return m;
+}
+
 /* GetBias: parse src and return Bias structure */
 static SVector GetBias(HMMSet *hset, Source *src, Token *tok)
 {
@@ -2386,7 +2430,7 @@ static LinXForm* GetLinXForm(HMMSet *hset, Source *src, Token *tok)
 {
   LinXForm *xf;
   MemHeap *hmem;
-  int i,b;
+  int i,b,j,d;
   int numBlocks;
 
   if (trace&T_PAR) printf("HModel: GetLinXForm\n");
@@ -2461,6 +2505,18 @@ static LinXForm* GetLinXForm(HMMSet *hset, Source *src, Token *tok)
 	return(NULL);
       }
       xf->xform[i] = GetTransform(hset,src,tok);
+
+      if (tok->sym==DIMVBVAR) {
+         if (i==1)
+            xf->vbvar = (Vector **)New(hmem,(numBlocks+1)*sizeof(Vector *));
+         d = NumRows(xf->xform[i]);
+         xf->vbvar[i] = (Vector *)New(hmem,(d+1)*sizeof(Vector));
+         for (j=1;j<=d;j++)
+            xf->vbvar[i][j] = GetXFormVBVar(hset,src,tok);
+      }
+      else
+         xf->vbvar = NULL;
+
     }
     if (tok->sym==VARIANCE) { /* this should be a semi-tied transform */
        if(( xf->vFloor = GetVariance(hset,src,tok))==NULL){
@@ -3338,7 +3394,7 @@ static void PutStateInfo(HMMSet *hset, FILE *f, MLink q, StateInfo *si,
 static void PutLinXForm(HMMSet *hset, FILE *f, MLink q, LinXForm *xf, 
 			  Boolean inMacro, Boolean binary)
 {
-  int i;
+  int i,j,k,d;
 
   if (xf->nUse > 0 || inMacro) 
     PutMacroHdr(hset,f,q,'f',xf,binary);
@@ -3367,6 +3423,19 @@ static void PutLinXForm(HMMSet *hset, FILE *f, MLink q, LinXForm *xf,
       WriteInt(f,&i,1,binary);
       if (!binary) fprintf(f,"\n");
       PutTransform(hset,f,NULL,xf->xform[i],FALSE,binary);
+      if (xf->vbvar != NULL) {
+         d = NumRows(xf->xform[i]);
+         for (j=1;j<=d;j++) {
+            k = VectorSize(xf->vbvar[i][j]);
+            PutSymbol(f,DIMVBVAR,binary);
+            WriteInt(f,&j,1,binary);
+            if (!binary) fprintf(f,"\n");
+            PutSymbol(f,XFORMVBVAR,binary);
+            WriteInt(f,&k,1,binary);
+            if (!binary) fprintf(f,"\n");
+            WriteVector(f,xf->vbvar[i][j],binary);
+         }
+      }
     }
     if (xf->vFloor != NULL)
        PutVariance(hset,f,NULL,xf->vFloor,FALSE,binary);  

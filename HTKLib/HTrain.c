@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2012  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *htrain_version = "!HVER!HTrain:   3.4.1 [CUED 12/03/09]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.22 2011/06/16 04:18:29 uratec Exp $";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.24 2012/12/22 07:01:28 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -252,8 +252,8 @@ SegStore CreateSegStore(MemHeap *x, Observation obs, int segLen)
    ss->o = obs; ss->segLen = segLen;
    ss->hasfv = ((obs.pk&BASEMASK) != DISCRETE) ? TRUE : FALSE;
    ss->hasvq = ((obs.pk&HASVQ)  || (obs.pk&BASEMASK) == DISCRETE) ? TRUE : FALSE;
-   if (ss->hasfv) ss->fvSegs = CreateSequence(x,100);
-   if (ss->hasvq) ss->vqSegs = CreateSequence(x,100);
+   if (ss->hasfv) ss->fvSegs = CreateSequence(x,10000);
+   if (ss->hasvq) ss->vqSegs = CreateSequence(x,10000);
    return ss;
 }
 
