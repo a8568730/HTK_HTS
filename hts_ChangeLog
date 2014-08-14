@@ -1,3 +1,378 @@
+2008-01-15 22:41  Heiga Zen
+
+	* HTKTools/Makefile.in: Fix bug reported by Junichi Yamagishi: Use
+	  -p option in mkdir.
+
+2008-01-15 22:18  Heiga Zen
+
+	* HTKLVRec/: HDecode.c, HDecode.mod.c: Fix bug reported by Junichi
+	  Yamagishi: Modify arguments of InitAdapt() and
+	  CreateAdaptXForm().
+
+2008-01-15 15:27  Heiga Zen
+
+	* ChangeLog.htk: Remove ChangeLog.htk.
+
+2008-01-15 13:30  Heiga Zen
+
+	* .cvsignore: Update .cvsignore.
+
+2008-01-15 13:27  Heiga Zen
+
+	* HTKTools/Makefile.in, configure, configure.ac: Modifications to
+	  support gcc4: Search libgortran if libg2c is not found.  Add a
+	  variable "FORTRANLIB" to specify fortran library to be used.
+
+2008-01-15 02:28  Heiga Zen
+
+	* HTKTools/HHEd.c: Stop if macId==NULL in DeleteMacroCommand().
+
+2008-01-15 02:27  Heiga Zen
+
+	* HTKLib/HAdapt.c: Fix saveFullC and xfinfo->outFullC handling.
+	  Create MInfo if xfinfo->xKind==SEMIT.
+
+2008-01-14 00:02  Heiga Zen
+
+	* HTKLib/HUtil.c: Add mixture component to the item list if
+	  msdflag[s] is TRUE in PMix().
+
+2008-01-13 23:58  Heiga Zen
+
+	* HTKLib/HFB.c: Remove an unused variable.
+
+2008-01-11 12:08  Heiga Zen
+
+	* HTKTools/HMGenS.c: Reset pre-computed state duration probs if
+	  speaker changes.  Set xform-related variables in fbInfo.
+
+2008-01-11 12:06  Heiga Zen
+
+	* HTKTools/HERest.c: Reset pre-computed state duration probs if
+	  speaker changes.
+
+2008-01-11 11:58  Heiga Zen
+
+	* HTKLib/HGen.c: Fix 1 bug: state duration prob distributions
+	  should be transformed.
+
+2008-01-11 11:52  Heiga Zen
+
+	* HTKLib/HFB.h: Add ResetDMMPreComps().
+
+2008-01-11 11:52  Heiga Zen
+
+	* HTKLib/HFB.c: Fix 2 bugs: 1. maxDur should be calculated using
+	  transformed variance values.	2. pre-calculated state duration
+	  probs should be reset if speaker changes (in SAT).
+
+2008-01-11 11:49  Heiga Zen
+
+	* HTKLib/HAdapt.c: Fix 3 bugs: 1. Do not transform a given
+	  observation vector if mp->ckind==FULLC, because model parameters
+	  rather than observation vector has already been transformed.	2.
+	  Store hook to transformed covariance matrix to mi->cov.var rather
+	  than mp->cov.var.  3. Speaker change detection was wrong.
+
+2008-01-09 17:38  Heiga Zen
+
+	* HTKTools/HHEd.c: Fix bug: baseclass mmf was not generated
+	  properly if tree->size==0 (root node only).
+
+2008-01-09 17:13  Heiga Zen
+
+	* HTKTools/HMGenS.c: Do no attach accs if stateAlign==TRUE.  Do not
+	  give dset for InitialiseForBack() if stateAlign==TRUE.
+
+2008-01-09 10:35  Heiga Zen
+
+	* HTKLib/HFB.c: Reset previous commit.
+
+2008-01-09 10:32  Heiga Zen
+
+	* HTKLib/: HAdapt.c, HAdapt.h: Move baseTriMatTime to XFInfo.
+
+2008-01-08 18:43  Heiga Zen
+
+	* HTKLib/HFBLat.c: Remove variable s from AccAdaptFrame().  Update
+	  Copyright year.
+
+2008-01-08 18:36  Heiga Zen
+
+	* HTKTools/HERest.c, HTKTools/HHEd.c, HTKTools/HMGenS.c,
+	  HTKTools/HMMIRest.c, HTKTools/HVite.c, HTKLib/HAdapt.c,
+	  HTKLib/HAdapt.h, HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HTrain.c,
+	  HTKLib/HTrain.h, HTKLib/HUtil.c: Update Copyright year.
+
+2008-01-08 18:23  Heiga Zen
+
+	* HTKTools/.cvsignore: Update .cvsignore.
+
+2008-01-08 18:23  Heiga Zen
+
+	* HTKLib/HFB.c: Accumulating statistics for duration xform in
+	  UpDurParms() is computationally very inefficient because
+	  observation caches in HAdapt doesn't work well.  So we added a
+	  function UpDurXForm() to solve this.
+
+2008-01-08 18:20  Heiga Zen
+
+	* HTKLib/: HAdapt.c, HAdapt.h: Remove variable s from
+	  AccAdaptFrame().  Add OpenMP pragma to UpdateBaseAccs().
+
+2008-01-08 14:53  Heiga Zen
+
+	* HTKTools/.cvsignore: Update .cvsignore.
+
+2008-01-08 14:45  Heiga Zen
+
+	* HTKTools/HHEd.c: Initialize shrinkOccThresh.	Terminate baseclass
+	  HMM list generation if shrinkOccThresh==NULL.
+
+2008-01-07 22:31  Heiga Zen
+
+	* HTKTools/HERest.c, HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HTrain.c,
+	  HTKLib/HUtil.c: Fix bug: statistics in generated stats file are
+	  invalid in stream shared systems.
+
+2008-01-07 22:27  Heiga Zen
+
+	* HTKTools/HHEd.c: Shrink loaded decision trees according to
+	  occupancies in DecTrees2RegTreeCommand().
+
+2008-01-04 16:30  Heiga Zen
+
+	* HTKTools/HMGenS.c: Update copyright year.
+
+2008-01-04 16:30  Heiga Zen
+
+	* configure.ac: Update version number.	Do not stop if libX11 is
+	  not found.
+
+2008-01-04 14:51  Heiga Zen
+
+	* HTKTools/HMGenS.c: Add a configuration variable "useHMMFB" to
+	  turn off the use of duration models in the forward-backward
+	  algorithm.
+
+2008-01-04 14:36  Heiga Zen
+
+	* HTKTools/HERest.c: Add a variable uFlags_dur to store update
+	  flags for duration models.  Parse duration update flags in
+	  SetuFlags().
+
+2008-01-04 14:35  Heiga Zen
+
+	* HTKTools/HVite.c: Fix bug: fbInfo->xfInfo_hmm  should be
+	  fbInfo->xfinfo_hmm.
+
+2008-01-04 14:33  Heiga Zen
+
+	* HTKTools/HMGenS.c: Add an option "-b" to turn on input xform for
+	  state duration models.  Change the mixture pruning threshold
+	  option to -g.
+
+2008-01-04 14:32  Heiga Zen
+
+	* HTKLib/: HFB.c, HTrain.h: Remove UPDUR from UPDSet.
+
+2008-01-03 10:37  Heiga Zen
+
+	* HTKTools/HERest.c, HTKTools/HHEd.c, HTKTools/HMGenS.c,
+	  HTKTools/HMMIRest.c, HTKTools/HVite.c, HTKLib/HAdapt.c,
+	  HTKLib/HAdapt.h: Support HSMM adaptation & adaptive training.
+
+2007-12-29 00:14  Heiga Zen
+
+	* HTKLib/HWave.c: Small modification to avoid warnings.
+
+2007-12-28 23:47  Heiga Zen
+
+	* HTKLib/: HModel.c, HModel.h: Move a static variable xformDirNames
+	  to HMMSet.
+
+2007-12-28 23:45  Heiga Zen
+
+	* HTKLib/HFB.c: Fix bugs: Use parent xform for parameter updates in
+	  UpDurParms().  Call UpDUrParms() if UPXFORMS is turned on.  Turn
+	  off UPTRANS for state duration models.
+
+2007-12-27 18:16  Heiga Zen
+
+	* HTKLib/HModel.c: Fix bug: index variables and others in HMMDef,
+	  StateInfo, and StreamInfo should be initialised.
+
+2007-12-27 17:00  Heiga Zen
+
+	* HTKTools/HHEd.c: Fix bug: ch1 & ch2 should not be freed at the
+	  end of BuildRegClusters().
+
+2007-12-26 03:41  Heiga Zen
+
+	* HTKTools/HERest.c: Add static variable durmapTau and call
+	  SetMapTau() to change mapTau value for duration models.
+
+2007-12-26 03:38  Heiga Zen
+
+	* HTKLib/: HMap.c, HMap.h: Add SetMapTau() to set mapTau from other
+	  modules.
+
+2007-12-25 16:22  Heiga Zen
+
+	* HTKTools/HVite.c: Fix bug: initialize fbInfo->xfinfo_hmm by
+	  xfInfo to support online incremental adaptation.
+
+2007-12-25 14:48  Heiga Zen
+
+	* HTKTools/HERest.c, HTKTools/HMMIRest.c, HTKTools/HVite.c,
+	  HTKLib/HAdapt.c, HTKLib/HAdapt.h, HTKLib/HFB.c, HTKLib/HFB.h,
+	  HTKLib/HFBLat.c, HTKLib/HFBLat.h: Move static variables in
+	  HAdapt.c to structure XFInfo and modify related parts.
+
+2007-12-23 03:48  Heiga Zen
+
+	* HTKTools/HERest.c: Remove SaveInOneFile().
+
+2007-12-22 22:37  Heiga Zen
+
+	* HTKTools/HERest.c: Add checks for # and name of dump files.
+
+2007-12-22 03:24  Heiga Zen
+
+	* HTKTools/HERest.c: Fixes to support parallel training with state
+	  duration models.
+
+2007-12-22 03:22  Heiga Zen
+
+	* HTKLib/HFB.c: Change wa->c from Vector to SVector.  Cache state
+	  duration probs in hooks of wa->c.
+
+2007-12-21 11:59  Heiga Zen
+
+	* HTKLib/HFB.c: Do not compute lMax and gMax in SetBeta() if
+	  pruning is turned off.
+
+2007-12-21 04:30  Heiga Zen
+
+	* HTKLib/HFB.c: Small speed improvements.
+
+2007-12-20 03:32  Heiga Zen
+
+	* HTKTools/HMGenS.c: Call PrintrFlags() to trace random generation
+	  flags.
+
+2007-12-20 03:31  Heiga Zen
+
+	* HTKLib/: HGen.c, HGen.h: Add PrintrFlags() to print the status of
+	  random generation flags.  Export SetrFlags() and PrintrFlags().
+
+2007-12-20 03:00  Heiga Zen
+
+	* HTKLib/HGen.c, HTKLib/HGen.h, HTKTools/HMGenS.c: Implement random
+	  sampling of state transitions, state durations, MSD spaces, and
+	  mixture components.
+
+2007-12-20 01:59  Heiga Zen
+
+	* HTKLib/HMath.c: Modify MultiNomial().
+
+2007-12-19 16:35  Heiga Zen
+
+	* HTKTools/HHEd.c: Fix typo.
+
+2007-12-18 12:32  Heiga Zen
+
+	* HTKLib/HFB.c: Fix bug: aqt1 rather than aqt should be used.
+
+2007-12-17 11:43  Heiga Zen
+
+	* HTKLib/HFB.c: Fix bugs: al_dList and up_dList should be created
+	  in CreateInsts() even no update flags for duration models is
+	  specified.  In UpMixParms, bqt[1][1] should be added to initx if
+	  t==1.
+
+2007-12-17 11:40  Heiga Zen
+
+	* HTKTools/.cvsignore: Add *.mmf to .cvsignore.
+
+2007-12-17 01:28  Heiga Zen
+
+	* HTKTools/HRest.c: Fix bug: stream index should be dcremented.
+
+2007-12-14 23:28  Heiga Zen
+
+	* HTKLib/: HMath.c, HMath.h: Add a function to sample a random
+	  value from a multinomial distribution.
+
+2007-12-14 14:52  Heiga Zen
+
+	* HTKLib/HFB.c: Support non-left-to-right structure in
+	  FixTransHSMM().
+
+2007-12-14 13:16  Heiga Zen
+
+	* HTKTools/HRest.c: Fix bug: HRest should generate a state duration
+	  model in new multi-stream format.
+
+2007-12-12 18:45  Heiga Zen
+
+	* HTKTools/.cvsignore, HTKTools/HERest.c, HTKTools/HHEd.c,
+	  HTKTools/HLEd.c, HTKTools/HMGenS.c, HTKTools/HVite.c,
+	  HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HGen.c, HTKLib/HGen.h,
+	  HTKLib/HShell.c, HTKLib/HTrain.h: Merge branch 'HSMM' and HEAD.
+
+2007-12-12 18:32  Heiga Zen
+
+	* HTKTools/.cvsignore: Update .cvsignore.
+
+2007-12-12 18:31  Heiga Zen
+
+	* HTKTools/HERest.c, HTKTools/HMGenS.c, HTKTools/HVite.c,
+	  HTKLib/HShell.c, HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HTrain.h:
+	  Support HSMM training and synthesis.
+
+2007-12-12 18:30  Heiga Zen
+
+	* HTKLib/: HGen.c, HGen.h: Export JointProb().
+
+2007-12-12 18:29  Heiga Zen
+
+	* HTKTools/HLEd.c: Cast to avoid warning.
+
+2007-12-12 18:29  Heiga Zen
+
+	* HTKTools/HHEd.c: Remove an unused variable.
+
+2007-12-04 18:38  Heiga Zen
+
+	* HTKLib/HUtil.c: Fix bug: GoNextHMM() stops by a segmentation
+	  fault if "~b" macro exists but all models in a given list doesn't
+	  exist in a model set.
+
+2007-11-29 15:56  Heiga Zen
+
+	* HTKLib/HGen.c: Fix bug: rho should be 0.0 if phoneme boundaries
+	  are not specified in SetStateDurations().
+
+2007-11-29 14:59  Heiga Zen
+
+	* HTKLib/HGen.c: Output an error message if gv model is not found
+	  in a model set.
+
+2007-11-21 17:49  Heiga Zen
+
+	* HTKTools/HMGenS.c: Fix a bug reported by Simon King: File names
+	  of window files a weren't output properly.
+
+2007-11-21 17:45  Heiga Zen
+
+	* HTKLib/HGen.c: Check window length to avoid invalid window files.
+
+2007-11-19 15:25  Heiga Zen
+
+	* HTKLib/HGraf.null.c: Fix a bug reported by Simon King: there is a
+	  stray semicolon in ResetGraf().
+
 2007-11-01 17:32  Heiga Zen
 
 	* HTKLib/HGen.c: Fix comment.
@@ -377,7 +752,7 @@
 	* HTKLib/HFB.c: Properly allocate otprob vector if
 	  hsKind==DISCRETEHS && S!=1
 
-2007-03-19 08:01  Takashi Nos
+2007-03-19 08:01  Takashi Nose
 
 	* HTKTools/HMGenS.c: Usage for -c 1 option was modified.
 

@@ -88,6 +88,11 @@ void ResetMap(void);
    reset the odule 
 */
 
+void SetMapTau(float tau);
+/*
+   set mapTau
+*/
+
 void MAPUpdateModels(HMMSet *hset, UPDSet uflags);
 /*
   Using the accumulates obtained using FB perform Gauvain

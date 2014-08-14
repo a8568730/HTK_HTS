@@ -38,7 +38,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -73,7 +73,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hfblat_version = "!HVER!HFBLat:   3.4 [CUED 25/04/06]";
-char *hfblat_vc_id = "$Id: HFBLat.c,v 1.9 2007/10/04 06:50:26 zen Exp $";
+char *hfblat_vc_id = "$Id: HFBLat.c,v 1.11 2008/01/08 09:43:49 zen Exp $";
 
 /*
   Performs forward/backward alignment
@@ -1143,7 +1143,7 @@ void DoAllMixUpdates(int t){
              up_otvs = ApplyCompFXForm(mp,fbInfo->al_ot.fv[s],fbInfo->paXForm,&det,t);
          } 
          if (fbInfo->uFlags&UPXFORM) 
-            AccAdaptFrame(Lr, up_otvs, mp, t, s);   /* note: discriminative transform update needs to be investigated further */
+            AccAdaptFrame(fbInfo->xfinfo, Lr, up_otvs, mp, t);   /* note: discriminative transform update needs to be investigated further */
 
          /* -------------------- (c) Std Mixture updates --------------------*/
          if (fbInfo->uFlags&UPMEANS) { /* cant update vars but not means. */

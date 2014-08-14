@@ -65,8 +65,8 @@
 /*  ---------------------------------------------------------------  */
 
 char *hgraf_version = "!HVER!HGraf(null):   3.4 [CUED 25/04/06]";
-char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.3 2007/09/18 12:20:43 zen Exp $";
-/* char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.3 2007/09/18 12:20:43 zen Exp $"; */
+char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.4 2007/11/19 06:25:16 zen Exp $";
+/* char *hgraf_vc_id = "$Id: HGraf.null.c,v 1.4 2007/11/19 06:25:16 zen Exp $"; */
 
 #include "HShell.h"
 #include "HMem.h"
@@ -92,7 +92,7 @@ void InitGraf(void)
 }
 
 /* EXPORT->ResetGraf: reset the module */
-void ResetGraf(void);
+void ResetGraf(void)
 {
    return;  /* do nothing */
 }

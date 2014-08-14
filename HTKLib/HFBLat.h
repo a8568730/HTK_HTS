@@ -131,6 +131,8 @@ typedef struct {
   float den_index; /*only for MPE. */ /*make sure set. */
 
   Boolean InUse; /* FALSE if stacks are cleared and lattices empty. */
+
+  XFInfo *xfinfo;
   AdaptXForm *inXForm;/* current input transform (if any) */
   AdaptXForm *paXForm;/* current parent transform (if any) */
   /* ... */

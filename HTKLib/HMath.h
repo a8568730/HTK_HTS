@@ -315,6 +315,11 @@ float GaussDeviate(float mu, float sigma);
    Return a random number with a N(mu,sigma) distribution
 */
 
+int MultiNomial(Vector prob, const int N);
+/* 
+   Return a random number in range 1->N with multinomial distribution
+*/
+
 #ifdef __cplusplus
 }
 #endif

@@ -148,6 +148,12 @@ void ResetMap(void)
    return;   /* do nothing */
 }
 
+/* EXPORT->SetMapTau: set mapTau from outside */
+void SetMapTau(float tau)
+{
+   mapTau = tau;
+}
+
 /* --------------------------- Model Update --------------------- */
 
 static int nFloorVar = 0;     /* # of floored variance comps */

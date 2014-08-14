@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hmodel_version = "!HVER!HModel:   3.4 [CUED 25/04/06]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.21 2007/10/04 04:31:06 zen Exp $";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.23 2007/12/28 14:47:58 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -113,8 +113,6 @@ static int trace = 0;
 
 /* ------------------ Input XForm directory info ------------------- */
 
-typedef struct _XFDirInfo *XFDirLink;
-
 typedef struct _XFDirInfo {
   char *dirName;           /* input XForm directory name */
   XFDirLink next;          /* next directory name in list */
@@ -139,7 +137,6 @@ static Boolean allowOthers=TRUE;        /* allow unseen models in files */
 static HSetKind cfHSKind;
 static char orphanMacFile[100];         /* last resort file for new macros */
 
-static XFDirLink xformDirNames = NULL;  /* linked list of input transform directories */
 static MemHeap xformStack;              /* For Storage of xforms with no model sets ... */
 
 static int pde1BlockEnd = 13;          /* size of PDE blocks */
@@ -199,7 +196,7 @@ void InitModel(void)
       if (GetConfFlt(cParm,nParm,"PDETHRESHOLD2",&d)) pdeTh2 = d;
       if (GetConfFlt(cParm,nParm,"IGNOREVALUE",&d)) ignoreValue = d;
    }
-   }
+}
 
 /* EXPORT->ResetModel: reset module */
 void ResetModel (void)
@@ -914,10 +911,10 @@ void AddInXFormDir(HMMSet *hset, char *dirname)
   p = (XFDirLink)New(hset->hmem,sizeof(XFDirInfo));
   p->next = NULL;
   p->dirName = CopyString(hset->hmem,dirname);
-  if (xformDirNames == NULL)
-    xformDirNames = p;
+  if (hset->xformDirNames == NULL)
+    hset->xformDirNames = p;
   else {  /* store in order of arrival */
-    for (q=xformDirNames; q->next != NULL; q=q->next);
+    for (q=hset->xformDirNames; q->next != NULL; q=q->next);
     q->next = p;
   }
 }
@@ -2029,7 +2026,7 @@ static StreamInfo *GetStreamInfo(HMMSet *hset, Source *src, Token *tok, int s)
       sti->nUse = 0;
       sti->hook = NULL;
       sti->spdf.cpdf = NULL;
-     
+      sti->pIdx = 0;
       if (tok->sym == STREAM) {
          if (!ReadShort(src,&sti->stream,1,tok->binForm)) {
             HMError(src,"Stream index in expected");
@@ -2161,6 +2158,7 @@ static StateInfo *GetStateInfo(HMMSet *hset, Source *src, Token *tok)
    } else {
       si = (StateInfo *)New(hset->hmem,sizeof(StateInfo));
       si->nUse = 0; si->hook = NULL; si->weights = NULL;
+      si->dur = NULL; si->sIdx = 0; si->stateCounter = 0;
       si->pdf = CreateSE(hset,S);
       if (tok->sym==SWEIGHTS || (tok->sym==MACRO && tok->macroType=='w')){
          if((si->weights = GetSWeights(hset,src,tok))==NULL){
@@ -4535,6 +4533,7 @@ void CreateHMMSet(HMMSet *hset, MemHeap *heap, Boolean allowTMods)
    hset->semiTiedMacro = NULL;
    hset->semiTied = NULL;
    hset->projSize = 0;
+   hset->xformDirNames = NULL;
 }
 
 /* CreateHMM: create logical macro. If pId is unknown, create macro for
@@ -4555,6 +4554,7 @@ static ReturnStatus CreateHMM(HMMSet *hset, LabId lId, LabId pId)
    if (m == NULL) {  /* need to create new phys macro and HMMDef */
       hmm = (HLink)New(hset->hmem,sizeof(HMMDef));
       hmm->owner = hset; hmm->nUse = 1; hmm->hook = NULL;
+      hmm->svec = NULL; hmm->dur = NULL; hmm->transP = NULL; hmm->tIdx=0;
       hmm->numStates = 0;  /* indicates HMMDef not yet defined */
       if((m=NewMacro(hset,0,'h',pId,hmm))==NULL){
          HRError(7091,"CreateHMM: NewMacro (Physical) failed"); /*will never happen*/
@@ -4816,7 +4816,7 @@ static char *InitXFormScanner(HMMSet *hset, char *macroname, char *fname,
   if ((fname==NULL) || ((f=FOpen(fname,NoFilter,&isPipe)) == NULL)) {
     if ((trace&T_XFD) && (fname!=NULL))
       HRError(7010,"InitXFormScanner: Cannot open source file %s",fname);
-    p = xformDirNames;
+      p = hset->xformDirNames;
     while ((p!=NULL) && 
 	   ((f=FOpen(MakeFN(macroname,p->dirName,NULL,buf),NoFilter,&isPipe)) == NULL)) {
       if (trace&T_XFD) 

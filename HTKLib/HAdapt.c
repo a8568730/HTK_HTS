@@ -39,7 +39,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -74,7 +74,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hadapt_version = "!HVER!HAdapt:   3.4  [CUED 25/04/06]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.32 2007/10/03 07:20:13 zen Exp $";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.39 2008/01/14 17:27:22 zen Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>
@@ -111,6 +111,7 @@ char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.32 2007/10/03 07:20:13 zen Exp $";
 
 typedef struct {
    XFormKind xkind;
+   Boolean useBias;
    int dim;
    double occ;  
    IntVec blockSize;
@@ -170,28 +171,16 @@ static ConfParam *cParm[MAXGLOBS];      /* config parameters */
 static int nParm = 0;
 static int trace = 0;                   /* trace info */
 
-/* Global information about current set of transforms */
-/* 
-static AdaptXForm* curXForm = NULL;
-static AdaptXForm* parentXForm = NULL;
-*/
-static AdaptXForm* outXForm = NULL;
-static AdaptXForm* diagCovXForm = NULL;
-
 /* Local stack to allow storage of internal structrures */
 static MemHeap infoStack;
 static MemHeap obcaStack;
 
 /* Global variables */
-static XFormKind xKind     = MLLRMEAN;  /* Transform Kind to be created */
-
 /* also have the option of storing a model set for each of the speakers */
 static Boolean saveSpkrModels = FALSE;
-static Boolean saveFullC = FALSE;
 
 /* The xform config variable information */
 static float minOccThresh = 0.0;       /* minimum occupancy to accumulate stats to estimate xform */
-static Boolean useBias = TRUE;         /* whether a bias is to be estimated for the xform */
 static Boolean storeMInfo = TRUE;      /* whether original model information  is to be stored */
 static Boolean keepXFormDistinct = TRUE;
 static Boolean swapXForms = FALSE;     /* swap the transforms around after generating transform */
@@ -200,45 +189,6 @@ static Boolean mllrDiagCov = FALSE;    /* perform diagonal covariance adaptation
 
 static IntVec enableBlockAdapt = NULL;
 
-/* split threshold definitions for each stream for each xform kind */
-static Vector xformSplitThresh=NULL;
-static Vector mllrMeanSplitThresh=NULL;
-static Vector mllrCovSplitThresh=NULL;
-static Vector cmllrSplitThresh=NULL;
-
-/* adaptation kind  definitions for each xform kind */
-static AdaptKind xformAdaptKind = BASE;
-static AdaptKind mllrMeanAdaptKind = BASE;
-static AdaptKind mllrCovAdaptKind = BASE;
-static AdaptKind cmllrAdaptKind = BASE;
-
-/* regression tree definitions for each xform kind */
-static char *xformRegTree = NULL;
-static char *mllrMeanRegTree = NULL;
-static char *mllrCovRegTree = NULL;
-static char *cmllrRegTree = NULL;
-
-/* baseclass definitions for each xform kind */
-static char *xformBaseClass = NULL;
-static char *mllrMeanBaseClass = NULL;
-static char *mllrCovBaseClass = NULL;
-static char *cmllrBaseClass = NULL;
-
-/* block size definitions for each xform kind for each stream */
-static IntVec xformBlockSize[SMAX];
-static IntVec mllrMeanBlockSize[SMAX];
-static IntVec mllrCovBlockSize[SMAX];
-static IntVec cmllrBlockSize[SMAX];
-
-/* band width definitions for each xform kind for each stream */
-static IntVec xformBandWidth[SMAX];
-static IntVec mllrMeanBandWidth[SMAX];
-static IntVec mllrCovBandWidth[SMAX];
-static IntVec cmllrBandWidth[SMAX];
-
-/* current time when this changes accumulate complete stats */
-/* -1 indicates that this is the first frame of a new file */
-static int baseTriMatTime=-1;  
 static int maxXFormIter = 10; /* something big, for CMLLR */ 
 static ObsCache *headoc = NULL; 
 static AccCache *headac = NULL;
@@ -308,7 +258,7 @@ static Boolean StoreObsCache(AdaptXForm *xform)
 static Boolean StoreAdaptMean(AdaptXForm *xform)
 {
    XFormKind xkind = xform->xformSet->xkind;
-   if ((xkind == MLLRMEAN) || (xkind == MLLRCOV) || (xkind == CMLLR))
+   if ((xkind == MLLRMEAN) || (xkind == MLLRCOV) || (xkind == CMLLR) || (xkind == SEMIT))
       return TRUE;
    else
       return FALSE;
@@ -317,7 +267,7 @@ static Boolean StoreAdaptMean(AdaptXForm *xform)
 static Boolean StoreAdaptCov(AdaptXForm *xform)
 {
    XFormKind xkind = xform->xformSet->xkind;
-   if ((xkind == MLLRVAR) || (xkind == MLLRCOV) || (xkind == CMLLR))
+   if ((xkind == MLLRVAR)  || (xkind == MLLRCOV) || (xkind == CMLLR) || (xkind == SEMIT))
       return TRUE;
    else
       return FALSE;
@@ -327,8 +277,11 @@ static Boolean StoreAdaptCov(AdaptXForm *xform)
 /*            Initialisations and general structures allocation           */
 /*------------------------------------------------------------------------*/
 
-static void CheckAdaptOptions()
+static void CheckAdaptOptions(XFInfo *xfinfo)
 {
+   XFormKind xKind = xfinfo->outXKind;
+   Boolean useBias = xfinfo->useBias;
+   
    if ((!keepXFormDistinct) && (swapXForms))
       HError(999,"Cannot save swapped XForms in a TMF");
    if (((xKind == MLLRCOV)||(xKind == SEMIT)) && (useBias))
@@ -350,10 +303,24 @@ static void CheckAdaptOptions()
 }
 
 /* EXPORT->CheckAdaptSetUp: check adapt setting */
-void CheckAdaptSetUp (HMMSet *hset)
+void CheckAdaptSetUp (HMMSet *hset, XFInfo *xfinfo)
 {
    int i,s,vsize;
 
+   XFormKind xKind = xfinfo->outXKind;
+   IntVec *xformBlockSize     = xfinfo->xformBlockSize;
+   IntVec *mllrMeanBlockSize  = xfinfo->mllrMeanBlockSize;
+   IntVec *mllrCovBlockSize   = xfinfo->mllrCovBlockSize;
+   IntVec *cmllrBlockSize     = xfinfo->cmllrBlockSize;
+   IntVec *xformBandWidth     = xfinfo->xformBandWidth;
+   IntVec *mllrMeanBandWidth  = xfinfo->mllrMeanBandWidth;
+   IntVec *mllrCovBandWidth   = xfinfo->mllrCovBandWidth;
+   IntVec *cmllrBandWidth     = xfinfo->cmllrBandWidth;
+   Vector xformSplitThresh    = xfinfo->xformSplitThresh;
+   Vector mllrMeanSplitThresh = xfinfo->mllrMeanSplitThresh;
+   Vector mllrCovSplitThresh  = xfinfo->mllrCovSplitThresh;
+   Vector cmllrSplitThresh    = xfinfo->cmllrSplitThresh;
+      
    /* check block size */
    for (s=1; s<=hset->swidth[0]; s++) {
       if (xformBlockSize[s] != NULL) {
@@ -442,32 +409,32 @@ void CheckAdaptSetUp (HMMSet *hset)
    
    /* check threshold */
    if (xformSplitThresh==NULL) {
-      xformSplitThresh = CreateVector(&infoStack, hset->swidth[0]);
+      xfinfo->xformSplitThresh = xformSplitThresh = CreateVector(&infoStack, hset->swidth[0]);
       for (s=1; s<=hset->swidth[0]; s++)
          xformSplitThresh[s] = -1000.0;
    }
    switch (xKind) {
    case MLLRMEAN: 
       if (mllrMeanSplitThresh==NULL) {
-         mllrMeanSplitThresh = CreateVector(&infoStack, hset->swidth[0]);
+         xfinfo->mllrMeanSplitThresh = mllrMeanSplitThresh = CreateVector(&infoStack, hset->swidth[0]);
          for (s=1; s<=hset->swidth[0]; s++)
             mllrMeanSplitThresh[s] = 1000.0;
       }
       break;
    case MLLRCOV:
       if (mllrCovSplitThresh==NULL) {
-         mllrCovSplitThresh = CreateVector(&infoStack, hset->swidth[0]);
+         xfinfo->mllrCovSplitThresh = mllrCovSplitThresh = CreateVector(&infoStack, hset->swidth[0]);
          for (s=1; s<=hset->swidth[0]; s++)
             mllrCovSplitThresh[s] = 1000.0;
       }
       break;
    case CMLLR:
       if (cmllrSplitThresh==NULL) {
-         cmllrSplitThresh = CreateVector(&infoStack, hset->swidth[0]);
+         xfinfo->cmllrSplitThresh = cmllrSplitThresh = CreateVector(&infoStack, hset->swidth[0]);
          for (s=1; s<=hset->swidth[0]; s++)
             cmllrSplitThresh[s] = 1000.0;
       }
-      break;
+      break; 
    case SEMIT:
    default:
       break;
@@ -476,8 +443,78 @@ void CheckAdaptSetUp (HMMSet *hset)
    return;
 }
 
+/* InitXFInfo: initialise XFInfo */
+static void InitXFInfo (XFInfo *xfinfo)
+{
+   int s;
+
+   xfinfo->outSpkrPat = "*.%%%";
+   xfinfo->inSpkrPat = NULL;
+   xfinfo->paSpkrPat = NULL;
+   xfinfo->outXFormExt = NULL;
+   xfinfo->inXFormExt = NULL;
+   xfinfo->paXFormExt = NULL;
+   xfinfo->al_inXFormExt = NULL;
+   xfinfo->al_paXFormExt = NULL;
+   xfinfo->outXFormDir = NULL;
+   xfinfo->paXFormDir = NULL;
+   xfinfo->al_inXFormDir = NULL;
+   xfinfo->al_paXFormDir = NULL;
+   xfinfo->useOutXForm = FALSE;
+   xfinfo->useInXForm = FALSE;
+   xfinfo->usePaXForm = FALSE;
+   xfinfo->use_alInXForm = FALSE;
+   xfinfo->use_alPaXForm = FALSE;
+   xfinfo->outFullC = FALSE;
+   xfinfo->inFullC  = FALSE;
+   xfinfo->xformTMF = NULL;
+   xfinfo->inXForm = NULL;
+   xfinfo->outXForm = NULL;
+   xfinfo->paXForm = NULL;
+   xfinfo->diagCovXForm = NULL;
+   xfinfo->al_hset = NULL;
+   xfinfo->al_inXForm = NULL;
+   xfinfo->al_paXForm = NULL;
+         
+   xfinfo->useBias = TRUE;
+   xfinfo->outXKind = MLLRMEAN;
+
+   xfinfo->xformSplitThresh    = NULL;
+   xfinfo->mllrMeanSplitThresh = NULL;
+   xfinfo->mllrCovSplitThresh  = NULL;
+   xfinfo->cmllrSplitThresh    = NULL;
+
+   xfinfo->xformAdaptKind    = BASE;
+   xfinfo->mllrMeanAdaptKind = BASE;
+   xfinfo->mllrCovAdaptKind  = BASE;
+   xfinfo->cmllrAdaptKind    = BASE;
+
+   xfinfo->xformRegTree    = NULL;
+   xfinfo->mllrMeanRegTree = NULL;
+   xfinfo->mllrCovRegTree  = NULL;
+   xfinfo->cmllrRegTree    = NULL;
+
+   xfinfo->xformBaseClass    = NULL;
+   xfinfo->mllrMeanBaseClass = NULL;
+   xfinfo->mllrCovBaseClass  = NULL;
+   xfinfo->cmllrBaseClass    = NULL;
+
+   /* initialize blocksize vector and occ threshold for each stream */
+   for (s=0; s<SMAX; s++) {
+      xfinfo->xformBlockSize  [s] = xfinfo->mllrMeanBlockSize[s] = NULL;
+      xfinfo->mllrCovBlockSize[s] = xfinfo->cmllrBlockSize   [s] = NULL;
+      xfinfo->xformBandWidth  [s] = xfinfo->mllrMeanBandWidth[s] = NULL;
+      xfinfo->mllrCovBandWidth[s] = xfinfo->cmllrBandWidth   [s] = NULL;
+      }
+   
+   xfinfo->coutspkr[0] = xfinfo->cinspkr[0] = xfinfo->cpaspkr[0] = '\0';
+   xfinfo->nspkr = 0;
+   
+   xfinfo->baseTriMatTime = -1;
+}
+
 /* EXPORT->InitAdapt: initialise configuration parameters */
-void InitAdapt (XFInfo *xfinfo) 
+void InitAdapt (XFInfo *xfinfo_hmm, XFInfo *xfinfo_dur) 
 {
    int i,s;
    Boolean b;
@@ -491,10 +528,10 @@ void InitAdapt (XFInfo *xfinfo)
    CreateHeap(&infoStack,"InfoStore", MSTAK, 1, 1.0, 50000, 500000);
    CreateHeap(&obcaStack,"ObsStore", MSTAK, 1, 1.0, 50000, 500000);
   
-   /* initialize blocksize vector and occ threshold for each stream */
-   for (s=0; s<SMAX; s++)
-      xformBlockSize[s] = mllrMeanBlockSize[s] = mllrCovBlockSize[s] = cmllrBlockSize[s] = NULL;
-
+   /* Initialise the XFInfo values */
+   if (xfinfo_hmm!=NULL) InitXFInfo(xfinfo_hmm);
+   if (xfinfo_dur!=NULL) InitXFInfo(xfinfo_dur);
+   
    if (nParm>0){
       /* general adaptation config variables */
       if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
@@ -502,45 +539,14 @@ void InitAdapt (XFInfo *xfinfo)
       if (GetConfBool(cParm,nParm,"STOREMINFO",&b)) storeMInfo = b;
       if (GetConfBool(cParm,nParm,"KEEPXFORMDISTINCT",&b)) keepXFormDistinct = b;
       if (GetConfBool(cParm,nParm,"SAVESPKRMODELS",&b)) saveSpkrModels = b;
-      if (GetConfBool(cParm,nParm,"SAVEFULLC",&b)) saveFullC = b;
-      /* Adaptation transformation set-up */
-      if (GetConfBool(cParm,nParm,"USEBIAS",&b)) useBias = b;
-      if (GetConfStr (cParm,nParm,"SPLITTHRESH",buf)) 
-         xformSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
-      if (GetConfStr (cParm,nParm,"TRANSKIND",buf)) xKind = Str2XFormKind(buf);
-      if (GetConfStr (cParm,nParm,"BLOCKSIZE",buf)) {
-         for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
-            xformBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
-            for (i=1; i<=IntVecSize(xformBlockSize[s])+2; i++) 
-               c = ParseString(c,tmp);
-            if (ParseString(c,tmp)==NULL)
-               break;
-         }
-      }
-      if (GetConfStr (cParm,nParm,"BANDWIDTH",buf)) {
-         for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
-            xformBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
-            for (i=1; i<=IntVecSize(xformBandWidth[s])+2; i++) 
-               c = ParseString(c,tmp);
-            if (ParseString(c,tmp)==NULL)
-               break;
-         }
-      }
-      if (GetConfStr (cParm,nParm,"BASECLASS",buf)) 
-         xformBaseClass = CopyString(&infoStack,buf);
-      if (GetConfStr (cParm,nParm,"REGTREE",buf)) 
-         xformRegTree = CopyString(&infoStack,buf);
-      if (GetConfStr (cParm,nParm,"ADAPTKIND",buf)) 
-         xformAdaptKind = Str2AdaptKind(buf);
+      
       if (GetConfInt(cParm,nParm,"MAXXFORMITER",&i)) maxXFormIter = i;
       if (GetConfBool(cParm,nParm,"MLLRDIAGCOV",&b)) mllrDiagCov = b;      
       if (GetConfBool(cParm,nParm,"SWAPXFORMS",&b)) swapXForms = b;      
       if (GetConfBool(cParm,nParm,"MLLRCOV2CMLLR",&b)) mllrCov2CMLLR = b; 
-
       if (GetConfFlt(cParm,nParm,"SEMITIEDFLOOR",&d)) semiTiedFloorScale = (float) d;
       if (GetConfInt(cParm,nParm,"MAXSEMITIEDITER",&i)) maxSemiTiedIter = i;
-      if (GetConfStr (cParm,nParm,"SEMITIEDMACRO",buf)) 
-         semiTiedMacro = CopyString(&infoStack,buf);
+      if (GetConfStr (cParm,nParm,"SEMITIEDMACRO",buf)) semiTiedMacro = CopyString(&infoStack,buf);
       if (GetConfBool(cParm,nParm,"SEMITIED2INPUTXFORM",&b)) semiTied2InputXForm = b; 
       if (GetConfBool(cParm,nParm,"SEMITIEDVFLOOR",&b)) semiTiedVFloor = b; 
       if (GetConfInt(cParm,nParm,"NUMNUISANCEDIM",&i)) numNuisanceDim = i;
@@ -548,121 +554,243 @@ void InitAdapt (XFInfo *xfinfo)
       if (GetConfBool(cParm,nParm,"INITNUISANCEFR",&b)) initNuisanceFR = b; 
       if (GetConfBool(cParm,nParm,"SAVESEMITIEDBINARY",&b)) saveSemiTiedBinary = b; 
 
+      /* Adaptation transformation set-up for HMMs */
+      if (xfinfo_hmm!=NULL) {
+         if (GetConfBool(cParm,nParm,"SAVEFULLC",&b)) xfinfo_hmm->outFullC = b;
+         if (GetConfBool(cParm,nParm,"USEBIAS",&b)) xfinfo_hmm->useBias = b;
+         if (GetConfStr (cParm,nParm,"SPLITTHRESH",buf)) 
+            xfinfo_hmm->xformSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
+         if (GetConfStr (cParm,nParm,"TRANSKIND",buf)) 
+            xfinfo_hmm->outXKind = Str2XFormKind(buf);
+         if (GetConfStr (cParm,nParm,"BLOCKSIZE",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_hmm->xformBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_hmm->xformBlockSize[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
+         }
+         if (GetConfStr (cParm,nParm,"BANDWIDTH",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_hmm->xformBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_hmm->xformBandWidth[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
+         }
+         if (GetConfStr (cParm,nParm,"BASECLASS",buf)) 
+            xfinfo_hmm->xformBaseClass = CopyString(&infoStack,buf);
+         if (GetConfStr (cParm,nParm,"REGTREE",buf)) 
+            xfinfo_hmm->xformRegTree = CopyString(&infoStack,buf);
+         if (GetConfStr (cParm,nParm,"ADAPTKIND",buf)) 
+            xfinfo_hmm->xformAdaptKind = Str2AdaptKind(buf);
+         
       /* Backward compatibility with old configuration options */
       /* MLLRMEAN specification */
-      if (GetConfStr (cParm,nParm,"MLLRMEANSPLITTHRESH",buf)) 
-         mllrMeanSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
-      if (GetConfStr (cParm,nParm,"MLLRMEANBLOCKSIZE",buf)) {
-         for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
-            mllrMeanBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
-            for (i=1; i<=IntVecSize(mllrMeanBlockSize[s])+2; i++) 
-               c = ParseString(c,tmp);
-            if (ParseString(c,tmp)==NULL)
-               break;
+         if (GetConfStr (cParm,nParm,"MLLRMEANSPLITTHRESH",buf)) 
+            xfinfo_hmm->mllrMeanSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
+         if (GetConfStr (cParm,nParm,"MLLRMEANBLOCKSIZE",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_hmm->mllrMeanBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_hmm->mllrMeanBlockSize[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
          }
-      }
-      if (GetConfStr (cParm,nParm,"MLLRMEANBANDWIDTH",buf)) {
-         for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
-            mllrMeanBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
-            for (i=1; i<=IntVecSize(mllrMeanBandWidth[s])+2; i++) 
-               c = ParseString(c,tmp);
-            if (ParseString(c,tmp)==NULL)
-               break;
+         if (GetConfStr (cParm,nParm,"MLLRMEANBANDWIDTH",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_hmm->mllrMeanBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_hmm->mllrMeanBandWidth[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
          }
-      }
       if (GetConfStr (cParm,nParm,"MLLRMEANBASECLASS",buf)) 
-         mllrMeanBaseClass = CopyString(&infoStack,buf);
+            xfinfo_hmm->mllrMeanBaseClass = CopyString(&infoStack,buf);
       if (GetConfStr (cParm,nParm,"MLLRMEANREGTREE",buf)) 
-         mllrMeanRegTree = CopyString(&infoStack,buf);
+            xfinfo_hmm->mllrMeanRegTree = CopyString(&infoStack,buf);
       if (GetConfStr (cParm,nParm,"MLLRMEANADAPTKIND",buf)) 
-         mllrMeanAdaptKind = Str2AdaptKind(buf);
+            xfinfo_hmm->mllrMeanAdaptKind = Str2AdaptKind(buf);
       /* MLLRCOV specification */      
-      if (GetConfStr (cParm,nParm,"MLLRCOVSPLITTHRESH",buf))
-         mllrCovSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
-      if (GetConfStr (cParm,nParm,"MLLRCOVBLOCKSIZE",buf)) {
-         for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
-            mllrCovBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
-            for (i=1; i<=IntVecSize(mllrCovBlockSize[s])+2; i++) 
-               c = ParseString(c,tmp);
-            if (ParseString(c,tmp)==NULL)
-               break;
+         if (GetConfStr (cParm,nParm,"MLLRCOVSPLITTHRESH",buf))
+            xfinfo_hmm->mllrCovSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
+         if (GetConfStr (cParm,nParm,"MLLRCOVBLOCKSIZE",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_hmm->mllrCovBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_hmm->mllrCovBlockSize[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
          }
-      }
-      if (GetConfStr (cParm,nParm,"MLLRCOVBANDWIDTH",buf)) {
-         for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
-            mllrCovBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
-            for (i=1; i<=IntVecSize(mllrCovBandWidth[s])+2; i++) 
-               c = ParseString(c,tmp);
-            if (ParseString(c,tmp)==NULL)
-               break;
+         if (GetConfStr (cParm,nParm,"MLLRCOVBANDWIDTH",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_hmm->mllrCovBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_hmm->mllrCovBandWidth[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
          }
-      }
       if (GetConfStr (cParm,nParm,"MLLRCOVBASECLASS",buf)) 
-         mllrCovBaseClass = CopyString(&infoStack,buf);
+            xfinfo_hmm->mllrCovBaseClass = CopyString(&infoStack,buf);
       if (GetConfStr (cParm,nParm,"MLLRCOVREGTREE",buf)) 
-         mllrCovRegTree = CopyString(&infoStack,buf);
+            xfinfo_hmm->mllrCovRegTree = CopyString(&infoStack,buf);
       if (GetConfStr (cParm,nParm,"MLLRCOVADAPTKIND",buf)) 
-         mllrCovAdaptKind = Str2AdaptKind(buf);
+            xfinfo_hmm->mllrCovAdaptKind = Str2AdaptKind(buf);
       /* CMLLR specification */
-      if (GetConfStr (cParm,nParm,"CMLLRSPLITTHRESH",buf))
-         cmllrSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
-      if (GetConfStr (cParm,nParm,"CMLLRBLOCKSIZE",buf)) {
-         for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
-            cmllrBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
-            for (i=1; i<=IntVecSize(cmllrBlockSize[s])+2; i++) 
-               c = ParseString(c,tmp);
-            if (ParseString(c,tmp)==NULL)
-               break;
+         if (GetConfStr (cParm,nParm,"CMLLRSPLITTHRESH",buf))
+            xfinfo_hmm->cmllrSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
+         if (GetConfStr (cParm,nParm,"CMLLRBLOCKSIZE",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_hmm->cmllrBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_hmm->cmllrBlockSize[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
          }
-      }
-      if (GetConfStr (cParm,nParm,"CMLLRBANDWIDTH",buf)) {
-         for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
-            cmllrBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
-            for (i=1; i<=IntVecSize(cmllrBandWidth[s])+2; i++) 
-               c = ParseString(c,tmp);
-            if (ParseString(c,tmp)==NULL)
-               break;
+         if (GetConfStr (cParm,nParm,"CMLLRBANDWIDTH",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_hmm->cmllrBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_hmm->cmllrBandWidth[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
          }
-      }
       if (GetConfStr (cParm,nParm,"CMLLRBASECLASS",buf))
-         cmllrBaseClass = CopyString(&infoStack,buf);
+            xfinfo_hmm->cmllrBaseClass = CopyString(&infoStack,buf);
       if (GetConfStr (cParm,nParm,"CMLLRREGTREE",buf))
-         cmllrRegTree = CopyString(&infoStack,buf);
+            xfinfo_hmm->cmllrRegTree = CopyString(&infoStack,buf);
       if (GetConfStr (cParm,nParm,"CMLLRADAPTKIND",buf))
-         cmllrAdaptKind = Str2AdaptKind(buf);
+            xfinfo_hmm->cmllrAdaptKind = Str2AdaptKind(buf);
+         
+         CheckAdaptOptions(xfinfo_hmm);
    }
 
-   /* Initialise the XFInfo values */
-   if (xfinfo!=NULL) {
-   xfinfo->outSpkrPat = "*.%%%";
-   xfinfo->inSpkrPat = NULL;
-   xfinfo->paSpkrPat = NULL;
-   xfinfo->outXFormExt = NULL;
-   xfinfo->inXFormExt = NULL;
-   xfinfo->paXFormExt = NULL;
-      xfinfo->al_inXFormExt = NULL;
-      xfinfo->al_paXFormExt = NULL;
-   xfinfo->outXFormDir = NULL;
-   xfinfo->paXFormDir = NULL;
-      xfinfo->al_inXFormDir = NULL;
-      xfinfo->al_paXFormDir = NULL;
-   xfinfo->useOutXForm = FALSE;
-   xfinfo->useInXForm = FALSE;
-   xfinfo->usePaXForm = FALSE;
-      xfinfo->use_alInXForm = FALSE;
-      xfinfo->use_alPaXForm = FALSE;
-      xfinfo->outFullC = saveFullC;
-      xfinfo->inFullC  = FALSE;
-   xfinfo->xformTMF = NULL;
-   xfinfo->inXForm = NULL;
-   xfinfo->outXForm = NULL;
-   xfinfo->paXForm = NULL;
-   xfinfo->al_hset = NULL;
-      xfinfo->al_inXForm = NULL;
-      xfinfo->al_paXForm = NULL;
-   }
+      /* Adaptation transformation set-up for duration models */
+      if (xfinfo_dur!=NULL) {
+         if (GetConfBool(cParm,nParm,"DURUSEBIAS",&b)) xfinfo_dur->useBias = b;
+         if (GetConfStr (cParm,nParm,"DURSPLITTHRESH",buf)) 
+            xfinfo_dur->xformSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
+         if (GetConfStr (cParm,nParm,"DURTRANSKIND",buf)) 
+            xfinfo_dur->outXKind = Str2XFormKind(buf);
+         if (GetConfStr (cParm,nParm,"DURBLOCKSIZE",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_dur->xformBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_dur->xformBlockSize[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
+         }
+         if (GetConfStr (cParm,nParm,"DURBANDWIDTH",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_dur->xformBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_dur->xformBandWidth[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
+         }
+         if (GetConfStr (cParm,nParm,"DURBASECLASS",buf)) 
+            xfinfo_dur->xformBaseClass = CopyString(&infoStack,buf);
+         if (GetConfStr (cParm,nParm,"DURREGTREE",buf)) 
+            xfinfo_dur->xformRegTree = CopyString(&infoStack,buf);
+         if (GetConfStr (cParm,nParm,"DURADAPTKIND",buf)) 
+            xfinfo_dur->xformAdaptKind = Str2AdaptKind(buf);
 
-   CheckAdaptOptions();
+         /* Backward compatibility with old configuration options */
+         /* MLLRMEAN specification */
+         if (GetConfStr (cParm,nParm,"DURMLLRMEANSPLITTHRESH",buf)) 
+            xfinfo_dur->mllrMeanSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
+         if (GetConfStr (cParm,nParm,"DURMLLRMEANBLOCKSIZE",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_dur->mllrMeanBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_dur->mllrMeanBlockSize[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
+         }
+         if (GetConfStr (cParm,nParm,"DURMLLRMEANBANDWIDTH",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_dur->mllrMeanBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_dur->mllrMeanBandWidth[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
+         }
+         if (GetConfStr (cParm,nParm,"DURMLLRMEANBASECLASS",buf)) 
+            xfinfo_dur->mllrMeanBaseClass = CopyString(&infoStack,buf);
+         if (GetConfStr (cParm,nParm,"DURMLLRMEANREGTREE",buf)) 
+            xfinfo_dur->mllrMeanRegTree = CopyString(&infoStack,buf);
+         if (GetConfStr (cParm,nParm,"DURMLLRMEANADAPTKIND",buf)) 
+            xfinfo_dur->mllrMeanAdaptKind = Str2AdaptKind(buf);
+         /* MLLRCOV specification */      
+         if (GetConfStr (cParm,nParm,"DURMLLRCOVSPLITTHRESH",buf))
+            xfinfo_dur->mllrCovSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
+         if (GetConfStr (cParm,nParm,"DURMLLRCOVBLOCKSIZE",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_dur->mllrCovBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_dur->mllrCovBlockSize[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
+         }
+         if (GetConfStr (cParm,nParm,"DURMLLRCOVBANDWIDTH",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_dur->mllrCovBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_dur->mllrCovBandWidth[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
+         }
+         if (GetConfStr (cParm,nParm,"DURMLLRCOVBASECLASS",buf)) 
+            xfinfo_dur->mllrCovBaseClass = CopyString(&infoStack,buf);
+         if (GetConfStr (cParm,nParm,"DURMLLRCOVREGTREE",buf)) 
+            xfinfo_dur->mllrCovRegTree = CopyString(&infoStack,buf);
+         if (GetConfStr (cParm,nParm,"DURMLLRCOVADAPTKIND",buf)) 
+            xfinfo_dur->mllrCovAdaptKind = Str2AdaptKind(buf);
+         /* CMLLR specification */
+         if (GetConfStr (cParm,nParm,"DURCMLLRSPLITTHRESH",buf))
+            xfinfo_dur->cmllrSplitThresh = ParseConfVector(&infoStack,buf,TRUE);
+         if (GetConfStr (cParm,nParm,"DURCMLLRBLOCKSIZE",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_dur->cmllrBlockSize[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_dur->cmllrBlockSize[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
+         }
+         if (GetConfStr (cParm,nParm,"DURCMLLRBANDWIDTH",buf)) {
+            for (s=1,c=buf; s<SMAX && c!=NULL; s++) {
+               xfinfo_dur->cmllrBandWidth[s] = ParseConfIntVec(&infoStack,c,FALSE);
+               for (i=1; i<=IntVecSize(xfinfo_dur->cmllrBandWidth[s])+2; i++) 
+                  c = ParseString(c,tmp);
+               if (ParseString(c,tmp)==NULL)
+                  break;
+            }
+         }
+         if (GetConfStr (cParm,nParm,"DURCMLLRBASECLASS",buf))
+            xfinfo_dur->cmllrBaseClass = CopyString(&infoStack,buf);
+         if (GetConfStr (cParm,nParm,"DURCMLLRREGTREE",buf))
+            xfinfo_dur->cmllrRegTree = CopyString(&infoStack,buf);
+         if (GetConfStr (cParm,nParm,"DURCMLLRADAPTKIND",buf))
+            xfinfo_dur->cmllrAdaptKind = Str2AdaptKind(buf);
+         
+         CheckAdaptOptions(xfinfo_dur);
+      }
+   }
 }
 
 /* EXPORT->ResetAdapt: reset adaptation module */
@@ -676,10 +804,16 @@ void ResetAdapt (void)
 
 /* Additional code to parse configs to for appropriate thresholds */
 
-static float GetSplitThresh(AdaptXForm *xform, float *thresh)
+static float GetSplitThresh(XFInfo *xfinfo, float *thresh)
 {
    int s;
    float min=0.0;
+
+   AdaptXForm *xform          = xfinfo->outXForm;
+   Vector xformSplitThresh    = xfinfo->xformSplitThresh;
+   Vector mllrMeanSplitThresh = xfinfo->mllrMeanSplitThresh;
+   Vector mllrCovSplitThresh  = xfinfo->mllrCovSplitThresh;
+   Vector cmllrSplitThresh    = xfinfo->cmllrSplitThresh;
 
    for (s=1; s<=xform->hset->swidth[0]; s++) {
       thresh[s] = 0.0;
@@ -701,20 +835,25 @@ static float GetSplitThresh(AdaptXForm *xform, float *thresh)
    }
       if (thresh[s]<min)
          min = thresh[s];
-   }
+}
 
    return min;
 }
 
-static AdaptKind GetAdaptKind(AdaptXForm *xform)
+static AdaptKind GetAdaptKind(XFInfo *xfinfo)
 {
    AdaptKind akind = BASE;
+
+   AdaptKind xformAdaptKind    = xfinfo->xformAdaptKind;
+   AdaptKind mllrMeanAdaptKind = xfinfo->mllrMeanAdaptKind;
+   AdaptKind mllrCovAdaptKind  = xfinfo->mllrCovAdaptKind;
+   AdaptKind cmllrAdaptKind    = xfinfo->cmllrAdaptKind;
 
    if (xformAdaptKind != BASE) {
      akind = xformAdaptKind;
    } 
    else {
-     switch(xform->xformSet->xkind) {
+      switch(xfinfo->outXKind) {
      case MLLRMEAN:
        akind = mllrMeanAdaptKind;
        break;
@@ -729,11 +868,17 @@ static AdaptKind GetAdaptKind(AdaptXForm *xform)
    return akind;
 }
 
-static RegTree* GetRegTree(HMMSet *hset, AdaptXForm *xform)
+static RegTree* GetRegTree(HMMSet *hset, XFInfo *xfinfo)
 {
    char* basename = NULL;
    char macroname[MAXSTRLEN];
 
+   AdaptXForm *xform     = xfinfo->outXForm;
+   char *xformRegTree    = xfinfo->xformRegTree;
+   char *mllrMeanRegTree = xfinfo->mllrMeanRegTree;
+   char *mllrCovRegTree  = xfinfo->mllrCovRegTree;
+   char *cmllrRegTree    = xfinfo->cmllrRegTree;
+   
    if (xformRegTree != NULL) {
      basename = xformRegTree;
    } 
@@ -757,11 +902,17 @@ static RegTree* GetRegTree(HMMSet *hset, AdaptXForm *xform)
    return LoadRegTree(hset,NameOf(basename,macroname),basename);  
 }
 
-static BaseClass* GetBaseClass(HMMSet *hset,AdaptXForm *xform)
+static BaseClass* GetBaseClass(HMMSet *hset, XFInfo *xfinfo)
 {
    char* basename = NULL;
    char macroname[MAXSTRLEN];
 
+   AdaptXForm *xform       = xfinfo->outXForm;
+   char *xformBaseClass    = xfinfo->xformBaseClass;
+   char *mllrMeanBaseClass = xfinfo->mllrMeanBaseClass;
+   char *mllrCovBaseClass  = xfinfo->mllrCovBaseClass;
+   char *cmllrBaseClass    = xfinfo->cmllrBaseClass;
+   
    if (xformBaseClass != NULL) {
      basename = xformBaseClass;
    } 
@@ -786,7 +937,7 @@ static BaseClass* GetBaseClass(HMMSet *hset,AdaptXForm *xform)
    return LoadBaseClass(hset,NameOf(basename,macroname),basename);
 }
 
-static int GetVecSizeClass(BaseClass *bclass, const int class)
+static int GetBaseClassVSize(BaseClass *bclass, const int class)
 {
    ILink i;
    MixtureElem *me;
@@ -798,11 +949,17 @@ static int GetVecSizeClass(BaseClass *bclass, const int class)
 }
 
 /* GetBlockSize: return block size vector for given xform */
-static IntVec GetBlockSize(AdaptXForm *xform, const int b)
+static IntVec GetBlockSize(XFInfo *xfinfo, const int b)
 {
    IntVec blockSize = NULL;
    int s;
 
+   AdaptXForm *xform = xfinfo->outXForm;
+   IntVec *xformBlockSize    = xfinfo->xformBlockSize;
+   IntVec *mllrMeanBlockSize = xfinfo->mllrMeanBlockSize;
+   IntVec *mllrCovBlockSize  = xfinfo->mllrCovBlockSize;
+   IntVec *cmllrBlockSize    = xfinfo->cmllrBlockSize;
+   
    /* stream index */
    s = xform->bclass->stream[b];
    
@@ -832,16 +989,22 @@ static IntVec GetBlockSize(AdaptXForm *xform, const int b)
    }
    else if (blockSize == NULL) {
       blockSize = CreateIntVec(xform->mem,1);
-      blockSize[1] = GetVecSizeClass(xform->bclass,b);
+      blockSize[1] = GetBaseClassVSize(xform->bclass,b);
    }
    return blockSize;  
 }
 
 /* GetBandWidth: return band width vector for given transform */
-static IntVec GetBandWidth(AdaptXForm *xform, const int b, IntVec blockSize)
+static IntVec GetBandWidth(XFInfo *xfinfo, const int b, IntVec blockSize)
 {
    IntVec bandWidth = NULL;
    int i,s;
+   
+   AdaptXForm *xform         = xfinfo->outXForm;
+   IntVec *xformBandWidth    = xfinfo->xformBandWidth;
+   IntVec *mllrMeanBandWidth = xfinfo->mllrMeanBandWidth;
+   IntVec *mllrCovBandWidth  = xfinfo->mllrCovBandWidth;
+   IntVec *cmllrBandWidth    = xfinfo->cmllrBandWidth;
    
    /* stream index */
    s = xform->bclass->stream[b];
@@ -869,7 +1032,7 @@ static IntVec GetBandWidth(AdaptXForm *xform, const int b, IntVec blockSize)
       for (i=1; i<=IntVecSize(blockSize); i++)
          bandWidth[i] = blockSize[i];
    }
-   
+
    return bandWidth;  
 }
 
@@ -936,7 +1099,7 @@ static MInfo *CreateMInfo(MemHeap *x, MixPDF *mp, AdaptXForm *xform)
       xf = xf->parentXForm;
    }
    if (adaptMean) {
-      mi->mean = CreateVector(x,size);
+      mi->mean = CreateSVector(x,size);
       CopyVector(mp->mean,mi->mean);
    } 
    else 
@@ -945,7 +1108,7 @@ static MInfo *CreateMInfo(MemHeap *x, MixPDF *mp, AdaptXForm *xform)
       switch(mp->ckind){
       case DIAGC:
       case INVDIAGC:
-         mi->cov.var = CreateVector(x,size);
+         mi->cov.var = CreateSVector(x,size);
          CopyVector(mp->cov.var,mi->cov.var);
          mi->gConst = mp->gConst;
          mi->ckind  = mp->ckind;
@@ -1260,16 +1423,17 @@ static void ZeroBaseTriMat(TriMat *bTriMat)
   }  
 }
 
-static void CreateBaseTriMat(MemHeap *x, MixPDF *mp, AdaptXForm *xform, int class)
+static void CreateBaseTriMat(XFInfo *xfinfo, MemHeap *x, MixPDF *mp, int class)
 {
   TriMat *tm;
   int vsize = VectorSize(mp->mean);
-  IntVec blockSize = GetBlockSize(xform,class);
+   IntVec blockSize = GetBlockSize(xfinfo,class);
   RegAcc *regAcc, *ra;
   MixPDF *me;
   BaseClass *bclass;
   ILink i;
   int j, cntj, *vsp, b, bsize;
+   AdaptXForm *xform = xfinfo->outXForm;
 
   regAcc = GetRegAcc(mp);
    if (vsize>0 && xform->info->accBTriMat) { 
@@ -1303,9 +1467,9 @@ static void CreateBaseTriMat(MemHeap *x, MixPDF *mp, AdaptXForm *xform, int clas
   }      
 }
 
-void SetBaseAccsTime(int t)
+void SetBaseAccsTime(XFInfo *xfinfo, const int t)
 {
-   baseTriMatTime = t;
+   xfinfo->baseTriMatTime = t;
 }
 
 
@@ -1342,7 +1506,7 @@ void UpdateAccCache(double Lr, Vector svec, MixPDF *mp)
    }
 }
 
-void UpdateBaseAccs(Vector svec, const int t, RegAcc *regAcc)
+void UpdateBaseAccs(XFInfo *xfinfo, Vector svec, const int t, RegAcc *regAcc)
 {
    int i,j,k,b,bsize;
    long nblock, bl;
@@ -1352,10 +1516,12 @@ void UpdateBaseAccs(Vector svec, const int t, RegAcc *regAcc)
    DVector acc;
    BaseClass *bclass;
    MixPDF *mp;
+   AdaptXForm *outXForm = xfinfo->outXForm;
    
    /* store statistics */
-   if (t != baseTriMatTime) {
+   if (t != xfinfo->baseTriMatTime) {
    bclass = outXForm->bclass;
+#pragma omp parallel for private(mp,ra,acc,nblock,bl,cnti,m,bsize,i,tm,j,k)
    for (b=1;b<=bclass->numClasses;b++) {
       mp = ((MixtureElem *)(bclass->ilist[b])->item)->mpdf;
       ra = GetRegAcc(mp);
@@ -1378,7 +1544,7 @@ void UpdateBaseAccs(Vector svec, const int t, RegAcc *regAcc)
    }
 
    if (regAcc==NULL) return;
-   if ((regAcc->bTriMat!=NULL) && (svec!=NULL)) {
+   if ((regAcc->bTriMat!=NULL) && (regAcc->bVector[1]==0.0) && (svec!=NULL)) {
       nblock = (long)(regAcc->bDiagMat[0]);
 	for (bl=1, cnt=1; bl<=nblock;bl++){
          bsize = TriMatSize(regAcc->bDiagMat[bl]);
@@ -1392,7 +1558,7 @@ void UpdateBaseAccs(Vector svec, const int t, RegAcc *regAcc)
       }
    }
 
-void UpdateBaseAccsWithPaac(void)
+void UpdateBaseAccsWithPaac(XFInfo *xfinfo)
 {
    int i,j,k,b,bsize;
    long nblock, bl;
@@ -1403,6 +1569,7 @@ void UpdateBaseAccsWithPaac(void)
    BaseClass *bclass;
    MixPDF *mp;
    AccCache *paac;
+   AdaptXForm *outXForm = xfinfo->outXForm;
 
    bclass = outXForm->bclass;
 
@@ -1443,7 +1610,7 @@ void ResetAccCache(void)
    }
 }
 
-static void AccBaseTriMat(double Lr, Vector svec, MixPDF *mp, int t, int s)
+static void AccBaseTriMat(XFInfo *xfinfo, double Lr, Vector svec, MixPDF *mp, int t)
 {
    int vsize, i;
    Vector covar;
@@ -1455,12 +1622,12 @@ static void AccBaseTriMat(double Lr, Vector svec, MixPDF *mp, int t, int s)
 
       /* Check to see whether this is the very first frame */
       if (headac == NULL ) 
-      UpdateBaseAccs(svec,t,regAcc);
+      UpdateBaseAccs(xfinfo,svec,t,regAcc);
       else  {
-        UpdateBaseAccsWithPaac(); 
+      UpdateBaseAccsWithPaac(xfinfo); 
         ResetAccCache();   
       }
-      SetBaseAccsTime(t);
+   SetBaseAccsTime(xfinfo,t);
 
    if  (headac == NULL ) {    
      for (i=1;i<=vsize;i++) {
@@ -1468,8 +1635,8 @@ static void AccBaseTriMat(double Lr, Vector svec, MixPDF *mp, int t, int s)
             regAcc->bVector[i] += Lr * (double) covar[i];
         else
             regAcc->bVector[i] += Lr / (double) covar[i];
+      }
      }
-   } 
    else  
      UpdateAccCache( Lr, svec, mp);
 }
@@ -1499,12 +1666,13 @@ static RegAcc *CreateRegAcc(MemHeap *x, MixPDF *mp, AdaptXForm *xform)
   return regAcc;
 }
 
-static void AttachRegAccs(HMMSet *hset, AdaptXForm *xform)
+static void AttachRegAccs(HMMSet *hset, XFInfo *xfinfo)
 {  
   MixPDF *mp = NULL;
   int nRegAcc=0, b;
   BaseClass *bclass;
   ILink i;
+   AdaptXForm *xform = xfinfo->outXForm;
 
   /* RegAccs stored on the Info structure */
   if (!hset->attXFormInfo) AttachXFormInfo(hset);
@@ -1515,8 +1683,9 @@ static void AttachRegAccs(HMMSet *hset, AdaptXForm *xform)
       ((XFormInfo *)(mp->info))->regAcc = (RegAcc *)CreateRegAcc(hset->hmem,mp,xform);
       nRegAcc++;   
     }
+
     /* Use last component of the baseclass to access baseclass stats */
-    CreateBaseTriMat(hset->hmem,mp,xform,b); 
+      CreateBaseTriMat(xfinfo,hset->hmem,mp,b); 
   }
 
   if (trace&T_ACC) printf("Attached %d RegAcc structures\n",nRegAcc);
@@ -1525,16 +1694,20 @@ static void AttachRegAccs(HMMSet *hset, AdaptXForm *xform)
 
 /* --------------- handling the AccStruct structure ------------------ */
 
-static AccStruct *CreateAccStruct(MemHeap *x, AdaptXForm *xform, int vsize, 
+static AccStruct *CreateAccStruct(MemHeap *x, XFInfo *xfinfo, int vsize, 
                                   IntVec blockSize, IntVec bandWidth)
 {
   AccStruct *accs;
   int dim,i,cnti;
   int b,bsize; 
 
+   Boolean useBias = xfinfo->useBias;
+   AdaptXForm *xform = xfinfo->outXForm;
+
   accs = (AccStruct *)New(x,sizeof(AccStruct));
    accs->occ = 0.0;
   accs->dim = vsize;
+   accs->useBias = useBias;
   accs->blockSize = blockSize;
    accs->bandWidth = bandWidth;
   accs->K = NULL;
@@ -1682,6 +1855,8 @@ static void SetSemiTiedAvCov(HMMSet *hset)
             if (vsize==hset->swidth[s]) {  /* MSD check */
             ma = (MuAcc *)GetHook(mp->mean);
             va = (VaAcc *)GetHook(mp->cov.var);
+               if (ma==NULL || va==NULL)
+                  HError(9999,"SetSemiTiedAvCov: mean/variance accumulators are NULL");
             if (fabs(ma->occ-va->occ) > 0.1)
                HError(999,"State-clustered systems only for semitied updates");
                if (va->occ > 0.0) {
@@ -1804,26 +1979,26 @@ static double SetNodeOcc (RegNode *node, BaseClass *bclass)
             if (node->vsize>-1) {
                if (vsize != node->vsize)
                   HError(999,"Inconsistent vector size in baseclasses (%d %d)", vsize, node->vsize);
-         }
+            }
             else
                 node->vsize = vsize;
 
             node->nodeOcc += (GetRegAcc(mp))->occ;
+         }
       }
-   }
    }
 
    return node->nodeOcc;
 }
 
-static Boolean ParseNode(RegNode *node, AdaptXForm *xform, 
+static Boolean ParseNode (XFInfo *xfinfo, RegNode *node,  
 			 RegTree *rtree, IntVec classes)
 {
    int b,c,size;
    Boolean genXForm;
    IntVec lclasses;
 
-   void GenXForm(RegNode *node, AdaptXForm *xform, IntVec classes);  
+   void GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes);
 
    genXForm = FALSE;
    if (trace&T_TRE) printf("Node %d (stream=%d, vsize=%d, occ=%f)\n",
@@ -1834,13 +2009,13 @@ static Boolean ParseNode(RegNode *node, AdaptXForm *xform,
       ZeroIntVec(lclasses);
       if (node->numChild>0) { /* Not a terminal node */
          for (c=1;c<=node->numChild;c++)
-            if (ParseNode(node->child[c], xform, rtree, lclasses)) genXForm = TRUE;
+            if (ParseNode(xfinfo, node->child[c], rtree, lclasses)) genXForm = TRUE;
          /* any of the children need a xform generate it */
-         if (genXForm) GenXForm(node,xform,lclasses);
+         if (genXForm) GenXForm(node,xfinfo,lclasses);
       } 
       else { /* Generate xform for this node */
          for (b=1;b<=IntVecSize(node->baseClasses);b++) lclasses[node->baseClasses[b]] = 1;
-         GenXForm(node,xform,lclasses);
+         GenXForm(node,xfinfo,lclasses);
       }
       FreeIntVec(&gstack,lclasses);
       genXForm = FALSE;
@@ -1848,7 +2023,7 @@ static Boolean ParseNode(RegNode *node, AdaptXForm *xform,
    else {
       if (node->numChild>0) { /* Not a terminal node */
          for (c=1;c<=node->numChild;c++)
-            ParseNode(node->child[c], xform, rtree, classes);
+            ParseNode(xfinfo, node->child[c], rtree, classes);
       } 
       else { /* Mark baseclasses for adaptation */
          for (b=1;b<=IntVecSize(node->baseClasses);b++) classes[node->baseClasses[b]] = 1;
@@ -1858,13 +2033,16 @@ static Boolean ParseNode(RegNode *node, AdaptXForm *xform,
    return genXForm;
 }
 
-static Boolean ParseTree(RegTree *rtree, AdaptXForm *xform)
+static Boolean ParseTree (XFInfo *xfinfo)
 {
    IntVec classes;
    double occ,minthresh;
+   
+   AdaptXForm *xform = xfinfo->outXForm;
+   RegTree *rtree = xform->rtree;
 
    /* First set the correct threshold for this tree */
-   minthresh = GetSplitThresh(xform, rtree->thresh);
+   minthresh = GetSplitThresh(xfinfo,rtree->thresh);
    occ = SetNodeOcc(rtree->root, rtree->bclass);
 
    if (occ<minthresh) /* not enough data to generate transforms */
@@ -1875,8 +2053,8 @@ static Boolean ParseTree(RegTree *rtree, AdaptXForm *xform)
       HError(999,"No support for semi-tied transforms with regression class trees");
    classes = CreateIntVec(&gstack,rtree->bclass->numClasses);
 
-      ZeroIntVec(classes);
-      ParseNode(rtree->root, xform, rtree, classes);
+         ZeroIntVec(classes);
+   ParseNode(xfinfo, rtree->root, rtree, classes);
 
    FreeIntVec(&gstack,classes);
 
@@ -1976,6 +2154,7 @@ static void AccCMLLRPDFStats(MixPDF *mp,  AccStruct *accs)
   int i,j;
    double icov=0.0,scale;
   int cnt,cnti,cntj,b,bsize;
+   Boolean useBias = accs->useBias;
   Vector mean;
   Covariance cov;
  
@@ -2017,6 +2196,7 @@ static void AccMLLRPDFStats(MixPDF *mp,  AccStruct *accs)
    int i,j,k;
    double icov=0.0,scale;
    int cnt,cnti,cntj,cntk,b,bsize;
+   Boolean useBias = accs->useBias;
    Vector mean;
    Covariance cov;
 
@@ -2226,7 +2406,7 @@ static AccCache  *CreateAccCache(IntVec size,  int b)
    return(ac);
 }
 
-static void SetAccCache(AdaptXForm *xform)
+static void SetAccCache(XFInfo *xfinfo)
 {
    MixPDF *mp;
    BaseClass *bclass;
@@ -2239,6 +2419,8 @@ static void SetAccCache(AdaptXForm *xform)
    AdaptXForm *xf;
    XFormSet  *xformSet;
    HMMSet *hset;
+   
+   AdaptXForm *xform = xfinfo->outXForm;
    
    if ((xform != NULL) && (AccAdaptBaseTriMat(xform))) {
       hset = xform->hset;
@@ -2293,7 +2475,7 @@ static void SetAccCache(AdaptXForm *xform)
                if (nxflevel > 0) {
                   if (ind > 0) { /* support no transform has been generated */
                     if ( ac[ind] == NULL )  {
-                      ac[ind] = CreateAccCache(GetBlockSize(xform,b), b);
+                        ac[ind] = CreateAccCache(GetBlockSize(xfinfo,b), b);
                       nCache++;
                     }
                   }
@@ -2634,30 +2816,42 @@ static void ConvFullCov (HMMSet *hset, MixPDF *mp)
    int i,j,vsize;
    SVector var;
    STriMat inv;
-   char buf[MAXSTRLEN];
+   MInfo *mi;
    
+   mi = GetMInfo(mp);
    var = mp->cov.var;
    vsize = VectorSize(var);
    
    /* create full cov matrix and hook var and inv each other */
-   if ((inv=GetHook(var))==NULL) {
+   if ((inv=GetHook(mi->cov.var))==NULL) {
       inv = CreateSTriMat(hset->hmem,vsize);
-      SetHook(var,inv); 
+      SetHook(mi->cov.var,inv);
       SetHook(inv,var);
    }
 
-   for (i=1; i<=vsize; i++) {
-      for (j=1; j<i; j++)
-         inv[i][j] = 0.0;
-      switch(mp->ckind) {
-      case DIAGC:    inv[i][i] = 1.0/var[i]; break;
-      case INVDIAGC: inv[i][i] = var[i]; break;
-      default: HError(999,"ConvFullCov: CovKind %s is not supported", CovKind2Str(mp->ckind, buf)); break;
+   switch(mp->ckind) {
+   case DIAGC:
+      for (i=1; i<=vsize; i++) {
+         for (j=1; j<i; j++)
+            inv[i][j] = 0.0;
+         inv[i][i] = 1.0/var[i];
       }
-   } 
-      
-   mp->cov.inv = inv;
-   mp->ckind   = FULLC;
+      mp->cov.inv = inv;
+      mp->ckind   = FULLC;
+      break;
+   case INVDIAGC:
+      for (i=1; i<=vsize; i++) {
+         for (j=1; j<i; j++)
+            inv[i][j] = 0.0;
+         inv[i][i] = var[i];
+      }
+      mp->cov.inv = inv;
+      mp->ckind   = FULLC;
+      break;
+   case FULLC:
+   default:
+      break;
+   }
    
    return;
 }
@@ -2676,6 +2870,10 @@ static Vector CompFXForm(MixPDF *mp, Vector svec, AdaptXForm *xform, AInfo *ai, 
       *det = 0.0;
      vec = svec;
   }
+   
+   if (mp->ckind==FULLC)
+      return svec;
+   
   /* Check the kind of the adaptation */
   if ((xform->akind != BASE) && (xform->akind != TREE))
     HError(999,"Only BASE and TREE adaptation currently supported");
@@ -2786,7 +2984,7 @@ static void CompXForm(MixPDF *mp, AdaptXForm *xform, AInfo *ai, Boolean full)
 /*                 Transform Initialisation and Estimation                */
 /*------------------------------------------------------------------------*/
 
-static LinXForm *CreateLinXForm(MemHeap *x,int vsize,IntVec blockSize)
+static LinXForm *CreateLinXForm(MemHeap *x,int vsize,IntVec blockSize,Boolean useBias)
 {
    LinXForm *xf;
    int b,bsize,size;
@@ -4106,17 +4304,20 @@ static void EstMLLRCovXForm(AccStruct *accs, LinXForm *xf)
    Dispose(&gstack,InvG);
 }
 
-static void EstXForm(AccStruct *accs, AdaptXForm *xform, IntVec classes)
+static void EstXForm(AccStruct *accs, XFInfo *xfinfo, IntVec classes)
 {
   XFormSet *xformSet;
   LinXForm *xf, *dxf;
   IntVec diagBlockSize;
   int i;
   
+   AdaptXForm *xform = xfinfo->outXForm; 
+   AdaptXForm *diagCovXForm = xfinfo->diagCovXForm;
+  
   xformSet = xform->xformSet;
   xformSet->numXForms++;
   xf = xformSet->xforms[xformSet->numXForms] 
-    = CreateLinXForm(xform->mem,accs->dim,accs->blockSize);
+      = CreateLinXForm(xform->mem,accs->dim,accs->blockSize,accs->useBias);
   switch (accs->xkind) {
   case MLLRMEAN:    
     EstMLLRMeanXForm(accs, xf);
@@ -4126,7 +4327,7 @@ static void EstXForm(AccStruct *accs, AdaptXForm *xform, IntVec classes)
       xformSet = diagCovXForm->xformSet;
       xformSet->numXForms++;
       dxf = xformSet->xforms[xformSet->numXForms] 
-	= CreateLinXForm(xform->mem,accs->dim,diagBlockSize);
+             = CreateLinXForm(xform->mem,accs->dim,diagBlockSize,FALSE);
       dxf->bias = NULL;
       EstMLLRDiagCovXForm(accs,xf,dxf);
       FixDet(dxf);
@@ -4149,11 +4350,14 @@ static void EstXForm(AccStruct *accs, AdaptXForm *xform, IntVec classes)
     printf("Estimated XForm %d using %f observations\n",xformSet->numXForms,accs->occ);
 }
 
-void GenXForm(RegNode *node, AdaptXForm *xform, IntVec classes)
+void GenXForm(RegNode *node, XFInfo *xfinfo, IntVec classes)
 {
    AccStruct *accs;
    int class=1,b;
    IntVec blockSize,bandWidth;
+  
+   AdaptXForm *xform = xfinfo->outXForm;
+   AdaptXForm *diagCovXForm = xfinfo->diagCovXForm;
   
    if (node->valid && node->vsize>0) {
    /* First get dimension of data associated with this set of transforms */
@@ -4165,14 +4369,14 @@ void GenXForm(RegNode *node, AdaptXForm *xform, IntVec classes)
       printf("\n");
    }
    while (classes[class] == 0) class++;
-      blockSize = GetBlockSize(xform,class);
-      bandWidth = GetBandWidth(xform,class,blockSize);      
+      blockSize = GetBlockSize(xfinfo,class);
+      bandWidth = GetBandWidth(xfinfo,class,blockSize);      
    if (strmProj)
-         accs = CreateAccStruct(&gstack,xform,xform->hset->vecSize,blockSize,bandWidth);
+         accs = CreateAccStruct(&gstack,xfinfo,xform->hset->vecSize,blockSize,bandWidth);
    else 
-         accs = CreateAccStruct(&gstack,xform,node->vsize,blockSize,bandWidth);
+         accs = CreateAccStruct(&gstack,xfinfo,node->vsize,blockSize,bandWidth);
    AccNodeStats(node,accs,xform,classes);
-   EstXForm(accs,xform,classes);
+      EstXForm(accs,xfinfo,classes);
    for (b=1;b<=IntVecSize(classes);b++)
       if (classes[b] == 1) {
 	if (HardAssign(xform)) {
@@ -4190,7 +4394,7 @@ void GenXForm(RegNode *node, AdaptXForm *xform, IntVec classes)
    return;
 }
 
-static Boolean GenClassXForm(BaseClass *bclass, AdaptXForm *xform)
+static Boolean GenClassXForm(XFInfo *xfinfo)
 {
   AccStruct *accs;
    int s,b;
@@ -4198,6 +4402,10 @@ static Boolean GenClassXForm(BaseClass *bclass, AdaptXForm *xform)
   ILink i;
   MixPDF *mp = NULL;
    IntVec classes,blockSize,bandWidth;
+   
+   AdaptXForm *xform = xfinfo->outXForm;
+   BaseClass *bclass = xform->bclass;
+   AdaptXForm *diagCovXForm = xfinfo->diagCovXForm;
 
   /* reset the number of transforms */
   xform->xformSet->numXForms = 0;
@@ -4217,12 +4425,12 @@ static Boolean GenClassXForm(BaseClass *bclass, AdaptXForm *xform)
      ZeroIntVec(classes); classes[b] = 1;
     /* Accumulate structure regenerated each time as this will handle
        streams of different sizes simply */
-      blockSize = GetBlockSize(xform,b);
-      bandWidth = GetBandWidth(xform,b,blockSize);
+      blockSize = GetBlockSize(xfinfo,b);
+      bandWidth = GetBandWidth(xfinfo,b,blockSize);
      if (strmProj)
-         accs = CreateAccStruct(&gstack,xform,xform->hset->vecSize,blockSize,bandWidth);
+         accs = CreateAccStruct(&gstack,xfinfo,xform->hset->vecSize,blockSize,bandWidth);
      else     
-         accs = CreateAccStruct(&gstack,xform,GetVecSizeClass(bclass,b),blockSize,bandWidth);
+         accs = CreateAccStruct(&gstack,xfinfo,GetBaseClassVSize(bclass,b),blockSize,bandWidth);
     for (i=bclass->ilist[b]; i!=NULL; i=i->next) {
       mp = ((MixtureElem *)i->item)->mpdf;
       AccMixPDFStats(xform->hset,mp,accs);
@@ -4232,7 +4440,7 @@ static Boolean GenClassXForm(BaseClass *bclass, AdaptXForm *xform)
 
       /* get threshold for this base class */
       s = bclass->stream[b];
-      GetSplitThresh(xform,thresh);
+      GetSplitThresh(xfinfo,thresh);
       
       printf("Class %d (stream=%d, vsize=%d", b, s, accs->dim);
       if (xform->xformSet->xkind!=SEMIT)
@@ -4241,7 +4449,7 @@ static Boolean GenClassXForm(BaseClass *bclass, AdaptXForm *xform)
          printf(")\n"); 
 
       if ((accs->dim>0) && ((xform->xformSet->xkind==SEMIT) || (accs->occ > thresh[s]))) {
-      EstXForm(accs,xform,classes);
+         EstXForm(accs,xfinfo,classes);
       xform->xformWgts.assign[b] = xform->xformSet->numXForms;
       if (mllrDiagCov) 
 	diagCovXForm->xformWgts.assign[b] = diagCovXForm->xformSet->numXForms;
@@ -4263,7 +4471,7 @@ InputXForm *AdaptXForm2InputXForm (HMMSet *hset, AdaptXForm *xform)
    MLink m;
    SVector v;
    SMatrix mat;
-
+   
    if (xform->bclass->numClasses != 1)
       HError(999,"Can only use Stream Projections with single base classes");
    ixform = (InputXForm *)New(hset->hmem,sizeof(InputXForm));
@@ -4319,13 +4527,15 @@ InputXForm *AdaptXForm2InputXForm (HMMSet *hset, AdaptXForm *xform)
 }
 
 /* The transform generated from this can be applied to a model set */
-static AdaptXForm *CreateBaseAdaptXForm(HMMSet *hset, char *xformName)
+static AdaptXForm *CreateBaseAdaptXForm(HMMSet *hset, XFInfo *xfinfo, char *xformName)
 {
    AdaptXForm *xform;
    XFormAccInfo *info;
    XFormSet *xformSet;
    int b;
    char buf[MAXSTRLEN];
+
+   XFormKind xKind = xfinfo->outXKind;
 
    xform = (AdaptXForm *)New(hset->hmem,sizeof(AdaptXForm));
    xform->xformName = CopyString(hset->hmem,xformName);
@@ -4340,14 +4550,14 @@ static AdaptXForm *CreateBaseAdaptXForm(HMMSet *hset, char *xformName)
    xformSet->nUse = 0;
    /* setup default values from config variables */
    xformSet->xkind = xKind; 
-   xform->akind = GetAdaptKind(xform);
+   xform->akind = GetAdaptKind(xfinfo);
    /* Now sort out the correct set of baseclasses */
    switch (xform->akind) {
    case BASE:
-      xform->bclass = GetBaseClass(hset,xform);
+      xform->bclass = GetBaseClass(hset,xfinfo);
       break;
    case TREE:
-      xform->rtree = GetRegTree(hset,xform);
+      xform->rtree = GetRegTree(hset,xfinfo);
       xform->bclass = xform->rtree->bclass;
       break;
    default:
@@ -4531,7 +4741,7 @@ static void SwapXForm(HMMSet *hset, AdaptXForm *xform)
 
 /* ---------------- Accumulation Control Functions ---------------------- */
 
-void AccAdaptFrame(double Lr, Vector svec, MixPDF *mp, int t, int s)
+void AccAdaptFrame(XFInfo *xfinfo, double Lr, Vector svec, MixPDF *mp, int t)
 {
    RegAcc *ra;
    int i, vsize;
@@ -4549,7 +4759,7 @@ void AccAdaptFrame(double Lr, Vector svec, MixPDF *mp, int t, int s)
       for (i=1;i<=vsize;i++)
          ra->spSumSq[i] += Lr*svec[i]*svec[i];
    if (ra->bTriMat != NULL) 
-      AccBaseTriMat(Lr,svec,mp,t,s);
+      AccBaseTriMat(xfinfo,Lr,svec,mp,t);
 }
 
 void ZeroAdaptAccs(HMMSet *hset, AdaptXForm *xform)
@@ -4614,7 +4824,6 @@ void SetParentXForm(HMMSet *hset, AdaptXForm *xform)
       }
    }
    hset->parentXForm = xform;
-   SetAccCache(outXForm);
 }
 
 /* EXPORT->ApplyCompXForm: apply component-specific xform to MixPDF */
@@ -4830,38 +5039,39 @@ AdaptXForm *CopyAdaptXForm(MemHeap *x, AdaptXForm *xform)
 
 /* ---------------  Transform Estimation Functions ----------------------- */
 
-AdaptXForm *CreateAdaptXForm(HMMSet *hset, char *xformName)
+AdaptXForm *CreateAdaptXForm(HMMSet *hset, XFInfo *xfinfo, char *xformName)
 {
-   AdaptXForm *xform;
+   AdaptXForm *xform,*diagCovXForm;
 
    /* The macroname is not defined at this stage, to avoid
       over-writing the old version */
-   xform = CreateBaseAdaptXForm(hset,xformName);
+   xfinfo->outXForm = xform = CreateBaseAdaptXForm(hset,xfinfo,xformName);
    if (mllrDiagCov) { /* additional code for efficient diag Cov */     
-     diagCovXForm = CreateBaseAdaptXForm(hset,xformName);
+      xfinfo->diagCovXForm = diagCovXForm = CreateBaseAdaptXForm(hset,xfinfo,xformName);
      /* fix the parent xform and attributes */
      if (xform->parentXForm != NULL) xform->parentXForm->nUse--;
      diagCovXForm->parentXForm = xform;
      diagCovXForm->xformSet->xkind = MLLRVAR;
      diagCovXForm->info = xform->info;
    }
-   if (!hset->attRegAccs) AttachRegAccs(hset,xform);
-   outXForm = xform;
+   if (!hset->attRegAccs) AttachRegAccs(hset,xfinfo);
+   xfinfo->outXForm = xform;
    return xform;
 }
 
-Boolean GenAdaptXForm(HMMSet *hset, AdaptXForm* xform)
+Boolean GenAdaptXForm(HMMSet *hset, XFInfo *xfinfo)
 {
    AdaptKind akind;
    Boolean genXForm = FALSE;
+   AdaptXForm *xform = xfinfo->outXForm;
 
    akind = xform->akind;
    switch(akind) {
    case TREE: 
-      genXForm = ParseTree(xform->rtree,xform);
+      genXForm = ParseTree(xfinfo);
       break;
    case BASE:
-      genXForm = GenClassXForm(xform->bclass,xform);
+      genXForm = GenClassXForm(xfinfo);
       break;
    default:
       HError(999,"Only TREE and BASE adaptation kinds currently supported");
@@ -4871,19 +5081,21 @@ Boolean GenAdaptXForm(HMMSet *hset, AdaptXForm* xform)
    return genXForm;
 }
 
-void TidyBaseAccs(void)
+void TidyBaseAccs(XFInfo *xfinfo)
 {
-   SetBaseAccsTime(-1);
+   SetBaseAccsTime(xfinfo,-1);
    if (headac == NULL )
-      UpdateBaseAccs(NULL,-1,NULL);
+      UpdateBaseAccs(xfinfo,NULL,-1,NULL);
    else { 
-      UpdateBaseAccsWithPaac();
+      UpdateBaseAccsWithPaac(xfinfo);
       ResetAccCache();
    }
 }
 
-AdaptXForm *GetMLLRDiagCov(AdaptXForm *xform)
+AdaptXForm *GetMLLRDiagCov(XFInfo *xfinfo, AdaptXForm *xform)
 {
+   AdaptXForm *diagCovXForm = xfinfo->diagCovXForm;
+   
    if (diagCovXForm == NULL)
       return xform;
    else 
@@ -4901,10 +5113,6 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
    char newMn[MAXSTRLEN];
    char spkr[MAXSTRLEN];
    char paspkr[MAXSTRLEN];
-   static char coutspkr[MAXSTRLEN];
-   static char cinspkr[MAXSTRLEN];
-   static char cpaspkr[MAXSTRLEN];
-   static int nspkr = 0;
    Boolean resetHMMSet = FALSE, maskMatch;
    Boolean spkrChange = FALSE;
 
@@ -4917,32 +5125,32 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
       maskMatch = MaskMatch(xfinfo->outSpkrPat,spkr,datafn);
       if ((!maskMatch) && (datafn != NULL))
          HError(999,"Output xform mask %s does not match filename %s",xfinfo->outSpkrPat,datafn);
-      if ((datafn == NULL) || ((coutspkr!=NULL) && strcmp(spkr,coutspkr))) {
+      if ((datafn == NULL) || (strcmp(spkr,xfinfo->coutspkr))) {
          /* end of current speaker, so complete his/her transform */
-         if (nspkr>0) { /* nothing to generate if first speaker */
+         if (xfinfo->nspkr>0) { /* nothing to generate if first speaker */
             if (trace&T_SXF)
-               printf("Generating transform %s (%i)\n",coutspkr,nspkr);
+               printf("Generating transform %s (%i)\n",xfinfo->coutspkr,xfinfo->nspkr);
             /* Tidy the statistics of the last frame */
-            SetBaseAccsTime(-1);
+            SetBaseAccsTime(xfinfo,-1);
             if (headac == NULL )
-               UpdateBaseAccs(NULL,-1,NULL);
+               UpdateBaseAccs(xfinfo,NULL,-1,NULL);
             else { 
-               UpdateBaseAccsWithPaac();
+               UpdateBaseAccsWithPaac(xfinfo);
                ResetAccCache();
             }
             /* Generate the new transform */
-            MakeFN(coutspkr,NULL,xfinfo->outXFormExt,newMn);
-            xfinfo->outXForm = CreateAdaptXForm(hset, newMn);
-            GenAdaptXForm(hset,xfinfo->outXForm);
-	    if (mllrDiagCov) xfinfo->outXForm = diagCovXForm;
+            MakeFN(xfinfo->coutspkr,NULL,xfinfo->outXFormExt, newMn);
+            xfinfo->outXForm = CreateAdaptXForm(hset, xfinfo, newMn);
+            GenAdaptXForm(hset,xfinfo);
+            if (mllrDiagCov) xfinfo->outXForm = xfinfo->diagCovXForm;
             /* After generating a transform need to reset parameters */
             resetHMMSet = TRUE;
             if (keepXFormDistinct) {  /* Output individual transform */
-               MakeFN(coutspkr,xfinfo->outXFormDir,xfinfo->outXFormExt,newFn);
+               MakeFN(xfinfo->coutspkr,xfinfo->outXFormDir,xfinfo->outXFormExt,newFn);
                SaveOneXForm(hset,xfinfo->outXForm,newFn,xfinfo->saveBinary);
             } 
             else { /* Create macro from the masked speaker name and extension */
-               MakeFN(coutspkr,NULL,xfinfo->outXFormExt,newMn);
+               MakeFN(xfinfo->coutspkr,NULL,xfinfo->outXFormExt,newMn);
                CreateXFormMacro(hset,xfinfo->outXForm,newMn);
             }
             if (saveSpkrModels) { 
@@ -4967,58 +5175,62 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                if (!maskMatch)
                   HError(999,"Parent xform mask %s does not match filename %s",xfinfo->paSpkrPat,datafn);
                /* parent transform changed and not the last file? */
-               if (strcmp(paspkr,cpaspkr)) { 
-                  strcpy(cpaspkr,paspkr);
+               if (strcmp(paspkr,xfinfo->cpaspkr)) { 
+                  strcpy(xfinfo->cpaspkr,paspkr);
                   if (xfinfo->usePaXForm) {
-                  MakeFN(cpaspkr,xfinfo->paXFormDir,xfinfo->paXFormExt,newFn);
-                  MakeFN(cpaspkr,NULL,xfinfo->paXFormExt,newMn);
+                     MakeFN(xfinfo->cpaspkr,xfinfo->paXFormDir,xfinfo->paXFormExt,newFn);
+                     MakeFN(xfinfo->cpaspkr,NULL,xfinfo->paXFormExt,newMn);
                   xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
                   SetParentXForm(hset,xfinfo->paXForm);
-               }
+                     SetAccCache(xfinfo);
+                  }
                   if (xfinfo->al_hset!=NULL && xfinfo->use_alPaXForm) {
-                     MakeFN(cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
-                     MakeFN(cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
+                     MakeFN(xfinfo->cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
+                     MakeFN(xfinfo->cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
                      xfinfo->al_paXForm = LoadOneXForm(xfinfo->al_hset,newMn,newFn);
                      SetParentXForm(xfinfo->al_hset,xfinfo->al_paXForm);
+                     SetAccCache(xfinfo);
                   }
                   else
                      xfinfo->al_paXForm = xfinfo->paXForm;
                }
+               }
             }
-         } 
          else if (xfinfo->usePaXForm || xfinfo->use_alPaXForm) { /* set-up the initial parent transform information */
             maskMatch = MaskMatch(xfinfo->paSpkrPat,paspkr,datafn);
             if (!maskMatch)
                HError(999,"Parent xform mask %s does not match filename %s",xfinfo->paSpkrPat,datafn);
-            strcpy(cpaspkr,paspkr);
+            strcpy(xfinfo->cpaspkr,paspkr);
             if (xfinfo->usePaXForm) {
-            MakeFN(cpaspkr,xfinfo->paXFormDir,xfinfo->paXFormExt,newFn);
-            MakeFN(cpaspkr,NULL,xfinfo->paXFormExt,newMn);
+               MakeFN(xfinfo->cpaspkr,xfinfo->paXFormDir,xfinfo->paXFormExt,newFn);
+               MakeFN(xfinfo->cpaspkr,NULL,xfinfo->paXFormExt,newMn);
             xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
             SetParentXForm(hset,xfinfo->paXForm);
+               SetAccCache(xfinfo);
             }
             if (xfinfo->al_hset!=NULL && xfinfo->use_alPaXForm) {
-               MakeFN(cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
-               MakeFN(cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
+               MakeFN(xfinfo->cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
+               MakeFN(xfinfo->cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
                xfinfo->al_paXForm = LoadOneXForm(xfinfo->al_hset,newMn,newFn);
                SetParentXForm(xfinfo->al_hset,xfinfo->al_paXForm);
+               SetAccCache(xfinfo);
             }
             else
                xfinfo->al_paXForm = xfinfo->paXForm;
          }
          
          if (datafn!=NULL) {
-         nspkr++;
-         strcpy(coutspkr,spkr);      
-         }      
-      } 
+            xfinfo->nspkr++;
+            strcpy(xfinfo->coutspkr,spkr);
+            }
+         }
       else if (xfinfo->usePaXForm || xfinfo->use_alPaXForm) { 
          /* check to see whether the parent transform changes */
          /* this should not happen */
          MaskMatch(xfinfo->paSpkrPat,paspkr,datafn);
-         if (strcmp(paspkr,cpaspkr)) 
+         if (strcmp(paspkr,xfinfo->cpaspkr)) 
             HError(999,"Changing parent transform out of sync with output transform (%s %s)",
-                   paspkr,cpaspkr);
+                   paspkr,xfinfo->cpaspkr);
       }
    } 
    else if ((xfinfo->usePaXForm || xfinfo->use_alPaXForm) && (datafn != NULL)) {
@@ -5027,41 +5239,44 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
       if (!maskMatch)
          HError(999,"Parent xform mask %s does not match filename %s",xfinfo->paSpkrPat,datafn);
       /* parent transform changed and not the last file? */
-      if (strcmp(paspkr,cpaspkr)) { 
-         strcpy(cpaspkr,paspkr);
+      if (strcmp(paspkr,xfinfo->cpaspkr)) { 
+         strcpy(xfinfo->cpaspkr,paspkr);
          if (xfinfo->usePaXForm) {  /* parent xform for hset */
-         MakeFN(cpaspkr,xfinfo->paXFormDir,xfinfo->paXFormExt,newFn);
-         MakeFN(cpaspkr,NULL,xfinfo->paXFormExt,newMn);
+            MakeFN(xfinfo->cpaspkr,xfinfo->paXFormDir,xfinfo->paXFormExt,newFn);
+            MakeFN(xfinfo->cpaspkr,NULL,xfinfo->paXFormExt,newMn);
          xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
          SetParentXForm(hset,xfinfo->paXForm);
+            SetAccCache(xfinfo);
       }
          else if (hset->semiTied != NULL) { /* model set uses a semitied transform */
       if (xfinfo->paXForm == NULL) { /* semi-tied transform is for all files */
          xfinfo->paXForm = hset->semiTied;
          SetParentXForm(hset,xfinfo->paXForm);
+               SetAccCache(xfinfo);
       }
          }
          if (xfinfo->al_hset!=NULL) {
             if (xfinfo->use_alPaXForm) {  /* parent xform for al_hset */
-               MakeFN(cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
-               MakeFN(cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
+               MakeFN(xfinfo->cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
+               MakeFN(xfinfo->cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
                xfinfo->al_paXForm = LoadOneXForm(xfinfo->al_hset,newMn,newFn);
                SetParentXForm(xfinfo->al_hset,xfinfo->al_paXForm);
+               SetAccCache(xfinfo);
             }
             else if (xfinfo->al_hset->semiTied != NULL) { /* model set uses a semitied transform */
                if (xfinfo->al_paXForm == NULL) { /* semi-tied transform is for all files */
                   xfinfo->al_paXForm = xfinfo->al_hset->semiTied;
                   SetParentXForm(xfinfo->al_hset,xfinfo->al_paXForm);
+                  SetAccCache(xfinfo);
                }
             }
          }
          else 
             xfinfo->al_paXForm = xfinfo->paXForm;
+
+      spkrChange=TRUE;
       }
-      spkrChange=TRUE;
    } 
-   else 
-      spkrChange=TRUE;
 
    /* Second: handle input transform */
    if ((xfinfo->useInXForm || xfinfo->use_alInXForm) && (datafn != NULL)) {
@@ -5070,25 +5285,27 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
          HError(999,"Input xform mask %s does not match filename %s",xfinfo->inSpkrPat,datafn);
       /* if a transform has been changed the input transform must be 
          reapplied */
-      if (((cinspkr!=NULL) && strcmp(spkr,cinspkr)) || (resetHMMSet)) {
+      if (((xfinfo->cinspkr!=NULL) && strcmp(spkr,xfinfo->cinspkr)) || (resetHMMSet)) {
          if (trace&T_SXF)
             printf("Using input transform %s\n",spkr);
-         strcpy(cinspkr,spkr);      
+         strcpy(xfinfo->cinspkr,spkr);      
          if (xfinfo->useInXForm) {  /* input xform for hset */
-         MakeFN(cinspkr,NULL,xfinfo->inXFormExt,newMn);
+            MakeFN(xfinfo->cinspkr,NULL,xfinfo->inXFormExt,newMn);
          xfinfo->inXForm = LoadOneXForm(hset,newMn,NULL);
          SetXForm(hset,xfinfo->inXForm);
             ApplyHMMSetXForm(hset,xfinfo->inXForm,xfinfo->inFullC);
          }
          if (xfinfo->al_hset!=NULL && xfinfo->use_alInXForm) {  /* input xform for al_hset */
-            MakeFN(cinspkr,xfinfo->al_inXFormDir,xfinfo->al_inXFormExt,newFn);
-            MakeFN(cinspkr,NULL,xfinfo->al_inXFormExt,newMn);
+            MakeFN(xfinfo->cinspkr,xfinfo->al_inXFormDir,xfinfo->al_inXFormExt,newFn);
+            MakeFN(xfinfo->cinspkr,NULL,xfinfo->al_inXFormExt,newMn);
             xfinfo->al_inXForm = LoadOneXForm(xfinfo->al_hset,newMn,newFn);
             SetXForm(xfinfo->al_hset,xfinfo->al_inXForm);
             ApplyHMMSetXForm(xfinfo->al_hset,xfinfo->al_inXForm,FALSE);
          } 
          else 
             xfinfo->al_inXForm = xfinfo->inXForm;
+
+         spkrChange = TRUE;
          }
       }
    else if (resetHMMSet && (xfinfo->usePaXForm || (xfinfo->inXForm != NULL) || saveSpkrModels)) { 
@@ -5129,9 +5346,9 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
       }
       
       /* reset static variables for speaker name */
-      strcpy(coutspkr,"");
-      strcpy(cpaspkr, "");
-      strcpy(cinspkr, "");
+      xfinfo->coutspkr[0] = '\0';
+      xfinfo->cpaspkr[0] = '\0';
+      xfinfo->cinspkr[0] = '\0';
    }
 
    return spkrChange;
@@ -5149,8 +5366,8 @@ void UpdateSemiTiedModels(HMMSet *hset, XFInfo *xfinfo)
    } 
    else 
       newMn = semiTiedMacro;
-   xfinfo->outXForm = CreateAdaptXForm(hset, newMn);
-   GenAdaptXForm(hset,xfinfo->outXForm);
+   xfinfo->outXForm = CreateAdaptXForm(hset, xfinfo, newMn);
+   GenAdaptXForm(hset,xfinfo);
    CreateXFormMacro(hset,xfinfo->outXForm,newMn);
    MakeFN(newMn,xfinfo->outXFormDir,xfinfo->outXFormExt,newFn);
    if ((strmProj) || (semiTied2InputXForm)) {

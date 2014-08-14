@@ -65,7 +65,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hled_version = "!HVER!HLEd:   3.4 [CUED 25/04/06]";
-char *hled_vc_id = "$Id: HLEd.c,v 1.6 2007/10/04 06:50:22 zen Exp $";
+char *hled_vc_id = "$Id: HLEd.c,v 1.7 2007/12/12 09:45:47 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -356,7 +356,7 @@ void Initialise(void)
    SetConfParms();
    asterix = GetLabId("*",TRUE);
    for (i=1;i<=99;i++) {
-      sprintf(buf,"%ld",i);
+      sprintf(buf,"%ld",(long)i);
       labid=GetLabId(buf,TRUE);
       labid->aux=(void*)((long) i);
    }

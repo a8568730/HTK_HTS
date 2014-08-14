@@ -39,7 +39,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -454,7 +454,7 @@ int main(int argc, char *argv[])
    InitDict();
    InitLat();
    InitNet();
-   InitAdapt(&xfInfo); 
+   InitAdapt(&xfInfo,NULL); 
 
    if (!InfoPrinted() && NumArgs() == 0)
       ReportUsage();
@@ -740,6 +740,7 @@ int main(int argc, char *argv[])
 	    }
 	 
             if (UpdateSpkrStats(&hset,&xfInfo, datafn)) nSnt=0 ;
+            fbInfo.xfinfo  = &xfInfo;
             fbInfo.inXForm = xfInfo.inXForm;
             fbInfo.paXForm = xfInfo.paXForm;
 
@@ -1028,7 +1029,7 @@ void Initialise(char *hmmListFn)
           HError(999,"Can only update linear transforms OR model parameters!");
         xfInfo.useOutXForm = TRUE;
         /* This initialises things - temporary hack - THINK!! */
-        CreateAdaptXForm(&hset, "tmp"); 
+        CreateAdaptXForm(&hset, &xfInfo, "tmp"); 
       }
       printf("\n ");
       if (parMode>=0) printf("Parallel-Mode[%d] ",parMode);

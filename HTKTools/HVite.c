@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hvite_version = "!HVER!HVite:   3.4 [CUED 25/04/06]";
-char *hvite_vc_id = "$Id: HVite.c,v 1.8 2007/09/18 12:24:07 zen Exp $";
+char *hvite_vc_id = "$Id: HVite.c,v 1.14 2008/01/08 09:36:38 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
    InitDict();
    InitNet();   InitRec();
    InitUtil(); 
-   InitAdapt(&xfInfo); InitMap();
+   InitAdapt(&xfInfo,NULL); InitMap();
 
    if (!InfoPrinted() && NumArgs() == 0)
       ReportUsage();
@@ -573,18 +573,19 @@ void Initialise(void)
    if (xfInfo.useOutXForm || (update>0)) {
       CreateHeap(&regHeap,   "regClassStore",  MSTAK, 1, 0.5, 1000, 8000 );
       /* This initialises things - temporary hack - THINK!! */
-      CheckAdaptSetUp(&hset);
-      CreateAdaptXForm(&hset, "tmp");
+      CheckAdaptSetUp(&hset,&xfInfo);
+      CreateAdaptXForm(&hset,&xfInfo,"tmp");
       /* initialise structures for the f-b frame-state alignment pass */
       utt = (UttInfo *) New(&regHeap, sizeof(UttInfo));
       fbInfo = (FBInfo *) New(&regHeap, sizeof(FBInfo));
+      fbInfo->xfinfo_hmm = &xfInfo;
       /* initialise a recogniser for frame/state alignment purposes */
       alignpsi=InitPSetInfo(&hset);
       alignvri=InitVRecInfo(alignpsi,1,TRUE,FALSE);
       SetPruningLevels(alignvri,0,genBeam,-LZERO,0.0,tmBeam);
       InitUttInfo(utt, FALSE);
       InitialiseForBack(fbInfo, &regHeap, &hset, (UPDSet) (UPXFORM), NULL, (UPDSet) 0, 
-                        genBeam*2.0, genBeam*2.0, genBeam*4.0+1.0, 10.0, FALSE);
+                        genBeam*2.0, genBeam*2.0, genBeam*4.0+1.0, 10.0, FALSE, FALSE);
       utt->twoDataFiles = FALSE;
       utt->S = hset.swidth[0]; 
       AttachPreComps(&hset,hset.hmem);
@@ -985,10 +986,10 @@ void DoAlignment(void)
 	    Estimate transform and then set it up as the 
 	    input XForm
 	 */
-	 incXForm = CreateAdaptXForm(&hset,"inc");
-         TidyBaseAccs();
-	 GenAdaptXForm(&hset,incXForm);
-         xfInfo.inXForm = GetMLLRDiagCov(incXForm);;
+         incXForm = CreateAdaptXForm(&hset,&xfInfo,"inc");
+         TidyBaseAccs(&xfInfo);
+         GenAdaptXForm(&hset,&xfInfo);
+         xfInfo.inXForm = GetMLLRDiagCov(&xfInfo,incXForm);
 	 SetXForm(&hset,xfInfo.inXForm);
          ApplyHMMSetXForm(&hset,xfInfo.inXForm,FALSE);
       }
@@ -1044,10 +1045,10 @@ void DoRecognition(void)
 	       Estimate transform and then set it up as the 
 	       input XForm
 	    */
-	    incXForm = CreateAdaptXForm(&hset,"inc");
-            TidyBaseAccs();
-	    GenAdaptXForm(&hset,incXForm);
-            xfInfo.inXForm = GetMLLRDiagCov(incXForm);;
+            incXForm = CreateAdaptXForm(&hset,&xfInfo,"inc");
+            TidyBaseAccs(&xfInfo);
+            GenAdaptXForm(&hset,&xfInfo);
+            xfInfo.inXForm = GetMLLRDiagCov(&xfInfo,incXForm);
             SetXForm(&hset,xfInfo.inXForm);
             ApplyHMMSetXForm(&hset,xfInfo.inXForm,FALSE);
          }
@@ -1077,10 +1078,10 @@ void DoRecognition(void)
 	       Estimate transform and then set it up as the 
 	       input XForm
 	    */
-	    incXForm = CreateAdaptXForm(&hset,"inc");
-            TidyBaseAccs();
-	    GenAdaptXForm(&hset,incXForm);
-            xfInfo.inXForm = GetMLLRDiagCov(incXForm);;
+            incXForm = CreateAdaptXForm(&hset,&xfInfo,"inc");
+            TidyBaseAccs(&xfInfo);
+            GenAdaptXForm(&hset,&xfInfo);
+            xfInfo.inXForm = GetMLLRDiagCov(&xfInfo,incXForm);
             SetXForm(&hset,xfInfo.inXForm);
             ApplyHMMSetXForm(&hset,xfInfo.inXForm,FALSE);
          }

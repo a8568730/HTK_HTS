@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -77,7 +77,7 @@
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
 char *htrain_version = "!HVER!HTrain:   3.4 [CUED 25/04/06]";
-char *htrain_vc_id = "$Id: HTrain.c,v 1.10 2007/10/04 06:50:26 zen Exp $";
+char *htrain_vc_id = "$Id: HTrain.c,v 1.13 2008/01/18 03:26:20 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1042,6 +1042,7 @@ void AttachAccsParallel(HMMSet *hset, MemHeap *x, UPDSet uFlags, int nPara)
       hmm = hss.hmm;
       hmm->hook = (void *)0;  /* used as numEg counter */
       while (GoNextState(&hss,TRUE)) {
+         hss.si->hook = (void *)0;  /* used as state occ counter */ 
          while (GoNextStream(&hss,TRUE)) {
             sti = hss.sti;
             sti->hook = CreateWtAcc(x,hss.M, nPara);
@@ -1429,6 +1430,21 @@ static void DumpPName(FILE *f, char *pname)
    fprintf(f,"\n");
 }
 
+/* DumpStateOcc: dump state occ to file f */
+static void DumpStateOcc(FILE *f, HMMSet *hset, StateInfo *si)
+{
+   float occ;
+
+   if (hset->numSharedStreams>0) {
+   	if (si->hook==NULL)
+         occ = 0.0;
+      else
+         memcpy(&occ,&(si->hook),sizeof(float));
+      WriteFloat(f,&occ,1,ldBinary);
+      if (!ldBinary) fprintf(f,"\n");
+   }
+}
+
 /* DumpWtAcc: dump wt acc to file f */
 static void DumpWtAcc(FILE *f, WtAcc *wa)
 {
@@ -1526,6 +1542,7 @@ FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, UPDSet uFlags, int ind
       i = (int)((long) hmm->hook);
       WriteInt(f,&i,1,ldBinary); 
       while (GoNextState(&hss,TRUE)) {
+         DumpStateOcc(f,hset,hss.si);
          while (GoNextStream(&hss,TRUE)) {
             DumpWtAcc(f,((WtAcc *)hss.sti->hook)+index);
             if (hss.isCont){
@@ -1563,6 +1580,17 @@ FILE * DumpAccsParallel(HMMSet *hset, char *fname, int n, UPDSet uFlags, int ind
       }
    }    
    return f;
+}
+
+/* LoadStateOcc: new state occ from file f */
+static void LoadStateOcc(Source *src, HMMSet *hset, StateInfo *si)
+{
+   float occ;
+
+   if (hset->numSharedStreams>0) {
+      ReadFloat(src,&occ,1,ldBinary);
+      memcpy(&(si->hook),&occ,sizeof(float));
+   }
 }
 
 /* LoadWtAcc: new inc of wt acc from file f */
@@ -1705,6 +1733,7 @@ Source LoadAccsParallel(HMMSet *hset, char *fname, UPDSet uFlags, int index)
       ReadInt(&src,&i,1,ldBinary); negs = (long) i;
       negs += (long)hmm->hook; hmm->hook = (void *)negs;
       while (GoNextState(&hss,TRUE)) {
+         LoadStateOcc(&src,hset,hss.si);
          while (GoNextStream(&hss,TRUE)) {
             LoadWtAcc(&src,((WtAcc *)hss.sti->hook)+index,hss.M);
             if (hss.isCont){

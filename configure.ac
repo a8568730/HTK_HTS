@@ -31,7 +31,7 @@
 #   Interdisciplinary Graduate School of Science and Engineering    #
 #                  Tokyo Institute of Technology                    #
 #                                                                   #
-#                     Copyright (c) 2001-2007                       #
+#                     Copyright (c) 2001-2008                       #
 #                       All Rights Reserved.                        #
 #                                                                   #
 #  Permission is hereby granted, free of charge, to use and         #
@@ -66,11 +66,11 @@
 #  ---------------------------------------------------------------  #
 
 # After editing this file, run "autoconf" to regenerate "configure".
-AC_INIT(HTS,2.0.1, hts-users@sp.nitech.ac.jp)
+AC_INIT(HTS,2.1beta, hts-users@sp.nitech.ac.jp)
 AC_COPYRIGHT(Copyright 2003-2005 University of Cambridge)
-AC_COPYRIGHT(Copyright 2001-2007 Nagoya Institute of Technology and Tokyo Institute of Technology)
+AC_COPYRIGHT(Copyright 2001-2008 Nagoya Institute of Technology and Tokyo Institute of Technology)
 
-AC_PREFIX_DEFAULT(/usr/local/HTS-2.0.1)
+AC_PREFIX_DEFAULT(/usr/local/HTS-2.1)
 
 # Checks for programs.
 AC_PROG_MAKE_SET
@@ -89,9 +89,10 @@ AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL(AR, ar, :)])
 AC_PROG_AR
 
 # Checks for libraries.
-AC_CHECK_LIB([X11],[main],,AC_MSG_ERROR(Cannot find libX11))
+AC_CHECK_LIB([X11], [main])
 AC_CHECK_LIB([m],  [main],,AC_MSG_ERROR(Cannot find libm))
-AC_CHECK_LIB([g2c],[main],,AC_MSG_ERROR(Cannot find libg2c))
+AC_CHECK_LIB([g2c],[main],[fortlib=-lg2c],AC_CHECK_LIB([gfortran],[main],[fortlib=-lgfortran],AC_MSG_ERROR(Cannot find libg2c and libgfortran)))
+AC_SUBST(FORTRANLIB, $fortlib)
 
 # Checks for header files.
 AC_CONFIG_HEADERS

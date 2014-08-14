@@ -1,6 +1,6 @@
 ================================================================
-   The HMM-based Speech Synthesis System (HTS) version 2.0.1
-                    release October 1, 2007
+   The HMM-based Speech Synthesis System (HTS) version 2.1beta
+                    release January 15, 2008
 
 
 The HMM-Based Speech Synthesis System (HTS)
@@ -36,7 +36,7 @@ ARCTIC databases" (http://www.festvox.org/cmu_arctic/).  These
 demo scripts generate "voices" for Festival.
 
 Six HTS voices for Festival 1.95 & 1.96 trained by CMU ARCTIC
-databases are also released with HTS version 2.0.1.  Each of HTS
+databases are also released with HTS version 2.1beta.  Each of HTS
 voices consists of HMMs trained by the demo script, and can be
 used as a "voice" of Festival Speech Synthesis System without
 any other HTS tools.
@@ -53,27 +53,22 @@ developed in Galatea project
 tools.
 
 An HTS voice for GalateaTalk trained by the demo script is also
-released with HTS version 2.0.1.
+released with HTS version 2.1beta.
 
 ****************************************************************
-                  What's new in version 2.0.1
+                  What's new in version 2.1beta
 ****************************************************************
 
  * Many bug fixes.
- * Band structure for linear transforms.
- * Stream-dependent variance flooring scales.
- * State duration model mmf structure is changed.  In the
-   previous versions we used a multi-variate Gaussian PDF to
-   represent state duration PDFs of an HMM.  However, from this
-   version we use multi-stream structure.  This is very
-   important for the future HSMM support.
- * Speaker-dependent demo supports LSP in addition to mcep.
+ * HSMM training, adaptation, and synthesis
+ * Random generation of state transitions, durations, and 
+   mixture components in addition to state output vectors..
 
 ****************************************************************
                             Copying
 ****************************************************************
 
-The basic core system of HTS version 2.0.1 is released as a
+The basic core system of HTS version 2.1beta is released as a
 patch code to HTK version 3.4.  The patch code is released under
 a MIT-style license, without commercial restrictions.  However,
 it should be noted that once you apply the patch to the HTK
@@ -85,7 +80,7 @@ and answer queries when can, but are not in a position to
 guarantee it.  We will consider consultancy if desired, please
 contacts us for details.
 
-If you are using HTS version 2.0.1 in commercial environment,
+If you are using HTS version 2.1beta in commercial environment,
 even though no license is required, we would be grateful if you
 let us know as it helps justify ourselves to our various
 sponsors.  We also strongly encourage you to
@@ -107,7 +102,7 @@ The current copyright on the core system is
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -141,7 +136,7 @@ The current copyright on the core system is
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
 
-Several tools in HTS version 2.0.1 are independent of HTK
+Several tools in HTS version 2.1beta are independent of HTK
 (though most of them use the HTK library).  The copyright of
 these tools is
 
@@ -155,7 +150,7 @@ these tools is
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -195,7 +190,7 @@ these tools is
                           Installation
 ****************************************************************
 
-Please expand HTS-2.0.1_for_HTK-3.4.tar.bz2 and see the
+Please expand HTS-2.1beta_for_HTK-3.4.tar.bz2 and see the
 extracted file "INSTALL".  Note that HTS requires HTK.
 
 ****************************************************************

@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hwave_version = "!HVER!HWave:   3.4 [CUED 25/04/06]";
-char *hwave_vc_id = "$Id: HWave.c,v 1.4 2007/09/18 12:20:45 zen Exp $";
+char *hwave_vc_id = "$Id: HWave.c,v 1.5 2007/12/28 15:14:38 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -248,10 +248,13 @@ static Boolean MustSwap(SrcOrder so)
    char bos[MAXSTRLEN];
    
    if (GetConfStr(cParm,numParm,"BYTEORDER",bos)) { /* force required order */
-      return (strcmp(bos,"VAX") == 0) ? !vaxOrder : vaxOrder;
+      if (strcmp(bos,"VAX")==0)
+         return((vaxOrder) ? FALSE : TRUE);
+      else
+         return(vaxOrder);
    } else
       switch(so) {
-      case VAXSO:     return !vaxOrder;
+      case VAXSO:     return ((vaxOrder) ? FALSE : TRUE);
       case SUNSO:     return vaxOrder;
       case UNKNOWNSO: return FALSE;
       }
@@ -787,7 +790,7 @@ static int GetShortPackBlock(char **inData, short **outData)
          buf = *(in++);
          numChar++;
       }
-      negative = buf & bitValue[7-charBits];
+      negative = (buf & bitValue[7-charBits]) ? TRUE : FALSE;
       charBits = (charBits+1)%8;
       k = nBits;
       while (k > 0) {

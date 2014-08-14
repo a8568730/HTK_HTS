@@ -8,7 +8,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -44,8 +44,8 @@
 /*                                                                   */
 /*  ---------------------------------------------------------------  */
 
-char *hmgens_version = "!HVER!HMGenS:   2.0.1 [NIT 01/10/07]";
-char *hmgens_vc_id = "$Id: HMGenS.c,v 1.31 2007/09/17 12:14:45 zen Exp $";
+char *hmgens_version = "!HVER!HMGenS:   2.1beta [NIT 15/01/08]";
+char *hmgens_vc_id = "$Id: HMGenS.c,v 1.42 2008/01/11 03:08:02 zen Exp $";
 
 /*  
     This program is used to generate feature vector sequences 
@@ -111,6 +111,7 @@ static int nParm = 0;               /* total num params */
 static UttInfo *utt;                /* utterance information storage */
 static GenInfo *genInfo;            /* generation information */
 static FBInfo *fbInfo;              /* forward-backward information storage */
+static Boolean useHMMFB = FALSE;    /* do not use duration models in the forward-backward algorithm */
 Boolean keepOccm = TRUE;            /* keep mixture-level occupancy prob for EM-based parameter generation */
 
 /* Global settings */
@@ -124,7 +125,8 @@ static LogDouble pruneLim = NOPRUNE;     /* pruning threshold limit */
 static float minFrwdP = NOPRUNE;         /* mix prune threshold */
 
 /* information about transforms */
-static XFInfo xfInfo;
+static XFInfo xfInfo_hmm;
+static XFInfo xfInfo_dur;
 
 /* configuration variables */
 static Boolean inBinary = FALSE;    /* set to generated parameters in binary */ 
@@ -162,10 +164,11 @@ void SetConfParms (void)
       if (GetConfBool(cParm,nParm,"MODELALIGN",&b)) modelAlign = b;
       if (GetConfBool(cParm,nParm,"STATEALIGN",&b)) stateAlign = b;
       if (GetConfBool(cParm,nParm,"USEALIGN",&b)) useAlign = b;
+      if (GetConfBool(cParm,nParm,"USEHMMFB",&b)) useHMMFB = b;
       if (GetConfStr(cParm,nParm,"INXFORMMASK",buf)) 
-         xfInfo.inSpkrPat = CopyString(&genStack,buf);
+         xfInfo_hmm.inSpkrPat = xfInfo_dur.inSpkrPat = CopyString(&genStack,buf);
       if (GetConfStr(cParm,nParm,"PAXFORMMASK",buf))
-         xfInfo.paSpkrPat = CopyString(&genStack,buf);
+         xfInfo_hmm.paSpkrPat = xfInfo_dur.paSpkrPat = CopyString(&genStack,buf);
       
       if (GetConfStr (cParm,nParm,"PDFSTRSIZE",buf))
          nPdfStr = ParseConfIntVec(&gstack,buf,TRUE);
@@ -193,8 +196,8 @@ void ReportUsage (void)
 {
    printf("\nUSAGE: HMGenS [options] hmmList dmList labFiles...\n\n");
    printf(" Option                                                    Default\n\n");
-   printf(" -a      Use an input linear transform                     off\n");
-   printf(" -b f    Mixture pruning threshold                         10.0\n");
+   printf(" -a      Use an input linear transform for HMMs            off\n");
+   printf(" -b      Use an input linear transform for dur models      off\n");
    printf(" -c n    type of parameter generation algorithm            0\n");
    printf("          0: both mix and state sequences are given        \n");
    printf("          1: state sequence is given,                      \n");
@@ -203,6 +206,7 @@ void ReportUsage (void)
    printf(" -d s    dir to find hmm definitions                       current\n");
    printf(" -e      use model alignment from label for pruning        off\n");
    printf(" -f f    frame shift in 100 ns                             50000\n");
+   printf(" -g f    Mixture pruning threshold                         10.0\n");
    printf(" -h s [s] set speaker name pattern to s,                   *.%%%%%%\n");
    printf("         optionally set parent patterns                    \n");
    printf(" -m      use model alignment for duration                  off\n");
@@ -214,8 +218,7 @@ void ReportUsage (void)
    printf(" -v f    threshold for switching spaces for MSD            0.5\n");
    printf(" -x s    extension for hmm files                           none\n");
    printf(" -y s    extension for duration model files                none\n");
-   printf(" -N mmf  Load duration macro file mmf                      \n");
-   PrintStdOpts("BEGHIJLMSTX");
+   PrintStdOpts("BEGHIJLMNSTWXY");
    printf("\n");
    Exit(0);
 }
@@ -276,7 +279,7 @@ void CheckGenSetUp(void)
          printf("  #order:   %d\n", genInfo->pst[p].order);
          printf("  file ext: %s\n", genInfo->pst[p].ext);
          for (d=0; d<pst->win.num; d++)
-            printf("  %d-th window: %s\n", d, pst->win.fn[d]);
+            printf("  %d-th window: %s\n", d+1, genInfo->pst[p].win.fn[d]);
       }
       printf("\n");
       fflush(stdout);
@@ -304,7 +307,7 @@ int main (int argc,char *argv[])
       HError(2300,"HMGenS: InitParm failed");
    InitUtil();
    InitFB();
-   InitAdapt(&xfInfo);
+   InitAdapt(&xfInfo_hmm,&xfInfo_dur);
    InitMap();
    InitGen();
 
@@ -330,10 +333,10 @@ int main (int argc,char *argv[])
          HError(9919,"HMGenS: Bad switch %s; must be single letter",s);
       switch (s[0]) {
       case 'a':
-         xfInfo.useInXForm = TRUE;
+         xfInfo_hmm.useInXForm = TRUE;
          break;
       case 'b':
-         minFrwdP = GetChkedFlt(0.0,1000.0,s);
+         xfInfo_dur.useInXForm = TRUE;
          break;
       case 'c':
          if (NextArg() != INTARG)
@@ -349,12 +352,15 @@ int main (int argc,char *argv[])
       case 'f': 
          frameRate = (HTime)GetChkedFlt(0.0,10000000.0,s); 
          break;         
+      case 'g':
+         minFrwdP = GetChkedFlt(0.0,1000.0,s);
+         break;
       case 'h':
         if (NextArg()!=STRINGARG)
            HError(1,"Speaker name pattern expected");
-        xfInfo.inSpkrPat = GetStrArg();
+        xfInfo_hmm.inSpkrPat = xfInfo_dur.inSpkrPat = GetStrArg();
         if (NextArg()==STRINGARG)
-           xfInfo.paSpkrPat = GetStrArg(); 
+           xfInfo_hmm.paSpkrPat = xfInfo_dur.paSpkrPat = GetStrArg(); 
         if (NextArg() != SWITCHARG)
           HError(2319,"HMGenS: cannot have -h as the last option");       
         break;  
@@ -406,10 +412,10 @@ int main (int argc,char *argv[])
       case 'E':
          if (NextArg()!=STRINGARG)
             HError(2319,"HVite: parent transform directory expected");
-         xfInfo.usePaXForm = TRUE;
-         xfInfo.paXFormDir = GetStrArg();
+         xfInfo_hmm.usePaXForm = TRUE;
+         xfInfo_hmm.paXFormDir = GetStrArg();
          if (NextArg()==STRINGARG)
-           xfInfo.paXFormExt = GetStrArg();
+           xfInfo_hmm.paXFormExt = GetStrArg();
          if (NextArg() != SWITCHARG)
            HError(2319,"HMGenS: cannot have -E as the last option");
          break;
@@ -434,7 +440,7 @@ int main (int argc,char *argv[])
             HError(2319,"HMGenS: input transform directory expected");
          AddInXFormDir(&hmset,GetStrArg());
          if (NextArg()==STRINGARG)
-           xfInfo.inXFormExt = GetStrArg(); 
+           xfInfo_hmm.inXFormExt = GetStrArg(); 
          if (NextArg() != SWITCHARG)
            HError(2319,"HMGenS: cannot have -J as the last option");       
          break;
@@ -457,10 +463,33 @@ int main (int argc,char *argv[])
             HError(2119,"HMGenS: Trace value expected");
          trace = GetChkedInt(0,0002,s);
          break;
+      case 'W':
+         if (NextArg()!=STRINGARG)
+            HError(2319,"HMGenS: parent duration transform directory expected");
+         xfInfo_dur.usePaXForm = TRUE;
+         xfInfo_dur.paXFormDir = GetStrArg(); 
+         if (NextArg()==STRINGARG)
+            xfInfo_dur.paXFormExt = GetStrArg(); 
+         if (NextArg() != SWITCHARG)
+            HError(2319,"HMGenS: cannot have -W as the last option");      
+         break;
       case 'X':
          if (NextArg()!=STRINGARG)
             HError(2319,"HMGenS: Label file extension expected");
          labExt = GetStrArg(); break;
+      case 'Y':
+         if (NextArg()!=STRINGARG)
+            HError(2319,"HMGenS: input duration transform directory expected");
+         AddInXFormDir(&dmset,GetStrArg());
+         if (NextArg()==STRINGARG) {
+            if (xfInfo_dur.inXFormExt == NULL)
+               xfInfo_dur.inXFormExt = GetStrArg(); 
+            else
+               HError(2319,"MGenS: only one input duration transform extension may be specified");
+         }
+         if (NextArg() != SWITCHARG)
+           HError(2319,"HMGenS: cannot have -Y as the last option");      
+         break;
       default : 
          HError(9919,"HMGenS: Unknown switch %s",s);
       }
@@ -479,11 +508,30 @@ int main (int argc,char *argv[])
    do {
       if (NextArg()!=STRINGARG)
          HError(2319,"HMGenS: data file name expected");
-      labfn = GetStrArg();      
+      labfn = GetStrArg();
+      
       /* track speakers */    
-      if (UpdateSpkrStats(&hmset, &xfInfo, labfn) && (!(xfInfo.useInXForm))) {
-         xfInfo.inXForm = NULL;
+      if (UpdateSpkrStats(&hmset, &xfInfo_hmm, labfn)) {
+         if (!xfInfo_hmm.useInXForm)
+            xfInfo_hmm.inXForm = NULL;
       }
+      if (UpdateSpkrStats(&dmset, &xfInfo_dur, labfn)) {
+         if (!xfInfo_dur.useInXForm)
+            xfInfo_dur.inXForm = NULL;
+         else
+            ResetDMMPreComps(&dmset);
+      }
+      
+      fbInfo->xfinfo_hmm     = &xfInfo_hmm;
+      fbInfo->xfinfo_dur     = &xfInfo_dur;
+      fbInfo->inXForm_hmm    = xfInfo_hmm.inXForm;
+      fbInfo->inXForm_dur    = xfInfo_dur.inXForm;
+      fbInfo->al_inXForm_hmm = xfInfo_hmm.al_inXForm;
+      fbInfo->al_inXForm_dur = xfInfo_dur.al_inXForm;
+      fbInfo->paXForm_hmm    = xfInfo_hmm.paXForm;
+      fbInfo->paXForm_dur    = xfInfo_dur.paXForm;
+
+      /* generate parameters */
       DoGeneration(labfn);
       numUtt++;
    } while (NumArgs()>0);
@@ -535,6 +583,7 @@ void Initialise (void)
    ConvDiagC(&hmset, TRUE);
          
    if (trace&T_TOP) {
+      PrintrFlags();
       printf("HMMSet is ");
       switch (hmset.hsKind){
       case PLAINHS:  printf("PLAIN\n");  break;
@@ -580,6 +629,7 @@ void Initialise (void)
    genInfo->hset = &hmset;
    genInfo->dset = &dmset;
    genInfo->maxStates = MaxStatesInSet(&hmset);
+   genInfo->maxMixes  = MaxMixInSet(&hmset);
    genInfo->speakRate = speakRate;
    genInfo->MSDthresh = MSDthresh;
    genInfo->modelAlign = modelAlign;
@@ -592,11 +642,16 @@ void Initialise (void)
    AttachAccs(&hmset, &gstack, (UPDSet)0);
    ZeroAccs(&hmset, (UPDSet)0);
    
-   InitialiseForBack(fbInfo, &fbInfoStack, &hmset, (UPDSet)0, &dmset, (UPDSet)0, pruneInit, pruneInc,
-                     pruneLim, minFrwdP, useAlign);
+   if (!stateAlign) {
+      AttachAccs(&dmset, &gstack, (UPDSet)0);
+      ZeroAccs(&dmset, (UPDSet)0);
+   }
+   
+   InitialiseForBack(fbInfo, &fbInfoStack, &hmset, (UPDSet)0, ((useHMMFB||stateAlign)?NULL:&dmset), (UPDSet)0, pruneInit, pruneInc,
+                     pruneLim, minFrwdP, useAlign, FALSE);
                      
    /* handle input xform */
-   xfInfo.inFullC = TRUE;
+   xfInfo_hmm.inFullC = xfInfo_dur.inFullC = TRUE;
    
    /* semi-tied case */
    if (hmset.semiTied!=NULL) {

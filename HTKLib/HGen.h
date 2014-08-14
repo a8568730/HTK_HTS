@@ -102,6 +102,7 @@ typedef struct {
    HMMSet *hset;          /* set of HMMs */
    HMMSet *dset;          /* set of duration models */
    int maxStates;         /* max # of states in hset */
+   int maxMixes;          /* max # of mixes in hset */
    
    PdfStream pst[SMAX];   /* PdfStream for generation */
    int nPdfStream[SMAX];  /* # of PdfStreams and its size */ 
@@ -119,6 +120,16 @@ typedef struct {
 } GenInfo;
 
 /* EXPORTED functions ------------------ */ 
+
+void SetrFlags(char *s);
+/* 
+   Set random generation flags 
+*/
+
+void PrintrFlags(void);
+/* 
+   Print random generation flags 
+*/
 
 void InitGen(void);
 /*
@@ -144,12 +155,17 @@ void ResetGenInfo (GenInfo *);
 /*
  * Reset GenInfo 
  */
- 
+
+void JointProb (GenInfo *genInfo, UttInfo *utt);
+/* 
+   joint probability of given observations and state sequence
+*/
+
 void ParamGen (GenInfo *, UttInfo *, FBInfo *, ParmGenType);
 /*
    Generate parameter sequence 
  */
-   
+
 #ifdef __cplusplus
 }
 #endif

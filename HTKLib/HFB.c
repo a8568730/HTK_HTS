@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hfb_version = "!HVER!HFB:   3.4 [CUED 25/04/06]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.13 2007/10/03 07:20:13 zen Exp $";
+char *hfb_vc_id = "$Id: HFB.c,v 1.30 2008/01/18 03:24:56 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -132,6 +132,10 @@ static struct {
 static Boolean pde = FALSE;  /* partial distance elimination */
 static Boolean sharedMix = FALSE; /* true if shared mixtures */
 static Boolean sharedStream = FALSE; /* true if shared streams */
+
+static Boolean semiMarkov = FALSE;  /* HMM or HSMM */
+static int maxstdDevCoef = 5;       /* max duration */
+static MemHeap dprobStack;
 
 /* ------------------------- Min HMM Duration -------------------------- */
 
@@ -224,7 +228,7 @@ static WtAcc *CreateWtAcc(MemHeap *x, int nMix)
    WtAcc *wa;
    
    wa = (WtAcc *) New(x,sizeof(WtAcc));
-   wa->c = CreateVector(x,nMix);
+   wa->c = CreateSVector(x,nMix);
    ZeroVector(wa->c);
    wa->occ = 0.0;
    wa->time = -1; wa->prob = NULL;
@@ -232,7 +236,7 @@ static WtAcc *CreateWtAcc(MemHeap *x, int nMix)
    return wa;
 }
 
-/* AttachTrAccs: attach transition accumulators to hset */
+/* AttachWtTrAccs: attach weight and transition accumulators to hset */
 static void AttachWtTrAccs(HMMSet *hset, MemHeap *x)
 {
    HMMScanState hss;
@@ -257,6 +261,37 @@ static void AttachWtTrAccs(HMMSet *hset, MemHeap *x)
    EndHMMScan(&hss);
 }
 
+/* -------------------- HMM -> HSMM conversion --------------------- */
+
+static void FixTransHSMM (HMMSet *hset)
+{
+   int i,j;
+   HMMScanState hss;
+   LogDouble sum;
+   SMatrix tr;
+   
+   /* fix trans prob */
+   NewHMMScan(hset,&hss);
+   do {
+      if (!IsSeenV(hss.hmm->transP)) {
+         tr = hss.hmm->transP;
+         for (i=1; i<=hss.N; i++) {
+            if (tr[i][i]>LSMALL) {
+               sum = LZERO;
+               for (j=1; j<=hss.N; j++)  
+                  if (j!=i && tr[i][j]>LSMALL)
+                     sum = LAdd(sum,tr[i][j]);
+               for (j=1; j<=hss.N; j++)
+                  tr[i][j] = (tr[i][j]>LSMALL) ? tr[i][j]-sum : LZERO;
+               tr[i][i] = LZERO;
+         }
+      }
+         TouchV(hss.hmm->transP);
+      }
+   } while (GoNextHMM(&hss));
+   EndHMMScan(&hss);
+}
+
 /* -------------------------- Initialisation ----------------------- */
 
 /* EXPORT->InitFB: initialise FB module */
@@ -269,12 +304,16 @@ void InitFB(void)
 
    Register(hfb_version,hfb_vc_id);
 
+   /* setup the local memory management */
+   CreateHeap(&dprobStack,"duration prob store", MSTAK, 1, 1.0, 50000, 500000);
+   
    for (m = 0; m < 2; ++m) {
       nParm = GetConfig(m==0 ? "HFWDBKWD" : "HFB", TRUE, cParm, MAXGLOBS);
       if (nParm>0){
          if (GetConfInt(cParm,nParm,"TRACE",&i)) trace = i;
          if (GetConfInt(cParm,nParm,"HSKIPSTART",&i)) skipstartInit = i;
          if (GetConfInt(cParm,nParm,"HSKIPEND",&i)) skipendInit = i;
+         if (GetConfInt(cParm,nParm,"MAXSTDDEVCOEF",&i)) maxstdDevCoef = i;
          if (GetConfFlt(cParm,nParm,"PRUNEINIT", &d)) pruneSetting.pruneInit = d;
          if (GetConfFlt(cParm,nParm,"PRUNEINC", &d)) pruneSetting.pruneInc = d;
          if (GetConfFlt(cParm,nParm,"PRUNELIM", &d)) pruneSetting.pruneLim = d;
@@ -288,6 +327,7 @@ void InitFB(void)
 /* EXPORT->ResetFB: reset FB module */
 void ResetFB(void)
 {
+   ResetHeap(&dprobStack);
    return;   /* do nothing */
 }
 
@@ -298,14 +338,15 @@ void SetTraceFB(void)
 }
 
 /* EXPORT->InitialiseForBack: IniInitialise the forward backward memory stacks and make initialisations  */
-void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, UPDSet uFlags, HMMSet *dset, UPDSet dur_uFlags, 
+void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, UPDSet uFlags_hmm, HMMSet *dset, UPDSet uFlags_dur, 
                        LogDouble pruneInit, LogDouble pruneInc, LogDouble pruneLim, 
-                       float minFrwdP, Boolean useAlign)
+                       float minFrwdP, Boolean useAlign, Boolean genDur)
 {
    int s;
    AlphaBeta *ab;
   
-   fbInfo->uFlags = uFlags; fbInfo->dur_uFlags = dur_uFlags;
+   fbInfo->uFlags_hmm = uFlags_hmm;
+   fbInfo->uFlags_dur = uFlags_dur;
    fbInfo->up_hset = fbInfo->al_hset = hset;
    fbInfo->up_dset = fbInfo->al_dset = dset;
    fbInfo->twoModels = FALSE;
@@ -314,15 +355,13 @@ void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, UPDSet uFlags, 
       by the following line. This is ugly and needs to be sorted out. Note:
       this function is called by HERest and HVite */
    AttachWtTrAccs(hset, x);
-   if (dur_uFlags&(UPMEANS|UPVARS))
-      AttachWtTrAccs(dset, x);
    SetMinDurs(hset);
    fbInfo->maxM = MaxMixInSet(hset);
    fbInfo->skipstart = skipstartInit;
    fbInfo->skipend   = skipendInit;
    fbInfo->useAlign = useAlign;
-   fbInfo->inXForm = fbInfo->al_inXForm = fbInfo->paXForm = NULL;
-   fbInfo->dur_inXForm = fbInfo->dur_al_inXForm = fbInfo->dur_paXForm = NULL;
+   fbInfo->inXForm_hmm = fbInfo->al_inXForm_hmm = fbInfo->paXForm_hmm = NULL;
+   fbInfo->inXForm_dur = fbInfo->al_inXForm_dur = fbInfo->paXForm_dur = NULL;
    for (s=1;s<=hset->swidth[0];s++)
       fbInfo->maxMixInS[s] = MaxMixInSetS(hset, s);
    fbInfo->ab = (AlphaBeta *) New(x, sizeof(AlphaBeta));
@@ -352,6 +391,20 @@ void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, UPDSet uFlags, 
       sharedMix = TRUE;
    if (hset->numSharedStreams > 0)
       sharedStream = TRUE;
+   if (dset!=NULL) {
+      if ((dset->hsKind!=PLAINHS) && (dset->hsKind!=SHAREDHS))
+         HError(7392,"InitialiseForBack: Model kind not supported for duration models");
+      if (MaxMixInSet(dset)>1)
+         HError(9999,"InitialiseForBack: Only single Gaussian is supported for duration models");
+      for (s=1; s<=dset->swidth[0]; s++)
+         if (dset->swidth[s]!=1)
+            HError(9999,"InitialiseForBack: Stream width must be 1");
+      if (!genDur) {
+         FixTransHSMM(hset);
+         semiMarkov = TRUE;
+      }
+      AttachWtTrAccs(dset,x);
+   }
    if (pde) {
       if (sharedMix)
 	 HError(7399,"PDE is not compatible with shared mixtures");
@@ -369,6 +422,8 @@ void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset, HMMSet *al_dset
    /* First check 2-model mode allowed for current up_hset */
    if ((fbInfo->hsKind != PLAINHS) && (fbInfo->hsKind != SHAREDHS))
       HError(7392,"Model kind not supported for fixed alignments");
+   
+   if (al_hset!=NULL) {
    if (al_hset->hsKind != fbInfo->hsKind)
       HRError(7392,"Different kinds in alignment and update HMM sets!");
    /* check stream compatibility */
@@ -379,9 +434,9 @@ void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset, HMMSet *al_dset
       if (al_hset->swidth[s] != fbInfo->up_hset->swidth[s]) 
          HError(7392,"Stream %d widths differ in alignment and update HMM sets!",s);
    /* check update flags */
-   if (fbInfo->uFlags&UPTRANS) {
+      if (fbInfo->uFlags_hmm&UPTRANS) {
       HRError(7392,"Don't update transitions on a 2-model alignment"); 
-      fbInfo->uFlags = (UPDSet) (fbInfo->uFlags & ~UPTRANS);
+         fbInfo->uFlags_hmm = (UPDSet) (fbInfo->uFlags_hmm & ~UPTRANS);
    }
    /* check input Xforms */
    if ((al_hset->xf!=NULL) && (al_hset->xf != fbInfo->up_hset->xf))
@@ -390,14 +445,43 @@ void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset, HMMSet *al_dset
    /* update the global alignment set features */
    fbInfo->hsKind = al_hset->hsKind;      
    fbInfo->maxM = MaxMixInSet(al_hset);
+       
    /* dummy accs to accomodate minDir */
    AttachWtTrAccs(al_hset, x);
    SetMinDurs(al_hset);
+         
    /* precomps */
    if ( al_hset->hsKind == SHAREDHS)
       AttachPreComps(al_hset,al_hset->hmem);
     
+      if (semiMarkov)
+         FixTransHSMM(al_hset);
+      
    fbInfo->al_hset = al_hset;  
+   }
+
+   if (fbInfo->up_dset!=NULL && al_dset!=NULL) {
+      S = al_dset->swidth[0];
+      if (S != fbInfo->up_dset->swidth[0])
+         HError(7392,"UseAlignHMMSet: Different num streams in alignment and update duration model sets!");
+      for (s=1; s<=S; s++) 
+         if (al_dset->swidth[s] != fbInfo->up_dset->swidth[s]) 
+            HError(7392,"UseAlignHMMSet: Stream %d widths differ in alignment and update duration model sets!",s);
+      if ((al_dset->hsKind!=PLAINHS) && (al_dset->hsKind!=SHAREDHS))
+         HError(7392,"UseAlignHMMSet: Model kind not supported for duration models");
+      if (MaxMixInSet(al_dset)>1)
+         HError(9999,"UseAlignHMMSet: Only single Gaussian is supported for duration models");
+      /* check input Xforms */
+      if ((al_dset->xf!=NULL) && (al_dset->xf != fbInfo->up_dset->xf))
+         HError(7392,"UseAlignHMMSet: Inconsistent input transforms for align duration model set");
+            
+      if (fbInfo->uFlags_dur&(UPMEANS|UPVARS)) {
+         HRError(7392,"UseAlignHMMSet: Don't update duration models on a 2-model alignment"); 
+         fbInfo->uFlags_hmm = (UPDSet) 0;
+      }
+      AttachWtTrAccs(al_dset, x);
+      fbInfo->al_dset = al_dset;
+   }
    fbInfo->twoModels = TRUE;
 }
 
@@ -429,20 +513,15 @@ static void InitPruneStats(AlphaBeta *ab)
 /* CreateTraceOcc: create the array of acc occ counts */
 static void CreateTraceOcc(AlphaBeta *ab, UttInfo *utt)
 {
-   int t,q;
-   Vector **occa;
+   int q;
+   Vector *occa;
 
-   occa=(Vector **)New(&ab->abMem, utt->T*sizeof(Vector *));
+   ab->occa=(Vector *)New(&ab->abMem, utt->Q*sizeof(Vector));
+   occa = ab->occa;
    --occa;
-   ab->occa = occa;
-   for (t=1;t<=utt->T;t++){
-      ab->occa[t]=(Vector *)New(&ab->abMem, utt->Q*sizeof(Vector));
-      occa[t] = ab->occa[t];
-      --occa[t];
    for (q=1;q<=utt->Q;q++){
-         occa[t][q] = CreateVector(&ab->abMem, ab->al_qList[q]->numStates);
-         ZeroVector(occa[t][q]);
-      }
+      occa[q] = CreateVector(&ab->abMem, ab->al_qList[q]->numStates);
+      ZeroVector(occa[q]);
    }
 }
 
@@ -456,7 +535,7 @@ static void TraceOcc(AlphaBeta *ab, UttInfo *utt, int t)
 
    printf("Accumulated Occ Counts at time %d\n",t);
    for (q=1; q<=utt->Q; q++){
-      occaq = ab->occa[t][q]; hmm = ab->al_qList[q]; Nq = hmm->numStates;
+      occaq = ab->occa[q]; hmm = ab->al_qList[q]; Nq = hmm->numStates;
       max = 0.0;        /* ignore zero vectors */
       for (i=1;i<=Nq;i++)
          if (occaq[i]>max) max = occaq[i];
@@ -469,19 +548,22 @@ static void TraceOcc(AlphaBeta *ab, UttInfo *utt, int t)
 }
 
 /* SetOcct: set the global occupation count for given hmm */
-static void SetOcct(HLink hmm, int q, Vector occt, Vector *occa,
-                    DVector aqt, DVector bqt, DVector bq1t, LogDouble pr)
+static void SetOcct(HLink hmm, int q, Vector occt, Vector *occa, int *maxDur,
+                    DVector *aqt, DVector *bqt, DVector *bq1t, LogDouble pr)
 {
-   int i,N;
+   int i,N,d;
    double x,y;
    Vector occaq;
    
    N=hmm->numStates;
    y=0;
    for (i=1;i<=N;i++) {
-      x = aqt[i]+bqt[i];
+      x = LZERO;
+      for (d=1; d<=maxDur[i]; d++)
+         if (aqt[i][d]>LSMALL && bqt[i][d]>LSMALL)
+            x = LAdd(x,aqt[i][d]+bqt[i][d]);
       if (i==1 && bq1t != NULL && hmm->transP[1][N] > LSMALL)
-         x = LAdd(x,aqt[1]+bq1t[1]+hmm->transP[1][N]);
+         x = LAdd(x,aqt[1][1]+bq1t[1][1]+hmm->transP[1][N]);
       x -= pr;
       occt[i] = (x>MINEARG) ? exp(x) : 0.0;
    }
@@ -535,9 +617,9 @@ void GetInputObs( UttInfo *utt, int t, HSetKind hsKind )
 /* CheckPruning: record peak alpha.beta product and position */
 static void CheckPruning(AlphaBeta *ab, int t, int skipstart, int skipend)
 {
-   int i,q,Nq,bestq,besti,margin;
+   int i,q,Nq,bestq,besti,margin,d,*maxDur;
    PruneInfo *p;
-   DVector aq,bq;
+   DVector *aq,*bq;
    HLink hmm;
    LogDouble lx,maxL;
 
@@ -547,8 +629,13 @@ static void CheckPruning(AlphaBeta *ab, int t, int skipstart, int skipend)
    for (q=p->qLo[t];q<=p->qHi[t];q++){
       hmm = ab->al_qList[q]; Nq = hmm->numStates;   
       aq = ab->alphat[q]; bq=ab->beta[t][q];
+      maxDur = ab->maxDur[q];
       for (i=2;i<Nq;i++){
-         if ((lx=aq[i]+bq[i])>maxL){
+         lx = LZERO;
+         for (d=1; d<=maxDur[i]; d++)
+            if (aq[i][d]>LSMALL && bq[i][d]>LSMALL)
+               lx = LAdd(lx,aq[i][d]+bq[i][d]);
+         if (lx>maxL){
             bestq = q; besti = i; maxL=lx;
          }
       }
@@ -600,7 +687,7 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
    /* init logical hmm & dur model list */
    up_qList=(HLink *)New(&ab->abMem, Q*sizeof(HLink)); 
    --up_qList;
-   if ( (up_dset!=NULL) && (fbInfo->dur_uFlags&(UPMEANS|UPVARS)) ) {
+   if (up_dset!=NULL) {
       up_dList=(HLink *)New(&ab->abMem, Q*sizeof(HLink)); 
       --up_dList;
    }
@@ -609,7 +696,7 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
    if (fbInfo->twoModels) {
       al_qList=(HLink *)New(&ab->abMem, Q*sizeof(HLink));
       --al_qList;
-      if ( (al_dset!=NULL) && (fbInfo->dur_uFlags&(UPMEANS|UPVARS)) ) {
+      if (al_dset!=NULL) {
          al_dList=(HLink *)New(&ab->abMem, Q*sizeof(HLink));
          --al_dList;
    }
@@ -631,7 +718,7 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
       if((macroName=FindMacroName(al_hset,'l',lab->labid))==NULL)
          HError(7321,"CreateInsts: Unknown label %s",lab->labid->name);
       al_qList[q] = (HLink)macroName->structure;
-      if ( (al_dset!=NULL) && (fbInfo->dur_uFlags&(UPMEANS|UPVARS)) ) {
+      if (al_dset!=NULL) {
          if ((macroName=FindMacroName(al_dset,'l',lab->labid))==NULL)
             HError(7321,"CreateInsts: Unknown label %s",lab->labid->name);
          al_dList[q] = (HLink)macroName->structure;
@@ -642,7 +729,7 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
          if((macroName=FindMacroName(up_hset,'l',lab->labid))==NULL)
             HError(2321,"CreateInsts: Unknown update label %s",lab->labid->name);
          up_qList[q] = (HLink)macroName->structure;
-         if ( (up_dset!=NULL) && (fbInfo->dur_uFlags&(UPMEANS|UPVARS)) ) {
+         if (up_dset!=NULL) {
             if ((macroName=FindMacroName(up_dset,'l',lab->labid))==NULL)
                HError(2321,"CreateInsts: Unknown update label %s",lab->labid->name);
             up_dList[q] = (HLink)macroName->structure;
@@ -681,20 +768,29 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
 /* CreateAlpha: allocate alpha columns */
 static void CreateAlpha(AlphaBeta *ab, HMMSet *hset, int Q, int T)
 {
-
-   int q;
-   DVector *alphat, *alphat1;
+   int q,Nq,i;
+   DVector **alphat, **alphat1;
  
    /* Create Storage Space - two columns */
-   alphat = (DVector *)New(&ab->abMem, Q*sizeof(DVector));
+   alphat = (DVector **)New(&ab->abMem, Q*sizeof(DVector *));
    --alphat;
-   for (q=1;q<=Q;q++)
-       alphat[q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
+   for (q=1; q<=Q; q++) {
+      Nq = (ab->al_qList[q])->numStates;
+      alphat[q] = (DVector *)New(&ab->abMem, Nq*sizeof(DVector));
+      --alphat[q];
+      for (i=1; i<=Nq; i++)
+         alphat[q][i] = CreateDVector(&ab->abMem, ab->maxDur[q][i]);
+   }
    
-   alphat1=(DVector *)New(&ab->abMem, Q*sizeof(DVector));
+   alphat1=(DVector **)New(&ab->abMem, Q*sizeof(DVector *));
    --alphat1;
-   for (q=1;q<=Q;q++)
-       alphat1[q] = CreateDVector(&ab->abMem, (ab->al_qList[q])->numStates);
+   for (q=1; q<=Q; q++) {
+      Nq = (ab->al_qList[q])->numStates;
+      alphat1[q] = (DVector *)New(&ab->abMem, Nq*sizeof(DVector));
+      --alphat1[q];
+      for (i=1; i<=Nq; i++)
+         alphat1[q][i] = CreateDVector(&ab->abMem, ab->maxDur[q][i]);
+   }
 
    ab->occt = CreateVector(&ab->abMem,MaxStatesInSet(hset));
    ab->alphat  = alphat;
@@ -706,15 +802,17 @@ static void CreateAlpha(AlphaBeta *ab, HMMSet *hset, int Q, int T)
 static void ZeroAlpha(AlphaBeta *ab, int qlo, int qhi)
 {
    HLink hmm;
-   int Nq,j,q;
-   DVector aq;
+   int Nq,j,q,d,maxDur;
+   DVector aqj;
    
    for (q=qlo;q<=qhi;q++) {   
       hmm = ab->al_qList[q]; 
       Nq = hmm->numStates; 
-      aq = ab->alphat[q];
-      for (j=1;j<=Nq;j++)
-         aq[j] = LZERO;
+      for (j=1; j<=Nq; j++) {
+         aqj = ab->alphat[q][j];  maxDur = ab->maxDur[q][j];
+         for (d=1; d<=maxDur; d++)
+            aqj[d] = LZERO;
+      }
    }
 }
 
@@ -722,11 +820,12 @@ static void ZeroAlpha(AlphaBeta *ab, int qlo, int qhi)
 static void InitAlpha(AlphaBeta *ab, int *start, int *end, 
                       int Q, int skipstart, int skipend)
 {
-   int i,j,Nq,eq,q;
+   int i,j,Nq,eq,q,d,*maxDur;
    PruneInfo *p;
    HLink hmm;
-   DVector aq;
+   DVector *aq;
    float ***outprob;
+   SVector *durprob;
    LogDouble x,a,a1N=0.0;
    
    p = ab->pInfo;
@@ -734,20 +833,24 @@ static void InitAlpha(AlphaBeta *ab, int *start, int *end,
    for (q=1; q<=eq; q++){
       hmm = ab->al_qList[q]; Nq = hmm->numStates;
       aq = ab->alphat[q];
-      aq[1] = (q==1)?0.0:ab->alphat[q-1][1]+a1N;
+      durprob = ab->durprob[q];
+      maxDur  = ab->maxDur [q];
+      aq[1][1] = (q==1) ? 0.0 : ab->alphat[q-1][1][1]+a1N;
       if((outprob = ab->otprob[1][q]) == NULL)
          HError(7322,"InitAlpha: Outprob NULL in model %d in InitAlpha",q);
       for (j=2;j<Nq;j++) {
          a = hmm->transP[1][j];
-         aq[j] = (a>LSMALL)?aq[1]+a+outprob[j][0][0]:LZERO;
+         aq[j][1] = (a>LSMALL) ? aq[1][1]+a+outprob[j][0][0] : LZERO;
+         for (d=2; d<=maxDur[j]; d++)
+            aq[j][d] = LZERO;
       }
       x = LZERO;
       for (i=2;i<Nq;i++) {
          a = hmm->transP[i][Nq];
          if (a>LSMALL)
-            x = LAdd(x,aq[i]+a);
+            x = LAdd(x,aq[i][1]+durprob[i][1]+a);
       }
-      aq[Nq] = x;
+      aq[Nq][1] = x;
       a1N = hmm->transP[1][Nq];
    }
    ZeroAlpha(ab,eq+1,Q);
@@ -760,20 +863,20 @@ static void InitAlpha(AlphaBeta *ab, int *start, int *end,
    time t, return LZERO if cannot do so */
 static LogDouble MaxModelProb(AlphaBeta *ab, int q, int t, int minq)
 {
-   DVector aq,bq,bq1;
+   DVector *aq,*bq,*bq1;
    LogDouble maxP,x;
-   int Nq1,Nq,i,qx,qx1;
+   int Nq1,Nq,d,i,qx,qx1,*maxDur;
    HLink hmm;
    
    if (q==1)
       maxP = LZERO;
    else {
       bq1 = ab->beta[t][q-1]; Nq1 = ab->al_qList[q-1]->numStates;
-      maxP = (bq1==NULL)?LZERO:ab->alphat[q-1][Nq1] + bq1[Nq1];
+      maxP = (bq1==NULL) ? LZERO : ab->alphat[q-1][Nq1][1] + bq1[Nq1][1];
       for (qx=q-1;qx>minq && ab->al_qList[qx]->transP[1][Nq1] > LSMALL;qx--){
          qx1 = qx-1;
          bq1 = ab->beta[t][qx1]; Nq1 = ab->al_qList[qx1]->numStates;
-         x=(bq1==NULL)?LZERO:ab->alphat[qx1][Nq1]+bq1[Nq1];
+         x = (bq1==NULL) ? LZERO : ab->alphat[qx1][Nq1][1]+bq1[Nq1][1];
          if (x > maxP) maxP = x;
       }
    }
@@ -781,8 +884,14 @@ static LogDouble MaxModelProb(AlphaBeta *ab, int q, int t, int minq)
    bq=ab->beta[t][q];
    if (bq != NULL) {
       aq = ab->alphat[q]; 
-      for (i=1;i<Nq;i++)
-         if ((x=aq[i]+bq[i]) > maxP) maxP = x;
+      maxDur = ab->maxDur[q];
+      for (i=1; i<Nq; i++) {
+         x = LZERO;
+         for (d=1; d<=maxDur[i]; d++)
+            if (aq[i][d]>LSMALL && bq[i][d]>LSMALL)
+               x = LAdd(x,aq[i][d]+bq[i][d]);
+         if (x > maxP) maxP = x;
+      }
    }
    return maxP;
 }
@@ -792,10 +901,11 @@ static LogDouble MaxModelProb(AlphaBeta *ab, int q, int t, int minq)
 static void StepAlpha(AlphaBeta *ab, int t, int *start, int *end, 
                       int Q, int T, LogDouble pr, int skipstart, int skipend)
 {
-   DVector aq,laq,*tmp, *alphat,*alphat1;
+   DVector *aq,*laq,**tmp, **alphat,**alphat1;
    PruneInfo *p;
    float ***outprob;
-   int sq,eq,i,j,q,Nq,lNq;
+   SVector *durprob;
+   int sq,eq,i,j,d,q,Nq,lNq,*maxDur;
    LogDouble x=0.0,y,a,a1N=0.0;
    HLink hmm;
    
@@ -809,19 +919,19 @@ static void StepAlpha(AlphaBeta *ab, int t, int *start, int *end,
    while (pr-MaxModelProb(ab,sq,t-1,sq)>pruneSetting.minFrwdP){
       ++sq;                /* raise start point */
       if (sq>p->qHi[t]) 
-         HError(7390,"StepAlpha: Alpha prune failed sq(%d) > qHi(%d)",sq,p->qHi[t]);
+         HError(7390,"StepAlpha: Alpha prune failed sq(%d) > qHi(%d) at time %d",sq,p->qHi[t],t);
    }
    if (sq<p->qLo[t])       /* start-point below beta beam so pull it back */
       sq = p->qLo[t];
    
-   eq = p->qHi[t-1]<Q?p->qHi[t-1]+1:p->qHi[t-1];
+   eq = (p->qHi[t-1]<Q) ? p->qHi[t-1]+1 : p->qHi[t-1];
    /* start end-point at top of beta beam at t-1  */
    /* JJO : + 1 to allow for state q-1[N] -> q[1] */
    /*       + 1 for each tee model following eq.  */
    while (pr-MaxModelProb(ab,eq,t-1,sq)>pruneSetting.minFrwdP){
       --eq;             /* lower end-point */
       if (eq<sq) 
-         HError(7390,"StepAlpha: Alpha prune failed eq(%d) < sq(%d)",eq,sq);
+         HError(7390,"StepAlpha: Alpha prune failed eq(%d) < sq(%d) at time %d",eq,sq,t);
    }
    while (eq<Q && ab->qDms[eq]==0) eq++;
    if (eq>p->qHi[t])  /* end point above beta beam so pull it back */
@@ -845,34 +955,47 @@ static void StepAlpha(AlphaBeta *ab, int t, int *start, int *end,
       lNq = Nq; hmm = ab->al_qList[q]; Nq = hmm->numStates; 
       aq = alphat[q]; 
       laq = alphat1[q];
+      durprob = ab->durprob[q];
+      maxDur  = ab->maxDur[q];
       if (laq == NULL)
          HError(7322,"StepAlpha: laq gone wrong!");
       if((outprob = ab->otprob[t][q]) == NULL)
          HError(7322,"StepAlpha: Outprob NULL at time %d model %d in StepAlpha",t,q);
       if (q==1)
-         aq[1] = LZERO;
+         aq[1][1] = LZERO;
       else{
-         aq[1] = alphat1[q-1][lNq];
+         aq[1][1] = alphat1[q-1][lNq][1];
          if (q>sq && a1N>LSMALL) /* tee Model */
-            aq[1] = LAdd(aq[1],alphat[q-1][1]+a1N);
+            aq[1][1] = LAdd(aq[1][1], alphat[q-1][1][1]+a1N);
       }
       for (j=2;j<Nq;j++) {
          a = hmm->transP[1][j];
-         x = (a>LSMALL)?a+aq[1]:LZERO;
+         x = (a>LSMALL) ? aq[1][1]+a : LZERO;
          for (i=2;i<Nq;i++){
-            a = hmm->transP[i][j]; y = laq[i];
-            if (a>LSMALL && y>LSMALL)
-               x = LAdd(x,y+a);
+            a = hmm->transP[i][j];
+            if (a>LSMALL) 
+               for (d=1; d<=maxDur[i]; d++) {
+                  y = laq[i][d];
+                  if (y>LSMALL)
+                     x = LAdd(x,y+durprob[i][d]+a);
          }
-         aq[j] = x + outprob[j][0][0];
+         }
+         aq[j][1] = x + outprob[j][0][0];
+         
+         for (d=2; d<=maxDur[j]; d++)
+            aq[j][d] = laq[j][d-1] + outprob[j][0][0];
       }
       x = LZERO;
       for (i=2;i<Nq;i++){
-         a = hmm->transP[i][Nq]; y = aq[i];
-         if (a>LSMALL && y>LSMALL)
-            x = LAdd(x,y+a);
+         a = hmm->transP[i][Nq];
+         if (a>LSMALL) 
+            for (d=1; d<=maxDur[i]; d++) {
+               y = aq[i][d];
+               if (y>LSMALL)
+                  x = LAdd(x,y+durprob[i][d]+a);
+            }
       }
-      aq[Nq] = x; a1N = hmm->transP[1][Nq];
+      aq[Nq][1] = x; a1N = hmm->transP[1][Nq];
    }
    if (eq<Q) ZeroAlpha(ab,eq+1,Q);
 
@@ -895,12 +1018,12 @@ static void CreateBeta(AlphaBeta *ab, int T)
 {
    int t;
    PruneInfo *p;
-   DVector **beta;
+   DVector ***beta;
 
    p = ab->pInfo;
    p->qHi = CreateShortVec(&ab->abMem, T); /* storage for min and max q vals */
    p->qLo = CreateShortVec(&ab->abMem, T);
-   beta=(DVector **)New(&ab->abMem, T*sizeof(DVector *));
+   beta=(DVector ***)New(&ab->abMem, T*sizeof(DVector **));
    --beta;
    for (t=1;t<=T;t++){
       beta[t] = NULL;
@@ -910,14 +1033,14 @@ static void CreateBeta(AlphaBeta *ab, int T)
 }
 
 /* CreateBetaQ: column of DVectors covering current beam */
-static DVector *CreateBetaQ(MemHeap *x, int qLo,int qHi,int Q)
+static DVector **CreateBetaQ (MemHeap *x, int qLo, int qHi, int Q)
 {
    int q;
-   DVector *v;
+   DVector **v;
 
    qLo--; qLo--;  if (qLo<1) qLo=1;
    qHi++;  if (qHi>Q) qHi=Q;
-   v = (DVector *)New(x, (qHi-qLo+1)*sizeof(DVector));
+   v = (DVector **)New(x, (qHi-qLo+1)*sizeof(DVector *));
    v -= qLo;
    for (q=qLo;q<=qHi;q++) v[q] = NULL;
    return(v);
@@ -953,12 +1076,16 @@ static float ****CreateOqprob(MemHeap *x, int qLo,int qHi)
 }
 
 /* NewBetaVec: create prob vector size 1..N */
-static DVector NewBetaVec(MemHeap *x, int N)
+static DVector *NewBetaVec(MemHeap *x, int N, int *maxDur)
 {
-   DVector v;
+   int n;
+   DVector *v;
    
-   v=(DVector)New(x, N*sizeof(double));
+   v=(DVector *)New(x, N*sizeof(double));
    --v;
+   for (n=1; n<=N; n++)
+      v[n] = CreateDVector(x, maxDur[n]);
+
    return v;
 }
 
@@ -1049,6 +1176,7 @@ static float *ShStrP(HMMSet *hset, StreamInfo *sti, Vector v, const int t,
                      pMix->prob = mixp; pMix->time = t;
                   }
                }
+               if (mixp>LSMALL && wt>LSMALL)
                x = LAdd(x,wt+mixp);
 	       outprobjs[m] = mixp;
             }
@@ -1062,6 +1190,7 @@ static float *ShStrP(HMMSet *hset, StreamInfo *sti, Vector v, const int t,
                mp = me->mpdf;
 	       mixp = MOutP(ApplyCompFXForm(mp,v,xform,&det,t),mp);
 	       mixp += det;
+               if (mixp>LSMALL && wt>LSMALL)
                x = LAdd(x,wt+mixp);
 	       outprobjs[m] = mixp;
             }
@@ -1083,6 +1212,7 @@ static float *ShStrP(HMMSet *hset, StreamInfo *sti, Vector v, const int t,
 	       otvs = ApplyCompFXForm(mp,v,xform,&det,t);
 	       if (PDEMOutP(otvs,mp,&mixp,x-wt-det) == TRUE) {
 		  mixp += det;
+                  if (mixp>LSMALL && wt>LSMALL)
 		  x = LAdd(x,wt+mixp);
 	       }
 	       outprobjs[m] = mixp; /* LZERO if PDEMOutP returns FALSE */
@@ -1152,11 +1282,11 @@ static void Setotprob(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt, int t, int S,
                   case PLAINHS:  
                   case SHAREDHS: 
 		     if (S==1)
-                     outprobj[0] = ShStrP(hset,sti,utt->o[t].fv[s],t,fbInfo->al_inXForm,&ab->abMem);
+                     outprobj[0] = ShStrP(hset,sti,utt->o[t].fv[s],t,fbInfo->al_inXForm_hmm,&ab->abMem);
 		     else {
                      if (((WtAcc *)sti->hook)->time==t) seenStr=TRUE;
                      else seenStr=FALSE;
-                     outprobj[s] = ShStrP(hset,sti,utt->o[t].fv[s],t,fbInfo->al_inXForm,&ab->abMem);
+                     outprobj[s] = ShStrP(hset,sti,utt->o[t].fv[s],t,fbInfo->al_inXForm_hmm,&ab->abMem);
                      }
 		    break;
                   default:
@@ -1197,12 +1327,100 @@ static void Setotprob(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt, int t, int S,
    }
 }
 
+/* EXPORT->ResetDMMPreComps: reset all pre-calculated durprob matrices */
+void ResetDMMPreComps (HMMSet *dset)
+{
+   HMMScanState hss;
+   WtAcc *wa;
+   
+   /* reset dprob hooks */
+   NewHMMScan(dset,&hss);
+   while (GoNextStream(&hss,FALSE)) {
+      wa = (WtAcc *)hss.sti->hook;
+      SetHook(wa->c,NULL);
+   }
+   EndHMMScan(&hss);
+   
+   /* reset all dprob matrices */ 
+   ResetHeap(&dprobStack);
+}
+
+/* Setdurprob: allocate and calculate durprob matrix */
+static void Setdurprob(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
+{
+   int q,j,Nq,d,maxDur;
+   double var;
+   LogFloat det;
+   Vector dur;
+   SVector dprob;
+   StreamInfo *sti;
+   MixPDF *mp;
+   WtAcc *wa;
+   
+   /* vector to be used to calculate duration prob */
+   dur = CreateVector(&gstack,1);
+   
+   /* duration prob and max # of durations */
+   ab->durprob = (SVector **) New(&ab->abMem,utt->Q*sizeof(SVector *));
+   ab->maxDur  = (int **)     New(&ab->abMem,utt->Q*sizeof(int *));
+   ab->durprob--;  ab->maxDur--;
+
+   for (q=1; q<=utt->Q; q++) {
+      Nq = ab->al_qList[q]->numStates;
+      ab->durprob[q] = (SVector *) New(&ab->abMem, Nq*sizeof(SVector));
+      ab->maxDur [q] = (int *)     New(&ab->abMem, Nq*sizeof(int));
+      ab->durprob[q]--;  ab->maxDur[q]--;
+      
+      for (j=1; j<=Nq; j++) {
+         if (!semiMarkov || j==1 || j==Nq) {
+            ab->maxDur [q][j]    = 1;
+            ab->durprob[q][j]    = CreateSVector(&ab->abMem, 1);
+            ab->durprob[q][j][1] = 0.0;
+         }
+         else {
+            /* currently only single Gaussian is supported */
+            sti = ab->al_dList[q]->svec[2].info->pdf[j-1].info;
+            wa = (WtAcc *)sti->hook;
+            if (GetHook(wa->c)==NULL) {
+               mp = sti->spdf.cpdf[1].mpdf;
+               ApplyCompXForm(mp, fbInfo->al_inXForm_dur, TRUE);  /* transform mp in full form */               
+               switch(mp->ckind) {
+               case DIAGC:    var = mp->cov.var[1]; break;
+               case INVDIAGC: var = 1.0 / mp->cov.var[1]; break;
+               case FULLC:    var = 1.0 / mp->cov.inv[1][1]; break;
+               }
+               maxDur = (int)(mp->mean[1] + maxstdDevCoef*sqrt(var)) + 2;  /* 2 <- minimum dur to be evaluated */
+               ApplyCompXForm(mp, fbInfo->al_inXForm_dur, fbInfo->xfinfo_dur->inFullC);
+               
+               /* compute duration prob */
+               dprob  = CreateSVector(&dprobStack,maxDur);
+               for (d=1; d<=maxDur; d++) {
+                  dur[1] = (float)d;
+                  dprob[d] = MOutP(ApplyCompFXForm(mp,dur,fbInfo->al_inXForm_dur,&det,d),mp);
+                  dprob[d] += det;
+               }
+               SetHook(dprob,(Ptr)((long)(maxDur)));
+               SetHook(wa->c,dprob);
+            }
+            else {
+               dprob = (SVector) GetHook(wa->c);
+               maxDur = (int) GetHook(dprob);
+            }
+            ab->maxDur [q][j] = maxDur;
+            ab->durprob[q][j] = dprob;
+         }
+      }
+   }
+   
+   FreeVector(&gstack,dur);
+}
+
 /* TraceAlphaBeta: print alpha/beta values at time t, also sum
          alpha/beta product across states at t-, t, and t+ */
 static void TraceAlphaBeta(AlphaBeta *ab, int t, int startq, int endq, LogDouble pr)
 {
-   int i,q,Nq;
-   DVector aqt,bqt;
+   int i,q,Nq,d,*maxDur;
+   DVector *aqt,*bqt;
    HLink hmm;
    double summ,sump,sum;
    
@@ -1213,15 +1431,26 @@ static void TraceAlphaBeta(AlphaBeta *ab, int t, int startq, int endq, LogDouble
       printf("  Q%2d: %5s           alpha             beta\n",
              q,ab->qIds[q]->name);
       aqt = ab->alphat[q]; bqt = ab->beta[t][q];
+      maxDur = ab->maxDur[q];
       for (i=1;i<=Nq;i++){
-         printf("                "); PrLog(aqt[i]); 
-         printf("     ");        PrLog(bqt[i]);
+         for (d=1; d<=maxDur[i]; d++) {
+            if (!semiMarkov) {
+               printf("                "); PrLog(aqt[i][d]);
+               printf("     ");        PrLog(bqt[i][d]);
+            }
+            else { 
+               printf("   d%5d       ",d); PrLog(aqt[i][d]);
+               printf("     ");        PrLog(bqt[i][d]);
+            }
          printf("\n");
       }
-      summ = LAdd(summ,aqt[1]+bqt[1]);
+      }
+      summ = LAdd(summ,aqt[1][1]+bqt[1][1]);
       for (i=2;i<Nq;i++)
-         sum = LAdd(sum,aqt[i]+bqt[i]);
-      sump = LAdd(sump,aqt[Nq]+bqt[Nq]);
+         for (d=1; d<=maxDur[i]; d++)
+            if (aqt[i][d]>LSMALL && bqt[i][d]>LSMALL)
+               sum = LAdd(sum,aqt[i][d]+bqt[i][d]);
+      sump = LAdd(sump,aqt[Nq][1]+bqt[Nq][1]);
    }
    printf("  Sums of Products:  "); PrLog(summ-pr);
    printf("(-)   "); PrLog(sum-pr); 
@@ -1382,12 +1611,13 @@ static void SetAlignBeam (AlphaBeta *ab, PruneInfo *p, UttInfo *utt)
 }
 
 /* SetBeta: allocate and calculate beta and otprob matrices */
-static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)\
+static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
 {
-   int i,j,t,q,Nq,lNq=0,q_at_gMax,startq,endq;
+   int i,j,t,q,Nq,lNq=0,q_at_gMax,startq,endq,d,*maxDur;
    int S, Q, T;
-   DVector bqt=NULL,bqt1,bq1t1,maxP, **beta;
+   DVector *bqt=NULL,*bqt1,*bq1t1,maxP,***beta;
    float ***outprob;
+   SVector *durprob;
    LogDouble x,y,gMax,lMax,a,a1N=0.0;
    HLink hmm;
    PruneInfo *p;
@@ -1409,22 +1639,26 @@ static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)\
    /* Last Column t = T */
    p->qHi[T] = Q; endq = p->qLo[T];
    Setotprob(ab,fbInfo,utt,T,S,Q,endq);
+   Setdurprob(ab,fbInfo,utt);
    beta[T] = CreateBetaQ(&ab->abMem,endq,Q,Q);
    gMax = LZERO;   q_at_gMax = 0;    /* max value of beta at time T */
    for (q=Q; q>=endq; q--){
       hmm = ab->al_qList[q]; Nq = hmm->numStates;
-      bqt = beta[T][q] = NewBetaVec(&ab->abMem,Nq);
-      bqt[Nq] = (q==Q)?0.0:beta[T][q+1][lNq]+a1N;
+      durprob = ab->durprob[q];
+      maxDur  = ab->maxDur[q];
+      bqt = beta[T][q] = NewBetaVec(&ab->abMem,Nq,maxDur);
+      bqt[Nq][1] = (q==Q) ? 0.0 : beta[T][q+1][lNq][1]+a1N;
       for (i=2;i<Nq;i++) 
-         bqt[i] = hmm->transP[i][Nq]+bqt[Nq];
+         for (d=1; d<=maxDur[i]; d++)
+            bqt[i][d] = durprob[i][d] + hmm->transP[i][Nq] + bqt[Nq][1];
       outprob = ab->otprob[T][q];
       x = LZERO;
       for (j=2; j<Nq; j++){
-         a = hmm->transP[1][j]; y = bqt[j];
+         a = hmm->transP[1][j]; y = bqt[j][1];
          if (a>LSMALL && y > LSMALL)
             x = LAdd(x,a+outprob[j][0][0]+y);
       }
-      bqt[1] = x;
+      bqt[1][1] = x;
       lNq = Nq; a1N = hmm->transP[1][Nq];
       if (x>gMax) {
          gMax = x; q_at_gMax = q;
@@ -1452,36 +1686,50 @@ static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)\
          lMax = LZERO;                 /* max value of beta in model q */
          hmm = ab->al_qList[q]; 
          Nq = hmm->numStates;
-         bqt = beta[t][q] = NewBetaVec(&ab->abMem,Nq);
+         durprob = ab->durprob[q];
+         maxDur  = ab->maxDur[q];
+         bqt = beta[t][q] = NewBetaVec(&ab->abMem,Nq,maxDur);
          bqt1 = beta[t+1][q];
          bq1t1 = (q==Q)?NULL:beta[t+1][q+1];
          outprob = ab->otprob[t+1][q];
-         bqt[Nq] = (bq1t1==NULL)?LZERO:bq1t1[1];
+         bqt[Nq][1] = (bq1t1==NULL) ? LZERO : bq1t1[1][1];
          if (q<startq && a1N>LSMALL)
-            bqt[Nq]=LAdd(bqt[Nq],beta[t][q+1][lNq]+a1N);
+            bqt[Nq][1] = LAdd(bqt[Nq][1], beta[t][q+1][lNq][1]+a1N);
          for (i=Nq-1;i>1;i--){
-            x = hmm->transP[i][Nq] + bqt[Nq];
-            if (q>=p->qLo[t+1]&&q<=p->qHi[t+1])
+            for (d=1; d<=maxDur[i]; d++) {
+               x = durprob[i][d] + hmm->transP[i][Nq] + bqt[Nq][1];
+               if (q>=p->qLo[t+1] && q<=p->qHi[t+1]) {
                for (j=2;j<Nq;j++) {
-                  a = hmm->transP[i][j]; y = bqt1[j];
+                     a = hmm->transP[i][j]; y = bqt1[j][1];
                   if (a>LSMALL && y>LSMALL)
-                     x = LAdd(x,a+outprob[j][0][0]+y);
+                        x = LAdd(x,durprob[i][d]+a+outprob[j][0][0]+y);
+                  }
+                  if (d<maxDur[i] && bqt1[i][d+1]>LSMALL)
+                     x = LAdd(x,outprob[i][0][0]+bqt1[i][d+1]);
                }
-            bqt[i] = x;
+               bqt[i][d] = x;
+               }
+            /* compute lMax and gMax only if pruning is on */
+            if (p->pruneThresh < NOPRUNE) { 
+               x = LZERO;
+               for (d=1; d<=maxDur[i]; d++)
+                  if (bqt[i][d]>LSMALL)
+                     x = LAdd(x,bqt[i][d]);
             if (x>lMax) lMax = x;
             if (x>gMax) {
                gMax = x; q_at_gMax = q;
             }
          }
+         }
          outprob = ab->otprob[t][q];
          x = LZERO;
          for (j=2; j<Nq; j++){
             a = hmm->transP[1][j];
-            y = bqt[j];
+            y = bqt[j][1];
             if (a>LSMALL && y>LSMALL)
                x = LAdd(x,a+outprob[j][0][0]+y);
          }
-         bqt[1] = x;
+         bqt[1][1] = x;
          maxP[q] = lMax;
          lNq = Nq; a1N = hmm->transP[1][Nq];
          /* printf("q=%d gMax=%e\n", q, x); */
@@ -1513,7 +1761,7 @@ static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)\
    }
 
    /* Finally, set total prob pr */
-   utt->pr = bqt[1];
+   utt->pr = bqt[1][1];
 
    if (utt->pr <= LSMALL) {
       return LZERO;
@@ -1602,12 +1850,13 @@ static Boolean StepBack(FBInfo *fbInfo, UttInfo *utt)
 
 /* UpTranParms: update the transition counters of given hmm */
 static void UpTranParms(FBInfo *fbInfo, HLink hmm, int t, int q,
-                        DVector aqt, DVector bqt, DVector bqt1, DVector bq1t, 
+                        DVector *aqt, DVector *bqt, DVector *bqt1, DVector *bq1t, 
                         LogDouble pr)
 {
-   int i,j,N;
+   int i,j,N,d,*maxDur;
    Vector ti,ai;
    float ***outprob,***outprob1;
+   SVector *durprob;
    double sum,x;
    TrAcc *ta;
    AlphaBeta *ab;
@@ -1616,28 +1865,46 @@ static void UpTranParms(FBInfo *fbInfo, HLink hmm, int t, int q,
    ab = fbInfo->ab;
    ta = (TrAcc *) GetHook(hmm->transP);
    outprob = ab->otprob[t][q]; 
+   durprob = ab->durprob[q];
+   maxDur  = ab->maxDur[q];
    if (bqt1!=NULL) outprob1 = ab->otprob[t+1][q];  /* Bug fix */
    else outprob1 = NULL;
-   for (i=1;i<N;i++)
-      ta->occ[i] += ab->occt[i];
+   /* for (i=1; i<N; i++)
+      ta->occ[i] += ab->occt[i]; */
    for (i=1;i<N;i++) {
       ti = ta->tran[i]; ai = hmm->transP[i];
       for (j=2;j<=N;j++) {
          if (i==1 && j<N) {                  /* entry transition */
-            x = aqt[1]+ai[j]+outprob[j][0][0]+bqt[j]-pr;
-            if (x>MINEARG) ti[j] += exp(x);
-         } else
+            x = aqt[1][1]+ai[j]+outprob[j][0][0]+bqt[j][1]-pr;
+         } 
+         else {
             if (i>1 && j<N && bqt1!=NULL) {     /* internal transition */
-               x = aqt[i]+ai[j]+outprob1[j][0][0]+bqt1[j]-pr;
-               if (x>MINEARG) ti[j] += exp(x);
-            } else
+               x = LZERO;
+               for (d=1; d<=maxDur[i]; d++)
+                  if (aqt[i][d]>LSMALL)
+                     x = LAdd(x,aqt[i][d]+durprob[i][d]);
+               x += ai[j]+outprob1[j][0][0]+bqt1[j][1]-pr;
+            } 
+            else {
                if (i>1 && j==N) {                  /* exit transition */
-                  x = aqt[i]+ai[N]+bqt[N]-pr;
-                  if (x>MINEARG) ti[N] += exp(x);
+                  x = LZERO;
+                  for (d=1; d<=maxDur[i]; d++)
+                     if (aqt[i][d]>LSMALL)
+                        x = LAdd(x,aqt[i][d]+durprob[i][d]);
+                  x += ai[N]+bqt[N][1]-pr;
+               }
+               else
+                  x = LZERO;
+            }
+         }
+         if (x>MINEARG) {
+            ti[j] += exp(x); ta->occ[i] += exp(x);
                }
          if (i==1 && j==N && ai[N]>LSMALL && bq1t != NULL){ /* tee transition */
-            x = aqt[1]+ai[N]+bq1t[1]-pr;
-            if (x>MINEARG) ti[N] += exp(x);
+            x = aqt[1][1]+ai[N]+bq1t[1][1]-pr;
+            if (x>MINEARG) {
+               ti[N] += exp(x); ta->occ[i] += exp(x);
+            }
          }
       }
    }
@@ -1658,13 +1925,14 @@ static void UpTranParms(FBInfo *fbInfo, HLink hmm, int t, int q,
 /* UpMixParms: update mu/va accs of given hmm  */
 static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                        Observation *o, Observation *o2, 
-                       int t, DVector aqt, DVector aqt1, DVector bqt, int S,
+                       int t, DVector *aqt, DVector *aqt1, DVector *bqt, int S,
                        Boolean twoDataFiles, LogDouble pr)
 {
-   int i,s,j,k,kk,m=0,mx,M=0,N,vSize;
+   int i,s,j,k,kk,m=0,mx,M=0,N,vSize,d,*maxDur;
    Vector mu_jm,var,mean=NULL,invk,otvs;
    TMixRec *tmRec = NULL;
    float **outprob;
+   SVector *durprob;
    Matrix inv;
    LogFloat c_jm,a,prob=0.0;
    LogDouble x,initx = LZERO;
@@ -1693,7 +1961,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
    hset   = fbInfo->up_hset;
    hsKind = fbInfo->hsKind;
 
-   if (trace&T_MIX && fbInfo->uFlags&UPMIXES && 
+   if (trace&T_MIX && fbInfo->uFlags_hmm&UPMIXES && 
        NonSkipRegion(fbInfo->skipstart,fbInfo->skipend,t)){
       printf("Mixture Weights at time %d, model Q%d %s\n",
              t,q,ab->qIds[q]->name);
@@ -1710,7 +1978,9 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
    }
 
    N = hmm->numStates;
-
+   maxDur = ab->maxDur[q];
+   durprob = ab->durprob[q];
+   
    if (keepOccm) {
       ab->occm[t][q] = (Vector **) New(&ab->abMem, N*sizeof(Vector *));
       ab->occm[t][q]--;
@@ -1718,16 +1988,25 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
          
    for (j=2;j<N;j++) {
       if (fbInfo->maxM>1){
-         initx = hmm->transP[1][j] + aqt[1];
-         if (t>1)
+         initx = hmm->transP[1][j] + aqt[1][1];
+         if (t>1) {
             for (i=2;i<N;i++){
                a = hmm->transP[i][j];
                if (a>LSMALL)
-                  initx = LAdd(initx,aqt1[i]+a);
+                  for (d=1; d<=maxDur[i]; d++)
+                     if (aqt1[i][d]>LSMALL)
+                        initx = LAdd(initx,aqt1[i][d]+durprob[i][d]+a);
             }
-         initx += bqt[j] - pr;
+            initx += bqt[j][1];
+            for (d=2; d<=maxDur[j]; d++)
+               if (aqt1[j][d-1]>LSMALL && bqt[j][d]>LSMALL)
+                  initx = LAdd(initx,aqt1[j][d-1]+bqt[j][d]);
+            }
+         else
+            initx += bqt[j][1];
+         initx -= pr;
       }
-      if (trace&T_MIX && fbInfo->uFlags&UPMIXES && 
+      if (trace&T_MIX && fbInfo->uFlags_hmm&UPMIXES && 
           NonSkipRegion(fbInfo->skipstart,fbInfo->skipend,t))
          printf("  State %d: ",j);
       if (keepOccm) {
@@ -1779,11 +2058,11 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                else {
                   me = sti->spdf.cpdf+mx;
                }
-	       inxform = fbInfo->inXForm;
+               inxform = fbInfo->inXForm_hmm;
                mp=me->mpdf;
                if (twoDataFiles){  
                   if (alCompLevel) {
-                     otvs = ApplyCompFXForm(mp,o2[t].fv[s],fbInfo->al_inXForm,&det,t);
+                     otvs = ApplyCompFXForm(mp,o2[t].fv[s],fbInfo->al_inXForm_hmm,&det,t);
                   }
                   else {
                      otvs = ApplyCompFXForm(mp,o2[t].fv[s],inxform,&det,t);
@@ -1794,6 +2073,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                }
                wght = MixLogWeight(hset,me->weight);
                comp_prob[mx]=wght+MOutP(otvs,mp)+det;
+               if (comp_prob[mx]>LSMALL)
                norm = LAdd(norm,comp_prob[mx]);
             }
          }
@@ -1826,10 +2106,19 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
             }
             if (wght>LMINMIX){
               /* compute mixture likelihood  */
-              if (!mmix || (hsKind==DISCRETEHS)) /* For DISCRETEHS calcs are*/
-                 x = aqt[j]+bqt[j]-pr;           /* same as single mix*/
+               if (!mmix || (hsKind==DISCRETEHS)) { /* For DISCRETEHS calcs are*/
+                  x = LZERO;
+                  for (d=1; d<=maxDur[j]; d++)
+                     if (aqt[j][d]>LSMALL && bqt[j][d]>LSMALL)
+                        x = LAdd(x,aqt[j][d]+bqt[j][d]);   /* same as single mix*/
+                  x -= pr;
+               }
               else if (fbInfo->twoModels) {      /* note: only SHAREDHS or PLAINHS */
-                 x = comp_prob[m]+aqt[j]+bqt[j]-pr-norm;
+                  x = LZERO;
+                  for (d=1; d<=maxDur[j]; d++)
+                     if (aqt[j][d]>LSMALL && bqt[j][d]>LSMALL)
+                        x = LAdd(x,aqt[j][d]+bqt[j][d]);
+                  x += comp_prob[m]-pr-norm;
               }
               else {
                  c_jm=wght;
@@ -1860,10 +2149,10 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
               }
               if (-x<pruneSetting.minFrwdP) {
 		 if (twoDataFiles){  /* switch to new data for mu & var est */
-                     otvs = ApplyCompFXForm(mp,o2[t].fv[s],fbInfo->paXForm,&det,t);
+                     otvs = ApplyCompFXForm(mp,o2[t].fv[s],fbInfo->paXForm_hmm,&det,t);
                   }
                   else {
-                     otvs = ApplyCompFXForm(mp,o[t].fv[s],fbInfo->paXForm,&det,t);
+                     otvs = ApplyCompFXForm(mp,o[t].fv[s],fbInfo->paXForm_hmm,&det,t);
 		 }
                  Lr = exp(x);
                   /* More diagnostics */
@@ -1875,13 +2164,13 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                   /* update occupation counts */
                   steSumLr += Lr;
                   /* update the adaptation statistic counts */
-                  if (fbInfo->uFlags&UPXFORM)
-                     AccAdaptFrame(Lr, otvs, mp, t, s);
+                  if (fbInfo->uFlags_hmm&UPXFORM)
+                     AccAdaptFrame(fbInfo->xfinfo_hmm, Lr, otvs, mp, t);
                   /* 
                      update the semi-tied statistic counts
                      this accumulates "true" outer products to allow multiple streams
                   */ 
-                  if (fbInfo->uFlags&UPSEMIT) {
+                  if (fbInfo->uFlags_hmm&UPSEMIT) {
                      ma = (MuAcc *) GetHook(mp->mean);
                      va = (VaAcc *) GetHook(mp->cov.var);
                      ma->occ += Lr;
@@ -1918,9 +2207,9 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                   } 
                   else {
                      /* update mean counts */
-                     if ((fbInfo->uFlags&UPMEANS) || (fbInfo->uFlags&UPVARS))
+                     if ((fbInfo->uFlags_hmm&UPMEANS) || (fbInfo->uFlags_hmm&UPVARS))
                         mean = mp->mean; 
-                     if ((fbInfo->uFlags&UPMEANS) && (fbInfo->uFlags&UPVARS)) {
+                     if ((fbInfo->uFlags_hmm&UPMEANS) && (fbInfo->uFlags_hmm&UPVARS)) {
                         ma = (MuAcc *) GetHook(mean);
                         va = (VaAcc *) GetHook(mp->cov.var);
                         ma->occ += Lr;
@@ -1949,14 +2238,14 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                            }
                         }
                      }
-                     else if (fbInfo->uFlags&UPMEANS){
+                     else if (fbInfo->uFlags_hmm&UPMEANS){
                         ma = (MuAcc *) GetHook(mean);
                         mu_jm = ma->mu;
                         ma->occ += Lr;
                         for (k=1;k<=vSize;k++)     /* sum zero mean */
                            mu_jm[k] += (otvs[k]-mean[k])*Lr;
                      }
-                     else if (fbInfo->uFlags&UPVARS){
+                     else if (fbInfo->uFlags_hmm&UPVARS){
                         /* update covariance counts */
                         va = (VaAcc *) GetHook(mp->cov.var);
                         va->occ += Lr;
@@ -1981,7 +2270,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                      }
                   }
                   /* update mixture weight counts */
-                  if (fbInfo->uFlags&UPMIXES) {
+                  if (fbInfo->uFlags_hmm&UPMIXES) {
                      wa->c[m] +=Lr;
                      if (trace&T_MIX && NonSkipRegion(fbInfo->skipstart,fbInfo->skipend,t))
                         printf("%3d. %7.2f",m,wa->c[m]);
@@ -1997,7 +2286,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
          }
       
          wa->occ += steSumLr;
-         if (trace&T_MIX && mmix && fbInfo->uFlags&UPMIXES && 
+         if (trace&T_MIX && mmix && fbInfo->uFlags_hmm&UPMIXES && 
              NonSkipRegion(fbInfo->skipstart,fbInfo->skipend,t))
             printf("[%7.2f]\n",wa->occ);
       }
@@ -2007,115 +2296,200 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
 }
 
 /* UpDurParms: update duration accs of given hmm */
-static void UpDurParms(FBInfo *fbInfo, UttInfo *utt, HLink hmm, const int t0, const int q)
+static void UpDurParms(FBInfo *fbInfo, UttInfo *utt, HLink hmm, const int t, const int q)
 {
-   int i, j, k, kk, t1, vSize;
-   double Lr, dur, zmean, zmean2, zmeanlr;
-   LogDouble Sumxi, xi;
+   int i,j,m,k,kk,vSize,d,*maxDur;
+   double Lr,zmean,zmean2,zmeanlr,steSumLr;
+   SVector *durprob;
+   LogDouble initx,x;
+   LogFloat det;
    AlphaBeta *ab;
    PruneInfo *p;
+   StreamInfo *sti;
    MixPDF *mp;
-   Vector mean,var,mu_jm,invk;
+   Vector mean,var,mu_jm,invk,dur,xdur;
+   DVector *aqt,*aqt1,*bqt,*bqt1;
    TriMat inv;
    MuAcc *ma=NULL;
    VaAcc *va=NULL;
-   
+   WtAcc *wa=NULL;
+
    const int T = utt->T;
    const int N = hmm->numStates;
    
-   ab = fbInfo->ab;
-   p  = ab->pInfo;
-      
-   for (j=2; j<N; j++) {
-      /* accumulators */
-      mp = ab->up_dList[q]->svec[2].info->pdf[j-1].info->spdf.cpdf[1].mpdf;  /* currently single mix is assumed */
-      mean = mp->mean; vSize = VectorSize(mean);
-      if (fbInfo->dur_uFlags&UPMEANS) ma = (MuAcc *) GetHook(mean);
-      if (fbInfo->dur_uFlags&UPVARS)  va = (VaAcc *) GetHook(mp->cov.var);
-      
-      /* initial state */
-      Sumxi = hmm->transP[1][j] + ab->alphat[q][1];
-      if (t0>1) {
-         for (i=2; i<N; i++)
-            if (i!=j && hmm->transP[i][j]>LSMALL)
-               Sumxi = LAdd(Sumxi,ab->alphat1[q][i]+hmm->transP[i][j]);
-      }
-               
-      /* count statistics from t0 to t1 */
-      for (t1=t0; t1<=T; t1++) {  
-         if (Sumxi>LSMALL && p->qLo[t1]<=q && q<=p->qHi[t1]) {
-            Sumxi += ab->otprob[t1][q][j][0][0];
-            if (t1>t0) 
-               Sumxi += hmm->transP[j][j];
-
-            xi = hmm->transP[j][N];
-            if (t1+1<=T) {
-               xi += (p->qLo[t1+1]<=q+1 && q+1<=p->qHi[t1+1]) ? ab->beta[t1+1][q+1][1] : LZERO;
-               if (p->qLo[t1+1]<=q && q<=p->qHi[t1+1]) {
-                  for (k=2;k<N;k++)
-                     if (k!=j && hmm->transP[j][k]>LSMALL)
-                        xi = LAdd(xi, hmm->transP[j][k]+ab->otprob[t1+1][q][k][0][0]+ab->beta[t1+1][q][k]);
-               }
-            }
+   ab   = fbInfo->ab;
+   p    = ab->pInfo;
+   aqt = ab->alphat[q];
+   bqt = ab->beta[t][q];
+   bqt1 = (t==T) ? NULL : ab->beta[t+1][q];
+   aqt1 = (t==1) ? NULL : ab->alphat1[q];
             
-            xi = xi+Sumxi-utt->pr;
-                     
-            /* update duration counts */
-            Lr = L2F(xi);
-            if (Lr>0.0) {
-               dur = (double)(t1-t0+1);
-               
-               /* acc statistics */
-               if ((fbInfo->dur_uFlags&UPMEANS) && (fbInfo->dur_uFlags&UPVARS)) {
-                  ma->occ += Lr;
-                  va->occ += Lr;
-                  mu_jm = ma->mu;
-                  if ((mp->ckind==DIAGC)||(mp->ckind==INVDIAGC)){
-                     var = va->cov.var;
-                     for (k=1; k<=vSize; k++) {
-                        zmean=dur-mp->mean[k];
-                        zmeanlr=zmean*Lr;
-                        mu_jm[k] += zmeanlr;
-                        var[k] += zmean*zmeanlr;
+   maxDur  = ab->maxDur[q];
+   durprob = ab->durprob[q];
+   
+   dur  = CreateVector(&gstack,1);
+   xdur = CreateVector(&gstack,1);
+         
+   for (j=2; j<N; j++) {
+      sti = ab->up_dList[q]->svec[2].info->pdf[j-1].info;
+      wa = (WtAcc *) sti->hook; steSumLr = 0.0;
+
+      /* initial term */
+      if (!semiMarkov) {
+         /* HMM */
+         initx = hmm->transP[1][j] + aqt[1][1];
+         if (t>1) {
+            for (i=2; i<N; i++)
+               if (i!=j && hmm->transP[i][j]>LSMALL && aqt1[i][1]>LSMALL)
+                  initx = LAdd(initx,aqt1[i][1]+hmm->transP[i][j]);
+         }
+      }
+      else {
+         /* HSMM */
+         initx = hmm->transP[j][N]+bqt[N][1];
+         if (bqt1!=NULL)
+            for (i=2; i<N; i++)
+               if (hmm->transP[j][i]>LSMALL && bqt1[i][1]>LSMALL)
+                  initx = LAdd(initx,hmm->transP[j][i]+ab->otprob[t+1][q][i][0][0]+bqt1[i][1]);
+      }
+
+      for (m=1; m<=sti->nMix; m++) {
+         /* accumulators */
+         mp = sti->spdf.cpdf[m].mpdf;
+         mean = mp->mean; vSize = VectorSize(mean);
+         if (fbInfo->uFlags_dur&UPMEANS) ma = (MuAcc *) GetHook(mean);
+         if (fbInfo->uFlags_dur&UPVARS)  va = (VaAcc *) GetHook(mp->cov.var);
+      
+         /* count statistics from t to t1 */
+         for (d=1; (!semiMarkov && t+d-1<=T) || (semiMarkov && d<=maxDur[j]); d++) {
+            /* acc statistics */
+            if (initx>LSMALL && (semiMarkov || (!semiMarkov && p->qLo[t+d-1]<=q && q<=p->qHi[t+d-1])) ) {
+               if (!semiMarkov) {
+                  /* HMM */
+                  initx += ab->otprob[t+d-1][q][j][0][0];
+                  if (d>1) 
+                     initx += hmm->transP[j][j];
+   
+                  x = hmm->transP[j][N];
+                  if (t+d-1<T) {
+                     x += (p->qLo[t+d]<=q+1 && q+1<=p->qHi[t+d]) ? ab->beta[t+d][q+1][1][1] : LZERO;
+                     if (p->qLo[t+d]<=q && q<=p->qHi[t+d]) {
+                        for (k=2; k<N; k++)
+                           if (k!=j && hmm->transP[j][k]>LSMALL && ab->beta[t+d][q][k][1]>LSMALL)
+                              x = LAdd(x, hmm->transP[j][k]+ab->otprob[t+d][q][k][0][0]+ab->beta[t+d][q][k][1]);
                      }
                   }
-                  else {
-                     inv = va->cov.inv;
-                     for (k=1; k<=vSize; k++) {
-                        invk = inv[k];
-                        zmean=dur-mp->mean[k];
-                        zmeanlr=zmean*Lr;
-                        mu_jm[k] += zmeanlr;
-                        for (kk=1; kk<=k; kk++) {
-                           zmean2 = dur-mp->mean[kk];
-                           invk[kk] += zmean2*zmeanlr;
+               }
+               else {
+                  /* HSMM */
+                  x = aqt[j][d]+durprob[j][d]; 
+               }
+               x = initx+x-utt->pr;
+                        
+               /* update duration counts */
+               Lr = L2F(x);
+               if (Lr>0.0) {
+                  /* duration observation */
+                  dur[1] = (float)d;
+                  xdur = ApplyCompFXForm(mp,dur,fbInfo->paXForm_dur,&det,d);
+
+                  /* update the adaptation statistic counts */
+                  if (fbInfo->uFlags_dur&UPXFORM)
+                     AccAdaptFrame(fbInfo->xfinfo_dur,Lr,xdur,mp,d);
+                   
+                  /* acc statistics */
+                  if ((fbInfo->uFlags_dur&UPMEANS) && (fbInfo->uFlags_dur&UPVARS)) {
+                     ma->occ += Lr;
+                     va->occ += Lr;
+                     mu_jm = ma->mu;
+                     if ((mp->ckind==DIAGC)||(mp->ckind==INVDIAGC)){
+                        var = va->cov.var;
+                        for (k=1; k<=vSize; k++) {
+                           zmean=xdur[k]-mp->mean[k];
+                           zmeanlr=zmean*Lr;
+                           mu_jm[k] += zmeanlr;
+                           var[k] += zmean*zmeanlr;
+                        }
+                     }
+                     else {
+                        inv = va->cov.inv;
+                        for (k=1; k<=vSize; k++) {
+                           invk = inv[k];
+                           zmean=xdur[k]-mp->mean[k];
+                           zmeanlr=zmean*Lr;
+                           mu_jm[k] += zmeanlr;
+                           for (kk=1; kk<=k; kk++) {
+                              zmean2 = xdur[k]-mp->mean[kk];
+                              invk[kk] += zmean2*zmeanlr;
+                           }
                         }
                      }
                   }
-               }
-               else if (fbInfo->uFlags&UPMEANS) {
-                   mu_jm = ma->mu;
-                   ma->occ += Lr;
-                   for (k=1;k<=vSize;k++)     /* sum zero mean */
-                      mu_jm[k] += (dur-mean[k])*Lr;
-               }
-               else if (fbInfo->uFlags&UPVARS){
-                   va->occ += Lr;
-                   if ((mp->ckind==DIAGC)||(mp->ckind==INVDIAGC)) {
-                      var = va->cov.var;
-                      for (k=1; k<=vSize; k++) {
-                         zmean=dur-mean[k];
-                         var[k] += zmean*zmean*Lr;
+                  else if (fbInfo->uFlags_dur&UPMEANS) {
+                     mu_jm = ma->mu;
+                     ma->occ += Lr;
+                     for (k=1; k<=vSize; k++)     /* sum zero mean */
+                        mu_jm[k] += (xdur[k]-mean[k])*Lr;
+                  }
+                  else if (fbInfo->uFlags_dur&UPVARS){
+                      va->occ += Lr;
+                      if ((mp->ckind==DIAGC)||(mp->ckind==INVDIAGC)) {
+                         var = va->cov.var;
+                         for (k=1; k<=vSize; k++) {
+                            zmean=xdur[k]-mean[k];
+                            var[k] += zmean*zmean*Lr;
+                         }
                       }
-                   }
-               }
-            }  
+                  }
+                  /* update mixture weight counts */
+                  if (fbInfo->uFlags_dur&UPMIXES) {
+                     steSumLr += Lr;
+                     wa->c[m] +=Lr;
+                  }
+               }  
+            }
+            else 
+               break; 
          }
-         else 
-            break; 
       }
+      wa->occ += steSumLr;
    }
-} 
+   
+   FreeVector(&gstack,dur);
+}
+
+/* UpStateOcc: update state-level occupancy counts of given hmm */
+static void UpStateOcc(FBInfo *fbInfo, int q, HLink hmm, DVector *aqt, DVector *bqt, LogDouble pr)
+{
+   int i,N,d,*maxDur;
+   double x;
+   float occ,tmp;
+   SVector *durprob;
+   StateInfo *si;
+
+   N = hmm->numStates;
+   maxDur = fbInfo->ab->maxDur[q];
+   durprob = fbInfo->ab->durprob[q];
+   
+   for (i=2; i<N; i++) {
+      x = LZERO;
+      for (d=1; d<=maxDur[i]; d++)
+         if (aqt[i][d]>LSMALL && bqt[i][d]>LSMALL)
+            x = LAdd(x,aqt[i][d]+bqt[i][d]);
+      x -= pr;
+      occ = (x>MINEARG) ? exp(x) : 0.0;
+      
+      si = hmm->svec[i].info;
+      if (si->hook==NULL)
+         tmp = 0.0;
+      else
+         memcpy(&tmp,&(si->hook),sizeof(float));
+      tmp += occ;
+      memcpy(&(si->hook),&tmp,sizeof(float));
+   }
+   
+   return;
+}
 
 /* -------------------- Top Level of F-B Updating ---------------- */
 
@@ -2127,7 +2501,7 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
 {
    int q,t,start,end;
    long negs;
-   DVector aqt,aqt1,bqt,bqt1,bq1t;
+   DVector *aqt,*aqt1,*bqt,*bqt1,*bq1t;
    HLink al_hmm, up_hmm;
    AlphaBeta *ab;
    PruneInfo *p;
@@ -2153,11 +2527,11 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
       up_hmm->hook = (void *)negs;
       
       /* duration models */
-      if (fbInfo->dur_uFlags&(UPMEANS|UPVARS)) {
+      if (fbInfo->up_dset!=NULL && fbInfo->uFlags_dur&(UPMEANS|UPVARS|UPMIXES)) {
          up_hmm = ab->up_dList[q];
          negs = (long)up_hmm->hook+1;
-         up_hmm->hook = (void *)negs;
-      }
+      up_hmm->hook = (void *)negs;
+   }
    }
 
    ResetObsCache();
@@ -2193,18 +2567,19 @@ static void StepForward(FBInfo *fbInfo, UttInfo *utt)
          aqt1 = (t==1)      ? NULL:ab->alphat1[q];
          bq1t = (q==utt->Q) ? NULL:ab->beta[t][q+1];
          if (trace&T_OCC)
-            SetOcct(al_hmm,q,ab->occt,ab->occa[t],aqt,bqt,bq1t,utt->pr);
-         else
-            SetOcct(al_hmm,q,ab->occt,NULL,aqt,bqt,bq1t,utt->pr);
+            SetOcct(al_hmm,q,ab->occt,ab->occa,ab->maxDur[q],aqt,bqt,bq1t,utt->pr);
          /* accumulate the statistics */
-         if (fbInfo->uFlags&(UPMEANS|UPVARS|UPMIXES|UPXFORM) || keepOccm)
+         if (fbInfo->uFlags_hmm&(UPMEANS|UPVARS|UPMIXES|UPXFORM) || keepOccm)
             UpMixParms(fbInfo,q,up_hmm,al_hmm,utt->o,utt->o2,t,aqt,aqt1,bqt,
                        utt->S, utt->twoDataFiles, utt->pr);
-         if (fbInfo->uFlags&UPTRANS)
+         if (fbInfo->uFlags_hmm&UPTRANS)
             UpTranParms(fbInfo,up_hmm,t,q,aqt,bqt,bqt1,bq1t,utt->pr);
-         if (fbInfo->dur_uFlags&(UPMEANS|UPVARS))
-            UpDurParms(fbInfo,utt,up_hmm,t,q);
+         if (fbInfo->uFlags_dur&(UPMEANS|UPVARS|UPMIXES|UPXFORM))
+            UpDurParms(fbInfo,utt,al_hmm,t,q);
+         if (fbInfo->up_hset->numSharedStreams>0)
+            UpStateOcc(fbInfo,q,up_hmm,aqt,bqt,utt->pr);
       }
+      
       if (trace&T_OCC && NonSkipRegion(fbInfo->skipstart,fbInfo->skipend,t)) 
          TraceOcc(ab,utt,t);
    }
@@ -2329,10 +2704,10 @@ void InitUttObservations(UttInfo *utt, HMMSet *al_hset,
                HError(7350,"LoadFile: Discrete data value [ %d ] out of range in stream [ %d ] in file %s",
                       utt->o[t].vq[s],s,datafn);
          }
-         }
       }
    }
-   
+}
+
 /* EXPORT -> ResetUttObservations: reset the observation structures within UttInfo */
 void ResetUttObservations (UttInfo *utt, HMMSet *al_hset)
 {

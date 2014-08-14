@@ -73,7 +73,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hdecode_version = "!HVER!HDecode:   3.4 [GE 25/04/06]";
-char *hdecode_sccs_id = "$Id: HDecode.mod.c,v 1.3 2007/10/01 18:07:58 zen Exp $";
+char *hdecode_sccs_id = "$Id: HDecode.mod.c,v 1.4 2008/01/15 13:18:27 zen Exp $";
 
 /* this is just the tool that handles command line arguments and
    stuff, all the real magic is in HLVNet and HLVRec */
@@ -305,7 +305,7 @@ main (int argc, char *argv[])
    InitLVNet ();
    InitLVLM ();
    InitLVRec ();
-   InitAdapt (&xfInfo);
+   InitAdapt (&xfInfo,NULL);
    InitLat ();
 
    if (!InfoPrinted () && NumArgs () == 0)

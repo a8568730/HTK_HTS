@@ -319,6 +319,8 @@ typedef struct {
   int nUse;            /* usage counter */
 } InputXForm;
 
+typedef struct _XFDirInfo *XFDirLink;
+
 /* ---------------------- Macros/HMM Hashing ------------------- */
 
 /* 
@@ -385,6 +387,7 @@ typedef struct _HMMSet{
    InputXForm *xf;         /* Input transform of HMMSet */
    AdaptXForm *semiTied;   /* SemiTied transform associated with model set */
    short projSize;         /* dimension of vector to update */
+   XFDirLink xformDirNames;/* linked list of input transform directories */
 
    /* Adaptation information accumulates */
    Boolean attRegAccs;   /* have the set of accumulates been attached */

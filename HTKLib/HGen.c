@@ -47,7 +47,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hgen_version = "!HVER!HGen:   2.0.1 [NIT 01/10/07]";
-char *hgen_vc_id = "$Id: HGen.c,v 1.31 2007/11/01 08:32:06 zen Exp $";
+char *hgen_vc_id = "$Id: HGen.c,v 1.38 2008/01/11 02:58:08 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -67,6 +67,7 @@ char *hgen_vc_id = "$Id: HGen.c,v 1.31 2007/11/01 08:32:06 zen Exp $";
 #include "lbfgs.h"
 
 #define LBFGSMEM 7
+#define MAXWINLEN 10
 
 /* ------------------- Trace Information ------------------------------ */
 /* Trace Flags */
@@ -82,9 +83,11 @@ static int nParm = 0;
 
 static int maxEMIter = 20;          /* max iterations in the EM-based parameter generation */
 static double EMepsilon = 1.0E-4;   /* convergence factor for EM iteration */
-static Boolean rndpg = FALSE;       /* random generation instead of ML one */
-static double rndMean = 0.0;        /* mean of Gaussian noise for random generation */
-static double rndVar  = 1.0;        /* variance of Gaussian noise for random generation */
+
+typedef enum { RNDTRANS=1,RNDDUR=2,RNDSPACE=4,RNDMIX=8,RNDPAR=16} RNDSet;
+static RNDSet rFlags  = (RNDSet)0;  /* random generation flag */
+static double rndParMean = 0.0;     /* mean of Gaussian noise for random generation */
+static double rndParVar  = 1.0;     /* variance of Gaussian noise for random generation */
 
 /* GV related variables */
 static Boolean useGV = FALSE;
@@ -122,10 +125,48 @@ static OptKind Str2OptKind(char *str)
 }
 
 /* OptKind2Str: Return string representation of enum OptKind */
-char *OptKind2Str(OptKind okind, char *buf)
+static char *OptKind2Str(OptKind okind, char *buf)
 {
    static char *okindmap[] = {"STEEPEST","NEWTON","LBFGS"};
    return strcpy(buf,okindmap[okind]);
+}
+
+/* EXPORT->SetrFlags: set random generation flags */
+void SetrFlags(char *s)
+{
+   rFlags=(RNDSet) 0;        
+   while (*s != '\0')
+      switch (*s++) {
+      case 't': rFlags = (RNDSet) (rFlags+RNDTRANS); break;
+      case 'd': rFlags = (RNDSet) (rFlags+RNDDUR); break;
+      case 's': rFlags = (RNDSet) (rFlags+RNDSPACE); break;
+      case 'm': rFlags = (RNDSet) (rFlags+RNDMIX); break;
+      case 'p': rFlags = (RNDSet) (rFlags+RNDPAR); break;
+      default: HError(2320,"SetrFlags: Unknown random generation flag %c",*s);
+         break;
+      }
+}
+
+/* EXPORT->PrintrFlags: print random generation flags */
+void PrintrFlags (void)
+{
+   printf("HMGenS  ");
+   
+   if (!rFlags) printf("ML Generating: ");
+   if (!(rFlags&RNDTRANS)) printf("Transitions "); 
+   if (!(rFlags&RNDDUR))   printf("Durations ");
+   if (!(rFlags&RNDSPACE)) printf("Spaces ");
+   if (!(rFlags&RNDMIX))   printf("Mixtures ");
+   if (!(rFlags&RNDPAR))   printf("Parameters ");
+   if (!rFlags) printf("   ");
+
+   if (rFlags) printf("Random Generating: ");
+   if (rFlags&RNDTRANS) printf("Transitions "); 
+   if (rFlags&RNDDUR)   printf("Durations ");
+   if (rFlags&RNDSPACE) printf("Spaces ");
+   if (rFlags&RNDMIX)   printf("Mixtures ");
+   if (rFlags&RNDPAR)   printf("Parameters ");
+   printf("\n\n");
 }
 
 /* EXPORT->InitGen: initialise module */
@@ -143,9 +184,8 @@ void InitGen(void)
       if (GetConfInt (cParm,nParm,"TRACE",     &i))  trace      = i;
       if (GetConfInt (cParm,nParm,"MAXEMITER", &i))  maxEMIter  = i;
       if (GetConfFlt (cParm,nParm,"EMEPSILON", &d))  EMepsilon  = d;
-      if (GetConfBool(cParm,nParm,"RNDPG",     &b))  rndpg      = b;
-      if (GetConfFlt (cParm,nParm,"RNDMEAN",   &d))  rndMean    = d;
-      if (GetConfFlt (cParm,nParm,"RNDVAR",    &d))  rndVar     = d;
+      if (GetConfFlt (cParm,nParm,"RNDPARMEAN",&d))  rndParMean = d;
+      if (GetConfFlt (cParm,nParm,"RNDPARVAR", &d))  rndParVar  = d;
       if (GetConfBool(cParm,nParm,"USEGV",     &b))  useGV      = b;
       if (GetConfInt (cParm,nParm,"MAXGVITER", &i))  maxGVIter  = i;
       if (GetConfFlt (cParm,nParm,"GVEPSILON", &d))  GVepsilon  = d;
@@ -156,6 +196,7 @@ void InitGen(void)
       if (GetConfFlt (cParm,nParm,"HMMWEIGHT", &d))  w1         = d;
       if (GetConfFlt (cParm,nParm,"GVWEIGHT",  &d))  w2         = d;
       if (GetConfStr (cParm,nParm,"OPTKIND",   buf)) optKind    = Str2OptKind(buf);
+      if (GetConfStr (cParm,nParm,"RNDFLAGS",  buf)) SetrFlags(buf);
       if (GetConfStr (cParm,nParm,"GVMODELMMF",buf)) strcpy(gvMMF,buf);
       if (GetConfStr (cParm,nParm,"GVHMMLIST", buf)) strcpy(gvLst,buf);
       if (GetConfStr (cParm,nParm,"GVMODELDIR",buf)) strcpy(gvDir,buf);
@@ -222,6 +263,10 @@ static void InitWindow (MemHeap *x, PdfStream *pst)
 
       /* Read window length */
       ReadInt(&src, &winlen, 1, FALSE);
+      if (winlen<0)
+         HError(9999,"InitWindow: Length of %d-th window (%d) is invalid", i+1, winlen);
+      if (winlen>MAXWINLEN)
+         HError(9999,"InitWindow: Length of %d-th window (%d) exceeds maximum length (%d)", i+1, winlen, MAXWINLEN);
 
       /* Read window coefficients */
       pst->win.coef[i] = (float *) New(x,winlen*sizeof(float));
@@ -336,11 +381,14 @@ static void SetupPdfStreams (GenInfo *genInfo)
    PdfStream *pst;
    StateInfo *si;
    MixPDF *mpdf;
-   Vector mseq_t;
+   Vector mseq_t,mnomial;
    Covariance vseq_t;
    LabId id;
    MLink macro;
 
+   /* multinomial distribution for random generation */
+   mnomial = CreateVector(&gstack,genInfo->maxMixes);
+   
    /* absolute time */
    const int T = genInfo->tframe;
 
@@ -362,6 +410,7 @@ static void SetupPdfStreams (GenInfo *genInfo)
       /* get gv mean and covariance */
       if (useGV) {
          id = GetLabId("gv",TRUE);
+         /* id = genInfo->label[1]->labid; */
          if ((macro=FindMacroName(&gvset,'h',id))!=NULL) {
             for (s=stream,v=1; s<stream+genInfo->nPdfStream[p]; v+=genInfo->hset->swidth[s++]) {
                mpdf = ((HLink)macro->structure)->svec[2].info->pdf[p].info->spdf.cpdf[1].mpdf;  /* currently only sigle-mixture GV pdf is supported */
@@ -388,6 +437,8 @@ static void SetupPdfStreams (GenInfo *genInfo)
                }
             }
          }
+         else
+            HError(9935,"Generator: Cannot find GV model %s in current list", id->name);
       }
    }
    
@@ -409,6 +460,7 @@ static void SetupPdfStreams (GenInfo *genInfo)
                   /* calculate mean_jp and cov_jp */
                   for (s=stream,v=1; s<stream+genInfo->nPdfStream[p]; v+=genInfo->hset->swidth[s++]) {
                      /* calculate total weight of continuous spaces */
+                     ZeroVector(mnomial);
                      for (m=1,max=0,weight=LZERO; m<=si->pdf[s].info->nMix; m++) {
                         mpdf = si->pdf[s].info->spdf.cpdf[m].mpdf;
                         if (VectorSize(mpdf->mean)==genInfo->hset->swidth[s]) {
@@ -417,11 +469,14 @@ static void SetupPdfStreams (GenInfo *genInfo)
                               weight = si->pdf[s].info->spdf.cpdf[m].weight;
                               max = m;
                            }
+                           mnomial[m] = MixWeight(genInfo->hset,si->pdf[s].info->spdf.cpdf[m].weight);
                         }
                      }
                      if (max==0)
                         HError(999,"SetupPdfStreams: no mix found");
-                  
+                     if (rFlags&RNDMIX)  /* randomly select one mixture component */
+                        max = MultiNomial(mnomial,si->pdf[s].info->nMix);
+                        
                      /* set pdf streams */
                      mpdf = si->pdf[s].info->spdf.cpdf[max].mpdf;
                      for (k=1; k<=genInfo->hset->swidth[s]; k++) {
@@ -476,6 +531,8 @@ static void SetupPdfStreams (GenInfo *genInfo)
          }
       }
    }
+   
+   FreeVector(&gstack,mnomial);
 
    return;
 }
@@ -496,6 +553,7 @@ static void SetStateSequence (GenInfo *genInfo)
    HLink hmm;
    Label *label;
    IntSet acyclic;
+   Vector mnomial;
 
    /* set state sequence */
    if (genInfo->stateAlign) {        /* state alignments are given */
@@ -520,6 +578,9 @@ static void SetStateSequence (GenInfo *genInfo)
    else {      /* state alignment is not given */
       /* IntSet to detect acyclic graph */
       acyclic = CreateSet(genInfo->maxStates);
+      
+      /* transition probs for random generation */
+      mnomial = CreateVector(&gstack,genInfo->maxStates);
 
       if (trace&T_STA)
          printf(" State sequence:\n");
@@ -534,17 +595,23 @@ static void SetStateSequence (GenInfo *genInfo)
          
          /* trace most likely state sequence in this model */
          for (j=1,n=0; j!=hmm->numStates; j=best) {
+            ZeroVector(mnomial);
             for (k=2,best=1,trans=LZERO; k<=hmm->numStates; k++) {
                if (k==j) continue;  /* exclude self-transition */
-               if (hmm->transP[j][k]>trans) {
+               if (hmm->transP[j][k]>trans) {  /* select ML one */
                   trans = hmm->transP[j][k];
                   best  = k;
                }
+               mnomial[k] = L2F(hmm->transP[j][k]);
+            }
+            if (rFlags&RNDTRANS) {  /* randomly select next state */
+               best  = MultiNomial(mnomial, hmm->numStates);
+               trans = hmm->transP[j][best];
             }
             
             /* check acyclic transition */
-            if (IsMember(acyclic,best))
-               HError(9999, "SetStateSeuqnce: acyclic HMM transition is detected.");
+            if (!(rFlags&RNDTRANS) && IsMember(acyclic,best))
+               HError(9999, "SetStateSeuqnce: acyclic transition is detected.");
             AddMember(acyclic,best);
             
             if (trace&T_STA)
@@ -561,7 +628,8 @@ static void SetStateSequence (GenInfo *genInfo)
          }
       }
       
-      /* free acyclic */
+      /* free */
+      FreeVector(&gstack,mnomial);
       FreeSet(acyclic);
    }
    
@@ -586,10 +654,15 @@ static void CountDurStat (Vector mean, Vector ivar, float *sum, float *sqr, IntV
 static void SetStateDurations (GenInfo *genInfo)
 {
    int i,j,k,s,cnt,nStates,modeldur,start=0,tframe=0;
-   float sum,sqr,rho,diff=0.0;
+   float sum,sqr,dur,rho=0.0,diff=0.0;
    Vector *mean, *ivar;
    Label *label;
    HLink dm;
+   
+   if (genInfo->speakRate!=1.0 && rFlags&RNDDUR)
+      HError(9999,"SetStateDurations: Cannot change speaking rate in random duration generation");
+   if (genInfo->modelAlign && rFlags&RNDDUR)
+      HError(9999,"SetStateDurations: Cannot use model-level alignments in random duration generation");
    
    /* state duration statistics storage */
    if ((mean = (Vector *) New(genInfo->genMem, genInfo->labseqlen*sizeof(Vector)))== NULL)
@@ -613,19 +686,25 @@ static void SetStateDurations (GenInfo *genInfo)
       for (s=cnt=1; s<=genInfo->dset->swidth[0]; s++) {
          for (k=1; k<=genInfo->dset->swidth[s]; k++,cnt++) {
             mean[i][cnt] = dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->mean[k];
-            ivar[i][cnt] = dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.var[k];  /* inverse variance (ConvDiagC was called when duration model set was loaded) */
+            switch(dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->ckind) {
+            case DIAGC:    ivar[i][cnt] = 1.0 / dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.var[k]; break;
+            case INVDIAGC: ivar[i][cnt] = dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.var[k]; break;
+            case FULLC:    ivar[i][cnt] = dm->svec[2].info->pdf[s].info->spdf.cpdf[1].mpdf->cov.inv[k][k]; break;
+            }
          }
       }
       
       /* acc duration statistics to set rho */
-      CountDurStat(mean[i], ivar[i], &sum, &sqr, genInfo->sindex[i]);
+      if (genInfo->speakRate!=1.0)
+         CountDurStat(mean[i], ivar[i], &sum, &sqr, genInfo->sindex[i]);
    }
    
    /* set rho, please refer to
     * T. Yoshimura, et al. "Duration Modeling in HMM-based Speech Synthesis System", 
     * Proc. of ICSLP, vol.2, pp.29-32, 1998, for detail 
     * */
-   rho = (genInfo->speakRate*sum-sum)/sqr;
+   if (genInfo->speakRate!=1.0)
+      rho = (genInfo->speakRate*sum-sum)/sqr;
    
    /* set state durations of given label sequence */ 
    for (i=1; i<=genInfo->labseqlen; i++) {
@@ -639,7 +718,7 @@ static void SetStateDurations (GenInfo *genInfo)
       if (genInfo->modelAlign) {
          if (label->start<=0 && label->end<=0) {   /* model-level alignment of the i-th label is not specified */
             HError(-9999,"SetStateDurations: model duration is not specified in %d-th label",i); 
-            rho = 1.0;
+            rho = 0.0;
          }
          else {  /* model-level alignment of the i-th label is specified */
             modeldur = (int) (label->end - label->start)/genInfo->frameRate;
@@ -652,13 +731,16 @@ static void SetStateDurations (GenInfo *genInfo)
       /* calculate state durations for the i-th label */
       modeldur = 0;
       for (j=1; genInfo->sindex[i][j]!=0; j++) {
-         genInfo->durations[i][j] = (int)(mean[i][genInfo->sindex[i][j]-1]+rho/ivar[i][genInfo->sindex[i][j]-1]+diff+0.5);
+         k = genInfo->sindex[i][j]-1;
+         dur = (rFlags&RNDDUR) ? GaussDeviate(mean[i][k],sqrt(1.0/ivar[i][k])) /* random duration sampling */
+                               : mean[i][k]+rho/ivar[i][k];
+         genInfo->durations[i][j] = (int)(dur+diff+0.5);
          
          /* set minimum duration -> 1 */
          if (genInfo->durations[i][j]<1)
             genInfo->durations[i][j] = 1;
 
-         diff += mean[i][genInfo->sindex[i][j]-1]+rho/ivar[i][genInfo->sindex[i][j]-1]-(float)genInfo->durations[i][j];
+         diff += dur-(float)genInfo->durations[i][j];
          tframe += genInfo->durations[i][j];
          modeldur += genInfo->durations[i][j];
       }
@@ -706,8 +788,8 @@ static void GetLabStateDurations (GenInfo *genInfo)
 /* SetSpaceIndexes: set space indexes for each PdfStream according to MSD threshold */
 static void SetSpaceIndexes (MemHeap *x, GenInfo *genInfo)
 {
-   int i,j,k,s,m,t,p,stream;
-   float ContSpaceWeight;
+   int i,j,d,s,m,t,p,stream;
+   float ContSpaceWeight,binomial[3];
    Boolean ContSpace;
    PdfStream *pst;
    StateInfo *si;
@@ -732,35 +814,37 @@ static void SetSpaceIndexes (MemHeap *x, GenInfo *genInfo)
       /* determine continuous space or not */ 
       for (j=1; genInfo->sindex[i][j]!=0; j++) {
          si = genInfo->hmm[i]->svec[genInfo->sindex[i][j]].info;
-         for (p=stream=1; p<=genInfo->nPdfStream[0]; stream+=genInfo->nPdfStream[p++]) {
-            ContSpace = FALSE;
-            for (s=stream; s<stream+genInfo->nPdfStream[p]; s++) {
-               if (genInfo->hset->msdflag[s]) {
-                  ContSpaceWeight = 0.0;
-                  for (m=1; m<=si->pdf[s].info->nMix; m++)
-                     if (VectorSize(si->pdf[s].info->spdf.cpdf[m].mpdf->mean)==genInfo->hset->swidth[s])  /* total weight of all continuous mixtures */
-                        ContSpaceWeight += MixWeight(genInfo->hset, si->pdf[s].info->spdf.cpdf[m].weight);
-                  
-                  /* if any streams in the p-th PdfStream is determined to continuous, this frame determined to be continous */
-                  if (ContSpaceWeight > genInfo->MSDthresh) {
+         for (d=0; d<genInfo->durations[i][j]; d++) {
+            for (p=stream=1; p<=genInfo->nPdfStream[0]; stream+=genInfo->nPdfStream[p++]) {
+               ContSpace = FALSE;
+               for (s=stream; s<stream+genInfo->nPdfStream[p]; s++) {
+                  if (genInfo->hset->msdflag[s]) {
+                     ContSpaceWeight = 0.0;
+                     for (m=1; m<=si->pdf[s].info->nMix; m++)
+                        if (VectorSize(si->pdf[s].info->spdf.cpdf[m].mpdf->mean)==genInfo->hset->swidth[s])  /* total weight of all continuous mixtures */
+                           ContSpaceWeight += MixWeight(genInfo->hset, si->pdf[s].info->spdf.cpdf[m].weight);
+                     
+                     /* binomial distribution to randomly select continuous/discrete space */ 
+                     binomial[1] = ContSpaceWeight;  
+                     binomial[2] = 1.0 - ContSpaceWeight;
+                     
+                     /* if any streams in the p-th PdfStream is determined to continuous, this frame determined to be continous */
+                     if (  ((rFlags&RNDSPACE) && MultiNomial(binomial,2)==1) ||
+                          (!(rFlags&RNDSPACE) && ContSpaceWeight>genInfo->MSDthresh) ) {
+                        ContSpace = TRUE;
+                        break;
+                     }
+                  }
+                  else {
                      ContSpace = TRUE;
                      break;
                   }
                }
-               else {
-                  ContSpace = TRUE;
-                  break;
-               }
-            }
                
-            /* set frames belonging to this state continuous */
-            if (ContSpace) {
-               /* set ContSpace flag */
-               for (k=0; k<genInfo->durations[i][j]; k++)
-                  genInfo->pst[p].ContSpace[t+k] = TRUE;
-                  
-               /* update total number of frame in this PdfStream */
-               genInfo->pst[p].T += genInfo->durations[i][j];
+               if (ContSpace) {
+                  genInfo->pst[p].ContSpace[t+d] = TRUE;  /* set ContSpace flag */
+                  genInfo->pst[p].T++;  /* increment total number of frame in this PdfStream */
+               }
             }
          }
          t += genInfo->durations[i][j];
@@ -888,8 +972,8 @@ void ResetGenInfo (GenInfo *genInfo)
    return;
 }
 
-/* JointProb: joint probability of given observations and state sequence */ 
-static void JointProb (GenInfo *genInfo, UttInfo *utt)
+/* EXPORT->JointProb: joint probability of given observations and state sequence */ 
+void JointProb (GenInfo *genInfo, UttInfo *utt)
 {
    int i, j, d, t;
    LogFloat prob=0.0;
@@ -1058,8 +1142,8 @@ static void Forward_Substitution (PdfStream *pst)
       g[t] /= U[t][1];
       
       /* random generation */
-      if (rndpg)
-         g[t] += GaussDeviate(rndMean, rndVar);
+      if (rFlags&RNDPAR)
+         g[t] += GaussDeviate(rndParMean, rndParVar);
    }
    
    if (trace & T_MAT) {

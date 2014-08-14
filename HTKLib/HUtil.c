@@ -43,7 +43,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hutil_version = "!HVER!HUtil:   3.4 [CUED 25/04/06]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.12 2007/09/18 12:20:45 zen Exp $";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.17 2008/01/18 03:27:22 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -338,7 +338,7 @@ Boolean GoNextHMM(HMMScanState *hss)
    for (;hss->h<MACHASHSIZE;hss->h++)
       for (mac=((mac==NULL)?hss->hset->mtab[hss->h]:mac);
            mac!=NULL;mac=mac->next) {
-         if (mac->type == 'h') {
+         if (mac->type == 'h' && ((HLink)mac->structure)->numStates>1) {
             hss->mac = mac;
             hss->hmm = (HLink)mac->structure;
             hss->N = hss->hmm->numStates;
@@ -936,7 +936,7 @@ static void PMix(ILink models, ILink *ilist, char *type,
                if (IsMember(streams,s)) {
                   me = sti->spdf.cpdf+1;
                   for (m=1; m<=sti->nMix; m++,me++) 
-                     if ((MixWeight(hset,me->weight) > MINMIX) && IsMember(mixes,m)) {
+                     if ((hset->msdflag[s] || MixWeight(hset,me->weight)>MINMIX) && IsMember(mixes,m)) {
                         switch (what) {
                         case TMIX: /* tie ->mpdf */
                            if (trace & T_ITM)
@@ -1420,8 +1420,8 @@ void LoadStatsFile(char *statfile,HMMSet *hset,Boolean otrace)
 {
    Source src;
    char hname[256];
-   int i,idx,count,N,lnum = 0;
-   float x;
+   int i,s,idx,count,N,lnum = 0;
+   float x,tmp;
    HMMDef *hmm;
    MLink ml;
    LabId hmmId;
@@ -1454,6 +1454,16 @@ void LoadStatsFile(char *statfile,HMMSet *hset,Boolean otrace)
          si = hmm->svec[i].info;
          si->stateCounter = count;/* load the # of times the state occurred */
          memcpy(&(si->hook),&x,sizeof(float)); /* !! */
+         
+         for (s=1; s<=hset->swidth[0]; s++) {
+            if (si->pdf[s].info->hook==NULL)
+               tmp = 0.0;
+            else
+               memcpy(&tmp,&(si->pdf[s].info->hook),sizeof(float));
+            tmp += x;
+            memcpy(&(si->pdf[s].info->hook),&tmp,sizeof(float));
+         }
+         
          occSum += x; ++occN;
       }
    }

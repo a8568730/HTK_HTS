@@ -30,7 +30,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -128,14 +128,15 @@ typedef struct {
    MLink *qLink;       /* array[1..Q] of link to active HMM defs */
   LabId  *qIds;       /* array[1..Q] of logical HMM names (in qList) */
   short *qDms;        /* array[1..Q] of minimum model duration */
-  DVector *alphat;    /* array[1..Q][1..Nq] of prob */
-  DVector *alphat1;   /* alpha[t-1] */
-   DVector **alpha;    /* array[1..T][1..Q][1..Nq] of prob */
-  DVector **beta;     /* array[1..T][1..Q][1..Nq] of prob */
-   float *****otprob;  /* array[1..T][1..Q][2..Nq-1][0..S] of prob */
+   DVector **alphat;   /* array[1..Q][1..Nq][1..D] of prob */
+   DVector **alphat1;  /* alpha[t-1] */
+   DVector ***beta;    /* array[1..T][1..Q][1..Nq][1..D] of prob */
+   float *****otprob;  /* array[1..T][1..Q][2..Nq-1][0..S] of state output prob */
+   SVector **durprob;  /* array[1..Q][2..Nq-1][1..maxDur] of state dur prob */
+   int **maxDur;       /* array[1..Q][1..Nq] of max state duration */
   LogDouble pr;       /* log prob of current utterance */
   Vector occt;        /* occ probs for current time t */
-   Vector **occa;      /* array[1..T][1..Q][1..Nq] of occ probs (trace only) */
+  Vector *occa;       /* array[1..Q][1..Nq] of occ probs (trace only) */
    Vector ****occm;    /* array[1..T][1..Q][1..Nq][1..S][1..M] of occ probs (param gen only) */
 
 } AlphaBeta;
@@ -151,20 +152,22 @@ typedef struct {
    HMMSet *al_dset;    /* duration models to use for alignment */
                        /* these are equal unless 2 model reest */
   HSetKind hsKind;    /* kind of the alignment HMM system */
-   UPDSet uFlags;      /* parameter update flags for HMMs */
-   UPDSet dur_uFlags;  /* parameter update flags for duration models */
+   UPDSet uFlags_hmm;  /* parameter update flags for HMMs */
+   UPDSet uFlags_dur;  /* parameter update flags for duration models */
   int skipstart;      /* Skipover region - debugging only */
   int skipend;
   int maxM;           /* maximum number of mixtures in hmmset */
   int maxMixInS[SMAX];/* array[1..swidth[0]] of max mixes */
   AlphaBeta *ab;      /* Alpha-beta structure for this model */
-   
-   AdaptXForm *inXForm;        /* current input transform for HMMs (if any) */
-  AdaptXForm *al_inXForm;/* current input transform for al_hset (if any) */
-   AdaptXForm *paXForm;        /* current parent transform for HMMs (if any) */
-   AdaptXForm *dur_inXForm;    /* current input transform for duration models (if any) */
-   AdaptXForm *dur_al_inXForm; /* current input transform for al_dset (if any) */
-   AdaptXForm *dur_paXForm;    /* current parent transform for duration models (if any) */
+
+   XFInfo *xfinfo_hmm;         /* xform info for hmmset */
+   XFInfo *xfinfo_dur;         /* xform info for dmset */
+   AdaptXForm *inXForm_hmm;    /* current input transform for HMMs (if any) */
+   AdaptXForm *inXForm_dur;    /* current input transform for duration models (if any) */
+   AdaptXForm *al_inXForm_hmm; /* current input transform for al_hset (if any) */
+   AdaptXForm *al_inXForm_dur; /* current input transform for al_dset (if any) */
+   AdaptXForm *paXForm_hmm;    /* current parent transform for HMMs (if any) */
+   AdaptXForm *paXForm_dur;    /* current parent transform for duration models (if any) */
 } FBInfo;
 
 /* EXPORTED FUNCTIONS-------------------------------------------------*/
@@ -179,9 +182,9 @@ void ResetFB(void);
 void SetTraceFB(void);
 
 /* Initialise the forward backward memory stacks etc */
-void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, UPDSet uFlags, HMMSet *dset, UPDSet dur_uFlags,
+void InitialiseForBack(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, UPDSet uFlags_hmm, HMMSet *dset, UPDSet uFlags_dur,
                        LogDouble pruneInit, LogDouble pruneInc, LogDouble pruneLim, 
-                       float minFrwdP, Boolean useAlign);
+                       float minFrwdP, Boolean useAlign, Boolean genDur);
 
 /* Use a different model set for alignment */
 void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset, HMMSet *al_dset);
@@ -206,6 +209,9 @@ void InitUttObservations(UttInfo *utt, HMMSet *hset,
 
 /* reset the observation structures within UttInfo */ 
 void ResetUttObservations (UttInfo *utt, HMMSet *hset);
+
+/* reset all pre-calculated duration prob matrices */
+void ResetDMMPreComps (HMMSet *dset);
 
 /* FBUtt: apply forward-backward to given utterance */
 Boolean FBUtt(FBInfo *fbInfo, UttInfo *utt);

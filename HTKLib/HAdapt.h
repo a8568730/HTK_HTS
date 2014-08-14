@@ -39,7 +39,7 @@
 /*   Interdisciplinary Graduate School of Science and Engineering    */
 /*                  Tokyo Institute of Technology                    */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
+/*                     Copyright (c) 2001-2008                       */
 /*                       All Rights Reserved.                        */
 /*                                                                   */
 /*  Permission is hereby granted, free of charge, to use and         */
@@ -105,14 +105,70 @@ typedef struct {
   AdaptXForm *inXForm;
   AdaptXForm *outXForm;
   AdaptXForm *paXForm;
+   AdaptXForm *diagCovXForm;
   HMMSet *al_hset;
   AdaptXForm *al_inXForm;
    AdaptXForm *al_paXForm;
+   
+   /* Transform Kind to be created */
+   XFormKind outXKind;  
+   
+   /* whether a bias is to be estimated for the xform */
+   Boolean useBias;
+   
+   /* split threshold definitions for each stream for each xform kind */
+   Vector xformSplitThresh;
+   Vector mllrMeanSplitThresh;
+   Vector mllrCovSplitThresh;
+   Vector cmllrSplitThresh;
+
+   /* adaptation kind  definitions for each xform kind */
+   AdaptKind xformAdaptKind;
+   AdaptKind mllrMeanAdaptKind;
+   AdaptKind mllrCovAdaptKind;
+   AdaptKind cmllrAdaptKind;
+
+   /* regression tree definitions for each xform kind */
+   char *xformRegTree;
+   char *mllrMeanRegTree;
+   char *mllrCovRegTree;
+   char *cmllrRegTree;
+
+   /* baseclass definitions for each xform kind */
+   char *xformBaseClass;
+   char *mllrMeanBaseClass;
+   char *mllrCovBaseClass;
+   char *cmllrBaseClass;
+
+   /* block size definitions for each xform kind for each stream */
+   IntVec xformBlockSize[SMAX];
+   IntVec mllrMeanBlockSize[SMAX];
+   IntVec mllrCovBlockSize[SMAX];
+   IntVec cmllrBlockSize[SMAX];
+
+   /* band width definitions for each xform kind for each stream */
+   IntVec xformBandWidth[SMAX];
+   IntVec mllrMeanBandWidth[SMAX];
+   IntVec mllrCovBandWidth[SMAX];
+   IntVec cmllrBandWidth[SMAX];
+
+   /* number of nuisance dimensions for HLDA transform estimation */
+   int numNuisanceDim;
+   
+   char coutspkr[MAXSTRLEN];
+   char cinspkr[MAXSTRLEN];
+   char cpaspkr[MAXSTRLEN];
+   int nspkr;
+   
+   /* current time when this changes accumulate complete stats */
+   /* -1 indicates that this is the first frame of a new file */
+   int baseTriMatTime;
+
 } XFInfo;
 
 /* -------------------- Initialisation Functions -------------------------- */
 
-void InitAdapt(XFInfo *xfinfo);
+void InitAdapt(XFInfo *xfinfo_hmm, XFInfo *xfinfo_dur);
 /*
    Initialise configuration parameters
 */
@@ -122,20 +178,20 @@ void ResetAdapt (void);
    Reset adaptation module 
 */
 
-AdaptXForm *GetMLLRDiagCov(AdaptXForm *xform);
-void CheckAdaptSetUp (HMMSet *hset);
+AdaptXForm *GetMLLRDiagCov(XFInfo *xfinfo, AdaptXForm *xform);
+void CheckAdaptSetUp (HMMSet *hset, XFInfo *xfinfo);
 
 /* ---------------- Accumulation Control Functions ------------------------ */
 
-void SetBaseAccsTime(int t);
-void TidyBaseAccs(void);
+void SetBaseAccsTime(XFInfo *xfinfo, const int t);
+void TidyBaseAccs(XFInfo *xfinfo);
 /*
   Modifies the internal time of current frames. Is used to ensure that
   last frame is correctly added in using UpdateBaseTriMat
 */
 
 
-void AccAdaptFrame(double Lr, Vector svec, MixPDF *mp, int t, int s);
+void AccAdaptFrame(XFInfo *xfinfo, double Lr, Vector svec, MixPDF *mp, int t);
 /* 
    Accumulate frame stats into specific mixture comp transformed using parent
 */
@@ -209,13 +265,13 @@ AdaptXForm *CopyAdaptXForm(MemHeap *x, AdaptXForm *xform);
 
 /* ---------------  Transform Estimation Functions ----------------------- */
 
-AdaptXForm *CreateAdaptXForm(HMMSet *hset, char* xformName);
+AdaptXForm *CreateAdaptXForm(HMMSet *hset, XFInfo *xfinfo, char *xformName);
 /*
   Creates a new output transform. xformName will eventually
   be used as the macroname for the transform.
 */
 
-Boolean GenAdaptXForm(HMMSet *hset, AdaptXForm* xform);
+Boolean GenAdaptXForm(HMMSet *hset, XFInfo *xfinfo);
 /*
   Estimate the transform using the information and regression
   trees specified in the configuration files. Returns FALSE

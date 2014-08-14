@@ -65,8 +65,8 @@
 /*  ---------------------------------------------------------------  */
 
 char *hmath_version = "!HVER!HMath:   3.3 [CUED 28/04/05]";
-char *hmath_vc_id = "$Id: HMath.c,v 1.8 2007/10/02 11:54:38 zen Exp $";
-/* char *hmath_vc_id = "$Id: HMath.c,v 1.8 2007/10/02 11:54:38 zen Exp $"; */
+char *hmath_vc_id = "$Id: HMath.c,v 1.10 2007/12/19 16:59:19 zen Exp $";
+/* char *hmath_vc_id = "$Id: HMath.c,v 1.10 2007/12/19 16:59:19 zen Exp $"; */
 
 /*
    This library provides math support in the following three areas
@@ -2010,7 +2010,7 @@ void RandInit(int seed)
    SRAND(seed);
 }
 
-/* EXPORT->RandomValue:  */
+/* EXPORT->RandomValue: Return a random number in range 0.0->1.0 with uniform distribution */
 float RandomValue(void)
 {
    return RANDF();
@@ -2040,6 +2040,25 @@ float GaussDeviate(float mu, float sigma)
       x = v2*fac;
    }
    return x*sigma+mu;
+}
+
+/* EXPORT->MultiNomial: return a random number in range 1->N with multinomial distribution */
+int MultiNomial(Vector prob, const int N)
+{
+   int i;
+   float p,sum=0.0;
+   
+   if (N==1) return 1;
+
+   for (i=1; i<=N; i++) sum += prob[i];
+
+   p = sum * RandomValue();  sum = 0.0;
+   for (i=1; i<=N; sum+=prob[i++]) {
+      if (sum<p && p<=sum+prob[i])
+         return i;
+   }
+   
+   return N;
 }
 
 /* --------------------- Initialisation ---------------------- */

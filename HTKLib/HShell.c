@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hshell_version = "!HVER!HShell:   3.4 [CUED 25/04/06]";
-char *hshell_vc_id = "$Id: HShell.c,v 1.8 2007/09/18 12:20:45 zen Exp $";
+char *hshell_vc_id = "$Id: HShell.c,v 1.9 2007/12/12 09:45:50 zen Exp $";
 
 #include "HShell.h"
 
@@ -2157,18 +2157,34 @@ void PrintStdOpts(char *opt)
       printf(" -L dir  Set input label (or net) dir         current\n");
    if (strchr(opt,'M'))
       printf(" -M dir  Dir to write HMM macro files         current\n");
+   if (strchr(opt,'N'))
+      printf(" -N mmf  Load duration macro file mmf\n");
    if (strchr(opt,'O'))
       printf(" -O      Set target data format to fmt        as config\n");
    if (strchr(opt,'P'))
       printf(" -P      Set target label format to fmt       as config\n");
    if (strchr(opt,'Q'))
       printf(" -Q      Print command summary\n");
+   if (strchr(opt,'R'))
+      printf(" -R dir  Dir to write duration macro files                 current\n");
    if (strchr(opt,'S'))
    printf(" -S f    Set script file to f                 none\n");
    printf(" -T N    Set trace flags to N                 0\n");
    printf(" -V      Print version information            off\n");
+   if (strchr(opt,'W')) {
+      printf(" -W s [s] set dir for duration parent xform to s           off\n");
+      printf("         and optional extension                 \n");
+   }
    if (strchr(opt,'X'))
       printf(" -X ext  Set input label (or net) file ext    lab\n");
+   if (strchr(opt,'Y')) {
+      printf(" -Y s [s] set dir for duration input xform to s            none\n");
+      printf("         and optional extension                            \n");
+   }
+   if (strchr(opt,'Z')) {
+      printf(" -Z s [s] set dir for duration output xform to s           none\n");
+      printf("         and optional extension                            \n");
+   }
 }
 
 /* -------------------------- End of HShell.c ----------------------------- */

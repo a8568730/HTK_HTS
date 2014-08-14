@@ -78,7 +78,7 @@
 /*  ---------------------------------------------------------------  */
 
 char *hrest_version = "!HVER!HRest:   3.4 [CUED 25/04/06]";
-char *hrest_vc_id = "$Id: HRest.c,v 1.5 2007/09/18 12:24:07 zen Exp $";
+char *hrest_vc_id = "$Id: HRest.c,v 1.7 2007/12/16 16:28:24 zen Exp $";
 
 /*
    This program is used to estimate the transition parameters,
@@ -1452,7 +1452,7 @@ void SaveDuration(void)
 { 
    int i; 
    double mean, var; 
-   char base[MAXSTRLEN];
+   char base[MAXSTRLEN],buf[MAXSTRLEN];
    FILE *fp;
    LabId hmmId;
    
@@ -1465,23 +1465,30 @@ void SaveDuration(void)
 
    /* ---- Output duration model ---- */
    /* output model definition */
-   fprintf(fp,"~o\n<VECSIZE> %d<GEND><USER><DIAGC>\n",nStates-2);
+   fprintf(fp,"~o\n");
+   fprintf(fp,"<STREAMINFO> %d", nStates-2);
+   for (i=1; i<=nStates-2; i++)
+      fprintf(fp," 1");
+   fprintf(fp,"\n<MSDINFO> %d", nStates-2);
+   for (i=1; i<=nStates-2; i++)
+      fprintf(fp," 0");
+   fprintf(fp,"\n<VECSIZE> %d <NULLD><DIAGC><%s>\n",nStates-2,ParmKind2Str(hset.pkind,buf));
    fprintf(fp,"~h \"%s\"\n",hmmId->name);
    fprintf(fp,"<BEGINHMM>\n<NUMSTATES> 3\n<STATE> 2\n");
-
-   /* output mean */
-   fprintf(fp,"<MEAN> %d\n",nStates-2);
-   for (i=2;i<nStates;i++){
+               
+   /* output mean & variance */
+   for (i=2; i<nStates; i++) {
+      fprintf(fp,"<STREAM> %d\n", i-1);
+      
+      /* mean */
       if (durOcc[i-1]<=LSMALL) mean = 0;
       else mean = L2F(durSum[i-1]-durOcc[i-1]);
-      fprintf(fp,"%e ",mean);
-   }
-
-   /* output variance */
-   fprintf(fp,"\n<VARIANCE> %d\n",nStates-2);
-   for (i=2;i<nStates;i++){
+      fprintf(fp,"<MEAN> 1\n");
+      fprintf(fp," %e\n",mean);
+      
+      /* variance */
       if ( (durOcc[i-1]<=LSMALL) 
-         ||(durSqr[i-1]-durOcc[i-1]<2*(durSum[i-1]-durOcc[i-1])) )
+           ||(durSqr[i-1]-durOcc[i-1]<2*(durSum[i-1]-durOcc[i-1])) )
          var = minVar;
       else {
          var = LSub(durSqr[i-1]-durOcc[i-1], 2*(durSum[i-1]-durOcc[i-1]));
@@ -1489,11 +1496,12 @@ void SaveDuration(void)
       }
       /* floor variance */
       if (var<minVar) var = minVar;
-         fprintf(fp,"%e ",var);
+      fprintf(fp,"<VARIANCE> 1\n");
+      fprintf(fp," %e\n",var);
    }
 
    /* output dummy transP */
-   fprintf(fp,"\n<TRANSP> 3\n");
+   fprintf(fp,"<TRANSP> 3\n");
    fprintf(fp,"0 1 0\n0 0 1\n0 0 0\n");
    fprintf(fp,"<ENDHMM>\n");
 
@@ -1550,9 +1558,8 @@ void ReEstimateModel(void)
       }
    } while ((iteration < maxIter) && !converged);
    
-   if (calcDuration) {
+   if (calcDuration)
       SaveDuration();
-   }
    
    if (trace&T_TOP) {
       if (converged)
