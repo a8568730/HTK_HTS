@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *herest_version = "!HVER!HERest:   3.4.1 [CUED 12/03/09]";
-char *herest_vc_id = "$Id: HERest.c,v 1.42 2010/04/08 04:50:30 uratec Exp $";
+char *herest_vc_id = "$Id: HERest.c,v 1.47 2010/11/09 14:58:49 uratec Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -322,6 +322,7 @@ void ReportUsage(void)
    printf(" -g s    output duration model to file s                   none\n");
    printf(" -h s    set output speaker name pattern   *.%%%%%%\n");
    printf("         to s, optionally set input and parent patterns\n");
+   printf(" -k f    set temperature parameter for DAEM training       1.0\n");
    printf(" -l N    set max files per speaker            off\n");
    printf(" -m N    set min examples needed per model    3\n");
    printf(" -n s    dir to find duration model definitions            current\n");
@@ -691,6 +692,9 @@ int main(int argc, char *argv[])
          if (NextArg() != STRINGARG)
             HError(2319,"HERest: output duration TMF file expected");
          xfInfo_dur.xformTMF = GetStrArg(); break;
+      case 'k':
+         SetDAEMTemp(GetChkedFlt(0.0,1.0,s));
+         break;
       default:
          HError(2319,"HERest: Unknown switch %s",s);
       }
@@ -1000,12 +1004,12 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, HMMSet *dset, char *hm
          if ((hsKind != PLAINHS) && (hsKind != SHAREDHS))
             HError(999,"Can only estimated transforms with PLAINHS and SHAREDHS!");
          xfInfo_dur.useOutXForm = TRUE;
-      /* This initialises things - temporary hack - THINK!! */
+         /* This initialises things - temporary hack - THINK!! */
          CreateAdaptXForm(dset, &xfInfo_dur, "tmp");
-   } 
+      }
       if ((uFlags_dur&UPXFORM) || (uFlags_dur&UPSEMIT))
          CheckAdaptSetUp(dset,&xfInfo_dur);
-
+      
    }
    
    if (trace&T_TOP) {

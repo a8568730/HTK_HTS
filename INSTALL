@@ -13,10 +13,10 @@ Installation Instructions
    % tar -zxvf HTK-3.4.1.tar.gz
    % tar -zxvf HDecode-3.4.1.tar.gz
 
-3. And then apply HTS-2.1.1_for_HTK-3.4.1.patch for HTK-3.4.1 as
+3. And then apply HTS-2.2alpha_for_HTK-3.4.1.patch for HTK-3.4.1 as
 
    % cd htk
-   % patch -p1 -d . < HTS-2.1.1_for_HTK-3.4.1.patch
+   % patch -p1 -d . < HTS-2.2alpha_for_HTK-3.4.1.patch
 
 4. Run configure script with appropriate options.
 

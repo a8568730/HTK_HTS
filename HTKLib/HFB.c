@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hfb_version = "!HVER!HFB:   3.4.1 [CUED 12/03/09]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.42 2010/04/08 04:50:29 uratec Exp $";
+char *hfb_vc_id = "$Id: HFB.c,v 1.48 2010/11/24 09:07:36 bonanza Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -478,7 +478,7 @@ void UseAlignHMMSet(FBInfo* fbInfo, MemHeap* x, HMMSet *al_hset, HMMSet *al_dset
             
       if (fbInfo->uFlags_dur&(UPMEANS|UPVARS)) {
          HRError(7392,"UseAlignHMMSet: Don't update duration models on a 2-model alignment"); 
-         fbInfo->uFlags_hmm = (UPDSet) 0;
+         fbInfo->uFlags_dur = (UPDSet) 0;
       }
       AttachWtTrAccs(al_dset, x);
       fbInfo->al_dset = al_dset;
@@ -563,8 +563,8 @@ static void SetOcct(HLink hmm, int q, Vector occt, Vector *occa, int *maxDur,
       for (d=1; d<=maxDur[i]; d++)
          if (aqt[i][d]>LSMALL && bqt[i][d]>LSMALL)
             x = LAdd(x,aqt[i][d]+bqt[i][d]);
-      if (i==1 && bq1t != NULL && hmm->transP[1][N] > LSMALL)
-         x = LAdd(x,aqt[1][1]+bq1t[1][1]+hmm->transP[1][N]);
+      if (i==1 && bq1t != NULL && ApplyDAEM(hmm->transP[1][N]) > LSMALL)
+	 x = LAdd(x,aqt[1][1]+bq1t[1][1]+ApplyDAEM(hmm->transP[1][N]));
       x -= pr;
       occt[i] = (x>MINEARG) ? exp(x) : 0.0;
    }
@@ -700,7 +700,7 @@ static int CreateInsts(FBInfo *fbInfo, AlphaBeta *ab, int Q, Transcription *tr)
       if (al_dset!=NULL) {
          al_dList=(HLink *)New(&ab->abMem, Q*sizeof(HLink));
          --al_dList;
-      }
+   }
    }
    else {
       /* use same list for update and align */
@@ -839,19 +839,19 @@ static void InitAlpha(AlphaBeta *ab, int *start, int *end,
       if((outprob = ab->otprob[1][q]) == NULL)
          HError(7322,"InitAlpha: Outprob NULL in model %d in InitAlpha",q);
       for (j=2;j<Nq;j++) {
-         a = hmm->transP[1][j];
+	 a = ApplyDAEM(hmm->transP[1][j]);
          aq[j][1] = (a>LSMALL) ? aq[1][1]+a+outprob[j][0][0] : LZERO;
          for (d=2; d<=maxDur[j]; d++)
             aq[j][d] = LZERO;
       }
       x = LZERO;
       for (i=2;i<Nq;i++) {
-         a = hmm->transP[i][Nq];
+	 a = ApplyDAEM(hmm->transP[i][Nq]);
          if (a>LSMALL)
             x = LAdd(x,aq[i][1]+durprob[i][1]+a);
       }
       aq[Nq][1] = x;
-      a1N = hmm->transP[1][Nq];
+      a1N = ApplyDAEM(hmm->transP[1][Nq]);
    }
    ZeroAlpha(ab,eq+1,Q);
    if (trace&T_PRU && p->pruneThresh < NOPRUNE)
@@ -969,10 +969,10 @@ static void StepAlpha(AlphaBeta *ab, int t, int *start, int *end,
             aq[1][1] = LAdd(aq[1][1], alphat[q-1][1][1]+a1N);
       }
       for (j=2;j<Nq;j++) {
-         a = hmm->transP[1][j];
+	 a = ApplyDAEM(hmm->transP[1][j]);
          x = (a>LSMALL) ? aq[1][1]+a : LZERO;
          for (i=2;i<Nq;i++){
-            a = hmm->transP[i][j];
+	    a = ApplyDAEM(hmm->transP[i][j]);
             if (a>LSMALL)
                for (d=1; d<=maxDur[i]; d++) {
                   y = laq[i][d];
@@ -987,7 +987,7 @@ static void StepAlpha(AlphaBeta *ab, int t, int *start, int *end,
       }
       x = LZERO;
       for (i=2;i<Nq;i++){
-         a = hmm->transP[i][Nq];
+	a = ApplyDAEM(hmm->transP[i][Nq]);
          if (a>LSMALL)
             for (d=1; d<=maxDur[i]; d++) {
                y = aq[i][d];
@@ -995,7 +995,7 @@ static void StepAlpha(AlphaBeta *ab, int t, int *start, int *end,
                   x = LAdd(x,y+durprob[i][d]+a);
             }
       }
-      aq[Nq][1] = x; a1N = hmm->transP[1][Nq];
+      aq[Nq][1] = x; a1N = ApplyDAEM(hmm->transP[1][Nq]);
    }
    if (eq<Q) ZeroAlpha(ab,eq+1,Q);
 
@@ -1159,6 +1159,7 @@ static float * ShStrP(HMMSet *hset, StreamInfo *sti, Vector v, const int t,
                pMix->prob = x; pMix->time = t;
             }
          }
+         x = ApplyDAEM(x);
       } else if (sharedMix) { /* Multiple Mixture Case - general case */
          x = LZERO;
          for (m=1;m<=M;m++,me++) {
@@ -1175,6 +1176,8 @@ static float * ShStrP(HMMSet *hset, StreamInfo *sti, Vector v, const int t,
                      pMix->prob = mixp; pMix->time = t;
                   }
                }
+               mixp = ApplyDAEM(mixp);
+               wt   = ApplyDAEM(wt);
                if (mixp>LSMALL && wt>LSMALL)
                x = LAdd(x,wt+mixp);
 	       outprobjs[m] = mixp;
@@ -1188,6 +1191,8 @@ static float * ShStrP(HMMSet *hset, StreamInfo *sti, Vector v, const int t,
                mp = me->mpdf;
 	       mixp = MOutP(ApplyCompFXForm(mp,v,xform,&det,t),mp);
 	       mixp += det;
+               mixp = ApplyDAEM(mixp);
+               wt   = ApplyDAEM(wt);
                if (mixp>LSMALL && wt>LSMALL)
                x = LAdd(x,wt+mixp);
 	       outprobjs[m] = mixp;
@@ -1200,6 +1205,8 @@ static float * ShStrP(HMMSet *hset, StreamInfo *sti, Vector v, const int t,
 	 otvs = ApplyCompFXForm(mp,v,xform,&det,t);
 	 mixp = IDOutP(otvs,VectorSize(otvs),mp); /* INVDIAGC assumed */
 	 mixp += det;
+         mixp = ApplyDAEM(mixp);
+         wt   = ApplyDAEM(wt);
 	 x = wt+mixp;
 	 outprobjs[1] = mixp;
 	 for (m=2,me=sti->spdf.cpdf+2;m<=M;m++,me++) {
@@ -1209,6 +1216,8 @@ static float * ShStrP(HMMSet *hset, StreamInfo *sti, Vector v, const int t,
 	       otvs = ApplyCompFXForm(mp,v,xform,&det,t);
 	       if (PDEMOutP(otvs,mp,&mixp,x-wt-det) == TRUE) {
 		  mixp += det;
+                  mixp = ApplyDAEM(mixp);
+                  wt   = ApplyDAEM(wt);
                   if (mixp>LSMALL && wt>LSMALL)
 		  x = LAdd(x,wt+mixp);
 	       }
@@ -1388,6 +1397,7 @@ static void Setdurprob(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
                   dur[1] = (float)d;
                   dprob[d] = MOutP(ApplyCompFXForm(mp,dur,fbInfo->al_inXForm_dur,&det,d),mp);
                   dprob[d] += det;
+                  dprob[d] = ApplyDAEM(dprob[d]);
                }
                if (stw!=1.0) /* multiply stream weight */
                   for (d=1; d<=maxDur; d++) dprob[d] *= stw;
@@ -1644,16 +1654,16 @@ static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
       bqt[Nq][1] = (q==Q) ? 0.0 : beta[T][q+1][lNq][1]+a1N;
       for (i=2;i<Nq;i++) 
          for (d=1; d<=maxDur[i]; d++)
-            bqt[i][d] = durprob[i][d] + hmm->transP[i][Nq] + bqt[Nq][1];
+	    bqt[i][d] = durprob[i][d] + ApplyDAEM(hmm->transP[i][Nq]) + bqt[Nq][1];
       outprob = ab->otprob[T][q];
       x = LZERO;
       for (j=2; j<Nq; j++){
-         a = hmm->transP[1][j]; y = bqt[j][1];
+	 a = ApplyDAEM(hmm->transP[1][j]); y = bqt[j][1];
          if (a>LSMALL && y > LSMALL)
             x = LAdd(x,a+outprob[j][0][0]+y);
       }
       bqt[1][1] = x;
-      lNq = Nq; a1N = hmm->transP[1][Nq];
+      lNq = Nq; a1N = ApplyDAEM(hmm->transP[1][Nq]);
       if (x>gMax) {
          gMax = x; q_at_gMax = q;
       }
@@ -1691,10 +1701,10 @@ static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
             bqt[Nq][1] = LAdd(bqt[Nq][1], beta[t][q+1][lNq][1]+a1N);
          for (i=Nq-1;i>1;i--){
             for (d=1; d<=maxDur[i]; d++) {
-               x = durprob[i][d] + hmm->transP[i][Nq] + bqt[Nq][1];
+	       x = durprob[i][d] + ApplyDAEM(hmm->transP[i][Nq]) + bqt[Nq][1];
                if (q>=p->qLo[t+1] && q<=p->qHi[t+1]) {
                for (j=2;j<Nq;j++) {
-                     a = hmm->transP[i][j]; y = bqt1[j][1];
+		     a = ApplyDAEM(hmm->transP[i][j]); y = bqt1[j][1];
                   if (a>LSMALL && y>LSMALL)
                         x = LAdd(x,durprob[i][d]+a+outprob[j][0][0]+y);
                   }
@@ -1702,7 +1712,7 @@ static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
                      x = LAdd(x,outprob[i][0][0]+bqt1[i][d+1]);
                }
                bqt[i][d] = x;
-               }
+            }
             /* compute lMax and gMax only if pruning is on */
             if (p->pruneThresh < NOPRUNE) { 
                x = LZERO;
@@ -1718,14 +1728,14 @@ static LogDouble SetBeta(AlphaBeta *ab, FBInfo *fbInfo, UttInfo *utt)
          outprob = ab->otprob[t][q];
          x = LZERO;
          for (j=2; j<Nq; j++){
-            a = hmm->transP[1][j];
+	    a = ApplyDAEM(hmm->transP[1][j]);
             y = bqt[j][1];
             if (a>LSMALL && y>LSMALL)
                x = LAdd(x,a+outprob[j][0][0]+y);
          }
          bqt[1][1] = x;
          maxP[q] = lMax;
-         lNq = Nq; a1N = hmm->transP[1][Nq];
+         lNq = Nq; a1N = ApplyDAEM(hmm->transP[1][Nq]);
       }
       while (gMax-maxP[startq] > p->pruneThresh) {
          beta[t][startq] = NULL;
@@ -1866,7 +1876,7 @@ static void UpTranParms(FBInfo *fbInfo, HLink hmm, int t, int q,
       ti = ta->tran[i]; ai = hmm->transP[i];
       for (j=2;j<=N;j++) {
          if (i==1 && j<N) {                  /* entry transition */
-            x = aqt[1][1]+ai[j]+outprob[j][0][0]+bqt[j][1]-pr;
+	    x = aqt[1][1]+ApplyDAEM(ai[j])+outprob[j][0][0]+bqt[j][1]-pr;
          }
          else {
             if (i>1 && j<N && bqt1!=NULL) {     /* internal transition */
@@ -1874,7 +1884,7 @@ static void UpTranParms(FBInfo *fbInfo, HLink hmm, int t, int q,
                for (d=1; d<=maxDur[i]; d++)
                   if (aqt[i][d]>LSMALL)
                      x = LAdd(x,aqt[i][d]+durprob[i][d]);
-               x += ai[j]+outprob1[j][0][0]+bqt1[j][1]-pr;
+               x += ApplyDAEM(ai[j])+outprob1[j][0][0]+bqt1[j][1]-pr;
             }
             else {
                if (i>1 && j==N) {                  /* exit transition */
@@ -1882,7 +1892,7 @@ static void UpTranParms(FBInfo *fbInfo, HLink hmm, int t, int q,
                   for (d=1; d<=maxDur[i]; d++)
                      if (aqt[i][d]>LSMALL)
                         x = LAdd(x,aqt[i][d]+durprob[i][d]);
-                  x += ai[N]+bqt[N][1]-pr;
+                  x += ApplyDAEM(ai[N])+bqt[N][1]-pr;
                }
                else
                   x = LZERO;
@@ -1890,12 +1900,12 @@ static void UpTranParms(FBInfo *fbInfo, HLink hmm, int t, int q,
 	 }
          if (x>MINEARG) {
             ti[j] += exp(x); ta->occ[i] += exp(x);
-               }
-         if (i==1 && j==N && ai[N]>LSMALL && bq1t != NULL){ /* tee transition */
-            x = aqt[1][1]+ai[N]+bq1t[1][1]-pr;
+         }
+         if (i==1 && j==N && ApplyDAEM(ai[N])>LSMALL && bq1t != NULL){ /* tee transition */
+	    x = aqt[1][1]+ApplyDAEM(ai[N])+bq1t[1][1]-pr;
             if (x>MINEARG) {
                ti[N] += exp(x); ta->occ[i] += exp(x);
-            }
+               }
          }
       }
    }
@@ -1981,10 +1991,10 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
    for (j=2;j<N;j++) {
       si = hmm->svec[j].info;
       if (fbInfo->maxM>1){
-         initx = hmm->transP[1][j] + aqt[1][1];
+	 initx = ApplyDAEM(hmm->transP[1][j]) + aqt[1][1];
          if (t>1) {
             for (i=2;i<N;i++){
-               a = hmm->transP[i][j];
+	       a = ApplyDAEM(hmm->transP[i][j]);
                if (a>LSMALL)
                   for (d=1; d<=maxDur[i]; d++)
                      if (aqt1[i][d]>LSMALL)
@@ -2059,14 +2069,14 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                   }
                   else {
                      otvs = ApplyCompFXForm(mp,o2[t].fv[s],inxform,&det,t);
-                  }
+               }
                } else if (fbInfo->twoModels) {
                   otvs = ApplyCompFXForm(mp,o[t].fv[s],inxform,&det,t);
                } else
                   otvs = o[t].fv[s];
                order = SpaceOrder(otvs);
-               wght = stw * MixLogWeight(hset,me->weight);
-               prob = (fbInfo->twoModels) ? MOutP(otvs,mp)+det : ((S==1) ? outprob[0][mx] : outprob[s][mx]);
+               wght = stw * ApplyDAEM(MixLogWeight(hset,me->weight));
+               prob = (fbInfo->twoModels) ? ApplyDAEM(MOutP(otvs,mp)+det) : ((S==1) ? outprob[0][mx] : outprob[s][mx]);
                comp_prob[mx] = (!hset->msdflag[s] || (hset->msdflag[s] && order==VectorSize(mp->mean))) ? stw*prob : LZERO;  /* MSD check */
                if (wght+comp_prob[mx]>LSMALL)
                   norm = LAdd(norm,wght+comp_prob[mx]);
@@ -2099,6 +2109,7 @@ static void UpMixParms(FBInfo *fbInfo, int q, HLink hmm, HLink al_hmm,
                break;
             }
             if (wght>LMINMIX){
+              wght = ApplyDAEM(wght);
               /* compute mixture likelihood  */
               if (!mmix || (hsKind==DISCRETEHS)) {/* For DISCRETEHS calcs are same as single mix*//* note: only SHAREDHS or PLAINHS */
                   x = LZERO;
@@ -2328,20 +2339,20 @@ static void UpDurParms(FBInfo *fbInfo, UttInfo *utt, HLink hmm, const int t, con
       /* initial term */
       if (!semiMarkov) {
          /* HMM */
-         initx = hmm->transP[1][j] + aqt[1][1];
+	 initx = ApplyDAEM(hmm->transP[1][j]) + aqt[1][1];
          if (t>1) {
             for (i=2; i<N; i++)
-               if (i!=j && hmm->transP[i][j]>LSMALL && aqt1[i][1]>LSMALL)
-                  initx = LAdd(initx,aqt1[i][1]+hmm->transP[i][j]);
+	       if (i!=j && ApplyDAEM(hmm->transP[i][j])>LSMALL && aqt1[i][1]>LSMALL)
+		  initx = LAdd(initx,aqt1[i][1]+ApplyDAEM(hmm->transP[i][j]));
          }
       }
       else {
          /* HSMM */
-         initx = hmm->transP[j][N]+bqt[N][1];
+	 initx = ApplyDAEM(hmm->transP[j][N])+bqt[N][1];
          if (bqt1!=NULL)
             for (i=2; i<N; i++)
-               if (hmm->transP[j][i]>LSMALL && bqt1[i][1]>LSMALL)
-                  initx = LAdd(initx,hmm->transP[j][i]+ab->otprob[t+1][q][i][0][0]+bqt1[i][1]);
+	       if (ApplyDAEM(hmm->transP[j][i])>LSMALL && bqt1[i][1]>LSMALL)
+		  initx = LAdd(initx,ApplyDAEM(hmm->transP[j][i])+ab->otprob[t+1][q][i][0][0]+bqt1[i][1]);
       }
 
       for (m=1; m<=sti->nMix; m++) {
@@ -2359,15 +2370,15 @@ static void UpDurParms(FBInfo *fbInfo, UttInfo *utt, HLink hmm, const int t, con
                   /* HMM */
                   initx += ab->otprob[t+d-1][q][j][0][0];
                   if (d>1) 
-                     initx += hmm->transP[j][j];
+		     initx += ApplyDAEM(hmm->transP[j][j]);
    
-                  x = hmm->transP[j][N];
+                  x = ApplyDAEM(hmm->transP[j][N]);
                   if (t+d-1<T) {
                      x += (p->qLo[t+d]<=q+1 && q+1<=p->qHi[t+d]) ? ab->beta[t+d][q+1][1][1] : LZERO;
                      if (p->qLo[t+d]<=q && q<=p->qHi[t+d]) {
                         for (k=2; k<N; k++)
-                           if (k!=j && hmm->transP[j][k]>LSMALL && ab->beta[t+d][q][k][1]>LSMALL)
-                              x = LAdd(x, hmm->transP[j][k]+ab->otprob[t+d][q][k][0][0]+ab->beta[t+d][q][k][1]);
+			   if (k!=j && ApplyDAEM(hmm->transP[j][k])>LSMALL && ab->beta[t+d][q][k][1]>LSMALL)
+			      x = LAdd(x, ApplyDAEM(hmm->transP[j][k])+ab->otprob[t+d][q][k][0][0]+ab->beta[t+d][q][k][1]);
                      }
                   }
                }

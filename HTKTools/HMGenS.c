@@ -42,8 +42,8 @@
 /* POSSIBILITY OF SUCH DAMAGE.                                       */
 /* ----------------------------------------------------------------- */
 
-char *hmgens_version = "!HVER!HMGenS:   2.1.1 beta  [NIT 25/12/09]";
-char *hmgens_vc_id = "$Id: HMGenS.c,v 1.47 2010/04/08 04:50:30 uratec Exp $";
+char *hmgens_version = "!HVER!HMGenS: 2.1.1 [NIT 25/12/09]";
+char *hmgens_vc_id = "$Id: HMGenS.c,v 1.49 2010/07/09 07:37:32 uratec Exp $";
 
 /*  
     This program is used to generate feature vector sequences 
@@ -409,7 +409,7 @@ int main (int argc,char *argv[])
          break;
       case 'E':
          if (NextArg()!=STRINGARG)
-            HError(2319,"HVite: parent transform directory expected");
+            HError(2319,"HMGenS: parent transform directory expected");
          xfInfo_hmm.usePaXForm = TRUE;
          xfInfo_hmm.paXFormDir = GetStrArg();
          if (NextArg()==STRINGARG)

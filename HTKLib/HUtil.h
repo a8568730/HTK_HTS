@@ -213,6 +213,12 @@ char *HMMPhysName(HMMSet *hset,HLink hmm);
    Aborts if model does not exist.
 */
 
+char *HMMPhysNameFromStreamInfo(HMMSet *hset, StreamInfo *sti, int *state, int *stream);
+/*
+   Return name, state index, and stream index of given StreamInfo from HMMSet.
+   Return NULL if it does not exist.
+*/
+
 /* --------------------- Item List Handling -------------------- */
 
 /* 

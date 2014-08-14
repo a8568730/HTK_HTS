@@ -76,7 +76,7 @@
 
 
 /*
-   This module provides facilities to apply a HMM set to 
+   This module provides facilities to apply an HMM set to 
    forward-backward align a sequence of training files and
    collect statistics from each alignment.  The exact
    statistics to capture are defined by a set of flags and

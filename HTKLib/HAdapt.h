@@ -332,6 +332,9 @@ void UpdateProjectModels(HMMSet *hset, char *dir);
   Applies the projection to the HMMSet and stores transforms etc.
 */
 
+/* for AX command in HHEd */
+void AttachXFormInfo(HMMSet *hset);
+void ApplyMapXForm(MixPDF *mp, MixPDF *mp_map, AdaptXForm *xform, Boolean full);
 
 #ifdef __cplusplus
 }

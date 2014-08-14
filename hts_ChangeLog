@@ -1,3 +1,145 @@
+2010-12-21 15:03  bonanza
+
+	* HTKLib/HAdapt.c: Merge patch code by Heiga Zen of Toshiba
+	  Research Europe Ltd. Cambridge Research Laboratory: Fix bugs that
+	  estimation of output xform can become extremely slow, when we
+	  cascade transforms.
+
+2010-12-07 08:10  bonanza
+
+	* HTKLib/HModel.c: Merge patch code by Heiga Zen of Toshiba
+	  Research Europe Ltd. Cambridge Research Laboratory: Fix bugs in
+	  GetRegTree
+
+2010-12-07 08:04  bonanza
+
+	* HTKLib/HModel.c: ApplyDAEM: fix bug about LZERO
+
+2010-12-02 14:23  uratec
+
+	* HTKTools/HHEd.c: Add PX help message.
+
+2010-12-02 13:58  uratec
+
+	* HTKTools/: HHEd.c, HSMMAlign.c: Remove warning given by Intel
+	  compiler: suggested by Heiga Zen of Toshiba Research Europe Ltd.
+	  Cambridge Research Laboratory.
+
+2010-11-24 18:37  uratec
+
+	* configure, HTKTools/HHEd.c: Modify help message of HHEd.
+
+2010-11-24 18:07  bonanza
+
+	* HTKLib/HFB.c: Modified for DAEM transP
+
+2010-11-24 17:21  bonanza
+
+	* HTKTools/HHEd.c: Modified Ref*** functions
+
+2010-11-24 09:23  uratec
+
+	* configure.ac, HTKLib/HFB.c, HTKLib/HFBLat.h, HTKLib/HModel.c,
+	  HTKLib/HModel.h, HTKLib/HNet.c, HTKLib/HParm.c, HTKTools/HHEd.c:
+	  Fix many bugs and typos: suggested by Heiga Zen of Toshiba
+	  Research Europe Ltd. Cambridge Research Labratory.
+
+2010-11-17 18:39  bonanza
+
+	* HTKTools/HHEd.c: bug fix about context-clustering using reference
+	  tree
+
+2010-11-16 13:10  uratec
+
+	* HTKTools/HHEd.c: Add command summary for SM and AX.
+
+2010-11-15 13:49  uratec
+
+	* HTKTools/HSMMAlign.c: Add pruning option to HSMMAlign.
+
+2010-11-09 23:58  uratec
+
+	* HTKTools/HERest.c: Change range of beta for DAEM.
+
+2010-11-09 23:34  bonanza
+
+	* HTKTools/HHEd.c: add useage comment for useRefTree
+
+2010-11-09 23:31  bonanza
+
+	* HTKLib/HFB.c, HTKTools/HERest.c: bug fix about DAEM training
+
+2010-11-09 14:36  uratec
+
+	* HTKTools/HHEd.c: Remove warning given by compiler.
+
+2010-11-09 14:18  bonanza
+
+	* HTKLib/HFB.c, HTKLib/HModel.c, HTKLib/HModel.h,
+	  HTKTools/HERest.c: commit DAEM training
+
+2010-11-09 13:33  bonanza
+
+	* HTKLib/HUtil.c, HTKTools/HHEd.c: TB command using reference trees
+
+2010-11-09 10:01  uratec
+
+	* HTKTools/HHEd.c: Add number of command in HHEd.
+
+2010-11-09 08:22  uratec
+
+	* HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HModel.c, HTKLib/HModel.h,
+	  HTKLib/HUtil.c, HTKTools/HERest.c, HTKTools/HHEd.c: Re-commit
+	  state mapping based CLSA func.
+
+2010-11-08 20:26  bonanza
+
+	* HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HModel.c, HTKLib/HModel.h,
+	  HTKTools/HERest.c: commit DAEM training
+
+2010-11-08 20:24  bonanza
+
+	* HTKLib/HUtil.c, HTKTools/HHEd.c: commit TreeBuildCommand using
+	  loaded trees
+
+2010-11-08 11:05  uratec
+
+	* HTKTools/HHEd.c: Add warning comments.
+
+2010-11-08 09:36  uratec
+
+	* HTKLib/HAdapt.c, HTKLib/HAdapt.h, HTKTools/HHEd.c: Add
+	  state-mapping adaptation to ApplyXFormCommand in HHEd.
+
+2010-11-05 13:13  uratec
+
+	* HTKLib/HUtil.c, HTKLib/HUtil.h, HTKTools/HHEd.c: Add state
+	  mapping command (SM).
+
+2010-11-05 09:35  uratec
+
+	* configure, configure.ac, HTKLib/HGen.h, HTKLib/lbfgs.h: Update
+	  version to 2.2 alpha.
+
+2010-11-05 09:25  uratec
+
+	* HTKTools/: .cvsignore, HFst.c, HSMMAlign.c, Makefile.in: Add
+	  HSMMALign command.  Remove HFst command.
+
+2010-07-09 16:37  uratec
+
+	* HTKTools/: HFst.c, HMGenS.c: Add transform to HFst command.
+
+2010-07-09 16:34  uratec
+
+	* HTKLib/HAdapt.c: Merge patch code by Heiga Zen of Toshiba
+	  Research Europe Ltd. Cambridge Research Labo ratory: Mean of
+	  MInfo should be SVector.
+
+2010-06-09 15:15  uratec
+
+	* HTKTools/HMGenS.c: Fix a tiny typo.
+
 2010-05-10 20:28  uratec
 
 	* HTKLib/HAdapt.c: Fix bugs suggested by Wenlin Zhang: in

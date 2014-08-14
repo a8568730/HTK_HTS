@@ -44,9 +44,6 @@
 /*         File: HGen.c: Generate parameter sequence from HMM        */
 /* ----------------------------------------------------------------- */
 
-
-/* !HVER!HGen:   2.0.1 [NIT 01/10/07] */
-
 #ifndef _HGEN_H_
 #define _HGEN_H_
 

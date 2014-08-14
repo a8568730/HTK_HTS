@@ -67,12 +67,12 @@
 
 # After editing this file, run "autoconf" to regenerate "configure".
 
-AC_INIT(HTS,2.1.1, hts-users@sp.nitech.ac.jp)
+AC_INIT(HTS,2.2alpha, hts-users@sp.nitech.ac.jp)
 AC_COPYRIGHT(Copyright 2003-2009 University of Cambridge)
 AC_COPYRIGHT(Copyright 2001-2010 Nagoya Institute of Technology)
 AC_COPYRIGHT(Copyright 2001-2008 Tokyo Institute of Technology)
 
-AC_PREFIX_DEFAULT(/usr/local/HTS-2.1.1)
+AC_PREFIX_DEFAULT(/usr/local/HTS-2.2alpha)
 
 dnl Checks for programs.
 AC_PROG_MAKE_SET
@@ -261,8 +261,8 @@ case "$host" in
 esac
 
 dnl define MAXSTRLEN if users want to change it to other value
-AC_ARG_VAR([MAXSTRLEN],[max length of strings (default=256)])
-if test -n "$MAXSTRLEN" -a $MAXSTRLEN!=256; then
+AC_ARG_VAR([MAXSTRLEN],[max length of strings (default=1024)])
+if test -n "$MAXSTRLEN" -a $MAXSTRLEN!=1024; then
 	AC_MSG_CHECKING(user-defined maximum length of strings)
 	CFLAGS="$CFLAGS -DMAXSTRLEN=$MAXSTRLEN"
 	AC_MSG_RESULT($MAXSTRLEN)
@@ -285,8 +285,8 @@ if test -n "$PAT_LEN" -a $PAT_LEN!=2048; then
 fi
 
 dnl define SMAX if users want to change it to other value
-AC_ARG_VAR([SMAX],[max number of streams (default=9)])
-if test -n "$SMAX" -a $SMAX!=9; then
+AC_ARG_VAR([SMAX],[max number of streams (default=30)])
+if test -n "$SMAX" -a $SMAX!=30; then
 	AC_MSG_CHECKING(user-defined maximum number of streams)
 	CFLAGS="$CFLAGS -DSMAX=$SMAX"
 	AC_MSG_RESULT($SMAX)

@@ -94,7 +94,7 @@ PROGS   = 	@HSLAB@ HBuild HCompV HCopy HDMan \
 		HERest HHEd HInit HLEd 	HList \
 		HLRescore HLStats HMMIRest HParse \
 		HQuant HRest HResults HSGen HSmooth \
-		HVite HMGenS HFst
+		HVite HMGenS HSMMAlign
 all: $(PROGS)
 
 %: %.c $(HTKLIB) 

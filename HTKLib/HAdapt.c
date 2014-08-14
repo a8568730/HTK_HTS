@@ -77,7 +77,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hadapt_version = "!HVER!HAdapt:   3.4.1  [CUED 12/03/09]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.59 2010/05/10 11:28:58 uratec Exp $";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.62 2010/12/21 06:03:45 bonanza Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>
@@ -130,7 +130,7 @@ typedef struct _AInfo {
 } AInfo;
 
 typedef struct {
-   Vector mean;
+   SVector mean;
    CovKind ckind;
    Covariance cov;
    float gConst;
@@ -1250,7 +1250,7 @@ static void UpdateMInfo(HMMSet *hset, AdaptXForm *xform)
                   mi = GetMInfo(mp);
                   if ((adaptMean) && (mi->mean == NULL)) {
 		     size = VectorSize(mp->mean);
-                     mi->mean = CreateVector(hset->hmem,size);
+                     mi->mean = CreateSVector(hset->hmem,size);
                      CopyVector(mp->mean,mi->mean);
                      nMInfo++;
                   } 
@@ -1260,7 +1260,7 @@ static void UpdateMInfo(HMMSet *hset, AdaptXForm *xform)
                      case INVDIAGC:
                         if (mi->cov.var == NULL) {
 			   size = VectorSize(mp->mean);
-                           mi->cov.var = CreateVector(hset->hmem,size);
+                           mi->cov.var = CreateSVector(hset->hmem,size);
                            CopyVector(mp->cov.var,mi->cov.var);
                            mi->gConst = mp->gConst;
                            mi->ckind  = mp->ckind; 
@@ -1296,7 +1296,7 @@ static XFormInfo *CreateXFormInfo(MemHeap *x)
    return info;
 }
 
-static void AttachXFormInfo(HMMSet *hset)
+void AttachXFormInfo(HMMSet *hset)
 {
    HMMScanState hss;
    MixPDF *mp;
@@ -1539,20 +1539,18 @@ void UpdateAccCache(double Lr, Vector svec, MixPDF *mp)
    long bl, nblock;
 
    paac = GetPAAccCache(mp);    
-   if ( paac != NULL ) {
-      /* This needs to be altered so that it does not rely on a non-zero first element */
-      if ( paac->bTriMat[1][1][1] == 0 ) {
-         nblock = (long)(paac->bTriMat[0]);
+   if (paac==NULL) return;
+   if ((paac->bTriMat!=NULL) && (paac->bVector[1]==0.0) && (svec!=NULL)) {
+      nblock = (long)(paac->bTriMat[0]);
 	for (bl=1,bstart=0;bl<=nblock;bl++) {
 	  m = paac->bTriMat[bl];
-            bsize = DTriMatSize(m);
+         bsize = DTriMatSize(m);
 	  for (i=1;i<=bsize;i++) { /* Fill the accumulate stores */
 	    for (j=1; j<=i; j++)
 		m[i][j] = svec[i+bstart] * svec[j+bstart];
 	  }
 	  bstart += bsize;
 	}
-      }
       covar = mp->cov.var;
       for (i=1;i<=vsize;i++) {
          if (mp->ckind==INVDIAGC)
@@ -1615,7 +1613,7 @@ void UpdateBaseAccs(XFInfo *xfinfo, Vector svec, const int t, RegAcc *regAcc)
    }
 }
 
-void UpdateBaseAccsWithPaac(XFInfo *xfinfo)
+void UpdateBaseAccsWithPaac(XFInfo *xfinfo, const int t)
 {
    int i,j,k,b,bsize;
    long nblock, bl;
@@ -1628,20 +1626,19 @@ void UpdateBaseAccsWithPaac(XFInfo *xfinfo)
    AccCache *paac;
    AdaptXForm *outXForm = xfinfo->outXForm;
 
+   /* store statistics */
+   if (t != xfinfo->baseTriMatTime) {
    bclass = outXForm->bclass;
-
-   for (b=1;b<=bclass->numClasses;b++) {
+      for (b=bclass->numClasses;b>0;b--) {
       mp = ((MixtureElem *)(bclass->ilist[b])->item)->mpdf;
+         paac = ((XFormInfo *)mp->info)->paac;
       ra = GetRegAcc(mp);
-
-      if ( ra->bTriMat != NULL) {
-         for (paac=xfinfo->headac; paac!=NULL; paac=paac->next) { 
-            if ((paac->baseclass==b) && (paac->bVector[1]>0.0)) {
+         if ((ra->bTriMat!=NULL) && (paac->bVector[1]>0.0)) {
             acc = paac->bVector;
-               nblock = (long)(ra->bDiagMat[0]);
+            nblock = (long)(ra->bDiagMat[0]);
             for (bl=1,cnti=1;bl<=nblock;bl++) {
               m = paac->bTriMat[bl];
-                  bsize = DTriMatSize(m);
+               bsize = DTriMatSize(m);
               for (i=1;i<=bsize;i++,cnti++) { /* Fill the accumulate stores */
                 tm = ra->bTriMat[cnti];
                 for (j=1; j<=bsize; j++)
@@ -1653,16 +1650,16 @@ void UpdateBaseAccsWithPaac(XFInfo *xfinfo)
         }
       }
    }  
-}
 
-void ResetAccCache(XFInfo *xfinfo)
+void ResetAccCache(XFInfo *xfinfo, const int t)
 {
    AccCache *ac;
  
-   if (xfinfo->headac != NULL) {
-      for (ac=xfinfo->headac; ac!=NULL; ac=ac->next) {
+   if (t != xfinfo->baseTriMatTime) {
+      if (xfinfo->headac != NULL) {
+         for (ac=xfinfo->headac; ac!=NULL; ac=ac->next) {
         ZeroDVector(ac->bVector);
-        ZeroBlockTriMat(ac->bTriMat);
+         }
       }
    }
 }
@@ -1721,8 +1718,8 @@ static void AccBaseTriMat(XFInfo *xfinfo, double Lr, Vector svec, MixPDF *mp, in
    if (xfinfo->headac==NULL) 
       UpdateBaseAccs(xfinfo,svec,t,regAcc);
      else  {
-      UpdateBaseAccsWithPaac(xfinfo); 
-      ResetAccCache(xfinfo);   
+      UpdateBaseAccsWithPaac(xfinfo,t); 
+      ResetAccCache(xfinfo,t);   
    }
    SetBaseAccsTime(xfinfo,t);
 
@@ -3008,7 +3005,7 @@ static void ApplyXForm2TriMat (LinXForm *linXForm, TriMat t, Matrix m)
       HError(999,"Transform dimension (%d) does not match matrix dimension (%d)",
              size,TriMatSize(t));
    mat = CreateMatrix(&gstack,size,size);
-   Tri2Mat(t,mat);
+   Tri2Mat(t,mat); 
    /* Transform mean */
    for (b=1,cnti=1,cnt=1;b<=IntVecSize(linXForm->blockSize);b++) {
       bsize = linXForm->blockSize[b];
@@ -3068,7 +3065,11 @@ static void ConvFullCov (HMMSet *hset, MixPDF *mp)
    vsize = VectorSize(var);
    
    /* create full cov matrix and hook var and inv each other */
-   if ((inv=GetHook(mi->cov.var))==NULL) {
+   if(mi == NULL) {
+      inv = CreateSTriMat(hset->hmem, vsize);
+      SetHook(inv, var);
+   }
+   else if ((inv=GetHook(mi->cov.var))==NULL) {
       inv = CreateSTriMat(hset->hmem,vsize);
       SetHook(mi->cov.var,inv);
       SetHook(inv,var);
@@ -5401,8 +5402,8 @@ void TidyBaseAccs(XFInfo *xfinfo)
    if (xfinfo->headac==NULL)
       UpdateBaseAccs(xfinfo,NULL,-1,NULL);
    else { 
-      UpdateBaseAccsWithPaac(xfinfo);
-      ResetAccCache(xfinfo);
+      UpdateBaseAccsWithPaac(xfinfo,-1);
+      ResetAccCache(xfinfo,-1);
    }
 }
 
@@ -5450,8 +5451,8 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
             if (xfinfo->headac==NULL)
                UpdateBaseAccs(xfinfo,NULL,-1,NULL);
             else { 
-               UpdateBaseAccsWithPaac(xfinfo);
-               ResetAccCache(xfinfo);
+               UpdateBaseAccsWithPaac(xfinfo,-1);
+               ResetAccCache(xfinfo,-1);
             }
             /* Generate the new transform */
             MakeFN(xfinfo->coutspkr,NULL,xfinfo->outXFormExt, newMn);
@@ -5500,7 +5501,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                   xfinfo->paXForm = LoadOneXForm(hset,newMn,newFn);
                      SetParentXForm(hset,xfinfo,xfinfo->paXForm);
                      SetAccCache(xfinfo);
-                  }
+               }
                   if (xfinfo->al_hset!=NULL && xfinfo->use_alPaXForm) {
                      MakeFN(xfinfo->cpaspkr,xfinfo->al_paXFormDir,xfinfo->al_paXFormExt,newFn);
                      MakeFN(xfinfo->cpaspkr,NULL,xfinfo->al_paXFormExt,newMn);
@@ -5511,8 +5512,8 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
                   else
                      xfinfo->al_paXForm = xfinfo->paXForm;
                }
-               }
             }
+         } 
          else if (xfinfo->usePaXForm || xfinfo->use_alPaXForm) { /* set-up the initial parent transform information */
             maskMatch = MaskMatch(xfinfo->paSpkrPat,paspkr,datafn);
             if (!maskMatch)
@@ -5539,8 +5540,8 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
          if (datafn!=NULL) {
             xfinfo->nspkr++;
             strcpy(xfinfo->coutspkr,spkr);
-            }
-         }
+         }      
+      } 
       else if (xfinfo->usePaXForm || xfinfo->use_alPaXForm) { 
          /* check to see whether the parent transform changes */
          /* this should not happen */
@@ -5723,4 +5724,28 @@ void UpdateProjectModels(HMMSet *hset, char *dir)
    /* gconsts fixed in main script */
 }
 
+/* ApplyMapXForm: apply mapped xform to MixPDF */
+void ApplyMapXForm(MixPDF * mp, MixPDF * mp_map, AdaptXForm * xform, Boolean full)
+{
+   AInfo *ai = NULL;
+   HMMSet *hset;
+   AdaptXForm *ax;
 
+   /* Store covariance matrices in full covariance form or not */
+   if (full)
+      for (ax = xform, full = FALSE; (ax != NULL) && (full == FALSE); ax = ax->parentXForm)
+         full |= ((ax->xformSet->xkind == MLLRCOV) || (ax->xformSet->xkind == CMLLR) || (ax->xformSet->xkind == SEMIT));
+
+   if (xform != NULL) {
+      hset = xform->hset;
+      if (mp_map->info == NULL)
+         HError(999, "ApplyMapXForm: No adaptation information for component");
+      if (xform == hset->curXForm)      /* use adapt information from current Xform */
+         ai = GetAInfo(mp_map);
+      else if (xform == hset->parentXForm)
+         ai = GetPAInfo(mp_map);
+      else
+         HError(999, "ApplyMapXForm: Can only apply parent and current transform");
+      CompXForm(mp, xform, ai, full);
+   }
+}

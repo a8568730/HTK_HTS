@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmodel_version = "!HVER!HModel:   3.4.1 [CUED 12/03/09]";
-char *hmodel_vc_id = "$Id: HModel.c,v 1.33 2010/04/08 04:50:29 uratec Exp $";
+char *hmodel_vc_id = "$Id: HModel.c,v 1.39 2010/12/06 23:10:47 bonanza Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -196,7 +196,7 @@ void InitModel(void)
       if (GetConfFlt(cParm,nParm,"PDETHRESHOLD2",&d)) pdeTh2 = d;
       if (GetConfFlt(cParm,nParm,"IGNOREVALUE",&d)) ignoreValue = d;
    }
-   }
+}
 
 /* EXPORT->ResetModel: reset module */
 void ResetModel (void)
@@ -380,7 +380,7 @@ static ReturnStatus CheckHMM(char *defName, HLink hmm)
    return(SUCCESS);
 }
 
-/* CheckTMRecs: check the tied mix codebook attached to a HMM Set */
+/* CheckTMRecs: check the tied mix codebook attached to an HMM Set */
 static ReturnStatus CheckTMRecs(HMMSet *hset)
 {
    int s,m,sw,mf;
@@ -543,7 +543,7 @@ static void TermScanner(Source *src)
    CloseSource(src);
 }
 
-/* HMError: report a HMM definition error */
+/* HMError: report an HMM definition error */
 static void HMError(Source *src, char *message)
 {
    char buf[MAXSTRLEN];
@@ -654,7 +654,7 @@ static void OWarn(HMMSet *hset,Boolean equal,char *opt)
       HRError(-7032,"OWarn: change HMM Set %s",opt);
 }
 
-/* GetOption: read a HMM option specifier - value set in nState pointer */
+/* GetOption: read an HMM option specifier - value set in nState pointer */
 static ReturnStatus GetOption(HMMSet *hset, Source *src, Token *tok, int *nState)
 {
    DurKind dk;
@@ -1506,6 +1506,7 @@ static RegTree *GetRegTree(HMMSet *hset, Source *src, Token *tok)
 	   rtree->valid = FALSE;
      }
      rtree->root = root = CreateRegNode(hset->hmem,1);
+     rtree->numNodes = rtree->numTNodes = 0;
      rtree->nodes = NULL;
      AddItem(NULL,root,&rtree->nodes);
      while ((tok->sym != EOFSYM) && 
@@ -2036,7 +2037,7 @@ static StreamInfo *GetStreamInfo(HMMSet *hset, Source *src, Token *tok, int s)
          if (!ReadInt(src,&sti->nMix,1,tok->binForm)) {
             HMError(src,"Num Mix in Shared Stream expected");
             return(NULL);
-      }
+         }
          if (GetToken(src,tok)<SUCCESS) {
             HMError(src,"GetToken failed");
             return(NULL);
@@ -4057,7 +4058,7 @@ static ReturnStatus LoadAllMacros(HMMSet *hset, char *fname, short fidx)
             return(FAIL);
          }
          id = GetLabId(buf,TRUE);
-         if (type == 'h'){    /* load a HMM definition */
+         if (type == 'h'){    /* load an HMM definition */
             m = FindMacroName(hset,'h',id);
             if (m == NULL) {
                if (!allowOthers){
@@ -4559,7 +4560,7 @@ static ReturnStatus CreateHMM(HMMSet *hset, LabId lId, LabId pId)
 }
 
 
-/* InitHMMSet: Init a HMM set by reading the HMM list in fname.
+/* InitHMMSet: Init an HMM set by reading the HMM list in fname.
                If isSingle, then fname is the name of a single HMM */
 static ReturnStatus InitHMMSet(HMMSet *hset, char *fname, Boolean isSingle)
 {
@@ -4617,7 +4618,7 @@ static ReturnStatus InitHMMSet(HMMSet *hset, char *fname, Boolean isSingle)
 }
 
 
-/* EXPORT->MakeHMMSet: Make a HMM set by reading the HMM list in fname */
+/* EXPORT->MakeHMMSet: Make an HMM set by reading the HMM list in fname */
 ReturnStatus MakeHMMSet(HMMSet *hset, char *fname)
 {
    if(InitHMMSet(hset, fname, FALSE)<SUCCESS){
@@ -5337,7 +5338,7 @@ ReturnStatus SaveHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt, char *macroExt
    return(SUCCESS);
 }
 
-/* EXPORT->SaveHMMList: Save a HMM list in fname describing given HMM set */
+/* EXPORT->SaveHMMList: Save an HMM list in fname describing given HMM set */
 ReturnStatus SaveHMMList(HMMSet *hset, char *fname)
 {
    int h;
@@ -5816,6 +5817,27 @@ LogFloat MOutP(Vector x, MixPDF *mp)
 }
 
 
+/* ------------------------- DAEM -------------------------- */
+
+static float tempDAEM = 1.0;       /* temerature parameter for DAEM */
+
+/* EXPORT-> SetDAEMTemp: sets temperature for DAEM */
+void SetDAEMTemp(float temp)
+{
+   tempDAEM = temp;
+}
+
+/* EXPORT-> ApplyDAEM: returns log prob * temperature parameter  */
+LogFloat ApplyDAEM(LogFloat lprob)
+{
+   LogFloat lp;
+ 
+   if (lprob==LZERO) return lprob;
+   lp = lprob * tempDAEM;
+   return (lp<LSMALL) ? LZERO : lp;
+}
+
+
 /* EXPORT-> SOutP: returns log prob of stream s of observation x */
 LogFloat SOutP(HMMSet *hset, int s, Observation *x, StreamInfo *sti)
 {
@@ -5855,6 +5877,7 @@ LogFloat SOutP(HMMSet *hset, int s, Observation *x, StreamInfo *sti)
          case XFORMC:   px=XOutP(v,vSize,mp); break;
          default:       px=LZERO;
          }
+         px = ApplyDAEM((LogFloat)px);
          return px;
       } else {
          bx = LZERO;                   /* Multi Mixture Case */
@@ -5875,6 +5898,8 @@ LogFloat SOutP(HMMSet *hset, int s, Observation *x, StreamInfo *sti)
                default:       px = LZERO;
                }
                   }
+                  px = ApplyDAEM((LogFloat)px);
+                  wt = ApplyDAEM((LogFloat)wt);
                bx = LAdd(bx,wt+px);
             }
          }

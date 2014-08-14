@@ -76,9 +76,6 @@
 
 */
 
-
-/* !HVER!lbfgs:   2.1 [NIT 31/10/07] */
-
 #ifndef _LBFGS_H_
 #define _LBFGS_H_
 

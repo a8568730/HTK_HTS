@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hutil_version = "!HVER!HUtil:   3.4.1 [CUED 12/03/09]";
-char *hutil_vc_id = "$Id: HUtil.c,v 1.25 2010/04/08 04:50:29 uratec Exp $";
+char *hutil_vc_id = "$Id: HUtil.c,v 1.29 2010/11/09 04:33:22 bonanza Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -576,6 +576,36 @@ char *HMMPhysName(HMMSet *hset,HLink hmm)
    if ((ml=FindMacroStruct(hset,'h',hmm))==NULL)
       HError(7270,"HMMPhysName: Cannot find hmm definition");
    return(ml->id->name);
+}
+
+/* search hmm name from stream information */
+char *HMMPhysNameFromStreamInfo(HMMSet *hset, StreamInfo *sti, int *state, int *stream)
+{
+   HMMScanState hss;
+   char *name = NULL;
+
+   NewHMMScan(hset, &hss);
+   do {
+      while (GoNextState(&hss, TRUE)) {
+         while (GoNextStream(&hss, TRUE)) {
+            if (hss.sti == sti) {
+               name = HMMPhysName(hset, hss.hmm);
+               if(state)
+                  *state = hss.i;
+               if(stream)
+                  *stream = hss.s;
+               break;
+            }
+         }
+         if (name)
+            break;
+      }
+      if (name)
+         break;
+   } while (GoNextHMM(&hss));
+   EndHMMScan(&hss);
+
+   return name;
 }
 
 /* --------------------- Item List Handling -------------------- */
@@ -1250,11 +1280,12 @@ char *PItemList (ILink *ilist, char *type, HMMSet *hset, Source *s, IntSet *stre
    maxMixes  = (maxM==0) ? MaxMixInSet(hset)    : maxM;
    maxStates = (maxS==0) ? MaxStatesInSet(hset) : maxS;
    position=pattern;
+   ch=GetCh(source);
+   while (isspace(ch)) ch=GetCh(source);
+   *position++=ch;
    *position=0;
 
    /* Parse item set */
-   ReadCh();
-   SkipSpaces();
    if (ch != '{')
       EdError("{ expected");
    ReadCh();

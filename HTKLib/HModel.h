@@ -87,8 +87,8 @@ extern "C" {
 #endif
 
 /* 
-   The following types define the in-memory representation of a HMM.
-   All HMM's belong to a HMMSet which includes a macro table for
+   The following types define the in-memory representation of an HMM.
+   All HMM's belong to an HMMSet which includes a macro table for
    rapidly mapping macro/hmm names into structures.  
 */
 
@@ -224,7 +224,7 @@ typedef struct _ItemRec *ILink;
 
 typedef struct _ItemRec {
    HLink owner;      /* HMM owning this item */
-   Ptr item;         /* -> to a HMM structure */
+   Ptr item;         /* -> to an HMM structure */
    ILink next;
 }ItemRec;
 
@@ -332,7 +332,7 @@ typedef struct _XFDirInfo *XFDirLink;
      x xform      w strm wts  o options   c lltcovar  * deleted
      r regtree    b baseclass a adaptXfrm j inputXfm  f linXfm
      g xformSet   y xformBias
-   a HMMDef will have exactly 1 phyHMM macro referencing it but it can 
+   an HMMDef will have exactly 1 phyHMM macro referencing it but it can
    have 0 or more logHMM macros referencing it.
 */
 
@@ -513,13 +513,13 @@ void PrintHSetProfile(FILE *f, HMMSet *hset);
 
 /* ------------------- HMM Set Load/Store ---------------------- */
 
-/* the basic sequence needed to create a HMM set is
+/* the basic sequence needed to create an HMM set is
       CreateHMMSet {AddMMF} (MakeHMMSet | MakeOneHMM) LoadHMMSet
 */
 
 void CreateHMMSet(HMMSet *hset, MemHeap *heap, Boolean allowTMods);
 /* 
-   Create a HMMSet using given heap.  This routine simply
+   Create an HMMSet using given heap.  This routine simply
    initialises the basic HMMSet structure. It must be followed by
    a call to either MakeOneHMM or MakeHMMSet.  
 */
@@ -536,8 +536,8 @@ MILink AddMMF(HMMSet *hset, char *fname);
 
 ReturnStatus MakeHMMSet(HMMSet *hset, char *fname);
 /*
-   Make a HMMSet by reading the file fname.  Each line of fname
-   should contain the logical name of a HMM optionally followed by a
+   Make an HMMSet by reading the file fname.  Each line of fname
+   should contain the logical name of an HMM optionally followed by a
    physical name.  If no physical name is given it is assumed to be
    the same as the logical name.  This routine creates the macro hash
    table, macro definitions for each HMM and HMMDef structures.  It
@@ -583,7 +583,7 @@ ReturnStatus SaveHMMSet(HMMSet *hset, char *hmmDir, char *hmmExt, char *macroExt
 
 ReturnStatus SaveHMMList(HMMSet *hset, char *fname);
 /*
-   Save a HMM list in fname describing given HMM set 
+   Save an HMM list in fname describing given HMM set
 */
 
 void SetIndexes(HMMSet *hset);
@@ -664,6 +664,12 @@ LogFloat POutP(HMMSet *hset, Observation *x, StateInfo *si);
    state of given model
 */
 
+
+/* ------------------------- DAEM -------------------------- */
+
+void SetDAEMTemp(float temp);
+LogFloat ApplyDAEM(LogFloat lprob);
+
 LogFloat SOutP(HMMSet *hset, int s, Observation *x, StreamInfo *sti);
 /*
    Return Stream log output prob of stream s of observation x
@@ -712,11 +718,6 @@ void FixGConsts(HLink hmm);
 void FixAllGConsts(HMMSet *hset);
 /*
    Sets all gConst values in all HMMs in set
-*/
-
-void SetAnnealTemp(const float temp);
-/*
-  Sets temperature for deterministic annealing
 */
 
 LogFloat MixLogWeight(HMMSet *hset, float weight); 

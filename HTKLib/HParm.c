@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hparm_version = "!HVER!HParm:   3.4.1 [CUED 12/03/09]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.12 2010/04/08 04:50:29 uratec Exp $";
+char *hparm_vc_id = "$Id: HParm.c,v 1.13 2010/11/24 00:23:34 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -1601,7 +1601,7 @@ static Boolean EqualKind(ParmKind a, ParmKind b)
    For buffers, they may be positive. */
       
 /* Note that unlike before this function really will process nRows of data */
-/* And will not automagically do extra (which was a necessary and probably */
+/* And will not automatically do extra (which was a necessary and probably */
 /* unintended side effect of the way the function worked previously) */
 
 static void AddDiffs(float *data, int nRows, int nCols, int si, int ti, int d, 
@@ -3603,7 +3603,7 @@ static int FramesInParm(ParmBuf pbuf)
    if (pbuf->lastRow<0) {
 #ifdef STREAM_PARM_FILES
       long l;
-      /* Automagically determine the end of file */
+      /* Automatically determine the end of file */
       ioctl(fileno(pbuf->cf->src.f),FIONREAD,&l);
       if (pbuf->cf->srcPK&HASCRCC) l-=2;
       if (pbuf->fShort)

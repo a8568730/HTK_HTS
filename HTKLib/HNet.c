@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hnet_version = "!HVER!HNet:   3.4.1 [CUED 12/03/09]";
-char *hnet_vc_id = "$Id: HNet.c,v 1.8 2010/04/08 04:50:29 uratec Exp $";
+char *hnet_vc_id = "$Id: HNet.c,v 1.9 2010/11/24 00:23:34 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -136,7 +136,7 @@ Boolean factorLM=FALSE;
 
 char *frcSil=NULL,frcSilBuf[MAXSTRLEN];
 /* 
-   Automagically add these sil models to the end of words.
+   Automatically add these sil models to the end of words.
 */
 Boolean remDupPron=TRUE;
 /*
@@ -1747,7 +1747,7 @@ static void AddChain(Network*net, NetNode *hd)
    of type shortArc to minimise lattice storage requirements).
    
    Cross word context dependent networks are created in an
-   automagic manner from the hmmlist and monophone dictionary.
+   automatic manner from the hmmlist and monophone dictionary.
 
    Contexts
    -1 == context free - skip this phone when determining context
