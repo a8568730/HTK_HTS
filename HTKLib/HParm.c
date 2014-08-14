@@ -33,52 +33,52 @@
 /* ----------------------------------------------------------- */
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
-/*  ---------------------------------------------------------------  */
+/* ----------------------------------------------------------------- */
 /*           The HMM-Based Speech Synthesis System (HTS)             */
-/*                       HTS Working Group                           */
+/*           developed by HTS Working Group                          */
+/*           http://hts.sp.nitech.ac.jp/                             */
+/* ----------------------------------------------------------------- */
 /*                                                                   */
-/*                  Department of Computer Science                   */
-/*                  Nagoya Institute of Technology                   */
-/*                               and                                 */
-/*   Interdisciplinary Graduate School of Science and Engineering    */
-/*                  Tokyo Institute of Technology                    */
+/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*                           Department of Computer Science          */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
-/*                       All Rights Reserved.                        */
+/*                2001-2008  Tokyo Institute of Technology           */
+/*                           Interdisciplinary Graduate School of    */
+/*                           Science and Engineering                 */
 /*                                                                   */
-/*  Permission is hereby granted, free of charge, to use and         */
-/*  distribute this software in the form of patch code to HTK and    */
-/*  its documentation without restriction, including without         */
-/*  limitation the rights to use, copy, modify, merge, publish,      */
-/*  distribute, sublicense, and/or sell copies of this work, and to  */
-/*  permit persons to whom this work is furnished to do so, subject  */
-/*  to the following conditions:                                     */
+/* All rights reserved.                                              */
 /*                                                                   */
-/*    1. Once you apply the HTS patch to HTK, you must obey the      */
-/*       license of HTK.                                             */
+/* Redistribution and use in source and binary forms, with or        */
+/* without modification, are permitted provided that the following   */
+/* conditions are met:                                               */
 /*                                                                   */
-/*    2. The source code must retain the above copyright notice,     */
-/*       this list of conditions and the following disclaimer.       */
+/* - Redistributions of source code must retain the above copyright  */
+/*   notice, this list of conditions and the following disclaimer.   */
+/* - Redistributions in binary form must reproduce the above         */
+/*   copyright notice, this list of conditions and the following     */
+/*   disclaimer in the documentation and/or other materials provided */
+/*   with the distribution.                                          */
+/* - Neither the name of the HTS working group nor the names of its  */
+/*   contributors may be used to endorse or promote products derived */
+/*   from this software without specific prior written permission.   */
 /*                                                                   */
-/*    3. Any modifications to the source code must be clearly        */
-/*       marked as such.                                             */
-/*                                                                   */
-/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
-/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
-/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
-/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
-/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
-/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
-/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
-/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/*  PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                   */
-/*  ---------------------------------------------------------------  */
+/* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND            */
+/* CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,       */
+/* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF          */
+/* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE          */
+/* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS */
+/* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,          */
+/* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED   */
+/* TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,     */
+/* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON */
+/* ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,   */
+/* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY    */
+/* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE           */
+/* POSSIBILITY OF SUCH DAMAGE.                                       */
+/* ----------------------------------------------------------------- */
 
 char *hparm_version = "!HVER!HParm:   3.4 [CUED 25/04/06]";
-char *hparm_vc_id = "$Id: HParm.c,v 1.7 2007/09/18 12:20:45 zen Exp $";
+char *hparm_vc_id = "$Id: HParm.c,v 1.9 2008/05/30 07:19:14 zen Exp $";
 
 #include "HShell.h"
 #include "HMem.h"
@@ -91,9 +91,9 @@ char *hparm_vc_id = "$Id: HParm.c,v 1.7 2007/09/18 12:20:45 zen Exp $";
 #include "HLabel.h"
 #include "HModel.h"
 #include "esignal.h"
-/*#ifdef UNIX
+#ifdef UNIX
 #include <sys/ioctl.h>
-#endif*/
+#endif
 
 /* ----------------------------- Trace Flags ------------------------- */
 
@@ -1710,15 +1710,12 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
       d = span[5]-span[4]+1; si = span[0]; ti = span[4];
       if (trace&T_QUA)
          printf("\nHParm:  adding %d deltas to %d rows",d,nRows);
-      /* Treatment of deltas ensures that whole margin is valid */
-      /* the Accs now have to precede the thirds, as you need delts  */
-      /* to calc the thirds */
-      if (hdValid>0) ds=pbuf->qwin-cf->delWin-cf->accWin; else ds=0;
-      if (tlValid>0) de=nRows+pbuf->qwin-cf->delWin-cf->accWin-1; else de=nRows-1;
 
-      AddDiffs(data+cf->nCols*ds,de-ds+1,cf->nCols,si,ti,d,cf->accWin,
+      /* Deltas need to preceed everything a little when they can */
+      if (hdValid>0) ds=pbuf->qwin-cf->delWin; else ds=0;
+      if (tlValid>0) de=nRows+pbuf->qwin-cf->delWin-1; else de=nRows-1;
+      AddDiffs(data+cf->nCols*ds,de-ds+1,cf->nCols,si,ti,d,cf->delWin,
                hdValid+ds,tlValid-ds,cf->v1Compat,cf->simpleDiffs);
-      
       cf->curPK |= HASDELTA; cf->nUsed += d;
    }
    if ((cf->tgtPK&HASACCS) && !(cf->curPK&HASACCS)) {
@@ -1726,8 +1723,13 @@ static void AddQualifiers(ParmBuf pbuf,float *data, int nRows, IOConfig cf,
       if (trace&T_QUA)
          printf("\nHParm:  adding %d accs to %d rows",d,nRows);
       /* Treatment of deltas ensures that whole margin is valid */
-      AddDiffs(data,nRows,cf->nCols,si,ti,d,cf->accWin,
-               hdValid,tlValid,cf->v1Compat,cf->simpleDiffs);
+      /* the Accs now have to precede the thirds, as you need delts  */
+      /* to calc the thirds */
+      if (hdValid>0) ds=pbuf->qwin-cf->delWin-cf->accWin; else ds=0;
+      if (tlValid>0) de=nRows+pbuf->qwin-cf->delWin-cf->accWin-1; else de=nRows-1;
+      
+      AddDiffs(data+cf->nCols*ds,de-ds+1,cf->nCols,si,ti,d,cf->accWin,
+	       hdValid+ds,tlValid-ds,cf->v1Compat,cf->simpleDiffs);
       cf->curPK |= HASACCS;  cf->nUsed += d;
       if ((cf->tgtPK&HASTHIRD) && !(cf->curPK&HASTHIRD)) {
          d = span[9]-span[8]+1; si = span[6]; ti = span[8];

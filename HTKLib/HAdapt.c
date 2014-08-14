@@ -29,59 +29,55 @@
 /* ----------------------------------------------------------- */
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
-/*  ---------------------------------------------------------------  */
+/* ----------------------------------------------------------------- */
 /*           The HMM-Based Speech Synthesis System (HTS)             */
-/*                       HTS Working Group                           */
+/*           developed by HTS Working Group                          */
+/*           http://hts.sp.nitech.ac.jp/                             */
+/* ----------------------------------------------------------------- */
 /*                                                                   */
-/*                  Department of Computer Science                   */
-/*                  Nagoya Institute of Technology                   */
-/*                               and                                 */
-/*   Interdisciplinary Graduate School of Science and Engineering    */
-/*                  Tokyo Institute of Technology                    */
+/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*                           Department of Computer Science          */
 /*                                                                   */
-/*                     Copyright (c) 2001-2008                       */
+/*                2001-2008  Tokyo Institute of Technology           */
+/*                           Interdisciplinary Graduate School of    */
+/*                           Science and Engineering                 */
 /*                                                                   */
-/*            The Centre for Speech Technology Research              */
-/*                     University of Edinburgh                       */
+/*                2008       University of Edinburgh                 */
+/*                           Centre for Speech Technology Research   */
 /*                                                                   */
-/*                        Copyright (c) 2008                         */
+/* All rights reserved.                                              */
 /*                                                                   */
-/*                       All Rights Reserved.                        */
+/* Redistribution and use in source and binary forms, with or        */
+/* without modification, are permitted provided that the following   */
+/* conditions are met:                                               */
 /*                                                                   */
-/*  Permission is hereby granted, free of charge, to use and         */
-/*  distribute this software in the form of patch code to HTK and    */
-/*  its documentation without restriction, including without         */
-/*  limitation the rights to use, copy, modify, merge, publish,      */
-/*  distribute, sublicense, and/or sell copies of this work, and to  */
-/*  permit persons to whom this work is furnished to do so, subject  */
-/*  to the following conditions:                                     */
+/* - Redistributions of source code must retain the above copyright  */
+/*   notice, this list of conditions and the following disclaimer.   */
+/* - Redistributions in binary form must reproduce the above         */
+/*   copyright notice, this list of conditions and the following     */
+/*   disclaimer in the documentation and/or other materials provided */
+/*   with the distribution.                                          */
+/* - Neither the name of the HTS working group nor the names of its  */
+/*   contributors may be used to endorse or promote products derived */
+/*   from this software without specific prior written permission.   */
 /*                                                                   */
-/*    1. Once you apply the HTS patch to HTK, you must obey the      */
-/*       license of HTK.                                             */
-/*                                                                   */
-/*    2. The source code must retain the above copyright notice,     */
-/*       this list of conditions and the following disclaimer.       */
-/*                                                                   */
-/*    3. Any modifications to the source code must be clearly        */
-/*       marked as such.                                             */
-/*                                                                   */
-/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/*  UNIVERSITY OF EDINBURGH, HTS WORKING GROUP, AND THE CONTRIBUTORS */
-/*  TO THIS WORK DISCLAIM ALL WARRANTIES WITH REGARD TO THIS         */ 
-/*  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY    */
-/*  AND FITNESS, IN NO EVENT SHALL NAGOYA INSTITUTE OF TECHNOLOGY,   */
-/*  TOKYO INSTITUTE OF TECHNOLOGY, UNIVERSITY OF EDINBURGH,          */
-/*  HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE FOR ANY        */
-/*  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES        */
-/*  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,          */
-/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/*  PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                   */
-/*  ---------------------------------------------------------------  */
+/* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND            */
+/* CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,       */
+/* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF          */
+/* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE          */
+/* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS */
+/* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,          */
+/* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED   */
+/* TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,     */
+/* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON */
+/* ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,   */
+/* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY    */
+/* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE           */
+/* POSSIBILITY OF SUCH DAMAGE.                                       */
+/* ----------------------------------------------------------------- */
 
 char *hadapt_version = "!HVER!HAdapt:   3.4  [CUED 25/04/06]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.45 2008/03/20 04:13:22 zen Exp $";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.48 2008/06/16 12:13:02 jyamagi Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>
@@ -179,8 +175,9 @@ static Boolean keepXFormDistinct = TRUE;
 static Boolean swapXForms = FALSE;     /* swap the transforms around after generating transform */
 static Boolean mllrCov2CMLLR= FALSE;   /* apply mllrcov transforms as cmllr transform */ 
 static Boolean mllrDiagCov = FALSE;    /* perform diagonal covariance adaptation */
-static Boolean useSMAPcriterion = FALSE; /* perform SMAPLR and CSMAPLR adaptation */
-static float   sigmascale = 1.0;         /* prior parameter for SMAP creterion*/
+static Boolean useSMAPcriterion = FALSE;  /* perform SMAPLR and CSMAPLR adaptation */
+static Boolean SaveAllSMAPXForms = FALSE; /* Save intermediate matrices estimated in SMAP */
+static float   sigmascale = 1.0;          /* prior parameter for SMAP creterion*/
 
 static IntVec enableBlockAdapt = NULL;
 
@@ -565,6 +562,7 @@ void InitAdapt (XFInfo *xfinfo_hmm, XFInfo *xfinfo_dur)
       if (xfinfo_hmm!=NULL) {
          if (GetConfBool(cParm,nParm,"SAVEFULLC",&b)) xfinfo_hmm->outFullC = b;
          if (GetConfBool(cParm,nParm,"USESMAP",&b)) useSMAPcriterion = b;
+         if (GetConfBool(cParm,nParm,"SAVEALLSMAPXFORM",&b)) SaveAllSMAPXForms = b;
          if (GetConfFlt(cParm,nParm,"SMAPSIGMA",&d)) sigmascale = (float) d;
          if (GetConfBool(cParm,nParm,"USEBIAS",&b)) xfinfo_hmm->useBias = b;
          if (GetConfStr (cParm,nParm,"SPLITTHRESH",buf)) 
@@ -2040,8 +2038,7 @@ static Boolean ParseNode (XFInfo *xfinfo, RegNode *node,
        if (trace&T_TRE) 
          printf("Prior Transform index: %d\n",xfindex);
        if(GenXForm(node,xfinfo,lclasses,xfindex)){
-          /* if (node->valid && node->vsize>0) */
-          parentxfindex = xfinfo->outXForm->xformSet->numXForms;
+         parentxfindex = xfinfo->outXForm->xformSet->numXForms;
        }
        FreeIntVec(&gstack,lclasses);
      } 
@@ -2085,6 +2082,53 @@ static Boolean ParseNode (XFInfo *xfinfo, RegNode *node,
    return genXForm;
 }
 
+static void SearchOutputXforms(AdaptXForm *xform)
+{
+
+  int i, b, numxforms=0;
+  Boolean USEXFORM = FALSE;
+  LinXForm **outxforms;
+  IntVec outassign=NULL;
+
+  outxforms = (LinXForm **)New(xform->mem,(xform->bclass->numClasses+1)*sizeof(LinXForm *));
+   if (HardAssign(xform)) {
+     outassign = CreateIntVec(xform->mem,xform->bclass->numClasses);
+     ZeroIntVec(outassign);
+   }
+   else 
+      HError(999,"Not currently supported");
+
+  for (i=1;i<=xform->xformSet->numXForms;i++) {
+    USEXFORM = FALSE;
+    for (b=1;b<=xform->bclass->numClasses;b++) {
+      if (HardAssign(xform)){
+        if(xform->xformWgts.assign[b] == i)
+          USEXFORM = TRUE;
+      }
+      else 
+        HError(999,"Not currently supported");
+    }
+    if(USEXFORM){
+      numxforms++;
+      outxforms[numxforms] = CopyLinXForm(xform->mem,xform->xformSet->xforms[i]); 
+      for (b=1;b<=xform->bclass->numClasses;b++) {
+        if (HardAssign(xform)){
+          if(xform->xformWgts.assign[b] == i)
+            outassign[b] = numxforms;
+        }
+        else 
+          HError(999,"Not currently supported");
+      }
+    }
+  }
+  
+  CopyIntVec(outassign, xform->xformWgts.assign);
+  xform->xformSet->numXForms = numxforms;
+  xform->xformSet->xforms = NULL;
+  xform->xformSet->xforms = outxforms;
+  
+}
+
 static Boolean ParseTree (XFInfo *xfinfo)
 {
    IntVec classes;
@@ -2107,8 +2151,10 @@ static Boolean ParseTree (XFInfo *xfinfo)
 
          ZeroIntVec(classes);
    ParseNode(xfinfo, rtree->root, rtree, classes, 0);
-
    FreeIntVec(&gstack,classes);
+
+   if(useSMAPcriterion && (!SaveAllSMAPXForms))
+     SearchOutputXforms(xform);
 
    if (xform->xformSet->numXForms == 0) return FALSE;
    else return TRUE;
@@ -2780,7 +2826,7 @@ static void ApplyXForm2Vector(LinXForm *linXForm, Vector mean)
 
 /* ApplyCMLLRXForm2Vector: apply CMLLR XForm to mean vector (mean' = A^{-1}*(mean-b)) */
 static void ApplyCMLLRXForm2Vector(LinXForm *linXForm, Vector mean)
-{
+{  
    Vector vec, bias;
    int b,bsize;
    Matrix A;
@@ -2823,7 +2869,7 @@ static void ApplyCMLLRXForm2Vector(LinXForm *linXForm, Vector mean)
 
 /* ApplyXForm2Cov: apply XForm to a given covariance matrix (cov' = A'*cov*A) */
 static void ApplyXForm2Cov(LinXForm *linXForm, Covariance *cov, CovKind ckind)
-{
+{  
    int b,bsize;
    Matrix A,A1,A2,mat;
    int i,j;
@@ -2864,8 +2910,8 @@ static void ApplyXForm2Cov(LinXForm *linXForm, Covariance *cov, CovKind ckind)
 }
 
 /* ApplyXForm2TriMat: Apply XForm to a given triangular matrix (m = A*t) */ 
-static void ApplyXForm2TriMat(LinXForm *linXForm, TriMat t, Matrix m)
-{  
+static void ApplyXForm2TriMat (LinXForm *linXForm, TriMat t, Matrix m)
+{
    int size,b,bsize;
    Matrix A,mat;
    float tmp;
@@ -2878,7 +2924,7 @@ static void ApplyXForm2TriMat(LinXForm *linXForm, TriMat t, Matrix m)
       HError(999,"Transform dimension (%d) does not match matrix dimension (%d)",
              size,TriMatSize(t));
    mat = CreateMatrix(&gstack,size,size);
-   Tri2Mat(t,mat); 
+   Tri2Mat(t,mat);
    /* Transform mean */
    for (b=1,cnti=1,cnt=1;b<=IntVecSize(linXForm->blockSize);b++) {
       bsize = linXForm->blockSize[b];
@@ -2893,12 +2939,12 @@ static void ApplyXForm2TriMat(LinXForm *linXForm, TriMat t, Matrix m)
       }
       cnt += bsize;
    }
-   if (linXForm->bias != NULL) HError(999,"Assumes there is no bias in transform");  
+   if (linXForm->bias != NULL) HError(999,"Assumes there is no bias in transform");
    FreeMatrix(&gstack,mat);
 }
 
-static void DiagApplyMat2TXForm(LinXForm *linXForm, Matrix m, Vector v)
-{  
+static void DiagApplyMat2TXForm (LinXForm *linXForm, Matrix m, Vector v)
+{
    int size,b,bsize;
    Matrix A;
    float tmp;
@@ -2932,7 +2978,7 @@ static void ConvFullCov (HMMSet *hset, MixPDF *mp)
    SVector var;
    STriMat inv;
    MInfo *mi;
-
+   
    mi = GetMInfo(mp);
    var = mp->cov.var;
    vsize = VectorSize(var);
@@ -2942,7 +2988,7 @@ static void ConvFullCov (HMMSet *hset, MixPDF *mp)
       inv = CreateSTriMat(hset->hmem,vsize);
       SetHook(mi->cov.var,inv);
       SetHook(inv,var);
-  }
+   }
 
    switch(mp->ckind) {
    case DIAGC:
@@ -2974,25 +3020,25 @@ static void ConvFullCov (HMMSet *hset, MixPDF *mp)
 /* CompFXForm: Feature-Space adaptation */
 static Vector CompFXForm(MixPDF *mp, Vector svec, AdaptXForm *xform, AInfo *ai, LogFloat *det)
 {
-   Vector vec;
-   XFormSet *xformSet;
-   int numXf = 0;
+  Vector vec;
+  XFormSet *xformSet;
+  int numXf = 0;
 
-   if (ai->next != NULL) { /* There's a parent transform */
-      vec = CompFXForm(mp,svec,xform->parentXForm,ai->next,det);
+  if (ai->next != NULL) { /* There's a parent transform */
+    vec = CompFXForm(mp,svec,xform->parentXForm,ai->next,det);
    } 
    else {
       *det = 0.0;
-      vec = svec;
-   }
+     vec = svec;
+  }
    
    if (mp->ckind==FULLC)
       return svec;
    
-   /* Check the kind of the adaptation */
-   if ((xform->akind != BASE) && (xform->akind != TREE))
-      HError(999,"Only BASE and TREE adaptation currently supported");
-   if (HardAssign(xform))
+  /* Check the kind of the adaptation */
+  if ((xform->akind != BASE) && (xform->akind != TREE))
+    HError(999,"Only BASE and TREE adaptation currently supported");
+  if (HardAssign(xform))
     numXf = xform->xformWgts.assign[ai->baseClass];
   else 
     HError(999,"Not currently supported");
@@ -5112,6 +5158,13 @@ LinXForm *CopyLinXForm(MemHeap *x, LinXForm *xf)
    } 
    else
       nxf->bias = NULL;
+
+   if (xf->vFloor != NULL) {
+      nxf->vFloor = CreateSVector(x,VectorSize(xf->vFloor));
+      CopyVector(xf->vFloor,nxf->vFloor);
+   }
+   else
+      nxf->vFloor = NULL;
    nxf->xform = (Matrix *)New(x,(IntVecSize(xf->blockSize)+1)*sizeof(Matrix));
    for (bl=1;bl<=IntVecSize(xf->blockSize);bl++) {
       bsize = xf->blockSize[bl];
@@ -5366,7 +5419,7 @@ Boolean UpdateSpkrStats(HMMSet *hset, XFInfo *xfinfo, char *datafn)
             HError(999,"Changing parent transform out of sync with output transform (%s %s)",
                    paspkr,xfinfo->cpaspkr);
       }
-   } 
+      }
    else if ((xfinfo->usePaXForm || xfinfo->use_alPaXForm) && (datafn != NULL)) {
       /* Parent transform specified with no output transform */
       maskMatch = MaskMatch(xfinfo->paSpkrPat,paspkr,datafn);

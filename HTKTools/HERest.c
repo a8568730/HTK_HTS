@@ -33,52 +33,52 @@
 /* ----------------------------------------------------------- */
 
 /*  *** THIS IS A MODIFIED VERSION OF HTK ***                        */
-/*  ---------------------------------------------------------------  */
+/* ----------------------------------------------------------------- */
 /*           The HMM-Based Speech Synthesis System (HTS)             */
-/*                       HTS Working Group                           */
+/*           developed by HTS Working Group                          */
+/*           http://hts.sp.nitech.ac.jp/                             */
+/* ----------------------------------------------------------------- */
 /*                                                                   */
-/*                  Department of Computer Science                   */
-/*                  Nagoya Institute of Technology                   */
-/*                               and                                 */
-/*   Interdisciplinary Graduate School of Science and Engineering    */
-/*                  Tokyo Institute of Technology                    */
+/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*                           Department of Computer Science          */
 /*                                                                   */
-/*                     Copyright (c) 2001-2008                       */
-/*                       All Rights Reserved.                        */
+/*                2001-2008  Tokyo Institute of Technology           */
+/*                           Interdisciplinary Graduate School of    */
+/*                           Science and Engineering                 */
 /*                                                                   */
-/*  Permission is hereby granted, free of charge, to use and         */
-/*  distribute this software in the form of patch code to HTK and    */
-/*  its documentation without restriction, including without         */
-/*  limitation the rights to use, copy, modify, merge, publish,      */
-/*  distribute, sublicense, and/or sell copies of this work, and to  */
-/*  permit persons to whom this work is furnished to do so, subject  */
-/*  to the following conditions:                                     */
+/* All rights reserved.                                              */
 /*                                                                   */
-/*    1. Once you apply the HTS patch to HTK, you must obey the      */
-/*       license of HTK.                                             */
+/* Redistribution and use in source and binary forms, with or        */
+/* without modification, are permitted provided that the following   */
+/* conditions are met:                                               */
 /*                                                                   */
-/*    2. The source code must retain the above copyright notice,     */
-/*       this list of conditions and the following disclaimer.       */
+/* - Redistributions of source code must retain the above copyright  */
+/*   notice, this list of conditions and the following disclaimer.   */
+/* - Redistributions in binary form must reproduce the above         */
+/*   copyright notice, this list of conditions and the following     */
+/*   disclaimer in the documentation and/or other materials provided */
+/*   with the distribution.                                          */
+/* - Neither the name of the HTS working group nor the names of its  */
+/*   contributors may be used to endorse or promote products derived */
+/*   from this software without specific prior written permission.   */
 /*                                                                   */
-/*    3. Any modifications to the source code must be clearly        */
-/*       marked as such.                                             */
-/*                                                                   */
-/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
-/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
-/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
-/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
-/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
-/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
-/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
-/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/*  PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                   */
-/*  ---------------------------------------------------------------  */
+/* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND            */
+/* CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,       */
+/* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF          */
+/* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE          */
+/* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS */
+/* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,          */
+/* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED   */
+/* TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,     */
+/* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON */
+/* ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,   */
+/* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY    */
+/* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE           */
+/* POSSIBILITY OF SUCH DAMAGE.                                       */
+/* ----------------------------------------------------------------- */
 
 char *herest_version = "!HVER!HERest:   3.4 [CUED 25/04/06]";
-char *herest_vc_id = "$Id: HERest.c,v 1.33 2008/03/02 05:48:30 zen Exp $";
+char *herest_vc_id = "$Id: HERest.c,v 1.38 2008/05/30 07:19:10 zen Exp $";
 
 /*
    This program is used to perform a single reestimation of
@@ -238,23 +238,12 @@ void SetConfParms(void)
       if (GetConfStr(cParm,nParm,"ALIGNMODELEXT",buf)) {
           strcpy(al_hmmExt,buf); al_hmmUsed = TRUE;
       }
-      if (GetConfBool(cParm,nParm,"USEALIGNINXFORM", &b)) {
-         xfInfo_hmm.use_alInXForm = b;
-      }
-      if (GetConfStr(cParm,nParm,"ALIGNINXFORMEXT",buf)) {
+      if (GetConfStr(cParm,nParm,"ALIGNXFORMEXT",buf)) {
          xfInfo_hmm.al_inXFormExt = CopyString(&hmmStack,buf);
       }
-      if (GetConfStr(cParm,nParm,"ALIGNINXFORMDIR",buf)) {
+      if (GetConfStr(cParm,nParm,"ALIGNXFORMDIR",buf)) {
          xfInfo_hmm.al_inXFormDir = CopyString(&hmmStack,buf);
-      }
-      if (GetConfBool(cParm,nParm,"USEALIGNPAXFORM", &b)) {
-         xfInfo_hmm.use_alPaXForm = b;
-      }
-      if (GetConfStr(cParm,nParm,"ALIGNPAXFORMEXT",buf)) {
-         xfInfo_hmm.al_paXFormExt = CopyString(&hmmStack,buf);
-      }
-      if (GetConfStr(cParm,nParm,"ALIGNPAXFORMDIR",buf)) {
-         xfInfo_hmm.al_paXFormDir = CopyString(&hmmStack,buf);
+         xfInfo_hmm.use_alInXForm = TRUE;
       }
       if (GetConfStr(cParm,nParm,"INXFORMMASK",buf)) {
          xfInfo_hmm.inSpkrPat = CopyString(&hmmStack,buf);
@@ -293,23 +282,12 @@ void SetConfParms(void)
       if (GetConfStr(cParm,nParm,"ALIGNDUREXT",buf)) {
          strcpy(al_durExt,buf); al_durUsed = TRUE;
       }
-      if (GetConfBool(cParm,nParm,"USEALIGNINDURXFORM", &b)) {
-         xfInfo_dur.use_alInXForm = b;
-      }
-      if (GetConfStr(cParm,nParm,"ALIGNINDURXFORMEXT",buf)) {
+      if (GetConfStr(cParm,nParm,"ALIGNDURXFORMEXT",buf)) {
          xfInfo_dur.al_inXFormExt = CopyString(&durStack,buf);
       }
-      if (GetConfStr(cParm,nParm,"ALIGNINDURXFORMDIR",buf)) {
+      if (GetConfStr(cParm,nParm,"ALIGNDURXFORMDIR",buf)) {
          xfInfo_dur.al_inXFormDir = CopyString(&durStack,buf);
-      }
-      if (GetConfBool(cParm,nParm,"USEALIGNDURPAXFORM", &b)) {
-         xfInfo_dur.use_alPaXForm = b;
-      }
-      if (GetConfStr(cParm,nParm,"ALIGNDURPAXFORMEXT",buf)) {
-         xfInfo_dur.al_paXFormExt = CopyString(&durStack,buf);
-      }
-      if (GetConfStr(cParm,nParm,"ALIGNDURPAXFORMDIR",buf)) {
-         xfInfo_dur.al_paXFormDir = CopyString(&durStack,buf);
+         xfInfo_dur.use_alInXForm = TRUE;
       }
       if (GetConfStr(cParm,nParm,"DURINXFORMMASK",buf)) {
          xfInfo_dur.inSpkrPat = CopyString(&durStack,buf);
@@ -831,9 +809,9 @@ int main(int argc, char *argv[])
                else
                   printf("Saving hmm's to MMF %s\n",mmfFn);
                fflush(stdout);
-      }
+            }
             SaveHMMSet(&hset,newhmmDir,newhmmExt,NULL,saveBinary);
-   }
+      }
          /* update duration models */
          if (up_durLoaded && (updateMode&UPMODE_UPDATE) && uFlags_dur) {
             /* first estimate variance floor */
@@ -841,6 +819,8 @@ int main(int argc, char *argv[])
                UpdateVFloors(&dset, durminVar, durvarFloorPercent);
             if (durmapTau>0.0)
                SetMapTau(durmapTau);
+            if (durminVar>0.0)
+               SetMinVar(durminVar);
             /* replace minVar & applyVFloor using these for duration models */
             minVar = durminVar; applyVFloor = applydurVFloor;
             /* estimate duration models */
@@ -851,7 +831,7 @@ int main(int argc, char *argv[])
                else
                   printf("Saving duration models to MMF %s\n",up_durMMF);
                fflush(stdout);
-            }
+   }
             SaveHMMSet(&dset,newdurDir,newhmmExt,NULL,saveBinary);
          }
          
@@ -961,7 +941,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, HMMSet *dset, char *hm
       /* This initialises things - temporary hack - THINK!! */
       CreateAdaptXForm(hset, &xfInfo_hmm, "tmp");
    } 
-   
+
    if ((uFlags_hmm&UPXFORM) || (uFlags_hmm&UPSEMIT))
       CheckAdaptSetUp(hset,&xfInfo_hmm); 
 
@@ -1002,8 +982,8 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, HMMSet *dset, char *hm
          case SHAREDHS: printf("SHARED\n"); break;
          case TIEDHS:   printf("TIED\n"); break;
          case DISCRETEHS: printf("DISCRETE\n"); break;
-   } 
-
+         }
+         
          printf(" %d Logical/%d Physical Models Loaded, #States=%d\n",dset->numLogHMM,dset->numPhyHMM,dset->vecSize);
          if (dset->numFiles>0)
             printf(" %d MMF input files\n",dset->numFiles);
@@ -1089,7 +1069,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, HMMSet *dset, char *hm
                printf(" HMM Dir %s",al_hmmDir);
            if (strlen(al_hmmExt) > 0 )
                printf(" Ext %s",al_hmmExt);
-           printf("\n");
+         /* printf("\n"); */
            if (strlen(al_hmmLst) > 0 )
                printf("HMM List %s\n",al_hmmLst);
            printf(" %d Logical/%d Physical Models Loaded, VecSize=%d\n",
@@ -1099,7 +1079,7 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, HMMSet *dset, char *hm
    
    if (al_durUsed){
       if (trace&T_TOP)
-         printf("2-model re-estimation enabled (duration model)\n");
+         printf("\n2-model re-estimation enabled (duration model)\n");
       /* load alignment duration model set */
       CreateHMMSet(&al_dset,&durStack,TRUE);
       xfInfo_dur.al_hset = &al_dset;
@@ -1143,12 +1123,17 @@ void Initialise(FBInfo *fbInfo, MemHeap *x, HMMSet *hset, HMMSet *dset, char *hm
             printf(" Duration Model Dir %s",al_durDir);
          if (strlen(al_durExt) > 0 )
             printf(" Ext %s",al_durExt);
-         printf("\n");
+         /* printf("\n"); */
          if (strlen(al_durLst) > 0 )
             printf("Duration Model List %s\n",al_durLst);
          printf(" %d Logical/%d Physical Models Loaded, VecSize=%d\n",
                 al_dset.numLogHMM,al_dset.numPhyHMM,al_dset.vecSize);
       }
+   }
+   
+   if (trace&T_TOP) {
+      printf("\n");
+      fflush(stdout);
    }
    
    /* switch model set */
@@ -1212,10 +1197,10 @@ void GenDurMMF (HMMSet *hset, char *durfn)
    Boolean isPipe;
    MLink mac;
    HLink hmm;
-   
+
    /* vSize of dur MMF */
    MaxN  = MaxStatesInSet(hset)-2;
-   
+
    /* ------- Output duration model ------- */
    if (trace & T_TOP)
       printf("Generatnig dur MMF from HMM MMF...\n");
@@ -1296,7 +1281,7 @@ void UpdateVFloors (HMMSet *hset, const double minVar, const double percent)
    for (s=1; s<=hset->swidth[0]; s++) {
       /* initialization */
       occ = sum = sqr = 0.0;
-
+      
       /* acc statistics for variance flooring */
       NewHMMScan(hset,&hss);
       while (GoNextMix(&hss,FALSE)) {
@@ -1638,10 +1623,6 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
    Vector mean;
    Covariance cov;
    Boolean mixFloored,shared;
-   Vector varFloor[SMAX];
-   
-   /* variance flooring */
-   SetVFloor(hset,varFloor,minVar);
    
    N = hmm->numStates;
    se = hmm->svec+2;
@@ -1650,7 +1631,7 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
       ste = se->info->pdf+1;
       for (s=1;s<=S;s++,ste++){
          sti = ste->info;
-         minV = varFloor[s];
+         minV = vFloor[s];
          me = sti->spdf.cpdf + 1; M = sti->nMix;
          for (m=1;m<=M;m++,me++)
             if (me->weight > MINMIX){
@@ -1705,9 +1686,6 @@ void UpdateVars(HMMSet *hset, int px, HLink hmm)
       }
    }
    
-   /* Reset vfloor */
-   ResetVFloor(hset,varFloor);
-   
    return;
 }
 
@@ -1724,9 +1702,6 @@ void UpdateTMVars(HMMSet *hset)
    Covariance cov;
    Boolean mixFloored,shared;
    Vector varFloor[SMAX];
-   
-   /* set variance floor */
-   SetVFloor(hset,varFloor,minVar);
    
    S = hset->swidth[0];
    for (s=1;s<=S;s++){
@@ -1780,10 +1755,7 @@ void UpdateTMVars(HMMSet *hset)
          }
       }
    }
-   
-   /* set variance floor */
-   ResetVFloor(hset,varFloor);
-   
+     
    return;
 }
 
@@ -1878,6 +1850,7 @@ void MLUpdateModels(HMMSet *hset, UPDSet uFlags)
    int px,maxM;
    long n;
 
+   SetVFloor(hset,vFloor,minVar);
    hsKind = hset->hsKind;
    maxM = MaxMixInSet(hset);
 
@@ -1930,6 +1903,7 @@ void MLUpdateModels(HMMSet *hset, UPDSet uFlags)
                 nFloorVar,nFloorVarMix);
       fflush(stdout);
    }
+   ResetVFloor(hset,vFloor);
 }
 
 /* UpdateModels: update all models and save them in newDir if set,

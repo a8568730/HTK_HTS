@@ -1,3 +1,219 @@
+2008-06-16 21:13  Junichi Yamagishi
+
+	* HTKLib/HAdapt.c:
+
+	  Bug fix of HTK (CopyLinXForm)
+
+2008-06-13 15:50  Heiga Zen
+
+	* HTKLVRec/HLVLM.h, HTKLVRec/HLVNet.c, HTKLVRec/HLVModel.h,
+	  HTKLVRec/HLVNet.h, HTKLVRec/HLVRec-GC.c, HTKLVRec/HLVRec-misc.c,
+	  HTKLVRec/HLVRec.h, HTKLVRec/config.h, HTKLib/esig_asc.c,
+	  HTKLib/esig_nat.c, HTKLib/esignal.c, HTKLib/strarr.c,
+	  HTKLib/strarr.h: Remove HTS license because there is no
+	  difference between HTK and HTS versions of these files.
+
+2008-06-13 15:48  Heiga Zen
+
+	* HTKLib/HTrain.c: Fix license.
+
+2008-06-13 14:17  Heiga Zen
+
+	* configure, configure.ac: Update version numbers for the final RC
+	  release.
+
+2008-06-12 19:34  Junichi Yamagishi
+
+	* HTKLib/HAdapt.c:
+
+	  Add a function for suppressing unnecessary linear matrices
+	  estimated in SMAP estimation (CSMAPLR/SMAPLR)
+
+2008-06-10 15:01  Heiga Zen
+
+	* HTKTools/HHEd.c: Fix minor bug.
+
+2008-06-09 14:51  Heiga Zen
+
+	* HTKTools/HHEd.c: Shrink trees if empty nodes exist (HHEd IT
+	  command).
+
+2008-06-06 16:43  Heiga Zen
+
+	* HTKTools/HHEd.c: Add command 'IT' to HHEd: it enables us to
+	  impose previously constructed decision trees to cluster new sets
+	  of HMMs.
+
+2008-06-06 14:52  Heiga Zen
+
+	* HTKLib/: HUtil.c, HUtil.h: Add CopySet().
+
+2008-05-30 18:32  Heiga Zen
+
+	* HTKLib/HTrain.c: Fix bug: variable "htrain_version" was removed
+	  at the previous commit.
+
+2008-05-30 16:19  Heiga Zen
+
+	* HTKTools/HCompV.c, HTKTools/HCopy.c, HTKTools/HDMan.c,
+	  HTKTools/HLStats.c, HTKTools/HMGenS.c, HTKTools/HMMIRest.c,
+	  HTKTools/HParse.c, HTKTools/HQuant.c, HTKTools/HRest.c,
+	  HTKTools/HResults.c, HTKTools/HVite.c, HTKTools/HBuild.c,
+	  HTKTools/HHEd.c, HTKTools/HLEd.c, HTKTools/HERest.c,
+	  HTKTools/HInit.c, HTKTools/HLRescore.c, HTKTools/HList.c,
+	  HTKTools/HSGen.c, HTKTools/HSLab.c, HTKTools/HSmooth.c,
+	  HTKTools/Makefile.in, HTKLib/HAdapt.c, HTKLib/HAdapt.h,
+	  HTKLib/HDict.c, HTKLib/HDict.h, HTKLib/HFBLat.c, HTKLib/HFBLat.h,
+	  HTKLib/HGen.c, HTKLib/HGraf_WIN32.c, HTKLib/HMap.c,
+	  HTKLib/HMap.h, HTKLib/HModel.c, HTKLib/HModel.h, HTKLib/HParm.c,
+	  HTKLib/HParm.h, HTKLib/HTrain.c, HTKLib/HTrain.h,
+	  HTKLib/esig_nat.c, HTKLib/esignal.c, HTKLib/esignal.h,
+	  HTKLib/HAudio.c, HTKLib/HAudio.h, HTKLib/HExactMPE.c,
+	  HTKLib/HExactMPE.h, HTKLib/HFB.c, HTKLib/HFB.h, HTKLib/HGen.h,
+	  HTKLib/HGraf.h, HTKLib/HLM.c, HTKLib/HLM.h, HTKLib/HLat.h,
+	  HTKLib/HMath.c, HTKLib/HMath.h, HTKLib/HNet.c, HTKLib/HNet.h,
+	  HTKLib/HRec.c, HTKLib/HRec.h, HTKLib/HShell.c, HTKLib/HShell.h,
+	  HTKLib/HUtil.c, HTKLib/HUtil.h, HTKLib/HVQ.c, HTKLib/HVQ.h,
+	  HTKLib/HWave.c, HTKLib/HWave.h, HTKLib/Makefile.in,
+	  HTKLib/esig_edr.c, HTKLib/lbfgs.h, HTKLib/strarr.c,
+	  HTKLib/HArc.c, HTKLib/HArc.h, HTKLib/HGraf.c,
+	  HTKLib/HGraf.null.c, HTKLib/HLabel.c, HTKLib/HLabel.h,
+	  HTKLib/HLat.c, HTKLib/HMem.c, HTKLib/HMem.h, HTKLib/HSigP.c,
+	  HTKLib/HSigP.h, HTKLib/esig_asc.c, HTKLib/strarr.h,
+	  HTKLVRec/HDecode.c, HTKLVRec/HDecode.mod.c, HTKLVRec/HLVLM.c,
+	  HTKLVRec/HLVLM.h, HTKLVRec/HLVModel.c, HTKLVRec/HLVModel.h,
+	  HTKLVRec/HLVNet.c, HTKLVRec/HLVNet.h, HTKLVRec/HLVRec-GC.c,
+	  HTKLVRec/HLVRec-LM.c, HTKLVRec/HLVRec-misc.c,
+	  HTKLVRec/HLVRec-outP.c, HTKLVRec/HLVRec-propagate.c,
+	  HTKLVRec/HLVRec-traceback.c, HTKLVRec/HLVRec.c,
+	  HTKLVRec/HLVRec.h, HTKLVRec/config.h, .cvsignore, Makefile.in,
+	  configure.ac: Replace license to New and Simplified BSD License.
+
+2008-05-30 12:32  Heiga Zen
+
+	* HTKLib/HModel.c: Fix bug: Add MixPDF *mp;
+
+2008-05-30 12:19  Heiga Zen
+
+	* HTKLib/HGen.c: Multiply minEucNorm and GVepsilon by M to relax
+	  the convergence thresholds of the speech parameter generation
+	  algorithm considering GV using full-covariance HMMs.
+
+2008-05-23 12:20  Heiga Zen
+
+	* HTKTools/HERest.c: Remove unused configuration variables and
+	  rename some configuration variables.
+
+2008-05-23 12:16  Heiga Zen
+
+	* HTKTools/HLRescore.c, HTKLVRec/HDecode.c: Revert previous fix.
+
+2008-05-23 12:12  Heiga Zen
+
+	* HTKTools/HRest.c: Skip short segments.
+
+2008-05-23 12:08  Heiga Zen
+
+	* HTKTools/HLRescore.c: Remove unused statements.
+
+2008-05-23 11:51  Heiga Zen
+
+	* HTKLib/HShell.h: Fix order of prototype definitions.
+
+2008-05-23 11:49  Heiga Zen
+
+	* HTKLib/HShell.h: MAXFNAMELEN increased to 1034 according to
+	  HTK-3.4.
+
+2008-05-23 11:47  Heiga Zen
+
+	* HTKLib/HModel.h: Fix typo.
+
+2008-05-23 11:45  Heiga Zen
+
+	* HTKLib/HModel.c: Clear seen flags for tied-mixture system.  This
+	  fix was made in HTK-3.3 but it has not been included in HTS.
+
+2008-05-23 11:34  Heiga Zen
+
+	* HTKLib/HMem.c: Minor fix to reduce patch size.
+
+2008-05-23 11:29  Heiga Zen
+
+	* HTKLib/HLat.c: Fix array size.
+
+2008-05-23 11:27  Heiga Zen
+
+	* HTKLib/HGraf.null.c: Remove meaningless statement.
+
+2008-05-23 11:15  Heiga Zen
+
+	* HTKLVRec/HDecode.c: Remove unused statements.
+
+2008-05-23 11:14  Heiga Zen
+
+	* HTKLVRec/HLVModel.c: Fix typo.
+
+2008-05-23 00:19  Heiga Zen
+
+	* HTKLib/HGen.c: Fix typo.
+
+2008-05-22 21:36  Heiga Zen
+
+	* HTKTools/HInit.c: Fix typo.
+
+2008-05-22 16:48  Heiga Zen
+
+	* HTKLib/HLat.c: Fix bug: HTK -> HTS porting bug.
+
+2008-05-22 16:21  Heiga Zen
+
+	* HTKTools/HERest.c: Small log message modification.
+
+2008-05-21 13:03  Heiga Zen
+
+	* HTKLib/HParm.c: Fix a bug in delta and delta-delta calculation.
+	  This bug was originally come from HTK-3.3 and was not fixed when
+	  I ported HTS to HTK-3.4.
+
+2008-05-12 17:18  Heiga Zen
+
+	* HTKLVRec/HLVRec-outP.c: Fix bug reported by Brian Ore.
+
+2008-05-08 13:47  Heiga Zen
+
+	* HTKLib/: HGen.c, HGen.h: Turn off LBFGS if no FORTRAN compiler
+	  exists.  Include log GV, context-dependent GV, and GV excluding
+	  silence.
+
+2008-05-08 13:41  Heiga Zen
+
+	* configure, configure.ac, HTKTools/Makefile.in,
+	  HTKLib/Makefile.in: Turn off LBFGS if no FORTRAN compiler exists.
+
+2008-04-03 13:45  Heiga Zen
+
+	* HTKTools/HERest.c: Fix a bug in the previous commit.
+
+2008-03-27 14:55  Heiga Zen
+
+	* HTKTools/HHEd.c: Use PAT_LEN instead of MAXSTRLEN for the size of
+	  char * variables which store pattern.  Use ReadStringWithLen()
+	  instaed of ReadString() to read pattern.
+
+2008-03-27 14:52  Heiga Zen
+
+	* HTKTools/HERest.c: Call HMap.c:SetMinVar() to set min variance
+	  for duration models.	Move SetVFloor() and ResetVFloor() from
+	  UpdateVars() to MLUpdateModels() because it outputs thousands of
+	  warnings if varFloor macros do not exist.
+
+2008-03-27 14:49  Heiga Zen
+
+	* HTKLib/: HMap.c, HMap.h: Add configuration variable to control
+	  variance flooring.  Add functions to set mixture and variance
+	  flooring values from outside modules.
+
 2008-03-24 10:52  Heiga Zen
 
 	* configure: Remove AC_PROG_CXX.

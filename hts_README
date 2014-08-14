@@ -1,6 +1,6 @@
 ================================================================
-   The HMM-based Speech Synthesis System (HTS) version 2.1RC1
-                    release March 24, 2008
+   The HMM-based Speech Synthesis System (HTS) version 2.1
+                    release June 27, 2008
 
 
 The HMM-Based Speech Synthesis System (HTS)
@@ -11,11 +11,11 @@ HTS was implemented as a modified version of the Hidden Markov
 Model Toolkit (HTK) (http://htk.eng.cam.ac.uk/).  Major
 modifications which we made to HTK are listed below:
                                 
- - Context clustering based on MDL criterion (instead of ML one)
- - Stream-dependent context clustering
- - Multi-space probability distribution as state output
-   probability (for pitch pattern modeling)
- - State duration modeling and clustering
+ * Context clustering based on the MDL criterion (instead of ML)
+ * Stream-dependent context clustering
+ * Multi-space probability distribution (MSD) as state output
+   PDFs (for F0 pattern modeling)
+ * State duration modeling and clustering
 
 Related publications about the techniques and algorithms used in
 HTS can be found at http://hts.sp.nitech.ac.jp/?Publications
@@ -27,7 +27,7 @@ analyzer.  Since version 1.1, HTS has included a small run-time
 synthesis engine called hts_engine (less than 2 Mbytes including
 HMMs).  Since the synthesis engine can run without the HTK
 library, it is suitable for using on the Festival and other
-applications.
+open or proprietary applications.
 
 
 This distribution comes with demo scripts for training
@@ -36,7 +36,7 @@ ARCTIC databases" (http://www.festvox.org/cmu_arctic/).  These
 demo scripts generate "voices" for Festival.
 
 Six HTS voices for Festival 1.95 & 1.96 trained by CMU ARCTIC
-databases are also released with HTS version 2.1RC1.  Each of HTS
+databases are also released with HTS version 2.1.  Each of HTS
 voices consists of HMMs trained by the demo script, and can be
 used as a "voice" of Festival Speech Synthesis System without
 any other HTS tools.
@@ -53,254 +53,110 @@ developed in Galatea project
 tools.
 
 An HTS voice for GalateaTalk trained by the demo script is also
-released with HTS version 2.1RC1.
+released with HTS version 2.1.
 
 ****************************************************************
-                  What's new in version 2.1RC1
+                  What's new in version 2.1
 ****************************************************************
 
  * Many bug fixes.
- * CSMAPLR adaptation.
- * HHEd MU command supports '*2' style mixing up.
- * Mixture-level occupancy threshold in mixing up.
+ * Released under the New and Simplified BSD license
+ * Include simple documentation
+ * Support 64-bit compile
+ * HERest:
+  - HSMM training and adaptation
+  - CSMAPLR adaptation
+ * HMGenS:
+  - Speech parameter generation from HSMMs
+  - Speech parameter generation algorithm considering GV
+  - Random generation of state transitions, state durations, 
+    and mixture components (by configuration variable RNDFLAGS)
+ * HHEd:
+  - Add DM command to delete an existing macro from MMF
+  - Add IT command to impose pre-built trees in clustering
+  - MU command supports '*2' style mixing up
+  - MU command supports mixture-level occcupancy threshhold in 
+    mixing up (by configuration variable MINMIXOCC)
 
 ****************************************************************
                             Copying
 ****************************************************************
 
-The basic core system of HTS version 2.1RC1 is released as a
-patch code to HTK version 3.4.  The patch code is released under
-a MIT-style license, without commercial restrictions.  However,
-it should be noted that once you apply the patch to the HTK
-source code, you must obey the license of HTK.
+The basic core system of HTS version 2.1 is released as a patch
+code to HTK version 3.4.  The patch code is released under the 
+New and Simplified BSD license (see http://www.opensource.org/).
+However, it should be noted that once you apply the patch to
+the HTK source code, you must obey the license of HTK.  Using
+and distributing this software in the form of patch code to HTK
+and its documentation is free (without restriction including 
+without limitation the rights to use, copy, modify, merge, 
+publish, distribute, sublicense, and/or sell copies of this
+work, and to permit persons to whom this work is furnished to
+do so) subject to the conditions in the following license:
+
+/*  ---------------------------------------------------------------  */
+/*           The HMM-Based Speech Synthesis System (HTS)             */
+/*           developed by HTS Working Group                          */
+/*           http://hts.sp.nitech.ac.jp/                             */
+/*  ---------------------------------------------------------------  */
+/*                                                                   */
+/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*                           Department of Computer Science          */
+/*                                                                   */
+/*                2001-2008  Tokyo Institute of Technology           */
+/*                           Interdisciplinary Graduate School of    */
+/*                           Science and Engineering                 */
+/*                                                                   */
+/* All rights reserved.                                              */
+/*                                                                   */
+/* Redistribution and use in source and binary forms, with or        */
+/* without modification, are permitted provided that the following   */
+/* conditions are met:                                               */
+/*                                                                   */
+/* - Redistributions of source code must retain the above copyright  */
+/*   notice, this list of conditions and the following disclaimer.   */
+/* - Redistributions in binary form must reproduce the above         */
+/*   copyright notice, this list of conditions and the following     */
+/*   disclaimer in the documentation and/or other materials provided */
+/*   with the distribution.                                          */
+/* - Neither the name of the HTS working group nor the names of its  */
+/*   contributors may be used to endorse or promote products derived */
+/*   from this software without specific prior written permission.   */
+/*                                                                   */
+/* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND            */
+/* CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,       */
+/* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF          */
+/* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE          */
+/* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS */
+/* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,          */
+/* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED   */
+/* TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,     */
+/* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON */
+/* ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,   */
+/* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY    */
+/* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE           */
+/* POSSIBILITY OF SUCH DAMAGE.                                       */
+/*  ---------------------------------------------------------------  */
 
 Although the patch code is free, we still offer no warranties
- and no maintenance.  We will continue to endeavor to fix bugs
+and no maintenance.  We will continue to endeavor to fix bugs
 and answer queries when can, but are not in a position to
 guarantee it.  We will consider consultancy if desired, please
 contacts us for details.
 
-If you are using HTS version 2.1RC1 in commercial environment,
-even though no license is required, we would be grateful if you
-let us know as it helps justify ourselves to our various
-sponsors.  We also strongly encourage you to
+If you are using HTS in commercial environment, even though no 
+license is required, we would be grateful if you let us know as
+it helps justify ourselves to our various sponsors.  We also 
+strongly encourage you to
 
- * reference the use of HTS in any publications that use the
-   software
- * report all bugs, where possible with bug fixes, that are
-   found.
-
-The current copyright on the core system is
-
-/*  ---------------------------------------------------------------  */
-/*           The HMM-Based Speech Synthesis System (HTS)             */
-/*                       HTS Working Group                           */
-/*                                                                   */
-/*                  Department of Computer Science                   */
-/*                  Nagoya Institute of Technology                   */
-/*                               and                                 */
-/*   Interdisciplinary Graduate School of Science and Engineering    */
-/*                  Tokyo Institute of Technology                    */
-/*                                                                   */
-/*                     Copyright (c) 2001-2008                       */
-/*                       All Rights Reserved.                        */
-/*                                                                   */
-/*  Permission is hereby granted, free of charge, to use and         */
-/*  distribute this software in the form of patch code to HTK and    */
-/*  its documentation without restriction, including without         */
-/*  limitation the rights to use, copy, modify, merge, publish,      */
-/*  distribute, sublicense, and/or sell copies of this work, and to  */
-/*  permit persons to whom this work is furnished to do so, subject  */
-/*  to the following conditions:                                     */
-/*                                                                   */
-/*    1. Once you apply the HTS patch to HTK, you must obey the      */
-/*       license of HTK.                                             */
-/*                                                                   */
-/*    2. The source code must retain the above copyright notice,     */
-/*       this list of conditions and the following disclaimer.       */
-/*                                                                   */
-/*    3. Any modifications to the source code must be clearly        */
-/*       marked as such.                                             */
-/*                                                                   */
-/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
-/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
-/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
-/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
-/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
-/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
-/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
-/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/*  PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                   */
-/*  ---------------------------------------------------------------  */
-
-or
-
-/*  ---------------------------------------------------------------  */
-/*           The HMM-Based Speech Synthesis System (HTS)             */
-/*                       HTS Working Group                           */
-/*                                                                   */
-/*                  Department of Computer Science                   */
-/*                  Nagoya Institute of Technology                   */
-/*                               and                                 */
-/*   Interdisciplinary Graduate School of Science and Engineering    */
-/*                  Tokyo Institute of Technology                    */
-/*                                                                   */
-/*                     Copyright (c) 2001-2008                       */
-/*                                                                   */
-/*            The Centre for Speech Technology Research              */
-/*                     University of Edinburgh                       */
-/*                                                                   */
-/*                        Copyright (c) 2008                         */
-/*                                                                   */
-/*                       All Rights Reserved.                        */
-/*                                                                   */
-/*  Permission is hereby granted, free of charge, to use and         */
-/*  distribute this software in the form of patch code to HTK and    */
-/*  its documentation without restriction, including without         */
-/*  limitation the rights to use, copy, modify, merge, publish,      */
-/*  distribute, sublicense, and/or sell copies of this work, and to  */
-/*  permit persons to whom this work is furnished to do so, subject  */
-/*  to the following conditions:                                     */
-/*                                                                   */
-/*    1. Once you apply the HTS patch to HTK, you must obey the      */
-/*       license of HTK.                                             */
-/*                                                                   */
-/*    2. The source code must retain the above copyright notice,     */
-/*       this list of conditions and the following disclaimer.       */
-/*                                                                   */
-/*    3. Any modifications to the source code must be clearly        */
-/*       marked as such.                                             */
-/*                                                                   */
-/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/*  UNIVERSITY OF EDINBURGH, HTS WORKING GROUP, AND THE CONTRIBUTORS */
-/*  TO THIS WORK DISCLAIM ALL WARRANTIES WITH REGARD TO THIS         */
-/*  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY    */
-/*  AND FITNESS, IN NO EVENT SHALL NAGOYA INSTITUTE OF TECHNOLOGY,   */
-/*  TOKYO INSTITUTE OF TECHNOLOGY, UNIVERSITY OF EDINBURGH,          */
-/*  HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE FOR ANY        */
-/*  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES        */
-/*  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,          */
-/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/*  PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                   */
-/*  ---------------------------------------------------------------  */
-
-Several tools in HTS version 2.1RC1 are independent of HTK
-(though most of them use the HTK library).  The copyright of
-these tools is
-
-/*  ---------------------------------------------------------------  */
-/*           The HMM-Based Speech Synthesis System (HTS)             */
-/*                       HTS Working Group                           */
-/*                                                                   */
-/*                  Department of Computer Science                   */
-/*                  Nagoya Institute of Technology                   */
-/*                               and                                 */
-/*   Interdisciplinary Graduate School of Science and Engineering    */
-/*                  Tokyo Institute of Technology                    */
-/*                                                                   */
-/*                     Copyright (c) 2001-2008                       */
-/*                       All Rights Reserved.                        */
-/*                                                                   */
-/*  Permission is hereby granted, free of charge, to use and         */
-/*  distribute this software and its documentation without           */
-/*  restriction, including without limitation the rights to use,     */
-/*  copy, modify, merge, publish, distribute, sublicense, and/or     */
-/*  sell copies of this work, and to permit persons to whom this     */
-/*  work is furnished to do so, subject to the following conditions: */
-/*                                                                   */
-/*    1. The source code must retain the above copyright notice,     */
-/*       this list of conditions and the following disclaimer.       */
-/*                                                                   */
-/*    2. Any modifications to the source code must be clearly        */
-/*       marked as such.                                             */
-/*                                                                   */
-/*    3. Redistributions in binary form must reproduce the above     */
-/*       copyright notice, this list of conditions and the           */
-/*       following disclaimer in the documentation and/or other      */
-/*       materials provided with the distribution.  Otherwise, one   */
-/*       must contact the HTS working group.                         */
-/*                                                                   */
-/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
-/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
-/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
-/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
-/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
-/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
-/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
-/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/*  PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                   */
-/*  ---------------------------------------------------------------  */
-
-or
-
-/*  ---------------------------------------------------------------  */
-/*           The HMM-Based Speech Synthesis System (HTS)             */
-/*                       HTS Working Group                           */
-/*                                                                   */
-/*                  Department of Computer Science                   */
-/*                  Nagoya Institute of Technology                   */
-/*                               and                                 */
-/*   Interdisciplinary Graduate School of Science and Engineering    */
-/*                  Tokyo Institute of Technology                    */
-/*                                                                   */
-/*                     Copyright (c) 2001-2008                       */
-/*                                                                   */
-/*            The Centre for Speech Technology Research              */
-/*                     University of Edinburgh                       */
-/*                                                                   */
-/*                        Copyright (c) 2008                         */
-/*                                                                   */
-/*                       All Rights Reserved.                        */
-/*                                                                   */
-/*  Permission is hereby granted, free of charge, to use and         */
-/*  distribute this software and its documentation without           */
-/*  restriction, including without limitation the rights to use,     */
-/*  copy, modify, merge, publish, distribute, sublicense, and/or     */
-/*  sell copies of this work, and to permit persons to whom this     */
-/*  work is furnished to do so, subject to the following conditions: */
-/*                                                                   */
-/*    1. The source code must retain the above copyright notice,     */
-/*       this list of conditions and the following disclaimer.       */
-/*                                                                   */
-/*    2. Any modifications to the source code must be clearly        */
-/*       marked as such.                                             */
-/*                                                                   */
-/*    3. Redistributions in binary form must reproduce the above     */
-/*       copyright notice, this list of conditions and the           */
-/*       following disclaimer in the documentation and/or other      */
-/*       materials provided with the distribution.  Otherwise, one   */
-/*       must contact the HTS working group.                         */
-/*                                                                   */
-/*                                                                   */
-/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/*  UNIVERSITY OF EDINBURGH, HTS WORKING GROUP, AND THE CONTRIBUTORS */
-/*  TO THIS WORK DISCLAIM ALL WARRANTIES WITH REGARD TO THIS         */
-/*  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY    */
-/*  AND FITNESS, IN NO EVENT SHALL NAGOYA INSTITUTE OF TECHNOLOGY,   */
-/*  TOKYO INSTITUTE OF TECHNOLOGY, UNIVERSITY OF EDINBURGH,          */
-/*  HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE FOR ANY        */
-/*  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES        */
-/*  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,          */
-/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/*  PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                   */
-/*  ---------------------------------------------------------------  */
-
+ * refer to the use of HTS in any publications that use HTS
+ * report bugs, where possible with bug fixes, that are found
 
 ****************************************************************
                           Installation
 ****************************************************************
 
-Please expand HTS-2.1RC1_for_HTK-3.4.tar.bz2 and see the
+Please expand HTS-2.1_for_HTK-3.4.tar.bz2 and see the
 extracted file "INSTALL".  Note that HTS requires HTK.
 
 ****************************************************************

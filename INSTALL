@@ -1,5 +1,5 @@
 
-   HMM-based Speech Synthesis System (HTS) version 2.1RC1
+   HMM-based Speech Synthesis System (HTS) version 2.1
 
 Install
 =========
@@ -15,10 +15,10 @@ After downloading HTK-3.4.tar.gz and HDecode-3.4.tar.gz, expand them as follows:
  % tar -zxvf HTK-3.4.tar.gz
  % tar -zxvf HDecode-3.4.tar.gz
 
-And then apply HTS-2.1RC1_for_HTK-3.4.patch for HTK-3.4 as
+And then apply HTS-2.1_for_HTK-3.4.patch for HTK-3.4 as
 
  % cd htk
- % patch -p1 -d . < HTS-2.1RC1_for_HTK-3.4.patch
+ % patch -p1 -d . < HTS-2.1_for_HTK-3.4.patch
 
 Finally configure and compile it.
 

@@ -1,53 +1,51 @@
-/*  ---------------------------------------------------------------  */
+/* ----------------------------------------------------------------- */
 /*           The HMM-Based Speech Synthesis System (HTS)             */
-/*                       HTS Working Group                           */
+/*           developed by HTS Working Group                          */
+/*           http://hts.sp.nitech.ac.jp/                             */
+/* ----------------------------------------------------------------- */
 /*                                                                   */
-/*                  Department of Computer Science                   */
-/*                  Nagoya Institute of Technology                   */
-/*                               and                                 */
-/*   Interdisciplinary Graduate School of Science and Engineering    */
-/*                  Tokyo Institute of Technology                    */
+/*  Copyright (c) 2001-2008  Nagoya Institute of Technology          */
+/*                           Department of Computer Science          */
 /*                                                                   */
-/*                     Copyright (c) 2001-2007                       */
-/*                       All Rights Reserved.                        */
+/*                2001-2008  Tokyo Institute of Technology           */
+/*                           Interdisciplinary Graduate School of    */
+/*                           Science and Engineering                 */
 /*                                                                   */
-/*  Permission is hereby granted, free of charge, to use and         */
-/*  distribute this software and its documentation without           */
-/*  restriction, including without limitation the rights to use,     */
-/*  copy, modify, merge, publish, distribute, sublicense, and/or     */
-/*  sell copies of this work, and to permit persons to whom this     */
-/*  work is furnished to do so, subject to the following conditions: */
+/* All rights reserved.                                              */
 /*                                                                   */
-/*    1. The source code must retain the above copyright notice,     */
-/*       this list of conditions and the following disclaimer.       */
+/* Redistribution and use in source and binary forms, with or        */
+/* without modification, are permitted provided that the following   */
+/* conditions are met:                                               */
 /*                                                                   */
-/*    2. Any modifications to the source code must be clearly        */
-/*       marked as such.                                             */
+/* - Redistributions of source code must retain the above copyright  */
+/*   notice, this list of conditions and the following disclaimer.   */
+/* - Redistributions in binary form must reproduce the above         */
+/*   copyright notice, this list of conditions and the following     */
+/*   disclaimer in the documentation and/or other materials provided */
+/*   with the distribution.                                          */
+/* - Neither the name of the HTS working group nor the names of its  */
+/*   contributors may be used to endorse or promote products derived */
+/*   from this software without specific prior written permission.   */
 /*                                                                   */
-/*    3. Redistributions in binary form must reproduce the above     */
-/*       copyright notice, this list of conditions and the           */
-/*       following disclaimer in the documentation and/or other      */
-/*       materials provided with the distribution.  Otherwise, one   */
-/*       must contact the HTS working group.                         */
-/*                                                                   */
-/*  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   */
-/*  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    */
-/*  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       */
-/*  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   */
-/*  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         */
-/*  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    */
-/*  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        */
-/*  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  */
-/*  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   */
-/*  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          */
-/*  PERFORMANCE OF THIS SOFTWARE.                                    */
-/*                                                                   */
-/*  ---------------------------------------------------------------  */
+/* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND            */
+/* CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,       */
+/* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF          */
+/* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE          */
+/* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS */
+/* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,          */
+/* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED   */
+/* TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,     */
+/* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON */
+/* ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,   */
+/* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY    */
+/* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE           */
+/* POSSIBILITY OF SUCH DAMAGE.                                       */
+/* ----------------------------------------------------------------- */
 /*         File: HGen.c: Generate parameter sequence from HMM        */
-/*  ---------------------------------------------------------------  */
+/* ----------------------------------------------------------------- */
 
-char *hgen_version = "!HVER!HGen:   2.0.1 [NIT 01/10/07]";
-char *hgen_vc_id = "$Id: HGen.c,v 1.40 2008/03/24 01:29:49 zen Exp $";
+char *hgen_version = "!HVER!HGen:   2.1 [NIT 30/05/08]";
+char *hgen_vc_id = "$Id: HGen.c,v 1.44 2008/05/30 07:19:14 zen Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -92,22 +90,28 @@ static double rndParVar  = 1.0;     /* variance of Gaussian noise for random gen
 /* GV related variables */
 static Boolean useGV = FALSE;
 static int maxGVIter = 50;          /* max iterations in the speech parameter generation considering GV */
-static double GVepsilon = 1.0E-4;   /* convergence factor for GV iteration */
-static double minEucNorm = 1.0E-2;  /* minimum Euclid norm of a gradient vector */ 
+static double GVepsilon = 1.0E-4;   /* convergence factor per dimension for GV iteration */
+static double minEucNorm = 1.0E-2;  /* minimum Euclid norm per dimension of a gradient vector */ 
 static double stepInit = 1.0;       /* initial step size */
-static double stepDec = 0.5;        /* step size deceralation factor */
+static double stepDec = 0.5;        /* step size deceleration factor */
 static double stepInc = 1.2;        /* step size acceleration factor */
 static double w1 = 1.0;             /* weight for HMM output prob. */
 static double w2 = 1.0;             /* weight for GV output prob. */
+static Boolean cdGV = FALSE;        /* use context-dependent GV */
+static Boolean logGV = FALSE;       /* use logarithmic GV */
 
 typedef enum {STEEPEST=0,NEWTON=1,LBFGS=2} OptKind;
+#ifdef _HAS_FORTRAN 
 static OptKind optKind = LBFGS;     /* optimization method */
-  
+#else
+static OptKind optKind = NEWTON;    /* optimization method */
+#endif /* _HAS_FORTRAN */
 
 static char gvDir[MAXFNAMELEN];  /* dir to look for GV defs */
 static char gvExt[MAXSTRLEN];    /* GV def file extension */
 static char gvMMF[MAXFNAMELEN];  /* GV MMF */
 static char gvLst[MAXFNAMELEN];  /* GV list */
+static char **gvOffmodel=NULL;   /* model names which are excluded to calculate GV */
 static HMMSet gvset;             /* GV set */
 static MemHeap gvStack;          /* Stack holds all GV related info */
 
@@ -121,6 +125,12 @@ static OptKind Str2OptKind(char *str)
    else if (!(strcmp(str,"NEWTON"))) okind = NEWTON;
    else if (!(strcmp(str,"LBFGS")))  okind = LBFGS;
    else HError(9999,"Str2OptKind: Unknown OptKind kind");
+
+#ifndef _HAS_FORTRAN
+   if (okind==LBFGS)
+      HError(9999,"Str2OptKind: LBFGS method requires FORTRAN compiler");
+#endif /* _HAS_FORTRAN */
+   
    return okind;
 }
 
@@ -150,7 +160,7 @@ void SetrFlags(char *s)
 /* EXPORT->PrintrFlags: print random generation flags */
 void PrintrFlags (void)
 {
-   printf("HMGenS  ");
+   printf("HGen  ");
    
    if (!rFlags) printf("ML Generating: ");
    if (!(rFlags&RNDTRANS)) printf("Transitions "); 
@@ -187,6 +197,8 @@ void InitGen(void)
       if (GetConfFlt (cParm,nParm,"RNDPARMEAN",&d))  rndParMean = d;
       if (GetConfFlt (cParm,nParm,"RNDPARVAR", &d))  rndParVar  = d;
       if (GetConfBool(cParm,nParm,"USEGV",     &b))  useGV      = b;
+      if (GetConfBool(cParm,nParm,"CDGV",      &b))  cdGV       = b;
+      if (GetConfBool(cParm,nParm,"LOGGV",     &b))  logGV      = b;
       if (GetConfInt (cParm,nParm,"MAXGVITER", &i))  maxGVIter  = i;
       if (GetConfFlt (cParm,nParm,"GVEPSILON", &d))  GVepsilon  = d;
       if (GetConfFlt (cParm,nParm,"MINEUCNORM",&d))  minEucNorm = d;
@@ -201,6 +213,8 @@ void InitGen(void)
       if (GetConfStr (cParm,nParm,"GVHMMLIST", buf)) strcpy(gvLst,buf);
       if (GetConfStr (cParm,nParm,"GVMODELDIR",buf)) strcpy(gvDir,buf);
       if (GetConfStr (cParm,nParm,"GVMODELEXT",buf)) strcpy(gvExt,buf);
+      if (GetConfStr (cParm,nParm,"GVOFFMODEL",buf)) 
+         gvOffmodel = ParseConfStrVec(&gstack,buf,TRUE);
    }
 
    if (useGV) {
@@ -222,6 +236,9 @@ void InitGen(void)
          printf("GV enabled\n");
          printf(" %d Logical/%d Physical Models Loaded, VecSize=%d\n", gvset.numLogHMM, gvset.numPhyHMM, gvset.vecSize);
       }
+      
+      if (logGV && optKind==NEWTON)
+         HError(9999,"InitGen: Currently only STEEPEST and LBFGS supports log GV");
    }
    
    return;
@@ -349,6 +366,13 @@ static void CreatePdfStreams (GenInfo *genInfo)
             pst->gvcov.var = CreateVector(x, pst->vSize);  
             ZeroVector(pst->gvcov.var);
          }
+         
+         /* gv flag */
+         pst->gvFlag = (Boolean *) New(x, genInfo->tframe*sizeof(Boolean));
+         pst->gvFlag--;
+         
+         /* gv time counter */
+         pst->gvT = 0;
       }
    }
 
@@ -409,8 +433,7 @@ static void SetupPdfStreams (GenInfo *genInfo)
       
       /* get gv mean and covariance */
       if (useGV) {
-         id = GetLabId("gv",TRUE);
-         /* id = genInfo->label[1]->labid; */
+         id = (cdGV) ? genInfo->label[1]->labid : GetLabId("gv",TRUE);
          if ((macro=FindMacroName(&gvset,'h',id))!=NULL) {
             for (s=stream,v=1; s<stream+genInfo->nPdfStream[p]; v+=genInfo->hset->swidth[s++]) {
                mpdf = ((HLink)macro->structure)->svec[2].info->pdf[p].info->spdf.cpdf[1].mpdf;  /* currently only sigle-mixture GV pdf is supported */
@@ -524,6 +547,22 @@ static void SetupPdfStreams (GenInfo *genInfo)
                         }
                      }
                   }
+ 
+                  /* set flag to exclude models in gvOffmodel from GV calculation */
+                  if (useGV) {
+                     char buf[MAXSTRLEN];
+                     strcpy(buf,genInfo->label[i]->labid->name);
+                     TriStrip(buf);
+                     for (k=1,pst->gvFlag[pst->t]=TRUE; gvOffmodel!=NULL && k<=gvOffmodel[0][0]; k++) {
+                        if (strcmp(buf,gvOffmodel[k])==0) {
+                           pst->gvFlag[pst->t] = FALSE;
+                           break;
+                        }
+                     }
+                     if (pst->gvFlag[pst->t])
+                        pst->gvT++;
+                  }
+
                   /* update counter */
                   pst->t++;
                }
@@ -1212,20 +1251,24 @@ static void Calc_GV (PdfStream *pst, const int bias, DVector mean, DVector var)
    /* mean */
    ZeroDVector(mean);
    for (t=1; t<=T; t++) {
-      m = (t+M-1)%M+1+bias;
-      mean[m] += c[t];
+      if (pst->gvFlag[(t+M-1)/M]) {
+         m = (t+M-1)%M+1+bias;
+         mean[m] += c[t];
+      }
    }
    for (m=1; m<=M; m++)
-      mean[m+bias] /= pst->T;
+      mean[m+bias] /= pst->gvT;
 
    /* variance */
    ZeroDVector(var);
    for (t=1; t<=T; t++) {
-      m = (t+M-1)%M+1+bias;
-      var[m] += (c[t]-mean[m])*(c[t]-mean[m]);
+      if (pst->gvFlag[(t+M-1)/M]) {
+         m = (t+M-1)%M+1+bias;
+         var[m] += (c[t]-mean[m])*(c[t]-mean[m]);
+      }
    }
    for (m=1; m<=M; m++)
-      var[m+bias] /= pst->T;
+      var[m+bias] /= pst->gvT;
 
    return;
 }
@@ -1248,12 +1291,15 @@ static void Conv_GV (PdfStream *pst, const int bias, DVector mean, DVector var)
    
    /* ratio between GV mean and variance of c */
    for (m=1; m<=M; m++)
-      ratio [m+bias] = sqrt(pst->gvmean[m+bias]/var[m+bias]);
+      ratio[m+bias] = (logGV) ? sqrt(exp(pst->gvmean[m+bias]) / var[m+bias])   /* log -> linear */
+                              : sqrt(    pst->gvmean[m+bias]  / var[m+bias]);  /* linear */
    
    /* expand c */
    for (t=1; t<=T; t++) {
-      m = (t+M-1)%M+1+bias;
-      c[t] = ratio[m] * (c[t]-mean[m]) + mean[m];
+     if (pst->gvFlag[(t+M-1)/M]) {
+        m = (t+M-1)%M+1+bias;
+        c[t] = ratio[m] * (c[t]-mean[m]) + mean[m];
+     }
    }
    
    FreeDVector(&gvStack, ratio);
@@ -1294,8 +1340,16 @@ static LogDouble Calc_Gradient (PdfStream *pst, const int bias, DVector mean, DV
    for (m=1,*GVobj=0.0; m<=M; m++) {
       for (l=((fullGV)?1:m); l<=((fullGV)?M:m); l++) {
          inv = (fullGV) ? ((l<m) ? gvcov.inv[m+bias][l+bias] : gvcov.inv[l+bias][m+bias]) : gvcov.var[l+bias];
-         *GVobj -= 0.5*w2*(var[m+bias]-gvmean[m+bias])*inv*(var[l+bias]-gvmean[l+bias]);
-         vd[m+bias] += inv*(var[l+bias]-gvmean[l+bias]);
+         if (logGV) {
+            /* logarithmic GV */
+            *GVobj -= 0.5*w2*(log(var[m+bias])-gvmean[m+bias])*inv*(log(var[l+bias])-gvmean[l+bias]);
+            vd[m+bias] += inv*(log(var[l+bias])-gvmean[l+bias]);
+         }
+         else {
+            /* linear GV */
+            *GVobj -= 0.5*w2*(var[m+bias]-gvmean[m+bias])*inv*(var[l+bias]-gvmean[l+bias]);
+            vd[m+bias] += inv*(var[l+bias]-gvmean[l+bias]);
+         }
       }
    }
 
@@ -1318,7 +1372,6 @@ static LogDouble Calc_Gradient (PdfStream *pst, const int bias, DVector mean, DV
          /* objective function */
          *HMMobj += -0.5*w1*w*c[i]*(g[i]-2.0*r[i]);
 
-         /* Hessian */
          switch(optKind) {
          case NEWTON:
             /* only diagonal elements of Hessian matrix are used */
@@ -1332,8 +1385,14 @@ static LogDouble Calc_Gradient (PdfStream *pst, const int bias, DVector mean, DV
             h = 1.0;
          }
 
-         /* gradient vector */
-         g[i] = h * ( w1*w*(-g[i]+r[i]) + w2*(-2.0/pst->T*(c[i]-mean[m+bias])*vd[m+bias]) );
+         /* derivative */
+         g[i] = w1*w*(-g[i]+r[i]);
+         if (pst->gvFlag[t])
+            g[i] += (logGV) ? w2*(-2.0/pst->T*(c[i]-mean[m+bias])*vd[m+bias])/var[m+bias]
+                            : w2*(-2.0/pst->T*(c[i]-mean[m+bias])*vd[m+bias]);
+            
+         /* Hessian */
+         g[i] *= h;
          
          /* norm of gradient vector */
          *norm += g[i]*g[i];
@@ -1388,22 +1447,6 @@ static void GV_ParmGen (PdfStream *pst, const int bias)
       /* calculate GV objective and its derivative with respect to c */
       obj = Calc_Gradient(pst, bias, mean, var, &GVobj, &HMMobj, &norm);
 
-      /* accelerate/decelerate step size */
-      if (iter>1 && optKind!=LBFGS) {
-         /* objective function improved -> increase step size */
-         if (obj>prev) step *= stepInc;
-         
-         /* objective function degraded -> go back c and decrese step size */
-         if (obj<prev) {
-            for (t=1; t<=T; t++)  /* go back c to that at the previous iteration */
-               c[t] -= step * diag[t];
-            step *= stepDec;
-            for (t=1; t<=T; t++)  /* gradient c */
-               c[t] += step * diag[t];
-            iter--; continue;
-         }
-      }
-
       if (trace & T_GV) {
          printf("   Iteration %2d: GV Obj = %e (HMM:%e GV:%e)", iter, obj, HMMobj, GVobj);
          if (iter>1)
@@ -1413,7 +1456,7 @@ static void GV_ParmGen (PdfStream *pst, const int bias)
       }
             
       /* convergence check (Euclid norm, objective function, and LBFGS report) */
-      if ((optKind!=LBFGS && norm<minEucNorm) || (iter>1 && fabs(obj-prev)<GVepsilon) || (iter>1 && optKind==LBFGS && iflag==0)) { 
+      if ((optKind!=LBFGS && norm<M*minEucNorm) || (iter>1 && fabs(obj-prev)<M*GVepsilon) || (iter>1 && optKind==LBFGS && iflag==0)) { 
          if (trace&T_GV) {
             if (iter>1)
                printf("   Converged (norm=%e, change=%e).\n", norm, fabs(obj-prev));
@@ -1424,6 +1467,22 @@ static void GV_ParmGen (PdfStream *pst, const int bias)
          break;
       }
       
+      /* accelerate/decelerate step size */
+      if (iter>1 && optKind!=LBFGS) {
+         /* objective function improved -> increase step size */
+         if (obj>prev) step *= stepInc;
+
+         /* objective function degraded -> go back c and decrese step size */
+         if (obj<prev) {
+            for (t=1; t<=T; t++)  /* go back c to that at the previous iteration */
+               c[t] -= step * diag[t];
+            step *= stepDec;
+            for (t=1; t<=T; t++)  /* gradient c */
+               c[t] += step * diag[t];
+            continue;
+         }
+      }
+
       switch (optKind) {
       case STEEPEST:  /* steepest ascent */
       case NEWTON:    /* quasi Newton (only diagonal elements of Hessian matrix are used */
@@ -1431,6 +1490,7 @@ static void GV_ParmGen (PdfStream *pst, const int bias)
            c[t] += step * g[t];
          CopyDVector(g,diag);
          break;
+#ifdef _HAS_FORTRAN
       case LBFGS:
          for (t=1; t<=T; t++)
             g[t] = -g[t];  /* swap sign because L-BFGS minimizes objective function */
@@ -1438,6 +1498,7 @@ static void GV_ParmGen (PdfStream *pst, const int bias)
          /* call LBFGS FORTRAN routine */
          lbfgs_(&dim, &mem, &c[1], &f, &g[1], &diagco, &diag[1], iprint, &eps, &xtol, &w[1], &iflag);
          break;
+#endif /* _HAS_FORTRAN */
       default:
          HError(9999,"GV_ParmGen: Not supported optimization kind.");
       }

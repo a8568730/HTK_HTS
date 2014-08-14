@@ -21,52 +21,52 @@
 # ----------------------------------------------------------- 
 
 #  *** THIS IS A MODIFIED VERSION OF HTK ***                        #
-#  ---------------------------------------------------------------  #
+# ----------------------------------------------------------------- #
 #           The HMM-Based Speech Synthesis System (HTS)             #
-#                       HTS Working Group                           #
+#           developed by HTS Working Group                          #
+#           http://hts.sp.nitech.ac.jp/                             #
+# ----------------------------------------------------------------- #
 #                                                                   #
-#                  Department of Computer Science                   #
-#                  Nagoya Institute of Technology                   #
-#                               and                                 #
-#   Interdisciplinary Graduate School of Science and Engineering    #
-#                  Tokyo Institute of Technology                    #
+#  Copyright (c) 2001-2008  Nagoya Institute of Technology          #
+#                           Department of Computer Science          #
 #                                                                   #
-#                     Copyright (c) 2001-2008                       #
-#                       All Rights Reserved.                        #
+#                2001-2008  Tokyo Institute of Technology           #
+#                           Interdisciplinary Graduate School of    #
+#                           Science and Engineering                 #
 #                                                                   #
-#  Permission is hereby granted, free of charge, to use and         #
-#  distribute this software in the form of patch code to HTK and    #
-#  its documentation without restriction, including without         #
-#  limitation the rights to use, copy, modify, merge, publish,      #
-#  distribute, sublicense, and/or sell copies of this work, and to  #
-#  permit persons to whom this work is furnished to do so, subject  #
-#  to the following conditions:                                     #
+# All rights reserved.                                              #
 #                                                                   #
-#    1. Once you apply the HTS patch to HTK, you must obey the      #
-#       license of HTK.                                             #
+# Redistribution and use in source and binary forms, with or        #
+# without modification, are permitted provided that the following   #
+# conditions are met:                                               #
 #                                                                   #
-#    2. The source code must retain the above copyright notice,     #
-#       this list of conditions and the following disclaimer.       #
+# - Redistributions of source code must retain the above copyright  #
+#   notice, this list of conditions and the following disclaimer.   #
+# - Redistributions in binary form must reproduce the above         #
+#   copyright notice, this list of conditions and the following     #
+#   disclaimer in the documentation and/or other materials provided #
+#   with the distribution.                                          #
+# - Neither the name of the HTS working group nor the names of its  #
+#   contributors may be used to endorse or promote products derived #
+#   from this software without specific prior written permission.   #
 #                                                                   #
-#    3. Any modifications to the source code must be clearly        #
-#       marked as such.                                             #
-#                                                                   #
-#  NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF TECHNOLOGY,   #
-#  HTS WORKING GROUP, AND THE CONTRIBUTORS TO THIS WORK DISCLAIM    #
-#  ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL       #
-#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT   #
-#  SHALL NAGOYA INSTITUTE OF TECHNOLOGY, TOKYO INSTITUTE OF         #
-#  TECHNOLOGY, HTS WORKING GROUP, NOR THE CONTRIBUTORS BE LIABLE    #
-#  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY        #
-#  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  #
-#  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTUOUS   #
-#  ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR          #
-#  PERFORMANCE OF THIS SOFTWARE.                                    #
-#                                                                   #
-#  ---------------------------------------------------------------  #
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND            #
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,       #
+# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF          #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE          #
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS #
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,          #
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED   #
+# TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,     #
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON #
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,   #
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY    #
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE           #
+# POSSIBILITY OF SUCH DAMAGE.                                       #
+# ----------------------------------------------------------------- #
 
 # After editing this file, run "autoconf" to regenerate "configure".
-AC_INIT(HTS,2.1RC1, hts-users@sp.nitech.ac.jp)
+AC_INIT(HTS,2.1RC2, hts-users@sp.nitech.ac.jp)
 AC_COPYRIGHT(Copyright 2003-2005 University of Cambridge)
 AC_COPYRIGHT(Copyright 2001-2008 Nagoya Institute of Technology and Tokyo Institute of Technology)
 
@@ -76,7 +76,6 @@ AC_PREFIX_DEFAULT(/usr/local/HTS-2.1)
 AC_PROG_MAKE_SET
 AC_PROG_AWK
 AC_PROG_CC
-AC_PROG_F77
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_RANLIB
@@ -90,8 +89,19 @@ AC_PROG_AR
 # Checks for libraries.
 AC_CHECK_LIB([X11], [main])
 AC_CHECK_LIB([m],  [main],,AC_MSG_ERROR(Cannot find libm))
-AC_CHECK_LIB([g2c],[main],[fortlib=-lg2c],AC_CHECK_LIB([gfortran],[main],[fortlib=-lgfortran],AC_MSG_ERROR(Cannot find libg2c and libgfortran)))
-AC_SUBST(FORTRANLIB, $fortlib)
+
+# Checks for FORTRAN
+AC_PROG_F77
+if test -z "$F77"; then
+	LBFGS=''
+	FLIBS=''
+else
+	LBFGS='lbfgs.o'
+	AC_F77_LIBRARY_LDFLAGS
+	CFLAGS="$CFLAGS -D_HAS_FORTRAN"
+fi
+AC_SUBST(FLIBS, $FLIBS)
+AC_SUBST(LBFGS, $LBFGS)
 
 # Checks for header files.
 AC_CONFIG_HEADERS
@@ -172,6 +182,7 @@ case "$host_cpu" in
 		;;
 esac
 
+
 case "$host" in
 		*x86_64*linux*)
 		CFLAGS="-ansi -D_SVID_SOURCE -DOSS_AUDIO -D'ARCH=\"$host_cpu\"' $CFLAGS"
@@ -234,6 +245,7 @@ case "$host" in
 				LIBEXT=dylib
 		;;				
 esac
+
 
 # Process customised options
 make_all=htktools
