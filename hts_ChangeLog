@@ -1,3 +1,42 @@
+2011-03-02 17:36  uratec
+
+	* .project, HTKLib/HFB.c, HTKLib/HFB.h, HTKTools/HSMMAlign.c:
+	  Support input xform of HSMMAlign.
+
+2011-02-10 17:23  uratec
+
+	* HTKLVRec/HDecode.c, HTKLVRec/HDecode.mod.c, HTKLVRec/HLVLM.c,
+	  HTKLVRec/HLVModel.c, HTKLVRec/HLVRec-propagate.c,
+	  HTKLVRec/HLVRec.c, HTKLib/HAdapt.c, HTKLib/HArc.c,
+	  HTKLib/HAudio.c, HTKLib/HDict.c, HTKLib/HExactMPE.c,
+	  HTKLib/HFB.c, HTKLib/HFBLat.c, HTKLib/HGen.c, HTKLib/HGraf.c,
+	  HTKLib/HGraf.null.c, HTKLib/HGraf_WIN32.c, HTKLib/HLM.c,
+	  HTKLib/HLabel.c, HTKLib/HLat.c, HTKLib/HMap.c, HTKLib/HMath.c,
+	  HTKLib/HMem.c, HTKLib/HModel.c, HTKLib/HNet.c, HTKLib/HParm.c,
+	  HTKLib/HRec.c, HTKLib/HShell.c, HTKLib/HSigP.c, HTKLib/HTrain.c,
+	  HTKLib/HUtil.c, HTKLib/HVQ.c, HTKLib/HWave.c, HTKTools/HBuild.c,
+	  HTKTools/HCompV.c, HTKTools/HCopy.c, HTKTools/HDMan.c,
+	  HTKTools/HERest.c, HTKTools/HHEd.c, HTKTools/HInit.c,
+	  HTKTools/HLEd.c, HTKTools/HLRescore.c, HTKTools/HLStats.c,
+	  HTKTools/HList.c, HTKTools/HMGenS.c, HTKTools/HMMIRest.c,
+	  HTKTools/HParse.c, HTKTools/HQuant.c, HTKTools/HRest.c,
+	  HTKTools/HResults.c, HTKTools/HSGen.c, HTKTools/HSLab.c,
+	  HTKTools/HSmooth.c, HTKTools/HVite.c: update all years in
+	  copyright.  add step-by-step beam search in HSMMAlign.
+
+2011-02-10 17:19  uratec
+
+	* Makefile.in, configure, configure.ac, HTKLVRec/HLVRec-LM.c,
+	  HTKLVRec/HLVRec-outP.c, HTKLVRec/HLVRec-traceback.c,
+	  HTKLib/HAdapt.h, HTKLib/HArc.h, HTKLib/HAudio.h, HTKLib/HDict.h,
+	  HTKLib/HExactMPE.h, HTKLib/HFB.h, HTKLib/HFBLat.h, HTKLib/HGen.h,
+	  HTKLib/HGraf.h, HTKLib/HLM.h, HTKLib/HLabel.h, HTKLib/HLat.h,
+	  HTKLib/HMap.h, HTKLib/HMath.h, HTKLib/HMem.h, HTKLib/HModel.h,
+	  HTKLib/HNet.h, HTKLib/HParm.h, HTKLib/HRec.h, HTKLib/HShell.h,
+	  HTKLib/HSigP.h, HTKLib/HTrain.h, HTKLib/HUtil.h, HTKLib/HVQ.h,
+	  HTKLib/HWave.h, HTKLib/Makefile.in, HTKLib/lbfgs.h,
+	  HTKTools/HSMMAlign.c, HTKTools/Makefile.in: update
+
 2010-12-21 15:03  bonanza
 
 	* HTKLib/HAdapt.c: Merge patch code by Heiga Zen of Toshiba

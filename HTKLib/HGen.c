@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -45,7 +45,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hgen_version = "!HVER!HGen:   2.1 [NIT 30/05/08]";
-char *hgen_vc_id = "$Id: HGen.c,v 1.51 2010/04/21 11:54:25 uratec Exp $";
+char *hgen_vc_id = "$Id: HGen.c,v 1.52 2011/02/10 08:23:06 uratec Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"

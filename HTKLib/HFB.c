@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hfb_version = "!HVER!HFB:   3.4.1 [CUED 12/03/09]";
-char *hfb_vc_id = "$Id: HFB.c,v 1.48 2010/11/24 09:07:36 bonanza Exp $";
+char *hfb_vc_id = "$Id: HFB.c,v 1.50 2011/03/02 08:36:30 uratec Exp $";
 
 #include "HShell.h"     /* HMM ToolKit Modules */
 #include "HMem.h"
@@ -1495,7 +1495,7 @@ static void SetBeamTaper(PruneInfo *p, short *qDms, int Q, int T)
 
 
 /* SetAlign: set start and end frame according to given label */
-static void SetAlign (long *st, long *en, short *qDms, const int Q, const int T)
+void SetAlign (long *st, long *en, short *qDms, const int Q, const int T)
 {
    int q, i, mindur;
 

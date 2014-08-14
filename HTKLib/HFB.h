@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -218,6 +218,9 @@ Boolean FBUtt(FBInfo *fbInfo, UttInfo *utt);
 
 /* PrLog: print a log value */
 void PrLog(LogDouble x);
+
+/* SetAlign: set start and end frame according to given label */
+void SetAlign (long *st, long *en, short *qDms, const int Q, const int T);
 
 #ifdef __cplusplus
 }

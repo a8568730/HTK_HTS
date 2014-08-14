@@ -35,7 +35,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -77,7 +77,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hadapt_version = "!HVER!HAdapt:   3.4.1  [CUED 12/03/09]";
-char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.62 2010/12/21 06:03:45 bonanza Exp $";
+char *hadapt_vc_id =  "$Id: HAdapt.c,v 1.63 2011/02/10 08:23:06 uratec Exp $";
 
 #include <stdio.h>      /* Standard C Libraries */
 #include <stdlib.h>

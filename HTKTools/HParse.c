@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hparse_version = "!HVER!HParse:   3.4.1 [CUED 12/03/09]";
-char *hparse_vc_id = "$Id: HParse.c,v 1.8 2010/04/08 04:50:31 uratec Exp $";
+char *hparse_vc_id = "$Id: HParse.c,v 1.9 2011/02/10 08:23:06 uratec Exp $";
 
 /* The HParse program reads in a set of HTK  HParse rewrite rules
    (as used in HTK V1.x) and writes out an HTK V2 lattice and

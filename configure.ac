@@ -27,7 +27,7 @@
 #           http://hts.sp.nitech.ac.jp/                             #
 # ----------------------------------------------------------------- #
 #                                                                   #
-#  Copyright (c) 2001-2010  Nagoya Institute of Technology          #
+#  Copyright (c) 2001-2011  Nagoya Institute of Technology          #
 #                           Department of Computer Science          #
 #                                                                   #
 #                2001-2008  Tokyo Institute of Technology           #
@@ -67,12 +67,12 @@
 
 # After editing this file, run "autoconf" to regenerate "configure".
 
-AC_INIT(HTS,2.2alpha, hts-users@sp.nitech.ac.jp)
+AC_INIT(HTS,2.2beta, hts-users@sp.nitech.ac.jp)
 AC_COPYRIGHT(Copyright 2003-2009 University of Cambridge)
-AC_COPYRIGHT(Copyright 2001-2010 Nagoya Institute of Technology)
+AC_COPYRIGHT(Copyright 2001-2011 Nagoya Institute of Technology)
 AC_COPYRIGHT(Copyright 2001-2008 Tokyo Institute of Technology)
 
-AC_PREFIX_DEFAULT(/usr/local/HTS-2.2alpha)
+AC_PREFIX_DEFAULT(/usr/local/HTS-2.2beta)
 
 dnl Checks for programs.
 AC_PROG_MAKE_SET

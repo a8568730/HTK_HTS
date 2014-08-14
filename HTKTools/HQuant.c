@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hquant_version = "!HVER!HQuant:   3.4.1 [CUED 12/03/09]";
-char *hquant_vc_id = "$Id: HQuant.c,v 1.6 2010/04/08 04:50:31 uratec Exp $";
+char *hquant_vc_id = "$Id: HQuant.c,v 1.7 2011/02/10 08:23:06 uratec Exp $";
 
 /* 
    This program calculates a vector quantisation table from a

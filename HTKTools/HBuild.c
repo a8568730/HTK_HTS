@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hbuild_version = "!HVER!HBuild:   3.4.1 [CUED 12/03/09]";
-char *hbuild_vc_id = "$Id: HBuild.c,v 1.10 2010/04/08 04:50:30 uratec Exp $";
+char *hbuild_vc_id = "$Id: HBuild.c,v 1.11 2011/02/10 08:23:06 uratec Exp $";
 
 /* The HBuild program takes input files in a number of different
    formats and constructs suitable HTK word lattice files.

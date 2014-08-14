@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2008-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2008-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /* All rights reserved.                                              */
@@ -39,8 +39,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hsmmalign_version = "!HVER!HSMMAlign: 2.1.1 [NIT 25/12/10]";
-char *hsmmalign_vc_id =
-    "$Id: HSMMAlign.c,v 1.3 2010/12/02 04:58:46 uratec Exp $";
+char *hsmmalign_vc_id = "$Id: HSMMAlign.c,v 1.5 2011/03/02 08:36:30 uratec Exp $";
 
 /*
   This program is used for forced alignment of HSMMs.
@@ -92,10 +91,12 @@ static int nParm = 0;           /* total num params */
 Boolean keepOccm = FALSE;
 
 /* Search settings */
-static int beam = 0;            /* beam width (if 0 then no-pruning) */
+static LogDouble pruneInit = NOPRUNE;   /* pruning threshold initially */
+static LogDouble pruneInc = 0.0;        /* pruning threshold increment */
+static LogDouble pruneLim = NOPRUNE;    /* pruning threshold limit */
 static double hsmmDurWeight = 1.0;      /* duration weight of state duration model */
 static Boolean state_align = FALSE;     /* align flag */
-static Boolean prun_frame = FALSE;      /* prun hypo by using time information of label */
+static Boolean prune_frame = FALSE;     /* prune hypo by using time information of label */
 
 /* Stack */
 static MemHeap hmmStack;
@@ -184,29 +185,25 @@ typedef struct _HSMMAlignState {
    StateInfo *info;             /* state information */
    int model_index;             /* index of model (0 ... M) */
    int state_index;             /* index of state (2 ...) */
-   double dmean;                /* mean of state duration */
-   double dvari;                /* variance of state duration */
-   int start;                   /* start frame for prun */
-   int end;                     /* end frame for prun */
+   MixPDF *dur_pdf;             /* PDF of state duration */
+   long start;                  /* start frame for prune */
+   long end;                    /* end frame for prune */
    struct _HSMMAlignState *next;
    struct _HSMMAlignState *prev;
    struct _HSMMAlignHypo *hypo_from_left;
 } HSMMAlignState;
 
 /* HSMMAlignStateInitialize: initialize state */
-void HSMMAlignStateInitialize(HSMMAlignState * s, char *name, StateInfo * info,
-                              int model_index, int state_index, double mean,
-                              double vari, int start, int end)
+void HSMMAlignStateInitialize(HSMMAlignState * s, char *name, StateInfo * info, int model_index,
+                              int state_index, MixPDF * dur_pdf, long start, long end)
 {
-   if (s == NULL || name == NULL || info == NULL || model_index < 0
-       || state_index < 2)
+   if (s == NULL || name == NULL || info == NULL || model_index < 0 || state_index < 2)
       HError(2300, "HSMMAlign: faild");
    s->name = name;
    s->info = info;
    s->model_index = model_index;
    s->state_index = state_index;
-   s->dmean = mean;
-   s->dvari = vari;
+   s->dur_pdf = dur_pdf;
    s->start = start;
    s->end = end;
    s->next = NULL;
@@ -228,16 +225,14 @@ void HSMMAlignStateSequenceInitialize(HSMMAlignStateSequence * ss)
 }
 
 /* HSMMAlignStateSequencePush: create and add state */
-void HSMMAlignStateSequencePush(HSMMAlignStateSequence * ss, char *name,
-                                StateInfo * info, int model_index,
-                                int state_index, double mean, double vari,
-                                int start, int end)
+void HSMMAlignStateSequencePush(HSMMAlignStateSequence * ss, char *name, StateInfo * info,
+                                int model_index, int state_index, MixPDF * dur_pdf, long start,
+                                long end)
 {
    HSMMAlignState *new_state;
 
    new_state = New(&tmpStack, sizeof(HSMMAlignState));
-   HSMMAlignStateInitialize(new_state, name, info, model_index, state_index,
-                            mean, vari, start, end);
+   HSMMAlignStateInitialize(new_state, name, info, model_index, state_index, dur_pdf, start, end);
 
    if (ss->head == NULL && ss->tail == NULL) {
       ss->head = ss->tail = new_state;
@@ -311,32 +306,29 @@ void SetConfParms(void)
       if (GetConfInt(cParm, nParm, "TRACE", &i))
          trace = i;
       if (GetConfStr(cParm, nParm, "INXFORMMASK", buf))
-         xfInfo_hmm.inSpkrPat = xfInfo_dur.inSpkrPat =
-             CopyString(&tmpStack, buf);
+         xfInfo_hmm.inSpkrPat = CopyString(&tmpStack, buf);
       if (GetConfStr(cParm, nParm, "PAXFORMMASK", buf))
-         xfInfo_hmm.paSpkrPat = xfInfo_dur.paSpkrPat =
-             CopyString(&tmpStack, buf);
+         xfInfo_hmm.paSpkrPat = CopyString(&tmpStack, buf);
+      if (GetConfStr(cParm, nParm, "DURINXFORMMASK", buf))
+         xfInfo_dur.inSpkrPat = CopyString(&durStack, buf);
+      if (GetConfStr(cParm, nParm, "DURPAXFORMMASK", buf))
+         xfInfo_dur.paSpkrPat = CopyString(&durStack, buf);
    }
 }
 
 void ReportUsage(void)
 {
    printf("\nUSAGE: HSMMAlign [options] hmmList durList dataFiles...\n\n");
-   printf
-       (" Option                                                    Default\n\n");
+   printf(" Option                                                    Default\n\n");
    printf(" -a      Use an input linear transform for HMMs            off\n");
    printf(" -b      Use an input linear transform for dur models      off\n");
-   printf(" -c      Prun by time information of label                 off\n");
-   printf
-       (" -d s    Dir to find hmm definitions                       current\n");
+   printf(" -c      Prune by time information of label                off\n");
+   printf(" -d s    Dir to find hmm definitions                       current\n");
    printf(" -f      Output full state alignment                       off\n");
-   printf
-       (" -h s [s] Set speaker name pattern to s,                   *.%%%%%%\n");
+   printf(" -h s [s] Set speaker name pattern to s,                   *.%%%%%%\n");
    printf("         optionally set parent patterns                    \n");
-   printf
-       (" -n s    Dir to find duration model definitions            current\n");
-   printf
-       (" -m dir  Set output label dir                              current\n");
+   printf(" -n s    Dir to find duration model definitions            current\n");
+   printf(" -m dir  Set output label dir                              current\n");
    printf(" -r ext  Output label file extension                       lab\n");
    printf(" -t i    Set pruning threshold                             off\n");
    printf(" -w f    Duration weight                                   1.0\n");
@@ -353,9 +345,10 @@ int main(int argc, char *argv[])
    char *s;
    int *maxMixInS;
    int i;
+   LogDouble beam;
 
    void Initialise(void);
-   void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS);
+   Boolean HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int beam, int *maxMixInS);
 
    if (InitShell(argc, argv, hsmmalign_version, hsmmalign_vc_id) < SUCCESS)
       HError(2300, "HSMMAlign: InitShell failed");
@@ -395,7 +388,7 @@ int main(int argc, char *argv[])
          xfInfo_dur.useInXForm = TRUE;
          break;
       case 'c':
-         prun_frame = TRUE;
+         prune_frame = TRUE;
          break;
       case 'd':
          if (NextArg() != STRINGARG)
@@ -421,8 +414,7 @@ int main(int argc, char *argv[])
          break;
       case 'n':
          if (NextArg() != STRINGARG)
-            HError(2319,
-                   "HSMMAlign: Duration model definition directory expected");
+            HError(2319, "HSMMAlign: Duration model definition directory expected");
          durDir = GetStrArg();
          break;
       case 'r':
@@ -431,9 +423,14 @@ int main(int argc, char *argv[])
          outLabExt = GetStrArg();
          break;
       case 't':
-         beam = GetIntArg();
-         if (beam <= 0)
-            beam = 0;
+         pruneInit = GetChkedFlt(0.0, 1.0E20, s);
+         if (NextArg() == FLOATARG || NextArg() == INTARG) {
+            pruneInc = GetChkedFlt(0.0, 1.0E20, s);
+            pruneLim = GetChkedFlt(0.0, 1.0E20, s);
+         } else {
+            pruneInc = 0.0;
+            pruneLim = pruneInit;
+         }
          break;
       case 'w':
          hsmmDurWeight = GetChkedFlt(0.0, 100000.0, s);
@@ -506,8 +503,7 @@ int main(int argc, char *argv[])
          break;
       case 'W':
          if (NextArg() != STRINGARG)
-            HError(2319,
-                   "HSMMAlign: Parent duration transform directory expected");
+            HError(2319, "HSMMAlign: Parent duration transform directory expected");
          xfInfo_dur.usePaXForm = TRUE;
          xfInfo_dur.paXFormDir = GetStrArg();
          if (NextArg() == STRINGARG)
@@ -522,8 +518,7 @@ int main(int argc, char *argv[])
          break;
       case 'Y':
          if (NextArg() != STRINGARG)
-            HError(2319,
-                   "HSMMAlign: Input duration transform directory expected");
+            HError(2319, "HSMMAlign: Input duration transform directory expected");
          AddInXFormDir(&dset, GetStrArg());
          if (NextArg() == STRINGARG) {
             if (xfInfo_dur.inXFormExt == NULL)
@@ -565,7 +560,12 @@ int main(int argc, char *argv[])
             ResetDMMPreComps(&dset);
       }
 
-      HSMMAlign(utt, datafn, outLabDir, maxMixInS);
+      for (beam = pruneInit; beam <= pruneLim; beam += pruneInc) {
+         if (HSMMAlign(utt, datafn, outLabDir, (int) beam, maxMixInS) == TRUE)
+            break;
+         if (pruneInit == NOPRUNE || pruneInc <= 0.0)
+            break;
+      }
    } while (NumArgs() > 0);
 
    ResetHeap(&tmpStack);
@@ -609,8 +609,7 @@ void Initialise(void)
    if (LoadHMMSet(&dset, durDir, durExt) < SUCCESS)
       HError(9928, "HSMMAlign: LoadHMMSet failed");
    if (hset.hsKind == DISCRETEHS)
-      HError(9999,
-             "HSMMAlign: Only continuous duration model mmf is surpported");
+      HError(9999, "HSMMAlign: Only continuous duration model mmf is surpported");
    ConvDiagC(&dset, TRUE);
 
    /* setup EM-based parameter generation */
@@ -626,10 +625,9 @@ void Initialise(void)
 
 /* ---------------------------- Viterbi ---------------------------- */
 
-void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
+Boolean HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int beam, int *maxMixInS)
 {
    int i, j, l, t;
-   int start, end;
    char ilabfn[MAXFNAMELEN];
    char olabfn[MAXFNAMELEN];
    char basefn[MAXFNAMELEN];
@@ -642,8 +640,8 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
    MLink mlink_dset;
    HLink hlink_dset;
    MixPDF *pdf;
-   double mean = 0.0, vari = 0.0;
    LogFloat p = LZERO;
+   LogFloat mixp, wt, x;
    Boolean isPipe;
 
    /* alignment */
@@ -657,10 +655,26 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
    HSMMAlignHypo *final_hypo = NULL;
 
    /* pruning */
+   int q;
+   long *st = NULL, *en = NULL;
+   short *mindur = NULL;
+
    DVector problist;
    int size;
    double threshold = 0.0;
    Boolean threshold_flag = FALSE;
+
+   /* calculation */
+   StateInfo *si;
+   StreamElem *ste;
+   int s, S;
+   StreamInfo *sti;
+   Vector v;
+   int m, M;
+   MixtureElem *me;
+   MixPDF *mp;
+   LogFloat det;
+   Vector dur;
 
    /* result */
    HSMMAlignHypo *result_hypo = NULL;
@@ -670,6 +684,7 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
    int total_nstate;
    HSMMAlignState *tmp_state = NULL;
    unsigned long tmp_ulong = 0;
+   Boolean ret = TRUE;
 
    /* load utterance */
    utt->twoDataFiles = FALSE;
@@ -692,53 +707,61 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
    for (llink = utt->tr->head->head, l = 0; llink != NULL; llink = llink->succ) {
       if (llink->labid != NULL) {
          name = llink->labid->name;
-         if (prun_frame) {
-            start = (llink->start * (1.0 / utt->tgtSampRate) + 1);
-            end = (llink->end * (1.0 / utt->tgtSampRate) + 1);
-            if (start < 1)
-               start = 1;
-            if (end < 1)
-               end = 1;
-            if (start > utt->T)
-               start = utt->T;
-            if (end > utt->T)
-               end = utt->T;
-         } else {
-            start = 1;
-            end = utt->T;
-         }
          mlink_hset = FindMacroName(&hset, 'l', llink->labid);
          hlink_hset = (HLink) mlink_hset->structure;
          mlink_dset = FindMacroName(&dset, 'l', llink->labid);
          hlink_dset = (HLink) mlink_dset->structure;
          for (i = 2; i < hlink_hset->numStates; i++) {
             pdf = hlink_dset->svec[2].info->pdf[i - 1].info->spdf.cpdf[1].mpdf;
-            mean = pdf->mean[1];
-            switch (pdf->ckind) {
-            case DIAGC:
-               vari = pdf->cov.var[1];
-               break;
-            case INVDIAGC:
-               vari = 1.0 / pdf->cov.var[1];
-               break;
-            case FULLC:
-               vari = 1.0 / pdf->cov.inv[1][1];
-               break;
-            default:
-               HError(2611, "HSMMAlign: Cannot load variance");
-            }
-            HSMMAlignStateSequencePush(&sseq, name, hlink_hset->svec[i].info, l,
-                                       i, mean, vari, start, end);
+            HSMMAlignStateSequencePush(&sseq, name, hlink_hset->svec[i].info, l, i, pdf, 1, utt->T);
             total_nstate++;
          }
          l++;
       }
    }
-   /* re-set */
-   sseq.head->start = 1;
-   sseq.tail->end = utt->T;
+
+   /* set alignment */
+   if (prune_frame) {
+      st = (long *) New(&tmpStack, utt->Q * sizeof(long));
+      en = (long *) New(&tmpStack, utt->Q * sizeof(long));
+      mindur = (short *) New(&tmpStack, utt->Q * sizeof(short));
+      st--;
+      en--;
+      mindur--;
+      for (llink = utt->tr->head->head, q = 1; llink != NULL; llink = llink->succ) {
+         if (llink->labid != NULL) {
+            st[q] = (long) llink->start * (1.0 / utt->tgtSampRate) + 1;
+            en[q] = (long) llink->end * (1.0 / utt->tgtSampRate);
+            if (en[q] > utt->T)
+               en[q] = utt->T;
+            mindur[q] = (short) total_nstate / utt->Q;
+            q++;
+         }
+      }
+      /* get time */
+      SetAlign(st, en, mindur, utt->Q, utt->T);
+      /* set time */
+      for (llink = utt->tr->head->head, tmp_state = sseq.head, q = 1;
+           llink != NULL; llink = llink->succ) {
+         if (llink->labid != NULL) {
+            for (i = 0; i < total_nstate / utt->Q; i++) {
+               tmp_state->start = st[q];
+               tmp_state->end = en[q];
+               tmp_state = tmp_state->next;
+            }
+            q++;
+         }
+      }
+      mindur++;
+      en++;
+      st++;
+      Dispose(&tmpStack, mindur);
+      Dispose(&tmpStack, en);
+      Dispose(&tmpStack, st);
+   }
 
    /* viterbi */
+   dur = CreateVector(&tmpStack, 1);
    HSMMAlignHypoSequenceInitialize(&hseq);
    for (t = 1; t <= utt->T; t++) {
       if (t == 1) {
@@ -749,7 +772,29 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
          /* set */
          next_h->frame_index = t;
          next_h->state = next_s;
-         next_h->prob = POutP(&hset, &(utt->o[t]), next_s->info);
+         si = next_s->info;
+         ste = si->pdf + 1;
+         S = hset.swidth[0];
+         p = 0;
+         for (s = 1; s <= S; s++, ste++) {
+            sti = ste->info;
+            v = utt->o[t].fv[s];
+            M = sti->nMix;
+            me = sti->spdf.cpdf + 1;
+            x = LZERO;
+            for (m = 1; m <= M; m++, me++) {
+               mp = me->mpdf;
+               mixp = MOutP(ApplyCompFXForm(mp, v, xfInfo_hmm.inXForm, &det, t), mp);
+               mixp += det;
+               wt = MixLogWeight(&hset, me->weight);
+               x = LAdd(x, wt + mixp);
+            }
+            if (si->weights)
+               p += si->weights[s] * x;
+            else
+               p += x;
+         }
+         next_h->prob = p;
          next_h->duration = 1;
          next_s->hypo_from_left = next_h;
          initial_hypo = next_h;
@@ -764,13 +809,13 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
                prev_s = prev_h->state;
                next_s = prev_s->next;
                if (next_s != NULL) {
-                  p = prev_h->prob + hsmmDurWeight * (-0.5) *
-                      (log(2 * PI * prev_s->dvari) +
-                       (prev_h->duration - prev_s->dmean) *
-                       (prev_h->duration -
-                        prev_s->dmean) * (1.0 / prev_s->dvari));
-                  if (next_s->hypo_from_left != NULL
-                      && next_s->hypo_from_left->frame_index == t) {
+                  dur[1] = (float) prev_h->duration;
+                  p = MOutP(ApplyCompFXForm
+                            (prev_s->dur_pdf, dur, xfInfo_dur.inXForm, &det,
+                             prev_h->duration), prev_s->dur_pdf);
+                  p += det;
+                  p = prev_h->prob + hsmmDurWeight * p;
+                  if (next_s->hypo_from_left != NULL && next_s->hypo_from_left->frame_index == t) {
                      if (next_s->hypo_from_left->prob < p) {
                         /* replace */
                         next_h = next_s->hypo_from_left;
@@ -823,11 +868,32 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
          }
          while (1) {
             next_s = next_h->state;
-            next_h->prob += POutP(&hset, &(utt->o[t]), next_s->info);
+            si = next_s->info;
+            ste = si->pdf + 1;
+            S = hset.swidth[0];
+            p = 0;
+            for (s = 1; s <= S; s++, ste++) {
+               sti = ste->info;
+               v = utt->o[t].fv[s];
+               M = sti->nMix;
+               me = sti->spdf.cpdf + 1;
+               x = LZERO;
+               for (m = 1; m <= M; m++, me++) {
+                  mp = me->mpdf;
+                  mixp = MOutP(ApplyCompFXForm(mp, v, xfInfo_hmm.inXForm, &det, t), mp);
+                  mixp += det;
+                  wt = MixLogWeight(&hset, me->weight);
+                  x = LAdd(x, wt + mixp);
+               }
+               if (si->weights)
+                  p += si->weights[s] * x;
+               else
+                  p += x;
+            }
+            next_h->prob += p;
             size++;
             if (t == utt->T) {
-               if (next_s->next == NULL
-                   && (p < next_h->prob || result_hypo == NULL)) {
+               if (next_s->next == NULL && (p < next_h->prob || result_hypo == NULL)) {
                   p = next_h->prob;
                   result_hypo = next_h;
                }
@@ -861,9 +927,8 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
 
    /* save label file */
    if (result_hypo == NULL) {
-      HError(-9999,
-             "HSMMAlign: No tokens survived to final node of network at beam %d\n",
-             beam);
+      HError(-9999, "HSMMAlign: No tokens survived to final node of network at beam %d\n", beam);
+      ret = FALSE;
    } else {
       if (outLabDir != NULL)
          sprintf(olabfn, "%s%c%s.%s", outLabDir, PATHCHAR, basefn, outLabExt);
@@ -873,7 +938,7 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
          HError(2611, "HSMMAlign: Cannot open label file %s", olabfn);
 
       if (trace & T_TOP) {
-         printf(" Utterance prob = %e\n", result_hypo->prob);
+         printf(" Utterance prob per frame = %e\n", result_hypo->prob / utt->T);
          fflush(stdout);
       }
 
@@ -898,32 +963,25 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
       /* output */
       if (state_align == TRUE) {
          tmp_ulong = 0;
-         for (tmp_state = sseq.head, i = 1; tmp_state != NULL;
-              tmp_state = tmp_state->next, i++) {
+         for (tmp_state = sseq.head, i = 1; tmp_state != NULL; tmp_state = tmp_state->next, i++) {
             if (tmp_state->state_index == 2)
                fprintf(fp, "%lu %lu %s[%d] %s\n", tmp_ulong,
-                       tmp_ulong +
-                       (unsigned long) (framelist[i] * utt->tgtSampRate),
-                       tmp_state->name, tmp_state->state_index,
-                       tmp_state->name);
+                       tmp_ulong + (unsigned long) (framelist[i] * utt->tgtSampRate),
+                       tmp_state->name, tmp_state->state_index, tmp_state->name);
             else
                fprintf(fp, "%lu %lu %s[%d]\n", tmp_ulong,
-                       tmp_ulong +
-                       (unsigned long) (framelist[i] * utt->tgtSampRate),
+                       tmp_ulong + (unsigned long) (framelist[i] * utt->tgtSampRate),
                        tmp_state->name, tmp_state->state_index);
             tmp_ulong += (unsigned long) (framelist[i] * utt->tgtSampRate);
          }
       } else {
          j = 0;
          tmp_ulong = 0;
-         for (tmp_state = sseq.head, i = 1; tmp_state != NULL;
-              tmp_state = tmp_state->next, i++) {
+         for (tmp_state = sseq.head, i = 1; tmp_state != NULL; tmp_state = tmp_state->next, i++) {
             j += framelist[i];
-            if (tmp_state->next == NULL
-                || tmp_state->next->state_index <= tmp_state->state_index) {
+            if (tmp_state->next == NULL || tmp_state->next->state_index <= tmp_state->state_index) {
                fprintf(fp, "%lu %lu %s\n", tmp_ulong,
-                       tmp_ulong + (unsigned long) (j * utt->tgtSampRate),
-                       tmp_state->name);
+                       tmp_ulong + (unsigned long) (j * utt->tgtSampRate), tmp_state->name);
                tmp_ulong += (unsigned long) (j * utt->tgtSampRate);
                j = 0;
             }
@@ -937,11 +995,15 @@ void HSMMAlign(UttInfo * utt, char *datafn, char *outLabDir, int *maxMixInS)
    /* free hypo sequence */
    HSMMAlignHypoSequenceClear(&hseq);
 
+   FreeVector(&tmpStack, dur);
+
    /* free state sequence */
    HSMMAlignStateSequenceClear(&sseq);
 
    /* reset utterance */
    ResetUttObservations(utt, &hset);
+
+   return ret;
 }
 
 /* ----------------------------------------------------------------- */

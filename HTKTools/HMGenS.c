@@ -4,7 +4,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -43,7 +43,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hmgens_version = "!HVER!HMGenS: 2.1.1 [NIT 25/12/09]";
-char *hmgens_vc_id = "$Id: HMGenS.c,v 1.49 2010/07/09 07:37:32 uratec Exp $";
+char *hmgens_vc_id = "$Id: HMGenS.c,v 1.50 2011/02/10 08:23:06 uratec Exp $";
 
 /*  
     This program is used to generate feature vector sequences 

@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hvq_version = "!HVER!HVQ:   3.4.1 [CUED 12/03/09]";
-char *hvq_vc_id = "$Id: HVQ.c,v 1.6 2010/04/08 04:50:29 uratec Exp $";
+char *hvq_vc_id = "$Id: HVQ.c,v 1.7 2011/02/10 08:23:06 uratec Exp $";
 
 #include "HShell.h"
 #include "HMem.h"

@@ -39,7 +39,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -78,7 +78,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hcompv_version = "!HVER!HCompV:   3.4.1 [CUED 12/03/09]";
-char *hcompv_vc_id = "$Id: HCompV.c,v 1.11 2010/04/08 04:50:30 uratec Exp $";
+char *hcompv_vc_id = "$Id: HCompV.c,v 1.12 2011/02/10 08:23:06 uratec Exp $";
 
 
 /* 

@@ -26,7 +26,7 @@
 /*           http://hts.sp.nitech.ac.jp/                             */
 /* ----------------------------------------------------------------- */
 /*                                                                   */
-/*  Copyright (c) 2001-2010  Nagoya Institute of Technology          */
+/*  Copyright (c) 2001-2011  Nagoya Institute of Technology          */
 /*                           Department of Computer Science          */
 /*                                                                   */
 /*                2001-2008  Tokyo Institute of Technology           */
@@ -65,7 +65,7 @@
 /* ----------------------------------------------------------------- */
 
 char *hsmooth_version = "!HVER!HSmooth:   3.4.1 [CUED 12/03/09]";
-char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.10 2010/04/08 04:50:31 uratec Exp $";
+char *hsmooth_vc_id = "$Id: HSmooth.c,v 1.11 2011/02/10 08:23:07 uratec Exp $";
 
 
 #include "HShell.h"     /* HMM ToolKit Modules */
