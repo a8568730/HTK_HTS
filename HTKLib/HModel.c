@@ -1237,8 +1237,8 @@ static ReturnStatus GetToken(Source *src, Token *tok)
         return (FAIL);
     }
     if (c == '~') {                    /* If macro sym return immediately */
-#ifdef USEOLDANNMODEL 
         c = GetCh(src);
+#ifdef USEOLDANNMODEL 
         switch (c) {
         case '0':
             c = 'M';
